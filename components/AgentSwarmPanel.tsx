@@ -4,6 +4,7 @@ import React from 'react';
 import { 
   ForexAnalysis, 
   FundamentalAnalysis, 
+  JournalMemoryAnalysis,
   NewsAnalysis, 
   RiskAssessment, 
   SignalDirection, 
@@ -25,7 +26,9 @@ import {
   Sparkles,
   Newspaper,
   Radio,
-  ExternalLink
+  ExternalLink,
+  History,
+  BookOpen
 } from 'lucide-react';
 
 interface AgentSwarmPanelProps {
@@ -33,10 +36,12 @@ interface AgentSwarmPanelProps {
   fundamental: FundamentalAnalysis;
   forex: ForexAnalysis;
   news: NewsAnalysis;
+  journal?: JournalMemoryAnalysis;
   risk: RiskAssessment;
   onExecuteTrade?: () => void;
   onOpenMonteCarlo?: () => void;
   onOpenNewsWire?: () => void;
+  onOpenJournal?: () => void;
 }
 
 export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
@@ -44,10 +49,12 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
   fundamental,
   forex,
   news,
+  journal,
   risk,
   onExecuteTrade,
   onOpenMonteCarlo,
   onOpenNewsWire,
+  onOpenJournal,
 }) => {
   const getBiasBadge = (bias: SignalDirection) => {
     if (bias.includes('BUY')) {
@@ -438,8 +445,86 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
         </div>
       </div>
 
-      {/* 5. RISK MANAGER & CHIEF CAPITAL GATEKEEPER (Wide Card) */}
-      <div className="bg-terminal-900 border border-emerald-800/60 rounded-xl p-4 flex flex-col justify-between hover:border-emerald-500/50 transition-colors shadow-md relative overflow-hidden md:col-span-2 lg:col-span-2">
+      {/* 5. HISTORICAL MEMORY & TRADE JOURNAL SPECIALIST */}
+      {journal && (
+        <div className="bg-terminal-900 border border-rose-900/60 rounded-xl p-4 flex flex-col justify-between hover:border-rose-500/50 transition-colors shadow-md relative overflow-hidden">
+          <div>
+            <div className="flex items-center justify-between border-b border-terminal-border/60 pb-2.5 mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-md bg-rose-950 border border-rose-800 flex items-center justify-center text-rose-400">
+                  <History className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">Historical Memory & Journal</h3>
+                  <span className="text-[11px] font-mono text-rose-400">Dr. Marcus Vance</span>
+                </div>
+              </div>
+              <span className={`px-2 py-0.5 rounded text-xs font-bold font-mono border ${
+                journal.lossPreventionVerdict === 'HIGH_RISK_LOSS_PATTERN_DETECTED'
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                  : journal.lossPreventionVerdict === 'CAUTION_SIMILAR_TO_PAST_LOSS'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+              }`}>
+                {journal.lossPreventionVerdict === 'HIGH_RISK_LOSS_PATTERN_DETECTED' ? 'LOSS TRAP' : journal.lossPreventionVerdict.replace(/_/g, ' ')}
+              </span>
+            </div>
+
+            <div className="space-y-2.5 text-xs font-mono">
+              <div className="bg-terminal-950/70 p-2.5 rounded-lg border border-terminal-border/40">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-slate-400 text-[10px] uppercase">Symbol Win Rate ({journal.symbolAnalyzed})</span>
+                  <span className="text-white font-bold">{journal.symbolWinRate}% ({journal.symbolTradesCount} trades)</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                  <div>
+                    <span className="text-slate-400">Loss Similarity: </span>
+                    <span className={`font-bold ${
+                      journal.lossSimilarityScore >= 60 ? 'text-rose-400' : journal.lossSimilarityScore >= 35 ? 'text-amber-400' : 'text-emerald-400'
+                    }`}>
+                      {journal.lossSimilarityScore}%
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Profit Factor: </span>
+                    <span className="text-cyan-400 font-bold">{journal.symbolProfitFactor}x</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">MAE Stop Buffer: </span>
+                    <span className="text-rose-300">+{journal.strategicAdjustments.stopLossBufferPips.toFixed(1)} pips</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Size Modifier: </span>
+                    <span className={journal.strategicAdjustments.sizeModifierPercent < 100 ? 'text-amber-400 font-bold' : 'text-emerald-400'}>
+                      {journal.strategicAdjustments.sizeModifierPercent}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-slate-300 text-xs font-sans leading-relaxed pt-1">
+                {journal.thesis}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3 pt-2 border-t border-terminal-border/40 text-[10px] font-mono text-slate-400 flex items-center justify-between">
+            <span>Archive Memory: #{journal.activeMemoryRecall.pastTradeId?.slice(-6) || 'SEED'}</span>
+            {onOpenJournal && (
+              <button
+                onClick={onOpenJournal}
+                className="text-rose-400 hover:text-rose-300 flex items-center gap-1 underline"
+              >
+                <BookOpen className="w-3 h-3" />
+                <span>Open Journal</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 6. RISK MANAGER & CHIEF CAPITAL GATEKEEPER */}
+      <div className="bg-terminal-900 border border-emerald-800/60 rounded-xl p-4 flex flex-col justify-between hover:border-emerald-500/50 transition-colors shadow-md relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
 
         <div>

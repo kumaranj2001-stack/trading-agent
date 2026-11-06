@@ -18,7 +18,8 @@ import {
   Menu,
   X,
   Radio,
-  Coins
+  Coins,
+  BookOpen
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, TimeFrame } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
@@ -40,6 +41,8 @@ interface HeaderProps {
   onOpenMonteCarlo: () => void;
   onOpenKnowledge: () => void;
   onOpenNewsWire?: () => void;
+  onOpenJournal?: () => void;
+  journalTradeCount?: number;
   isAnalyzing: boolean;
   onTriggerAnalysis: () => void;
   activeSession: string;
@@ -67,6 +70,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMonteCarlo,
   onOpenKnowledge,
   onOpenNewsWire,
+  onOpenJournal,
+  journalTradeCount,
   isAnalyzing,
   onTriggerAnalysis,
   activeSession,
@@ -95,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="font-bold text-white tracking-wider text-xs sm:text-sm md:text-base truncate">
-                  APEX <span className="text-cyan-400 font-mono">//</span> 5-AGENT SWARM
+                  APEX <span className="text-cyan-400 font-mono">//</span> 6-AGENT SWARM
                 </span>
                 {confluenceGrade && (
                   <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold border shrink-0 ${
@@ -228,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>5-Agent Debate</span>
+              <span>6-Agent Debate</span>
             </button>
             <button
               onClick={() => setActiveTab('backtest')}
@@ -250,7 +255,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>5 Roles</span>
+              <span>6 Roles</span>
             </button>
           </div>
 
@@ -265,6 +270,21 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
                 <span className="font-bold">News Wire (18)</span>
+              </button>
+            )}
+
+            {/* Persistent Trading Journal Button */}
+            {onOpenJournal && (
+              <button
+                onClick={onOpenJournal}
+                className="px-2.5 py-1 rounded bg-rose-950/70 hover:bg-rose-900 border border-rose-700/60 text-rose-300 flex items-center gap-1.5 transition-colors shadow-sm"
+                title="Open Persistent Trading Journal & Loss Audit"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-rose-400" />
+                <span className="font-bold">Journal</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-rose-500/20 text-[10px] text-rose-300 font-bold">
+                  {journalTradeCount || 12}
+                </span>
               </button>
             )}
 
@@ -410,7 +430,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>5-Agent Debate</span>
+                <span>6-Agent Debate</span>
               </button>
               <button
                 onClick={() => { setActiveTab('backtest'); setMobileMenuOpen(false); }}
@@ -432,12 +452,22 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Shield className="w-3.5 h-3.5" />
-                <span>5 Roles</span>
+                <span>6 Roles</span>
               </button>
             </div>
 
             {/* Mobile Quick Tools Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {onOpenJournal && (
+                <button
+                  onClick={() => { onOpenJournal(); setMobileMenuOpen(false); }}
+                  className="p-2 rounded bg-rose-950/80 border border-rose-700/60 text-rose-300 font-bold flex items-center justify-center gap-1.5"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-rose-400" />
+                  <span>Journal ({journalTradeCount || 12})</span>
+                </button>
+              )}
+
               {onOpenNewsWire && (
                 <button
                   onClick={() => { onOpenNewsWire(); setMobileMenuOpen(false); }}

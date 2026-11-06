@@ -1,8 +1,9 @@
-import { Candle, CurrencyPair, SwarmConsensusResult, TimeFrame, AgentDebateMessage, MarketScannerOpportunity, MarketSegment, UnifiedDecision } from '../types';
+import { Candle, CurrencyPair, SwarmConsensusResult, TimeFrame, AgentDebateMessage, MarketScannerOpportunity, MarketSegment, UnifiedDecision, JournalMemoryAnalysis } from '../types';
 import { TechnicalAnalystAgent } from './TechnicalAnalyst';
 import { FundamentalAnalystAgent } from './FundamentalAnalyst';
 import { ForexMarketAnalystAgent } from './ForexMarketAnalyst';
 import { NewsAnalystAgent } from './NewsAnalyst';
+import { JournalMemoryAnalystAgent } from './JournalMemoryAnalyst';
 import { RiskManagerAgent, RiskManagerConfig, DEFAULT_RISK_CONFIG } from './RiskManager';
 import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, generateCandles, getMarketSegmentForSymbol } from '../marketData';
 import { knowledgeEngine } from '../knowledge/KnowledgeEngine';
@@ -12,6 +13,7 @@ export class SwarmCoordinator {
   private fundamentalAnalyst: FundamentalAnalystAgent;
   private forexAnalyst: ForexMarketAnalystAgent;
   private newsAnalyst: NewsAnalystAgent;
+  private journalAnalyst: JournalMemoryAnalystAgent;
   private riskManager: RiskManagerAgent;
 
   constructor(riskConfig: Partial<RiskManagerConfig> = {}) {
@@ -19,6 +21,7 @@ export class SwarmCoordinator {
     this.fundamentalAnalyst = new FundamentalAnalystAgent();
     this.forexAnalyst = new ForexMarketAnalystAgent();
     this.newsAnalyst = new NewsAnalystAgent();
+    this.journalAnalyst = new JournalMemoryAnalystAgent();
     this.riskManager = new RiskManagerAgent({ ...DEFAULT_RISK_CONFIG, ...riskConfig });
   }
 
@@ -43,19 +46,32 @@ export class SwarmCoordinator {
     // 4. Real-Time News & Wire Analysis (18+ Financial Outlets Scraped)
     const news = this.newsAnalyst.analyze(pair);
 
-    // 5. Risk Manager Evaluation & Final Sizing
-    const risk = this.riskManager.evaluateTrade(pair, currentPrice, technical, fundamental, forex);
+    // 5. Active Journal Memory & Loss Prevention Feedback Loop
+    const currentRsi = Number(technical.indicatorSummary.rsiStatus.split(' ')[0]) || 52;
+    const journal = this.journalAnalyst.analyzeCandidateSetup(
+      pair,
+      technical.bias,
+      timeframe,
+      currentPrice,
+      currentRsi,
+      news.sentimentScore
+    );
 
-    // 5-Agent Confluence Scoring
+    // 6. Risk Manager Evaluation & Final Sizing (Integrates Active Journal Memory)
+    const risk = this.riskManager.evaluateTrade(pair, currentPrice, technical, fundamental, forex, journal);
+
+    // 6-Specialist Multi-Agent Confluence Scoring
     const buyScore = (technical.bias.includes('BUY') ? technical.confidenceScore : 0) +
                      (fundamental.bias.includes('BUY') ? fundamental.confidenceScore : 0) +
                      (forex.bias.includes('BUY') ? forex.confidenceScore : 0) +
-                     (news.bias.includes('BUY') ? news.confidenceScore : 0);
+                     (news.bias.includes('BUY') ? news.confidenceScore : 0) +
+                     (journal.lossPreventionVerdict === 'FAVORABLE_WINNING_PATTERN_MATCH' ? 20 : 0);
 
     const sellScore = (technical.bias.includes('SELL') ? technical.confidenceScore : 0) +
                       (fundamental.bias.includes('SELL') ? fundamental.confidenceScore : 0) +
                       (forex.bias.includes('SELL') ? forex.confidenceScore : 0) +
-                      (news.bias.includes('SELL') ? news.confidenceScore : 0);
+                      (news.bias.includes('SELL') ? news.confidenceScore : 0) +
+                      (journal.lossPreventionVerdict === 'FAVORABLE_WINNING_PATTERN_MATCH' ? 20 : 0);
 
     let consensusDirection: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let overallConfidence = 50;
@@ -85,7 +101,7 @@ export class SwarmCoordinator {
 
     const stats = knowledgeEngine.getTotalStats();
 
-    // 🎯 Synthesize the Unified 5-Role Decision Object
+    // 🎯 Synthesize the Unified Decision Object
     const isMetal = pair === 'XAU/USD' || pair === 'XAG/USD' || pair === 'XPT/USD' || pair === 'COPPER';
     const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
     
@@ -102,12 +118,13 @@ export class SwarmCoordinator {
         : consensusDirection === 'HOLD'
         ? `WAIT FOR CONFLUENCE: Analyst team split, awaiting breakout validation.`
         : `${consensusDirection} ${risk.parameters.positionSizeLots} Standard Lots on ${pair} @ ${currentPrice}`,
-      summary: `5-Role Institutional Consensus: ${consensusDirection} (${confluenceGrade} Grade Confluence, ${overallConfidence}% Confidence Score across Technical, Fundamental, Forex, News & Risk desks).`,
+      summary: `6-Specialist Institutional Swarm Consensus: ${consensusDirection} (${confluenceGrade} Grade Confluence, ${overallConfidence}% Confidence Score across Technical, Fundamental, News, Forex, Memory Journal & Risk desks).`,
       coreReasons: {
         fundamental: `Macro Regime: ${fundamental.macroRegime}. Central bank policy stance (${fundamental.baseCurrencyOutlook.currency} ${fundamental.baseCurrencyOutlook.centralBankStance} @ ${fundamental.baseCurrencyOutlook.interestRate}% vs ${fundamental.quoteCurrencyOutlook.currency} ${fundamental.quoteCurrencyOutlook.centralBankStance} @ ${fundamental.quoteCurrencyOutlook.interestRate}%). Real interest rate spread: ${fundamental.realInterestRateSpread > 0 ? '+' : ''}${fundamental.realInterestRateSpread}%.`,
         newsSentiment: `Wire Pulse: ${news.marketMood.replace('_', ' ')} (${news.sentimentScore > 0 ? '+' : ''}${news.sentimentScore} sentiment). 18 sources actively scraped (Bloomberg, Reuters, Kitco, WSJ, CNBC, FT). Top headline catalyst: "${news.topCatalysts[0] || 'Broad institutional wire confluence.'}".`,
         technicalSetup: `Structure: ${technical.smartMoneyConcepts?.structure || technical.trend}. Pattern: ${technical.candlestickPattern}. Invalidation Floor (S1): ${technical.keySupport}, Resistance Ceiling (R1): ${technical.keyResistance}. RSI momentum: ${technical.indicatorSummary.rsiStatus}.`,
         marketDynamics: dynSummary,
+        journalMemory: `Historical Win Rate: ${journal.symbolWinRate}% (Profit Factor: ${journal.symbolProfitFactor}x, Avg R: +${journal.avgRMultiple}R across ${journal.symbolTradesCount} logged trades). ${journal.thesis}. Memory feedback: stop buffer +${journal.strategicAdjustments.stopLossBufferPips.toFixed(1)} pips, position sizing ${journal.strategicAdjustments.sizeModifierPercent}%.`,
         riskGovernance: risk.verdict === 'VETOED' 
           ? `VETO ENFORCED: ${risk.vetoReasons?.[0] || 'Circuit breaker active.'}`
           : `RISK APPROVED: ${risk.parameters.riskRewardRatio}:1 Risk-to-Reward ratio, stop anchored at ${risk.parameters.stopLoss}, targeting ${risk.parameters.takeProfit1} with $${risk.parameters.maxLossUsd} downside cap (${risk.parameters.accountRiskPercent}% equity).`,
@@ -116,13 +133,14 @@ export class SwarmCoordinator {
         `Fundamental: ${fundamental.macroRegime} policy divergence (${fundamental.baseCurrencyOutlook.interestRate}% vs ${fundamental.quoteCurrencyOutlook.interestRate}%)`,
         `Live News Wire: ${news.marketMood} sentiment across 18 monitored outlets (${news.recentHeadlines[0]?.title || 'Institutional flow'})`,
         `Technical: ${technical.candlestickPattern} with ${technical.smartMoneyConcepts?.structure || 'trend continuation'}`,
+        `Historical Memory Feedback: ${journal.lossPreventionVerdict.replace(/_/g, ' ')} (${journal.lossSimilarityScore}% similarity to past losses) — ${journal.strategicAdjustments.reasoning}`,
         `Market Mechanics: ${forex.activeTradingSession.session} session (${forex.activeTradingSession.liquidityRating} liquidity)`,
         `Risk Governance: ${risk.verdict} — R:R ${risk.parameters.riskRewardRatio}:1, Max Risk $${risk.parameters.maxLossUsd}`,
       ],
     };
 
-    // Build 5-Agent Debate Transcript
-    const debateTranscript = this.generateDebateTranscript(pair, currentPrice, technical, fundamental, forex, news, risk, marketSegment);
+    // Build 6-Specialist Debate Transcript
+    const debateTranscript = this.generateDebateTranscript(pair, currentPrice, technical, fundamental, forex, news, journal, risk, marketSegment);
 
     return {
       pair,
@@ -146,6 +164,7 @@ export class SwarmCoordinator {
         fundamental,
         forex,
         news,
+        journal,
         risk,
       },
       debateTranscript,
@@ -215,6 +234,7 @@ export class SwarmCoordinator {
     fund: ReturnType<FundamentalAnalystAgent['analyze']>,
     fx: ReturnType<ForexMarketAnalystAgent['analyze']>,
     news: ReturnType<NewsAnalystAgent['analyze']>,
+    journal: JournalMemoryAnalysis,
     risk: ReturnType<RiskManagerAgent['evaluateTrade']>,
     segment: MarketSegment
   ): AgentDebateMessage[] {
@@ -275,16 +295,38 @@ export class SwarmCoordinator {
       timestamp: '00:07s',
     });
 
-    // Round 2: Cross-Examination
+    messages.push({
+      id: 'deb-memory-1',
+      round: 1,
+      role: 'journal_analyst',
+      agentName: journal.agentName,
+      avatarColor: 'text-rose-400 bg-rose-950/60 border-rose-800',
+      content: `From our Persistent Trade Journal & Memory Desk: On ${pair}, we have ${journal.symbolTradesCount} logged executions (${journal.symbolWinRate}% historical win rate, Profit Factor ${journal.symbolProfitFactor}x). Loss similarity check: ${journal.lossSimilarityScore}%. ${journal.activeMemoryRecall.pastTradeId ? `Memory recall: Past trade #${journal.activeMemoryRecall.pastTradeId.slice(-4)} (${journal.activeMemoryRecall.dateOrTimeAgo}) suffered from ${journal.activeMemoryRecall.mistakeIdentified}` : 'No recurring loss traps identified.'} Applied feedback: stop buffer +${journal.strategicAdjustments.stopLossBufferPips.toFixed(1)} pips, sizing modifier ${journal.strategicAdjustments.sizeModifierPercent}%.`,
+      sentiment: journal.lossPreventionVerdict === 'HIGH_RISK_LOSS_PATTERN_DETECTED' ? 'CAUTION' : journal.lossPreventionVerdict === 'FAVORABLE_WINNING_PATTERN_MATCH' ? 'BULLISH' : 'NEUTRAL',
+      timestamp: '00:09s',
+    });
+
+    // Round 2: Cross-Examination & Memory Verification
     messages.push({
       id: 'deb-5',
       round: 2,
       role: 'news_analyst',
       agentName: news.agentName,
       avatarColor: 'text-sky-400 bg-sky-950/60 border-sky-800',
-      content: `@RiskManager Sarah & @TechnicalAnalyst Marcus: Our Bloomberg and Reuters speed-wires detected elevated institutional order flow into ${pair}. Are our proposed stop-loss buffers wide enough to absorb intraday headline volatility spikes?`,
+      content: `@RiskManager Sarah & @TechnicalAnalyst Marcus: Our speed-wires show rising flow into ${pair}. Are stop buffers calibrated against both news spread spikes and historical adverse excursion?`,
       sentiment: 'CAUTION',
-      timestamp: '00:10s',
+      timestamp: '00:11s',
+    });
+
+    messages.push({
+      id: 'deb-memory-2',
+      round: 2,
+      role: 'journal_analyst',
+      agentName: journal.agentName,
+      avatarColor: 'text-rose-400 bg-rose-950/60 border-rose-800',
+      content: `@RiskManager Sarah: Historical trade audit confirms that adding a ${journal.strategicAdjustments.stopLossBufferPips.toFixed(1)}-pip MAE cushion directly eliminates the false wick-outs documented in our journal archives on ${pair}.`,
+      sentiment: 'NEUTRAL',
+      timestamp: '00:13s',
     });
 
     messages.push({
@@ -293,9 +335,9 @@ export class SwarmCoordinator {
       role: 'technical_analyst',
       agentName: tech.agentName,
       avatarColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800',
-      content: `Confirmed Alexander. Knowledge rule "${tech.topMatchedRules[0]?.ruleName || 'SMC Liquidity Sweep'}" mandates anchoring our stop loss 1.5x ATR beyond structural pivot ${tech.keySupport}, insulating the trade from headline stop runs.`,
+      content: `Confirmed Alexander and Dr. Vance. Incorporating the journal's +${journal.strategicAdjustments.stopLossBufferPips.toFixed(1)} pip MAE buffer beyond structural support ${tech.keySupport} safely protects our entry without compromising the 1:2+ R:R expectation.`,
       sentiment: 'NEUTRAL',
-      timestamp: '00:12s',
+      timestamp: '00:14s',
     });
 
     // Round 3: Risk Manager Review & Binding Verdict
@@ -308,10 +350,10 @@ export class SwarmCoordinator {
       content: risk.verdict === 'VETOED'
         ? `PROPOSAL REJECTED under Risk Governance: ${risk.reasoning}. Capital preservation is non-negotiable.`
         : risk.verdict === 'MODIFIED'
-        ? `Setup APPROVED WITH RESTRICTIONS. Cross-examined across all 5 roles: ${tech.matchedRulesCount} technical and ${fund.matchedRulesCount} fundamental rules confirmed alongside wire sentiment score of ${news.sentimentScore}. Sizing allocated at ${risk.parameters.positionSizeLots} lots, max loss capped at $${risk.parameters.maxLossUsd} (${risk.parameters.accountRiskPercent}% equity), targeting $${risk.parameters.projectedGainUsd} (R:R ${risk.parameters.riskRewardRatio}:1).`
-        : `Proposal FULLY APPROVED by all 5 roles. Solid confluence across Technical, Fundamental, Forex, and News wire sentiment. Sizing set at ${risk.parameters.positionSizeLots} standard lots with hard stop at ${risk.parameters.stopLoss}. Order authorized for execution.`,
+        ? `Setup APPROVED WITH RESTRICTIONS. Cross-examined across all 6 roles: ${tech.matchedRulesCount} technical and ${fund.matchedRulesCount} fundamental rules verified. Journal memory feedback integrated: ${journal.strategicAdjustments.reasoning}. Allocated ${risk.parameters.positionSizeLots} lots, stop set at ${risk.parameters.stopLoss}, max loss capped at $${risk.parameters.maxLossUsd} (${risk.parameters.accountRiskPercent}% equity), targeting $${risk.parameters.projectedGainUsd} (R:R ${risk.parameters.riskRewardRatio}:1).`
+        : `Proposal FULLY APPROVED by all 6 specialist desks. Historical journal confirms ${journal.symbolWinRate}% win rate on ${pair}. Stop anchored at ${risk.parameters.stopLoss} with MAE cushion applied. Allocated ${risk.parameters.positionSizeLots} standard lots. Order authorized for execution.`,
       sentiment: risk.verdict === 'VETOED' ? 'CAUTION' : risk.action === 'BUY' ? 'BULLISH' : 'BEARISH',
-      timestamp: '00:15s',
+      timestamp: '00:16s',
     });
 
     return messages;

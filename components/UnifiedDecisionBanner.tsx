@@ -14,13 +14,16 @@ import {
   ArrowRight,
   ShieldAlert,
   Flame,
-  Radio
+  Radio,
+  History,
+  BookOpen
 } from 'lucide-react';
 
 interface UnifiedDecisionBannerProps {
   consensus: SwarmConsensusResult;
   onExecuteTrade?: () => void;
   onOpenNewsWire?: () => void;
+  onOpenJournal?: () => void;
   onOpenMonteCarlo?: () => void;
 }
 
@@ -28,6 +31,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   consensus,
   onExecuteTrade,
   onOpenNewsWire,
+  onOpenJournal,
   onOpenMonteCarlo,
 }) => {
   const { unifiedDecision, agents, executionSignal, currentPrice, pair } = consensus;
@@ -112,6 +116,16 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               <span>18 Sources Wire</span>
             </button>
           )}
+
+          {onOpenJournal && (
+            <button
+              onClick={onOpenJournal}
+              className="px-3 py-2 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-700/60 text-rose-300 font-mono text-xs flex items-center gap-1.5 transition-colors"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-rose-400" />
+              <span>Journal & Memory</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -128,15 +142,15 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
         </div>
       </div>
 
-      {/* Core Fundamental & Technical Reasons Driving the Decision (5 Structured Pillars) */}
+      {/* Core Fundamental & Technical Reasons Driving the Decision (6 Structured Pillars) */}
       <div className="mt-4 space-y-2.5">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
             <Flame className="w-3.5 h-3.5 text-amber-400" />
-            Core Drivers Behind the {unifiedDecision.direction} Decision (5-Desk Synthesis)
+            Core Drivers Behind the {unifiedDecision.direction} Decision (6-Desk Institutional Synthesis)
           </h4>
           <span className="text-[10px] font-mono text-cyan-400">
-            5/5 AGENTS SYNCHRONIZED
+            6/6 AGENTS SYNCHRONIZED
           </span>
         </div>
 
@@ -218,13 +232,40 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </div>
           </div>
 
-          {/* Pillar 5: Risk Manager & Capital Preservation */}
-          <div className="bg-terminal-950/80 border border-emerald-800/40 rounded-xl p-3 flex flex-col justify-between hover:border-emerald-600/60 transition-colors md:col-span-2 lg:col-span-2">
+          {/* Pillar 5: Historical Memory & Loss Prevention Feedback */}
+          <div className="bg-terminal-950/80 border border-rose-800/40 rounded-xl p-3 flex flex-col justify-between hover:border-rose-600/60 transition-colors">
+            <div>
+              <div className="flex items-center justify-between mb-1.5 text-rose-400 text-[11px] font-bold">
+                <span className="flex items-center gap-1.5">
+                  <History className="w-3.5 h-3.5" />
+                  5. Historical Memory & Loss Prevention
+                </span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded border ${
+                  agents.journal?.lossPreventionVerdict === 'HIGH_RISK_LOSS_PATTERN_DETECTED'
+                    ? 'bg-rose-950/60 text-rose-300 border-rose-800'
+                    : 'bg-emerald-950/60 text-emerald-300 border-emerald-800'
+                }`}>
+                  {agents.journal?.lossPreventionVerdict ? agents.journal.lossPreventionVerdict.replace(/_/g, ' ') : 'MEMORY ACTIVE'}
+                </span>
+              </div>
+              <p className="text-slate-300 text-[11px] font-sans leading-relaxed">
+                {unifiedDecision.coreReasons.journalMemory || 'Historical loss prevention feedback active.'}
+              </p>
+            </div>
+            {agents.journal?.strategicAdjustments && (
+              <div className="mt-2 pt-1.5 border-t border-rose-900/60 text-[10px] text-slate-400 truncate">
+                Stop Buffer: +{agents.journal.strategicAdjustments.stopLossBufferPips.toFixed(1)} pips • Size: {agents.journal.strategicAdjustments.sizeModifierPercent}%
+              </div>
+            )}
+          </div>
+
+          {/* Pillar 6: Risk Manager & Capital Preservation */}
+          <div className="bg-terminal-950/80 border border-emerald-800/40 rounded-xl p-3 flex flex-col justify-between hover:border-emerald-600/60 transition-colors">
             <div>
               <div className="flex items-center justify-between mb-1.5 text-emerald-400 text-[11px] font-bold">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="w-3.5 h-3.5" />
-                  5. Risk Governance & Monte Carlo Edge
+                  6. Risk Governance & Monte Carlo Edge
                 </span>
                 <span className={`text-[10px] px-1.5 py-0.2 rounded ${
                   isApproved 
@@ -240,8 +281,8 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </div>
             {agents.risk.monteCarlo && (
               <div className="mt-2 pt-1.5 border-t border-emerald-900/60 flex flex-wrap items-center justify-between text-[10px] text-slate-400">
-                <span>Monte Carlo 1,000 Paths: Win Prob {agents.risk.monteCarlo.projectedProfitProbability}%</span>
-                <span>95% VaR: ${agents.risk.monteCarlo.var95Usd}</span>
+                <span>Win Prob: {agents.risk.monteCarlo.projectedProfitProbability}%</span>
+                <span>VaR95: ${agents.risk.monteCarlo.var95Usd}</span>
                 <span>Sharpe: {agents.risk.monteCarlo.sharpeRatio}</span>
               </div>
             )}
