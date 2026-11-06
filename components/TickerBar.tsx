@@ -1,0 +1,79 @@
+'use client';
+
+import React from 'react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
+import { CurrencyPair, MarketSegment } from '@/lib/types';
+import { FOREX_PAIRS, INDIAN_MARKET_ASSETS } from '@/lib/marketData';
+
+interface TickerItem {
+  pair: CurrencyPair;
+  price: number;
+  change24h: number;
+  high24h: number;
+  low24h: number;
+}
+
+interface TickerBarProps {
+  rates: TickerItem[];
+  selectedPair: CurrencyPair;
+  onSelectPair: (p: CurrencyPair) => void;
+  marketSegment: MarketSegment;
+}
+
+export const TickerBar: React.FC<TickerBarProps> = ({ 
+  rates, 
+  selectedPair, 
+  onSelectPair,
+  marketSegment
+}) => {
+  const isIndian = marketSegment === 'INDIAN_MARKET';
+  const displayRates = rates.filter(r => {
+    return isIndian ? INDIAN_MARKET_ASSETS.includes(r.pair) : FOREX_PAIRS.includes(r.pair);
+  });
+
+  return (
+    <div className="bg-terminal-950 border-b border-terminal-border/80 px-4 py-1.5 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-2 min-w-max">
+        <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mr-2 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+          {isIndian ? '🇮🇳 NSE/BSE RATES' : '🌐 GLOBAL FX RATES'}
+        </span>
+        {displayRates.map((item) => {
+          const isSelected = item.pair === selectedPair;
+          const isPositive = item.change24h >= 0;
+          const isJpy = item.pair.includes('JPY');
+          const isIndianIndex = item.pair === 'NIFTY 50' || item.pair === 'BANK NIFTY';
+          const isStock = item.pair === 'RELIANCE' || item.pair === 'TCS' || item.pair === 'HDFC BANK' || item.pair === 'INFY';
+          const decimalCount = (isIndianIndex || isStock) ? 2 : (isJpy || item.pair.includes('/INR') ? 3 : 5);
+
+          return (
+            <button
+              key={item.pair}
+              onClick={() => onSelectPair(item.pair)}
+              className={`flex items-center gap-2 px-2.5 py-1 rounded transition-all text-xs font-mono border ${
+                isSelected 
+                  ? 'bg-terminal-800/90 border-cyan-500/60 shadow-sm shadow-cyan-500/10' 
+                  : 'bg-terminal-900/60 border-terminal-border hover:border-slate-600 hover:bg-terminal-800/50'
+              }`}
+            >
+              <span className={`font-semibold ${isSelected ? 'text-cyan-400' : 'text-slate-200'}`}>
+                {item.pair}
+              </span>
+              <span className="text-white font-medium">
+                {isIndianIndex ? `₹${item.price.toLocaleString('en-IN')}` : item.price.toFixed(decimalCount)}
+              </span>
+              <span className={`flex items-center text-[11px] font-semibold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {isPositive ? (
+                  <TrendingUp className="w-3 h-3 mr-0.5 inline" />
+                ) : (
+                  <TrendingDown className="w-3 h-3 mr-0.5 inline" />
+                )}
+                {isPositive ? '+' : ''}{item.change24h.toFixed(2)}%
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
