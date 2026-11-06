@@ -11,7 +11,9 @@ import {
   MarketScannerOpportunity, 
   MacroIndicator,
   MarketSegment,
-  KnowledgeRule 
+  KnowledgeRule,
+  FinancialNewsSource,
+  ScrapedNewsItem
 } from '@/lib/types';
 import { INITIAL_PORTFOLIO, PortfolioState } from '@/lib/store';
 import { DEFAULT_RISK_CONFIG, RiskManagerConfig } from '@/lib/agents/RiskManager';
@@ -28,7 +30,9 @@ import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
+import { NewsScraperModal } from '@/components/NewsScraperModal';
 import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
+import { browserNewsStorage, MONITORED_FINANCIAL_SOURCES } from '@/lib/newsStorage';
 
 export default function Home() {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>('EUR/USD');
@@ -42,10 +46,16 @@ export default function Home() {
   const [calendar, setCalendar] = useState<MacroIndicator[]>([]);
   const [activeSession, setActiveSession] = useState<string>('LONDON_NY_OVERLAP');
 
-  // Swarm State
+  // Swarm State (5-Agent Swarm with News Analyst)
   const [consensus, setConsensus] = useState<SwarmConsensusResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [isDebating, setIsDebating] = useState<boolean>(false);
+
+  // Dedicated News Analyst & 20-Source Scraper Radar State
+  const [isNewsRadarOpen, setIsNewsRadarOpen] = useState<boolean>(false);
+  const [newsSources, setNewsSources] = useState<FinancialNewsSource[]>(MONITORED_FINANCIAL_SOURCES);
+  const [scrapedArticles, setScrapedArticles] = useState<ScrapedNewsItem[]>([]);
+  const [isScrapingNews, setIsScrapingNews] = useState<boolean>(false);
 
   // Modals & Tools
   const [executionMode, setExecutionMode] = useState<ExecutionMode>('MANUAL');
@@ -148,7 +158,7 @@ export default function Home() {
     }
   }, []);
 
-  // Trigger Multi-Agent Swarm with 1,000+ Knowledge Rules Matching
+  // Trigger Multi-Agent Swarm with all 5 roles (Technical, Fundamental, Forex, News & Risk)
   const triggerSwarm = useCallback(async (pair: CurrencyPair, tf: TimeFrame, currentCandles?: Candle[]) => {
     setIsAnalyzing(true);
     try {
@@ -199,7 +209,7 @@ export default function Home() {
               freeMargin: Math.max(0, prev.balance - (prev.marginUsed + marginNeeded)),
             }));
 
-            showNotification(`AUTOPILOT TRIGGERED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} (Confluence: ${result.confluenceGrade})`);
+            showNotification(`AUTOPILOT TRIGGERED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} (5-Role Confluence: ${result.confluenceGrade})`);
           }
         }
       }
@@ -209,6 +219,28 @@ export default function Home() {
       setIsAnalyzing(false);
     }
   }, []);
+
+  // Initialize and run real-time background news scraper stored in local browser
+  useEffect(() => {
+    // Load initial sources & articles from local browser storage
+    const sources = browserNewsStorage.getSources();
+    const articles = browserNewsStorage.getArticles(selectedPair);
+    setNewsSources(sources);
+    setScrapedArticles(articles);
+
+    // Continuous real-time scraper polling loop (every 25s)
+    const interval = setInterval(() => {
+      const res = browserNewsStorage.runRealtimeScrape(selectedPair);
+      setNewsSources(browserNewsStorage.getSources());
+      setScrapedArticles(browserNewsStorage.getArticles(selectedPair));
+
+      if (res.newArticleAdded) {
+        showNotification(`NEWS WIRE: ${res.newArticleAdded.title.slice(0, 55)}...`);
+      }
+    }, 25000);
+
+    return () => clearInterval(interval);
+  }, [selectedPair]);
 
   // Initial load and pair/timeframe change listener
   useEffect(() => {
@@ -249,6 +281,27 @@ export default function Home() {
       if (prev === 'SEMI_AUTONOMOUS') return 'FULL_AUTOPILOT';
       return 'MANUAL';
     });
+  };
+
+  // Handle Manual News Scrape Trigger
+  const handleManualNewsScrape = () => {
+    setIsScrapingNews(true);
+    setTimeout(() => {
+      const res = browserNewsStorage.runRealtimeScrape(selectedPair);
+      setNewsSources(browserNewsStorage.getSources());
+      setScrapedArticles(browserNewsStorage.getArticles(selectedPair));
+      setIsScrapingNews(false);
+      showNotification(`SCRAPED 20 SOURCES: ${res.scrapedSourcesCount} outlets verified (${res.totalArticles} headlines indexed locally in browser).`);
+      // Re-trigger swarm analysis to incorporate newly scraped sentiment
+      triggerSwarm(selectedPair, timeframe, candles);
+    }, 800);
+  };
+
+  // Toggle News Source Enable / Disable
+  const handleToggleNewsSource = (sourceId: string) => {
+    const updated = browserNewsStorage.toggleSource(sourceId);
+    setNewsSources(updated);
+    triggerSwarm(selectedPair, timeframe, candles);
   };
 
   // Handle custom debate prompt
@@ -370,7 +423,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Main Header with Market Selector & Knowledge Tools */}
+      {/* Main Header with Market Selector, 5 Roles & 20-Source News Radar */}
       <Header
         selectedPair={selectedPair}
         marketSegment={marketSegment}
@@ -386,6 +439,7 @@ export default function Home() {
         onOpenCalendar={() => setIsCalendarOpen(true)}
         onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
+        onOpenNewsRadar={() => setIsNewsRadarOpen(true)}
         isAnalyzing={isAnalyzing}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
         activeSession={activeSession}
@@ -418,15 +472,18 @@ export default function Home() {
               signalBias={consensus?.agents.technical.bias}
             />
 
-            {/* Middle row: 4 Specialized Agent Cards */}
+            {/* Middle row: 5 Specialized Agent Cards + Unified Consensus Banner */}
             {consensus && (
               <AgentSwarmPanel
                 technical={consensus.agents.technical}
                 fundamental={consensus.agents.fundamental}
                 forex={consensus.agents.forex}
+                news={consensus.agents.news}
                 risk={consensus.agents.risk}
+                unifiedDecision={consensus.unifiedDecision}
                 onExecuteTrade={handleExecuteTrade}
                 onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
+                onOpenNewsRadar={() => setIsNewsRadarOpen(true)}
               />
             )}
 
@@ -438,7 +495,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Tab 2: Autonomous Agent Debate Feed */}
+        {/* Tab 2: Autonomous Agent Debate Feed (5 Roles) */}
         {activeTab === 'debate' && (
           <AgentDebateFeed
             messages={consensus?.debateTranscript || []}
@@ -457,6 +514,19 @@ export default function Home() {
           <ArchitectureView />
         )}
       </main>
+
+      {/* 📰 Dedicated News & Sentiment Radar Modal (20 Sources) */}
+      <NewsScraperModal
+        isOpen={isNewsRadarOpen}
+        onClose={() => setIsNewsRadarOpen(false)}
+        sources={newsSources}
+        articles={scrapedArticles}
+        selectedPair={selectedPair}
+        onSelectPair={handleSelectPair}
+        onToggleSource={handleToggleNewsSource}
+        onRefreshScrape={handleManualNewsScrape}
+        isScraping={isScrapingNews}
+      />
 
       {/* Institutional Knowledge Base Explorer Modal */}
       <KnowledgeBaseModal

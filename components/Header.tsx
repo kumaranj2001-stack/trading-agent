@@ -16,7 +16,8 @@ import {
   PlayCircle,
   Database,
   Menu,
-  X
+  X,
+  Newspaper
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, TimeFrame } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
@@ -37,6 +38,7 @@ interface HeaderProps {
   onOpenCalendar: () => void;
   onOpenMonteCarlo: () => void;
   onOpenKnowledge: () => void;
+  onOpenNewsRadar: () => void;
   isAnalyzing: boolean;
   onTriggerAnalysis: () => void;
   activeSession: string;
@@ -63,6 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCalendar,
   onOpenMonteCarlo,
   onOpenKnowledge,
+  onOpenNewsRadar,
   isAnalyzing,
   onTriggerAnalysis,
   activeSession,
@@ -86,7 +89,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="font-bold text-white tracking-wider text-xs sm:text-sm md:text-base truncate">
-                  APEX <span className="text-cyan-400 font-mono">//</span> SWARM
+                  APEX <span className="text-cyan-400 font-mono">//</span> 5-AGENT SWARM
                 </span>
                 {confluenceGrade && (
                   <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold border shrink-0 ${
@@ -103,7 +106,8 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="hidden xs:flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span className="truncate">{activeSession}</span>
-                <span className="text-cyan-400/80">• 1,050+ RULES</span>
+                <span className="text-cyan-400/90 font-bold">• 5 ROLES</span>
+                <span className="text-blue-400/90">• 20 NEWS SOURCES</span>
               </div>
             </div>
           </div>
@@ -154,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Zap className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
-              <span className="hidden xs:inline">{isAnalyzing ? 'ANALYZING...' : 'RUN SWARM'}</span>
+              <span className="hidden xs:inline">{isAnalyzing ? 'ANALYZING...' : 'RUN 5-AGENT SWARM'}</span>
               <span className="xs:hidden">{isAnalyzing ? '...' : 'RUN'}</span>
             </button>
 
@@ -201,7 +205,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Swarm Debate</span>
+              <span>Swarm Debate (5 Roles)</span>
             </button>
             <button
               onClick={() => setActiveTab('backtest')}
@@ -223,19 +227,30 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>Roles</span>
+              <span>Roles Specs</span>
             </button>
           </div>
 
           {/* Quick Tools */}
           <div className="flex items-center gap-1.5">
+            {/* 📰 News Radar Button (NEW) */}
+            <button
+              onClick={onOpenNewsRadar}
+              className="px-2.5 py-1 rounded bg-blue-950/70 hover:bg-blue-900 border border-blue-700/60 text-blue-300 flex items-center gap-1.5 transition-colors shadow-sm"
+              title="Real-time 20-source financial news & economic calendar scraper"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <Newspaper className="w-3.5 h-3.5 text-blue-400" />
+              <span className="font-bold">News Radar (20)</span>
+            </button>
+
             <button
               onClick={onOpenKnowledge}
               className="px-2.5 py-1 rounded bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 flex items-center gap-1.5 transition-colors shadow-sm"
               title="Open 1,000+ Rule Knowledge Base"
             >
               <Database className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="font-bold">Knowledge (1,050+)</span>
+              <span className="font-bold">1,050+ Rules</span>
             </button>
 
             <button
@@ -371,7 +386,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>Debate</span>
+                <span>5-Role Debate</span>
               </button>
               <button
                 onClick={() => { setActiveTab('backtest'); setMobileMenuOpen(false); }}
@@ -393,12 +408,20 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Shield className="w-3.5 h-3.5" />
-                <span>Roles</span>
+                <span>5 Roles Specs</span>
               </button>
             </div>
 
             {/* Mobile Quick Tools Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <button
+                onClick={() => { onOpenNewsRadar(); setMobileMenuOpen(false); }}
+                className="p-2 rounded bg-blue-950/80 border border-blue-700/60 text-blue-300 font-bold flex items-center justify-center gap-1.5"
+              >
+                <Newspaper className="w-3.5 h-3.5 text-blue-400" />
+                <span>20 News Sources</span>
+              </button>
+
               <button
                 onClick={() => { onOpenKnowledge(); setMobileMenuOpen(false); }}
                 className="p-2 rounded bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 font-bold flex items-center justify-center gap-1.5"
@@ -439,10 +462,10 @@ export const Header: React.FC<HeaderProps> = ({
 
               <button
                 onClick={() => { onOpenMonteCarlo(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-terminal-800 text-emerald-400 border border-terminal-border flex items-center justify-center gap-1.5 col-span-2 sm:col-span-4"
+                className="p-2 rounded bg-terminal-800 text-emerald-400 border border-terminal-border flex items-center justify-center gap-1.5"
               >
                 <LineChart className="w-3.5 h-3.5" />
-                <span>Monte Carlo 1,000-Path VaR</span>
+                <span>VaR Engine</span>
               </button>
             </div>
           </div>

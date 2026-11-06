@@ -1,6 +1,5 @@
-export type MarketSegment = 'FOREX' | 'INDIAN_MARKET';
-
-export type ForexPair = 
+export type CurrencyPair = 
+  // Forex Majors & Crosses
   | 'EUR/USD' 
   | 'GBP/USD' 
   | 'USD/JPY' 
@@ -8,22 +7,30 @@ export type ForexPair =
   | 'USD/CAD' 
   | 'USD/CHF' 
   | 'NZD/USD' 
-  | 'EUR/GBP';
-
-export type IndianMarketAsset = 
-  | 'NIFTY 50' 
-  | 'BANK NIFTY' 
-  | 'USD/INR' 
-  | 'EUR/INR' 
-  | 'GBP/INR' 
-  | 'RELIANCE' 
-  | 'TCS' 
-  | 'HDFC BANK' 
+  | 'EUR/GBP'
+  // Indian Market & Currency
+  | 'NIFTY 50'
+  | 'BANK NIFTY'
+  | 'USD/INR'
+  | 'EUR/INR'
+  | 'GBP/INR'
+  | 'RELIANCE'
+  | 'TCS'
+  | 'HDFC BANK'
   | 'INFY';
 
-export type TradableSymbol = ForexPair | IndianMarketAsset;
+export type MarketSegment = 'FOREX' | 'INDIAN_MARKET';
 
-export type CurrencyPair = TradableSymbol;
+export type IndianMarketAsset = 
+  | 'NIFTY 50'
+  | 'BANK NIFTY'
+  | 'USD/INR'
+  | 'EUR/INR'
+  | 'GBP/INR'
+  | 'RELIANCE'
+  | 'TCS'
+  | 'HDFC BANK'
+  | 'INFY';
 
 export type TimeFrame = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
@@ -40,6 +47,7 @@ export type AgentRole =
   | 'technical_analyst'
   | 'fundamental_analyst'
   | 'forex_analyst'
+  | 'news_analyst'
   | 'risk_manager';
 
 export type ExecutionMode = 'MANUAL' | 'SEMI_AUTONOMOUS' | 'FULL_AUTOPILOT';
@@ -71,6 +79,7 @@ export interface TechnicalIndicators {
     bandwidth: number;
   };
   atr: number;
+  atr14?: number;
   supportLevels: number[];
   resistanceLevels: number[];
 }
@@ -78,13 +87,11 @@ export interface TechnicalIndicators {
 export interface MacroIndicator {
   name: string;
   region: string;
-  actual: string | number;
-  forecast: string | number;
-  previous: string | number;
+  actual: string;
+  forecast: string;
+  previous: string;
   impact: 'HIGH' | 'MEDIUM' | 'LOW';
   date: string;
-  timeRemainingMinutes?: number;
-  surpriseDeviation?: number;
 }
 
 export interface CurrencyStrength {
@@ -221,6 +228,73 @@ export interface ForexAnalysis {
   timestamp: string;
 }
 
+// 15 to 20 Scraped Financial Source definition
+export interface FinancialNewsSource {
+  id: string;
+  name: string;
+  url: string;
+  category: 'GLOBAL_MACRO' | 'CENTRAL_BANK' | 'FOREX_SPECIALIST' | 'INDIAN_MARKET' | 'BREAKING_WIRE';
+  reliabilityRating: number; // 1 to 10
+  status: 'ACTIVE' | 'SCRAPING' | 'IDLE';
+  lastScrapedTime: string;
+  articlesCount: number;
+  pingMs: number;
+  enabled: boolean;
+}
+
+// Scraped News / Economic Calendar Item
+export interface ScrapedNewsItem {
+  id: string;
+  sourceId: string;
+  sourceName: string;
+  title: string;
+  summary: string;
+  url: string;
+  category: string;
+  targetSymbols: string[];
+  impact: 'HIGH' | 'MEDIUM' | 'LOW';
+  sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  sentimentScore: number; // -100 to +100
+  publishedTime: string;
+  timeAgo: string;
+  isBreaking: boolean;
+}
+
+// Core Fundamental Reason driving the Unified Swarm decision
+export interface CoreFundamentalReason {
+  id: string;
+  pillar: 'MONETARY_POLICY' | 'NEWS_SENTIMENT' | 'MACRO_DATA' | 'CAPITAL_FLOWS' | 'GEOPOLITICAL_RISK';
+  roleOrigin: AgentRole;
+  title: string;
+  description: string;
+  sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  impactWeight: number; // 1 to 100
+  evidenceSource: string;
+}
+
+// News Analyst Agent Output
+export interface NewsAnalysis {
+  role: 'news_analyst';
+  agentName: string;
+  bias: SignalDirection;
+  confidenceScore: number;
+  overallSentimentScore: number; // -100 to +100
+  totalSourcesMonitored: number;
+  activeSourcesCount: number;
+  scrapedHeadlinesCount: number;
+  breakingNewsAlert?: ScrapedNewsItem;
+  topCatalysts: ScrapedNewsItem[];
+  sourceBreakdown: {
+    sourceName: string;
+    sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    score: number;
+    headline: string;
+  }[];
+  coreFundamentalReasons: CoreFundamentalReason[];
+  thesis: string;
+  timestamp: string;
+}
+
 export interface MonteCarloProjection {
   simulationsCount: number;
   projectedProfitProbability: number;
@@ -275,6 +349,20 @@ export interface AgentDebateMessage {
   timestamp: string;
 }
 
+// Unified 5-Role Swarm Decision with core fundamental reasons
+export interface UnifiedSwarmDecision {
+  direction: 'BUY' | 'SELL' | 'HOLD';
+  confidence: number;
+  confluenceGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  symbol: CurrencyPair;
+  timeframe: TimeFrame;
+  synthesisSummary: string;
+  rolesAlignmentText: string; // e.g. "5 of 5 roles aligned"
+  coreFundamentalReasons: CoreFundamentalReason[];
+  executionRecommended: boolean;
+  actionTitle: string;
+}
+
 export interface SwarmConsensusResult {
   pair: CurrencyPair;
   marketSegment: MarketSegment;
@@ -284,6 +372,7 @@ export interface SwarmConsensusResult {
   consensusDirection: 'BUY' | 'SELL' | 'HOLD';
   overallConfidence: number;
   confluenceGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  unifiedDecision: UnifiedSwarmDecision; // The unified 5-agent decision
   knowledgeSummary: {
     totalTechnicalRulesLoaded: number;
     totalFundamentalRulesLoaded: number;
@@ -295,6 +384,7 @@ export interface SwarmConsensusResult {
     technical: TechnicalAnalysis;
     fundamental: FundamentalAnalysis;
     forex: ForexAnalysis;
+    news: NewsAnalysis; // Dedicated 5th agent
     risk: RiskAssessment;
   };
   debateTranscript: AgentDebateMessage[];
@@ -320,6 +410,7 @@ export interface MarketScannerOpportunity {
   technicalScore: number;
   fundamentalScore: number;
   forexScore: number;
+  newsScore?: number;
   riskVerdict: RiskVerdict;
   grade: 'A+' | 'A' | 'B' | 'C' | 'F';
   potentialLots: number;
