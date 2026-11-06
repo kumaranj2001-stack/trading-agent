@@ -40,50 +40,50 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
   };
 
   return (
-    <div className="bg-terminal-900 border border-terminal-border rounded-xl p-4 flex flex-col h-[650px] shadow-lg">
+    <div className="bg-terminal-900 border border-terminal-border rounded-xl p-3 sm:p-4 flex flex-col h-[520px] sm:h-[650px] max-h-[82vh] shadow-lg">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-terminal-border/60 pb-3 mb-3">
+      <div className="flex flex-wrap items-center justify-between border-b border-terminal-border/60 pb-3 mb-3 gap-2">
         <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-indigo-400" />
+          <Bot className="w-5 h-5 text-indigo-400 shrink-0" />
           <div>
             <h3 className="font-bold text-white text-sm">Autonomous Swarm Debate Room</h3>
-            <span className="text-[11px] font-mono text-slate-400">
-              Interactive Cross-Examination: Technical • Fundamental • Forex • Risk Manager
+            <span className="text-[10px] sm:text-[11px] font-mono text-slate-400">
+              Cross-Examination: Technical • Fundamental • Forex • Risk Manager
             </span>
           </div>
         </div>
-        <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-terminal-800 text-indigo-300 border border-indigo-500/30">
+        <span className="px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-mono bg-terminal-800 text-indigo-300 border border-indigo-500/30">
           3-ROUND PROTOCOL
         </span>
       </div>
 
       {/* Messages stream */}
-      <div className="flex-1 overflow-y-auto space-y-3.5 pr-2 font-mono scrollbar-thin">
+      <div className="flex-1 overflow-y-auto space-y-3 pr-1 sm:pr-2 font-mono scrollbar-thin">
         {messages.map((msg) => {
           const isRisk = msg.role === 'risk_manager';
           return (
             <div
               key={msg.id}
-              className={`p-3.5 rounded-xl border transition-all ${
+              className={`p-3 sm:p-3.5 rounded-xl border transition-all ${
                 isRisk 
                   ? 'bg-terminal-950/90 border-emerald-500/40 shadow-sm shadow-emerald-500/10' 
                   : 'bg-terminal-950/60 border-terminal-border hover:border-slate-600'
               }`}
             >
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2">
-                  <div className={`p-1.5 rounded-lg border flex items-center justify-center ${msg.avatarColor}`}>
+              <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`p-1.5 rounded-lg border flex items-center justify-center shrink-0 ${msg.avatarColor}`}>
                     {getRoleIcon(msg.role)}
                   </div>
-                  <div>
-                    <span className="font-bold text-xs text-white block">{msg.agentName}</span>
-                    <span className="text-[10px] text-slate-400 capitalize">
+                  <div className="min-w-0">
+                    <span className="font-bold text-xs text-white block truncate">{msg.agentName}</span>
+                    <span className="text-[10px] text-slate-400 capitalize truncate block">
                       {msg.role.replace('_', ' ')} • Round {msg.round}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                     msg.sentiment === 'BULLISH'
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
@@ -99,38 +99,31 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                 </div>
               </div>
 
-              <p className="text-slate-200 text-xs font-sans leading-relaxed pl-9">
+              <p className="text-slate-200 text-xs font-sans leading-relaxed pl-1">
                 {msg.content}
               </p>
             </div>
           );
         })}
-
-        {isDebating && (
-          <div className="p-3 rounded-lg bg-terminal-950 border border-terminal-border flex items-center gap-2 text-xs font-mono text-cyan-400">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
-            <span>Swarm agents are actively deliberating macroeconomic & technical divergence...</span>
-          </div>
-        )}
       </div>
 
-      {/* Input box for custom scenario / stress-test */}
+      {/* Input bar */}
       <form onSubmit={handleSubmit} className="mt-3 pt-3 border-t border-terminal-border/60 flex items-center gap-2">
         <input
           type="text"
           value={inputPrompt}
           onChange={(e) => setInputPrompt(e.target.value)}
-          placeholder="Challenge the swarm: 'What if Fed holds rates?', 'Simulate oil price surge to $90'..."
-          disabled={isDebating}
-          className="flex-1 bg-terminal-950 text-white placeholder-slate-500 px-3.5 py-2 rounded-lg border border-terminal-border focus:outline-none focus:border-cyan-500 text-xs font-sans"
+          placeholder="Cross-examine the swarm or inject macro stress scenario..."
+          maxLength={300}
+          className="flex-1 bg-terminal-950 border border-terminal-border rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-sans"
         />
         <button
           type="submit"
           disabled={!inputPrompt.trim() || isDebating}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-terminal-800 disabled:text-slate-600 text-white rounded-lg font-mono text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-md shadow-indigo-600/20"
+          className="px-3 sm:px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg flex items-center gap-1.5 font-mono text-xs font-bold transition-colors shrink-0"
         >
-          <span>INTERROGATE</span>
           <Send className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">DEBATE</span>
         </button>
       </form>
     </div>

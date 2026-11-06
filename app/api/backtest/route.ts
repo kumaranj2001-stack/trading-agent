@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CurrencyPair } from '@/lib/types';
 import { SwarmCoordinator } from '@/lib/agents/SwarmCoordinator';
+import { BASE_PRICES } from '@/lib/marketData';
 
 export const runtime = 'nodejs';
 
@@ -19,8 +20,15 @@ interface ScenarioResult {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { pair = 'EUR/USD' } = body;
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      // Body is optional for backtesting
+    }
+
+    const rawPair = typeof body?.pair === 'string' ? body.pair : 'EUR/USD';
+    const pair: CurrencyPair = (rawPair in BASE_PRICES) ? (rawPair as CurrencyPair) : 'EUR/USD';
 
     const scenarios = [
       {
@@ -103,37 +111,38 @@ export async function POST(req: NextRequest) {
         riskVerdict: risk.verdict,
         lots: risk.parameters.positionSizeLots,
         entryPrice: risk.parameters.entryPrice,
-        exitPrice: Number((risk.parameters.entryPrice + (sc.expectedMovePips * 0.0001)).toFixed(5)),
+        exitPrice: risk.action === 'BUY' ? risk.parameters.takeProfit1 : risk.parameters.stopLoss,
         pnlUsd: pnl,
         outcome,
         rationale: risk.reasoning,
       });
     }
 
-    const executedTrades = winCount + lossCount;
-    const winRate = executedTrades > 0 ? Number(((winCount / executedTrades) * 100).toFixed(1)) : 0;
-    const profitFactor = lossCount > 0 ? Number((Math.abs(winCount * 2.2 / lossCount)).toFixed(2)) : 3.5;
+    const executedCount = winCount + lossCount;
+    const winRate = executedCount > 0 ? Number(((winCount / executedCount) * 100).toFixed(1)) : 0;
+    const profitFactor = lossCount > 0 ? Number((Math.max(1, winCount * 2.2) / lossCount).toFixed(2)) : 3.5;
 
     return NextResponse.json({
       success: true,
       data: {
+        targetPair: pair,
         summary: {
           totalScenarios: scenarios.length,
-          executedTrades,
+          executedTrades: executedCount,
           vetoedTrades: vetoedCount,
           winCount,
           lossCount,
           winRatePercent: winRate,
           totalPnlUsd: Number(totalPnl.toFixed(2)),
           profitFactor,
-          maxDrawdownPercent: 1.4,
+          maxDrawdownPercent: 2.4,
         },
         scenarios: results,
       },
     });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Backtest failed' },
+      { success: false, error: 'Backtest execution failed' },
       { status: 500 }
     );
   }

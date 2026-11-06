@@ -9,7 +9,10 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category');
-    const query = searchParams.get('query')?.toLowerCase();
+    const rawQuery = searchParams.get('query') || '';
+
+    // Bound query length to 100 characters to prevent ReDoS / CPU spike
+    const query = rawQuery.slice(0, 100).toLowerCase().trim();
 
     let rules = [...TECHNICAL_KNOWLEDGE_BASE, ...FUNDAMENTAL_KNOWLEDGE_BASE];
 
@@ -21,11 +24,12 @@ export async function GET(req: NextRequest) {
       rules = rules.filter(r => r.marketScope === 'INDIAN_MARKET');
     }
 
-    if (query) {
+    if (query.length > 0) {
       rules = rules.filter(r => 
         r.ruleName.toLowerCase().includes(query) ||
         r.conditionDescription.toLowerCase().includes(query) ||
-        r.subcategory.toLowerCase().includes(query)
+        r.subcategory.toLowerCase().includes(query) ||
+        r.id.toLowerCase().includes(query)
       );
     }
 
@@ -41,7 +45,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Knowledge query failed' },
+      { success: false, error: 'Knowledge query failed' },
       { status: 500 }
     );
   }

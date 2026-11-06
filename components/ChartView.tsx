@@ -18,7 +18,7 @@ interface ChartViewProps {
 }
 
 export const ChartView: React.FC<ChartViewProps> = ({
-  candles,
+  candles = [],
   pair,
   timeframe,
   indicators,
@@ -37,23 +37,27 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const isIndianStock = pair === 'RELIANCE' || pair === 'TCS' || pair === 'HDFC BANK' || pair === 'INFY';
   const decimalCount = (isIndianIndex || isIndianStock) ? 2 : (isJpy || pair.includes('/INR') ? 3 : 5);
 
-  const closes = candles && candles.length > 0 ? candles.map(c => c.close) : [1.0];
+  const safeCandles = candles && candles.length > 0 ? candles : [];
+  const closes = safeCandles.length > 0 ? safeCandles.map(c => c.close) : [1.0];
   const ema20 = calculateEMA(closes, 20);
   const ema50 = calculateEMA(closes, 50);
   const rsi = calculateRSI(closes, 14);
 
-  const prices = candles.flatMap(c => [c.high, c.low]);
-  if (stopLoss) prices.push(stopLoss);
-  if (takeProfit) prices.push(takeProfit);
+  const prices = safeCandles.flatMap(c => [c.high, c.low]);
+  if (stopLoss && Number.isFinite(stopLoss)) prices.push(stopLoss);
+  if (takeProfit && Number.isFinite(takeProfit)) prices.push(takeProfit);
 
-  const minPrice = Math.min(...prices) * 0.9995;
-  const maxPrice = Math.max(...prices) * 1.0005;
-  const priceRange = maxPrice - minPrice || 0.001;
+  // Safe min/max to prevent Infinity if candles is empty
+  const safePrices = prices.length > 0 ? prices : [1.0, 1.01];
+  const minPrice = Math.min(...safePrices) * 0.9995;
+  const maxPrice = Math.max(...safePrices) * 1.0005;
+  const priceRange = Math.max(0.00001, maxPrice - minPrice);
 
   const chartHeight = 280;
   const rsiHeight = 80;
   const chartWidth = 720;
-  const candleWidth = Math.max(4, Math.floor((chartWidth - 40) / Math.max(1, candles.length)) - 2);
+  const candleCount = Math.max(1, safeCandles.length);
+  const candleWidth = Math.max(3, Math.floor((chartWidth - 40) / candleCount) - 2);
 
   const getY = (val: number) => {
     return chartHeight - ((val - minPrice) / priceRange) * chartHeight;
@@ -63,9 +67,8 @@ export const ChartView: React.FC<ChartViewProps> = ({
     return rsiHeight - (val / 100) * rsiHeight;
   };
 
-  const lastCandle = candles.length > 0 ? candles[candles.length - 1] : { open: 0, high: 0, low: 0, close: 0, timestamp: 0, time: '', volume: 0 };
-
   const buildLinePath = (values: number[]) => {
+    if (!values || values.length === 0) return '';
     return values
       .map((val, idx) => {
         const x = 20 + idx * (candleWidth + 2) + candleWidth / 2;
@@ -76,6 +79,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   };
 
   const buildRsiPath = (values: number[]) => {
+    if (!values || values.length === 0) return '';
     return values
       .map((val, idx) => {
         const x = 20 + idx * (candleWidth + 2) + candleWidth / 2;
@@ -86,46 +90,46 @@ export const ChartView: React.FC<ChartViewProps> = ({
   };
 
   return (
-    <div className="bg-terminal-900 border border-terminal-border rounded-xl p-4 flex flex-col gap-3 shadow-lg">
+    <div className="bg-terminal-900 border border-terminal-border rounded-xl p-3 sm:p-4 flex flex-col gap-3 shadow-lg">
       {/* Chart Top Bar with Chart Mode Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/60 pb-3 font-mono text-xs">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-terminal-border/60 pb-3 font-mono text-xs">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-base font-bold text-white tracking-wide">{pair}</span>
-            <span className="px-2 py-0.5 rounded bg-terminal-800 text-slate-300 text-[11px] border border-terminal-border">
+            <span className="text-sm sm:text-base font-bold text-white tracking-wide">{pair}</span>
+            <span className="px-2 py-0.5 rounded bg-terminal-800 text-slate-300 text-[10px] sm:text-[11px] border border-terminal-border">
               {timeframe.toUpperCase()}
             </span>
           </div>
 
-          <div className="flex items-center bg-terminal-950 p-1 rounded-lg border border-terminal-border text-[11px]">
+          <div className="flex items-center bg-terminal-950 p-0.5 rounded-lg border border-terminal-border text-[11px]">
             <button
               onClick={() => setChartMode('OANDA_LIVE')}
-              className={`px-2.5 py-0.5 rounded flex items-center gap-1.5 transition-colors ${
+              className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 sm:gap-1.5 transition-colors ${
                 chartMode === 'OANDA_LIVE'
                   ? 'bg-cyan-600 text-white font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
               <MonitorPlay className="w-3 h-3" />
-              <span>OANDA / Live Feed</span>
+              <span>Live Chart</span>
             </button>
             <button
               onClick={() => setChartMode('ALGO_SWARM')}
-              className={`px-2.5 py-0.5 rounded flex items-center gap-1.5 transition-colors ${
+              className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 sm:gap-1.5 transition-colors ${
                 chartMode === 'ALGO_SWARM'
                   ? 'bg-indigo-600 text-white font-bold'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
               <LayoutGrid className="w-3 h-3" />
-              <span>Apex Swarm Matrix</span>
+              <span>Swarm Matrix</span>
             </button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {signalBias && (
-            <span className={`px-2.5 py-0.5 rounded font-bold text-[11px] border ${
+            <span className={`px-2 py-0.5 rounded font-bold text-[10px] sm:text-[11px] border ${
               signalBias.includes('BUY') 
                 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
                 : signalBias.includes('SELL')
@@ -137,23 +141,23 @@ export const ChartView: React.FC<ChartViewProps> = ({
           )}
 
           {chartMode === 'ALGO_SWARM' && (
-            <>
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setShowIndicators(!showIndicators)}
-                className="px-2 py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 text-[11px] flex items-center gap-1 border border-terminal-border transition-colors"
+                className="px-2 py-0.5 sm:py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 text-[10px] sm:text-[11px] flex items-center gap-1 border border-terminal-border transition-colors"
               >
                 {showIndicators ? <Eye className="w-3 h-3 text-cyan-400" /> : <EyeOff className="w-3 h-3" />}
-                <span>EMA 20/50</span>
+                <span>EMA</span>
               </button>
 
               <button
                 onClick={() => setShowRsi(!showRsi)}
-                className="px-2 py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 text-[11px] flex items-center gap-1 border border-terminal-border transition-colors"
+                className="px-2 py-0.5 sm:py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 text-[10px] sm:text-[11px] flex items-center gap-1 border border-terminal-border transition-colors"
               >
                 <BarChart2 className="w-3 h-3 text-purple-400" />
-                <span>RSI (14)</span>
+                <span>RSI</span>
               </button>
-            </>
+            </div>
           )}
         </div>
       </div>
@@ -169,7 +173,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
           <div className="relative w-full overflow-hidden bg-terminal-950/70 rounded-lg p-2 border border-terminal-border/40">
             <svg
               viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-              className="w-full h-64 select-none"
+              className="w-full h-56 sm:h-64 select-none"
               preserveAspectRatio="none"
             >
               {[0.2, 0.4, 0.6, 0.8].map((ratio) => {
@@ -186,7 +190,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               })}
 
               {/* Stop Loss Line */}
-              {stopLoss && (
+              {stopLoss && Number.isFinite(stopLoss) && (
                 <g>
                   <line
                     x1="0"
@@ -205,7 +209,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               )}
 
               {/* Take Profit Line */}
-              {takeProfit && (
+              {takeProfit && Number.isFinite(takeProfit) && (
                 <g>
                   <line
                     x1="0"
@@ -224,7 +228,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
               )}
 
               {/* Candlesticks */}
-              {candles.map((candle, idx) => {
+              {safeCandles.map((candle, idx) => {
                 const x = 20 + idx * (candleWidth + 2);
                 const highY = getY(candle.high);
                 const lowY = getY(candle.low);
@@ -237,7 +241,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
 
                 return (
                   <g
-                    key={candle.timestamp}
+                    key={candle.timestamp || idx}
                     className="cursor-pointer transition-opacity hover:opacity-80"
                     onMouseEnter={() => setHoveredCandle(candle)}
                     onMouseLeave={() => setHoveredCandle(null)}
@@ -256,8 +260,8 @@ export const ChartView: React.FC<ChartViewProps> = ({
               )}
             </svg>
 
-            <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mt-1 px-2">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center justify-between text-[10px] font-mono text-slate-400 mt-1 px-1 gap-2">
+              <div className="flex items-center gap-3">
                 {showIndicators && (
                   <>
                     <span className="flex items-center gap-1">
@@ -271,7 +275,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                   </>
                 )}
               </div>
-              <span>ALGORITHMIC SWARM ENGINE • {candles.length} BARS</span>
+              <span>ALGORITHMIC SWARM • {safeCandles.length} BARS</span>
             </div>
           </div>
 
@@ -281,7 +285,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 <span className="text-purple-400 font-bold">RSI (14): {indicators?.rsi ? indicators.rsi.toFixed(1) : '52.4'}</span>
                 <span className="text-slate-400">70 (Overbought) / 30 (Oversold)</span>
               </div>
-              <svg viewBox={`0 0 ${chartWidth} ${rsiHeight}`} className="w-full h-16 select-none" preserveAspectRatio="none">
+              <svg viewBox={`0 0 ${chartWidth} ${rsiHeight}`} className="w-full h-14 sm:h-16 select-none" preserveAspectRatio="none">
                 <line x1="0" y1={getRsiY(70)} x2={chartWidth} y2={getRsiY(70)} stroke="#ef4444" strokeDasharray="2 2" strokeWidth="1" opacity="0.6" />
                 <line x1="0" y1={getRsiY(50)} x2={chartWidth} y2={getRsiY(50)} stroke="#475569" strokeDasharray="2 2" strokeWidth="1" opacity="0.4" />
                 <line x1="0" y1={getRsiY(30)} x2={chartWidth} y2={getRsiY(30)} stroke="#10b981" strokeDasharray="2 2" strokeWidth="1" opacity="0.6" />

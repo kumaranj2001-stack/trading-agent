@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   CurrencyPair, 
   TimeFrame, 
@@ -28,7 +28,7 @@ import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
-import { getMarketSegmentForSymbol } from '@/lib/marketData';
+import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
 
 export default function Home() {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>('EUR/USD');
@@ -58,7 +58,16 @@ export default function Home() {
 
   // Portfolio State
   const [portfolio, setPortfolio] = useState<PortfolioState>(INITIAL_PORTFOLIO);
+  const portfolioRef = useRef(portfolio);
+  portfolioRef.current = portfolio;
+
   const [riskConfig, setRiskConfig] = useState<RiskManagerConfig>(DEFAULT_RISK_CONFIG);
+  const riskConfigRef = useRef(riskConfig);
+  riskConfigRef.current = riskConfig;
+
+  const executionModeRef = useRef(executionMode);
+  executionModeRef.current = executionMode;
+
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -70,13 +79,53 @@ export default function Home() {
   // Fetch market data & rates
   const fetchMarketData = useCallback(async (pair: CurrencyPair, tf: TimeFrame) => {
     try {
-      const res = await fetch(`/api/market?pair=${encodeURIComponent(pair)}&timeframe=${tf}&count=50`);
+      const res = await fetch(`/api/market?pair=${encodeURIComponent(pair)}&timeframe=${tf}&count=60`);
       const json = await res.json();
-      if (json.success) {
-        setCandles(json.data.candles);
-        setRates(json.data.rates);
+      if (json.success && json.data) {
+        setCandles(json.data.candles || []);
+        setRates(json.data.rates || []);
         setCalendar(json.data.calendar || []);
-        setActiveSession(json.data.activeSession.session);
+        if (json.data.activeSession?.session) {
+          setActiveSession(json.data.activeSession.session);
+        }
+
+        // Live update active position P&L from latest rates
+        if (json.data.rates && Array.isArray(json.data.rates)) {
+          const rateMap = new Map<string, number>();
+          json.data.rates.forEach((r: any) => rateMap.set(r.pair, r.price));
+
+          setPortfolio(prev => {
+            let hasChanged = false;
+            const updatedPositions = prev.positions.map(pos => {
+              const currentLivePrice = rateMap.get(pos.symbol);
+              if (!currentLivePrice || currentLivePrice === pos.currentPrice) return pos;
+
+              hasChanged = true;
+              const isJpy = pos.symbol.includes('JPY');
+              const pipVal = PIP_VALUES[pos.symbol] || (isJpy ? 0.01 : 0.0001);
+              const pipDollar = 10;
+              const pipDiff = pos.type === 'BUY' 
+                ? (currentLivePrice - pos.entryPrice) / pipVal
+                : (pos.entryPrice - currentLivePrice) / pipVal;
+
+              const pnl = Number((pipDiff * pipDollar * pos.lots).toFixed(2));
+              const pnlPercent = Number(((pnl / (pos.lots * 1000)) * 100).toFixed(2));
+
+              return {
+                ...pos,
+                currentPrice: currentLivePrice,
+                pnl,
+                pnlPercent,
+              };
+            });
+
+            if (!hasChanged) return prev;
+            return {
+              ...prev,
+              positions: updatedPositions,
+            };
+          });
+        }
       }
     } catch (e) {
       console.error('Market fetch error:', e);
@@ -89,7 +138,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/scanner');
       const json = await res.json();
-      if (json.success) {
+      if (json.success && json.data?.opportunities) {
         setOpportunities(json.data.opportunities);
       }
     } catch (e) {
@@ -109,20 +158,24 @@ export default function Home() {
         body: JSON.stringify({
           pair,
           timeframe: tf,
-          riskConfig,
+          riskConfig: riskConfigRef.current,
           candles: currentCandles,
         }),
       });
       const json = await res.json();
-      if (json.success) {
+      if (json.success && json.data) {
         const result: SwarmConsensusResult = json.data;
         setConsensus(result);
 
         // Autopilot Execution Check
-        if (executionMode === 'FULL_AUTOPILOT' && result.executionSignal.authorized) {
-          const alreadyOpen = portfolio.positions.some(p => p.symbol === result.pair);
+        if (executionModeRef.current === 'FULL_AUTOPILOT' && result.executionSignal.authorized) {
+          const currentPositions = portfolioRef.current.positions;
+          const alreadyOpen = currentPositions.some(p => p.symbol === result.pair);
+          
           if (!alreadyOpen) {
             const signal = result.executionSignal;
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             const autoPos: Position = {
               id: `pos-${Date.now()}`,
               symbol: signal.symbol,
@@ -132,7 +185,7 @@ export default function Home() {
               currentPrice: signal.entry,
               stopLoss: signal.stopLoss,
               takeProfit: signal.takeProfit,
-              openTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              openTime: timeStr,
               pnl: 0,
               pnlPercent: 0,
               riskReward: signal.riskReward,
@@ -155,14 +208,22 @@ export default function Home() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [riskConfig, executionMode, portfolio.positions]);
+  }, []);
 
-  // Initial load
+  // Initial load and pair/timeframe change listener
   useEffect(() => {
-    fetchMarketData(selectedPair, timeframe).then(() => {
-      triggerSwarm(selectedPair, timeframe);
-    });
+    let isCancelled = false;
+    const load = async () => {
+      await fetchMarketData(selectedPair, timeframe);
+      if (!isCancelled) {
+        await triggerSwarm(selectedPair, timeframe);
+      }
+    };
+    load();
     fetchOpportunities();
+    return () => {
+      isCancelled = true;
+    };
   }, [selectedPair, timeframe, fetchMarketData, triggerSwarm, fetchOpportunities]);
 
   // Handle Pair Switch
@@ -204,7 +265,7 @@ export default function Home() {
         }),
       });
       const json = await res.json();
-      if (json.success && consensus) {
+      if (json.success && json.data && consensus) {
         setConsensus({
           ...consensus,
           debateTranscript: json.data.transcript,
@@ -222,6 +283,9 @@ export default function Home() {
     if (!consensus || !consensus.executionSignal.authorized) return;
     const signal = consensus.executionSignal;
 
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
     const newPosition: Position = {
       id: `pos-${Date.now()}`,
       symbol: signal.symbol,
@@ -231,7 +295,7 @@ export default function Home() {
       currentPrice: signal.entry,
       stopLoss: signal.stopLoss,
       takeProfit: signal.takeProfit,
-      openTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      openTime: timeStr,
       pnl: 0,
       pnlPercent: 0,
       riskReward: signal.riskReward,
@@ -261,6 +325,9 @@ export default function Home() {
     const marginFreed = (pos.lots * 100000) / 30;
     const newMarginUsed = Math.max(0, portfolio.marginUsed - marginFreed);
 
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
     const historyItem = {
       id: `th-${Date.now()}`,
       symbol: pos.symbol,
@@ -271,7 +338,7 @@ export default function Home() {
       stopLoss: pos.stopLoss,
       takeProfit: pos.takeProfit,
       openTime: pos.openTime,
-      closeTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      closeTime: timeStr,
       pnl: pos.pnl,
       outcome: (pos.pnl > 0 ? 'WIN' : pos.pnl < 0 ? 'LOSS' : 'SCRATCH') as 'WIN' | 'LOSS' | 'SCRATCH',
       riskManagerVerdict: 'APPROVED' as const,
@@ -284,7 +351,7 @@ export default function Home() {
       equity: newBalance,
       positions: updatedPositions,
       marginUsed: newMarginUsed,
-      freeMargin: newBalance - newMarginUsed,
+      freeMargin: Math.max(0, newBalance - newMarginUsed),
       tradeHistory: [historyItem, ...portfolio.tradeHistory],
     });
 
@@ -294,12 +361,12 @@ export default function Home() {
   const triggeredRules: KnowledgeRule[] = consensus ? consensus.knowledgeSummary.topConfluenceRules : [];
 
   return (
-    <div className="min-h-screen flex flex-col bg-terminal-950 text-slate-100">
+    <div className="min-h-screen flex flex-col bg-terminal-950 text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200">
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-mono text-xs font-semibold shadow-2xl flex items-center gap-2 border border-emerald-400 animate-fade-in">
-          <span className="w-2 h-2 rounded-full bg-white animate-ping"></span>
-          <span>{notification}</span>
+        <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-mono text-xs font-semibold shadow-2xl flex items-center gap-2 border border-emerald-400 animate-fade-in max-w-[90vw]">
+          <span className="w-2 h-2 rounded-full bg-white animate-ping shrink-0"></span>
+          <span className="truncate">{notification}</span>
         </div>
       )}
 
@@ -336,7 +403,7 @@ export default function Home() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 space-y-4">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 space-y-4">
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
           <div className="space-y-4">
