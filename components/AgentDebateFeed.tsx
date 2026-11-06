@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { AgentDebateMessage } from '@/lib/types';
-import { Send, Bot, Shield, BarChart2, Globe, Scale, Newspaper } from 'lucide-react';
+import { Send, Bot, Shield, BarChart2, Globe, Scale } from 'lucide-react';
 
 interface AgentDebateFeedProps {
   messages: AgentDebateMessage[];
@@ -34,8 +34,6 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         return <Globe className="w-4 h-4 text-purple-400" />;
       case 'forex_analyst':
         return <Scale className="w-4 h-4 text-amber-400" />;
-      case 'news_analyst':
-        return <Newspaper className="w-4 h-4 text-blue-400" />;
       case 'risk_manager':
         return <Shield className="w-4 h-4 text-emerald-400" />;
     }
@@ -48,9 +46,9 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-indigo-400 shrink-0" />
           <div>
-            <h3 className="font-bold text-white text-sm">Autonomous Swarm Debate Room (5 Roles)</h3>
+            <h3 className="font-bold text-white text-sm">Autonomous Swarm Debate Room</h3>
             <span className="text-[10px] sm:text-[11px] font-mono text-slate-400">
-              Cross-Examination: Technical • Fundamental • Forex • News Analyst (20 Sources) • Risk Manager
+              Cross-Examination: Technical • Fundamental • Forex • Risk Manager
             </span>
           </div>
         </div>
@@ -115,7 +113,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
           type="text"
           value={inputPrompt}
           onChange={(e) => setInputPrompt(e.target.value)}
-          placeholder="Cross-examine the 5-agent swarm or inject macro news scenario..."
+          placeholder="Cross-examine the swarm or inject macro stress scenario..."
           maxLength={300}
           className="flex-1 bg-terminal-950 border border-terminal-border rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-sans"
         />

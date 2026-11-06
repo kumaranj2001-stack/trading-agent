@@ -1,7 +1,11 @@
-import { Candle, CurrencyPair, CurrencyStrength, IndianMarketAsset, IndianMarketMetrics, MacroIndicator, MarketSegment, TimeFrame } from './types';
+import { Candle, CurrencyPair, CurrencyStrength, IndianMarketAsset, IndianMarketMetrics, MacroIndicator, MarketSegment, MetalCommodityAsset, TimeFrame } from './types';
 
 export const FOREX_PAIRS: CurrencyPair[] = [
   'EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD', 'USD/CHF', 'NZD/USD', 'EUR/GBP'
+];
+
+export const METALS_COMMODITIES: CurrencyPair[] = [
+  'XAU/USD', 'XAG/USD', 'XPT/USD', 'COPPER', 'WTI_CRUDE', 'BRENT_CRUDE'
 ];
 
 export const INDIAN_MARKET_ASSETS: CurrencyPair[] = [
@@ -18,6 +22,13 @@ export const BASE_PRICES: Record<CurrencyPair, number> = {
   'USD/CHF': 0.8670,
   'NZD/USD': 0.5980,
   'EUR/GBP': 0.8385,
+  // Metals & Energy Commodities
+  'XAU/USD': 2735.40, // Spot Gold ($/oz)
+  'XAG/USD': 33.65,   // Spot Silver ($/oz)
+  'XPT/USD': 1012.80, // Spot Platinum ($/oz)
+  'COPPER': 4.385,    // COMEX Copper ($/lb)
+  'WTI_CRUDE': 71.85, // WTI Light Sweet Crude Oil ($/bbl)
+  'BRENT_CRUDE': 75.40,// Brent Global Benchmark ($/bbl)
   // Indian Market & Currency
   'NIFTY 50': 24180.50,
   'BANK NIFTY': 51840.25,
@@ -39,6 +50,14 @@ export const PIP_VALUES: Record<CurrencyPair, number> = {
   'USD/CHF': 0.0001,
   'NZD/USD': 0.0001,
   'EUR/GBP': 0.0001,
+  // Metals & Commodities
+  'XAU/USD': 0.10,    // Gold pip/point
+  'XAG/USD': 0.01,    // Silver pip
+  'XPT/USD': 0.10,    // Platinum
+  'COPPER': 0.001,    // Copper tick
+  'WTI_CRUDE': 0.01,  // Oil cent
+  'BRENT_CRUDE': 0.01,// Oil cent
+  // Indian
   'NIFTY 50': 0.05,
   'BANK NIFTY': 0.05,
   'USD/INR': 0.0025,
@@ -52,6 +71,7 @@ export const PIP_VALUES: Record<CurrencyPair, number> = {
 
 // Maps internal symbols to real OANDA / TradingView widget symbols!
 export const OANDA_TRADINGVIEW_MAP: Record<CurrencyPair, string> = {
+  // Forex
   'EUR/USD': 'OANDA:EURUSD',
   'GBP/USD': 'OANDA:GBPUSD',
   'USD/JPY': 'OANDA:USDJPY',
@@ -60,6 +80,14 @@ export const OANDA_TRADINGVIEW_MAP: Record<CurrencyPair, string> = {
   'USD/CHF': 'OANDA:USDCHF',
   'NZD/USD': 'OANDA:NZDUSD',
   'EUR/GBP': 'OANDA:EURGBP',
+  // Metals & Commodities
+  'XAU/USD': 'OANDA:XAUUSD',
+  'XAG/USD': 'OANDA:XAGUSD',
+  'XPT/USD': 'TVC:PLATINUM',
+  'COPPER': 'COMEX:HG1!',
+  'WTI_CRUDE': 'TVC:USOIL',
+  'BRENT_CRUDE': 'TVC:UKOIL',
+  // Indian Markets
   'NIFTY 50': 'NSE:NIFTY',
   'BANK NIFTY': 'NSE:BANKNIFTY',
   'USD/INR': 'FX_IDC:USDINR',
@@ -72,7 +100,9 @@ export const OANDA_TRADINGVIEW_MAP: Record<CurrencyPair, string> = {
 };
 
 export function getMarketSegmentForSymbol(symbol: CurrencyPair): MarketSegment {
-  return INDIAN_MARKET_ASSETS.includes(symbol) ? 'INDIAN_MARKET' : 'FOREX';
+  if (INDIAN_MARKET_ASSETS.includes(symbol)) return 'INDIAN_MARKET';
+  if (METALS_COMMODITIES.includes(symbol)) return 'METALS_COMMODITIES';
+  return 'FOREX';
 }
 
 export function generateCandles(pair: CurrencyPair, timeframe: TimeFrame, count: number = 60): Candle[] {
@@ -81,6 +111,11 @@ export function generateCandles(pair: CurrencyPair, timeframe: TimeFrame, count:
   const isIndianIndex = pair === 'NIFTY 50' || pair === 'BANK NIFTY';
   const isIndianStock = pair === 'RELIANCE' || pair === 'TCS' || pair === 'HDFC BANK' || pair === 'INFY';
   const isRupeePair = pair.includes('/INR');
+  const isGold = pair === 'XAU/USD';
+  const isSilver = pair === 'XAG/USD';
+  const isPlatinum = pair === 'XPT/USD';
+  const isCopper = pair === 'COPPER';
+  const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
 
   let pip = 0.0001;
   let volatility = 0.0012;
@@ -91,6 +126,21 @@ export function generateCandles(pair: CurrencyPair, timeframe: TimeFrame, count:
   } else if (isIndianStock) {
     pip = 0.05;
     volatility = basePrice * 0.0025; // ~5-10 INR
+  } else if (isGold) {
+    pip = 0.10;
+    volatility = 8.50; // ~$8.50 per gold candle
+  } else if (isSilver) {
+    pip = 0.01;
+    volatility = 0.28; // ~$0.28 silver move
+  } else if (isPlatinum) {
+    pip = 0.10;
+    volatility = 4.20;
+  } else if (isCopper) {
+    pip = 0.001;
+    volatility = 0.025;
+  } else if (isOil) {
+    pip = 0.01;
+    volatility = 0.65; // ~$0.65 crude move
   } else if (isRupeePair) {
     pip = 0.0025;
     volatility = 0.04;
@@ -121,7 +171,12 @@ export function generateCandles(pair: CurrencyPair, timeframe: TimeFrame, count:
     const wave = Math.sin(i / 5) * volatility * 0.6;
     const randomStep = (Math.random() - 0.49) * volatility * 1.4;
     const open = currentClose;
-    const decimalPlaces = (isIndianIndex || isIndianStock) ? 2 : (isJpy || isRupeePair ? 3 : 5);
+    
+    let decimalPlaces = 5;
+    if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil) decimalPlaces = 2;
+    else if (isSilver || isJpy || isRupeePair) decimalPlaces = 3;
+    else if (isCopper) decimalPlaces = 4;
+
     const close = Number((open + wave + randomStep).toFixed(decimalPlaces));
     const high = Number((Math.max(open, close) + Math.random() * volatility * 0.7).toFixed(decimalPlaces));
     const low = Number((Math.min(open, close) - Math.random() * volatility * 0.7).toFixed(decimalPlaces));
@@ -156,6 +211,24 @@ export const INDIAN_MARKET_TELEMETRY: IndianMarketMetrics = {
 
 export const MACRO_ECONOMIC_CALENDAR: MacroIndicator[] = [
   {
+    name: 'Fed FOMC Interest Rate Decision & Powell Presser',
+    region: 'USD',
+    actual: '4.75%',
+    forecast: '4.75%',
+    previous: '5.00%',
+    impact: 'HIGH',
+    date: '2026-11-05',
+  },
+  {
+    name: 'US Spot Gold & Metals Bullion Reserve Inflows',
+    region: 'XAU',
+    actual: '+38.4 Tons',
+    forecast: '+22.0 Tons',
+    previous: '+18.5 Tons',
+    impact: 'HIGH',
+    date: '2026-11-06',
+  },
+  {
     name: 'RBI Monetary Policy Repo Rate Decision',
     region: 'INR',
     actual: '6.50%',
@@ -165,31 +238,22 @@ export const MACRO_ECONOMIC_CALENDAR: MacroIndicator[] = [
     date: '2026-12-06',
   },
   {
-    name: 'India Retail CPI Inflation YoY',
-    region: 'INR',
-    actual: '4.85%',
-    forecast: '4.90%',
-    previous: '5.08%',
-    impact: 'HIGH',
-    date: '2026-11-12',
-  },
-  {
-    name: 'Fed Interest Rate Decision',
-    region: 'USD',
-    actual: '4.75%',
-    forecast: '4.75%',
-    previous: '5.00%',
-    impact: 'HIGH',
-    date: '2026-11-05',
-  },
-  {
-    name: 'US Non-Farm Payrolls (NFP)',
+    name: 'US Non-Farm Payrolls (NFP) & Unemployment',
     region: 'USD',
     actual: '175K',
     forecast: '160K',
     previous: '223K',
     impact: 'HIGH',
     date: '2026-11-06',
+  },
+  {
+    name: 'OPEC+ Crude Production Quotas & Strategic Reserve',
+    region: 'WTI',
+    actual: '-1.2M bpd',
+    forecast: '-1.0M bpd',
+    previous: '-1.0M bpd',
+    impact: 'HIGH',
+    date: '2026-11-07',
   },
   {
     name: 'Eurozone Harmonised CPI YoY',
@@ -201,7 +265,7 @@ export const MACRO_ECONOMIC_CALENDAR: MacroIndicator[] = [
     date: '2026-11-04',
   },
   {
-    name: 'Bank of Japan Policy Rate',
+    name: 'Bank of Japan Policy Rate & Yield Curve Control',
     region: 'JPY',
     actual: '0.25%',
     forecast: '0.25%',
@@ -213,6 +277,7 @@ export const MACRO_ECONOMIC_CALENDAR: MacroIndicator[] = [
 
 export const CURRENCY_STRENGTH_INDEX: CurrencyStrength[] = [
   { currency: 'USD', score: 7.8, trend: 'STRENGTHENING' },
+  { currency: 'XAU (Gold)', score: 9.2, trend: 'STRENGTHENING' },
   { currency: 'INR', score: 7.2, trend: 'STABLE' },
   { currency: 'EUR', score: 6.2, trend: 'STABLE' },
   { currency: 'GBP', score: 5.9, trend: 'WEAKENING' },
@@ -229,7 +294,7 @@ export function getActiveTradingSession(): {
 } {
   const currentUtcHour = new Date().getUTCHours();
   const currentUtcMinute = new Date().getUTCMinutes();
-  const istMinutes = currentUtcHour * 60 + currentUtcMinute + 330; // UTC+5:30
+  const istMinutes = currentUtcHour * 60 + currentUtcMinute + 330;
   const istHour = Math.floor((istMinutes / 60) % 24);
 
   // NSE Indian hours: 09:15 to 15:30 IST (03:45 to 10:00 UTC)

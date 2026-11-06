@@ -9,21 +9,27 @@ import {
   Cpu, 
   Cloud, 
   Newspaper, 
-  Database,
-  Radio
+  Radio, 
+  Database, 
+  HardDrive 
 } from 'lucide-react';
 
 export const ArchitectureView: React.FC = () => {
   return (
-    <div className="bg-terminal-900 border border-terminal-border rounded-xl p-4 sm:p-5 shadow-lg space-y-6">
+    <div className="bg-terminal-900 border border-terminal-border rounded-xl p-4 sm:p-6 shadow-lg space-y-6">
       {/* Title */}
       <div className="border-b border-terminal-border pb-4">
-        <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-          <Cpu className="w-5 h-5 text-cyan-400" />
-          <span>Multi-Agent Swarm Architecture // 5 Autonomous Roles</span>
-        </h2>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <Cpu className="w-5 h-5 text-cyan-400" />
+            <span>5-Agent Institutional Swarm Architecture & Roles</span>
+          </h2>
+          <span className="px-2.5 py-0.5 rounded text-[11px] font-mono bg-sky-500/20 text-sky-400 border border-sky-500/40">
+            5 ROLES + 18 NEWS WIRES
+          </span>
+        </div>
         <p className="text-xs text-slate-400 font-mono mt-1">
-          Complete structural specifications of the 5 autonomous trading roles, 20-source real-time news scraping pipeline, and local browser backend engine.
+          Complete structural specifications of the 5 autonomous trading roles, real-time financial news scraper, and local browser persistence engine.
         </p>
       </div>
 
@@ -41,10 +47,10 @@ export const ArchitectureView: React.FC = () => {
             </div>
           </div>
           <ul className="text-xs text-slate-300 font-sans space-y-1.5 list-disc pl-4">
-            <li><strong>Smart Money Concepts:</strong> Identifies 3-bar Fair Value Gaps (FVG), order blocks, and structural liquidity sweeps.</li>
-            <li><strong>Momentum Oscillators:</strong> Evaluates RSI (14) dynamic divergences, center-line crosses, and volume absorption.</li>
-            <li><strong>Trend Alignments:</strong> Computes EMA 20, 50, and 200 to establish micro and macro trend regimes across MTF frames.</li>
-            <li><strong>Volatility Envelopes:</strong> Calculates Bollinger Bands (20, 2) and ATR (14) for volatility expansion and squeeze detection.</li>
+            <li><strong>Smart Money Concepts:</strong> Identifies Order Blocks, 3-bar Fair Value Gaps (FVG), Liquidity Sweeps, and CHOCH structural shifts.</li>
+            <li><strong>Moving Average Ribbons:</strong> Computes EMA 20, 50, and 200 to establish micro and macro trend regimes across multi-timeframes.</li>
+            <li><strong>Momentum Oscillators:</strong> Evaluates RSI (14) for dynamic divergences, overbought/oversold extremes, and 50-centerline crosses.</li>
+            <li><strong>Precious Metals & Forex Pips:</strong> Dynamic volatility scaling tailored for Spot Gold ($/oz), Silver, Crude Oil, and FX Majors.</li>
           </ul>
         </div>
 
@@ -56,98 +62,98 @@ export const ArchitectureView: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold text-white text-sm">Role 2: Fundamental Analyst</h3>
-              <span className="text-[11px] font-mono text-purple-400">Macroeconomics & Monetary Policy</span>
+              <span className="text-[11px] font-mono text-purple-400">Macroeconomics & Sovereign Policy</span>
             </div>
           </div>
           <ul className="text-xs text-slate-300 font-sans space-y-1.5 list-disc pl-4">
-            <li><strong>Central Bank Policy Stance:</strong> Maps Hawkish, Neutral, and Dovish postures across the Federal Reserve, ECB, BOJ, BoE, and RBI.</li>
-            <li><strong>Rate Differentials:</strong> Analyzes sovereign rate spreads and 2Y/10Y yield curves between base and quote economies.</li>
-            <li><strong>Indian Market Catalysts:</strong> Monitors FII & DII cash flows, India VIX volatility gauge, and Nifty Put-Call Ratio (PCR).</li>
-            <li><strong>Macro Regime Classification:</strong> Categorizes conditions into Policy Divergence, Reflationary, or Stagflationary regimes.</li>
+            <li><strong>Central Bank Policy Stance:</strong> Maps Hawkish, Neutral, and Dovish postures across the Fed, ECB, BOJ, BoE, and RBI.</li>
+            <li><strong>Interest Rate Differentials:</strong> Analyzes sovereign rate spreads and 2Y/10Y bond yield curve inversions.</li>
+            <li><strong>Real Yield Dynamics:</strong> Tracks TIPS real yields and inflation expectations directly driving Gold and commodities.</li>
+            <li><strong>Indian Market Telemetry:</strong> Evaluates FII & DII cash flows, India VIX, NIFTY Put-Call Ratio (PCR), and RBI repo rate.</li>
           </ul>
         </div>
 
-        {/* Role 3: Forex Market Analyst */}
+        {/* Role 3: Real-Time News Analyst (NEW 5th ROLE) */}
+        <div className="bg-terminal-950 p-4 rounded-xl border border-sky-800/60 space-y-2.5">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-lg bg-sky-950 border border-sky-600 text-sky-400">
+              <Newspaper className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-sm">Role 3: Real-Time News Analyst</h3>
+              <span className="text-[11px] font-mono text-sky-400">18 Financial Websites & Wire Scraper</span>
+            </div>
+          </div>
+          <ul className="text-xs text-slate-300 font-sans space-y-1.5 list-disc pl-4">
+            <li><strong>18 Monitored Outlets:</strong> Continuous scraping of Bloomberg, Reuters, Kitco, WSJ, CNBC, FT, DailyFX, FXStreet, and Forexlive.</li>
+            <li><strong>Precious Metals Wire:</strong> Tracks central bank bullion accumulations, Comex vault drawdowns, and LBMA delivery spreads.</li>
+            <li><strong>Breaking Wire Alerts:</strong> Instant detection of geopolitical tensions, OPEC+ emergency quotes, and flash macro prints.</li>
+            <li><strong>Sentiment Scoring:</strong> Generates a continuous -1.0 to +1.0 sentiment score and Market Mood gauge (Risk-On / Risk-Off).</li>
+          </ul>
+        </div>
+
+        {/* Role 4: Forex & Intermarket Dynamics Analyst */}
         <div className="bg-terminal-950 p-4 rounded-xl border border-amber-800/50 space-y-2.5">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-amber-950 border border-amber-600 text-amber-400">
               <Scale className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-sm">Role 3: Forex Market Analyst</h3>
-              <span className="text-[11px] font-mono text-amber-400">Currency Mechanics & Sessions</span>
+              <h3 className="font-bold text-white text-sm">Role 4: Forex & Market Dynamics</h3>
+              <span className="text-[11px] font-mono text-amber-400">Currency Mechanics & Commodities</span>
             </div>
           </div>
           <ul className="text-xs text-slate-300 font-sans space-y-1.5 list-disc pl-4">
-            <li><strong>Currency Strength Index:</strong> Computes real-time 0-10 relative strength scoring across G10 and INR currencies.</li>
-            <li><strong>Dollar Index (DXY) Trend:</strong> Tracks USD index momentum and transmission across major currency pairs.</li>
-            <li><strong>Carry Yield & Cross-Correlations:</strong> Assesses net annual yield differentials and intermarket correlations (Crude Oil, Gold).</li>
-            <li><strong>Session Liquidity Radar:</strong> Evaluates trading windows (London, New York, Tokyo, NSE) to prevent thin execution.</li>
+            <li><strong>Currency Strength Index:</strong> Computes real-time 0-10 relative strength scoring across USD, EUR, GBP, JPY, AUD, CAD, CHF.</li>
+            <li><strong>Dollar Index (DXY) Transmission:</strong> Tracks USD index momentum and inverse correlation against Gold and Silver.</li>
+            <li><strong>Carry Trade & Cross-Correlations:</strong> Assesses net annual yield differentials and intermarket correlations (Crude Oil, Gold, Equities).</li>
+            <li><strong>Session Liquidity Radar:</strong> Evaluates trading windows (London, New York, Tokyo, NSE India) to prevent execution in thin sessions.</li>
           </ul>
         </div>
 
-        {/* Role 4: 📰 News Analyst (NEW DEDICATED 5TH ROLE) */}
-        <div className="bg-terminal-950 p-4 rounded-xl border border-blue-800/50 space-y-2.5">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-blue-950 border border-blue-600 text-blue-400">
-              <Newspaper className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-sm">Role 4: News Analyst (David Vance)</h3>
-              <span className="text-[11px] font-mono text-blue-400">20 Financial Outlets & Scraper</span>
-            </div>
-          </div>
-          <ul className="text-xs text-slate-300 font-sans space-y-1.5 list-disc pl-4">
-            <li><strong>20 Financial Sources Scraped:</strong> Continuously monitors Bloomberg, Reuters, FT, WSJ, CNBC, Forex Factory, Moneycontrol, LiveMint, etc.</li>
-            <li><strong>NLP Sentiment Scoring:</strong> Calculates -100 to +100 directional sentiment scores from live headline order flow.</li>
-            <li><strong>Breaking Shock Alerts:</strong> Detects sudden central bank statements, emergency interventions, and geopolitics.</li>
-            <li><strong>Core Fundamental Reasons:</strong> Synthesizes the core fundamental and news catalysts driving the unified decision.</li>
-          </ul>
-        </div>
-
-        {/* Role 5: Risk Manager */}
+        {/* Role 5: Risk Manager & Gatekeeper */}
         <div className="bg-terminal-950 p-4 rounded-xl border border-emerald-800/50 space-y-2.5 md:col-span-2 lg:col-span-2">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-emerald-950 border border-emerald-600 text-emerald-400">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-sm">Role 5: Risk Manager (Sarah Stirling)</h3>
-              <span className="text-[11px] font-mono text-emerald-400">Capital Preservation & Veto Gatekeeper</span>
+              <h3 className="font-bold text-white text-sm">Role 5: Risk Manager (Chief Gatekeeper)</h3>
+              <span className="text-[11px] font-mono text-emerald-400">Capital Preservation, Sizing & Absolute Veto</span>
             </div>
           </div>
           <ul className="text-xs text-slate-300 font-sans space-y-1.5 list-disc pl-4">
-            <li><strong>Absolute Veto Authority:</strong> Cross-examines technical, fundamental, forex, and news proposals; vetoes setups lacking mathematical edge.</li>
-            <li><strong>Mathematical Sizing:</strong> Calculates exact position sizing (standard lots) using fixed fractional equity risk (1.0%–1.5%).</li>
-            <li><strong>Expectancy & R:R Enforcement:</strong> Enforces minimum 1:1.8 Risk-to-Reward ratio with hard ATR-anchored Stop Loss and Take Profit brackets.</li>
-            <li><strong>Monte Carlo Simulation Engine:</strong> Runs 1,000 stochastic price paths to calculate 95% & 99% Value-at-Risk (VaR).</li>
+            <li><strong>Absolute Veto Authority:</strong> Automatically rejects setups where technical, fundamental, and news signals contradict.</li>
+            <li><strong>Mathematical Expectancy:</strong> Enforces minimum 1:1.8 Risk-to-Reward ratio with hard volatility-insulated stop losses.</li>
+            <li><strong>1,000-Path Monte Carlo Engine:</strong> Simulates 1,000 stochastic price paths to calculate 95% Value-at-Risk (VaR) and win probability.</li>
+            <li><strong>Circuit Breaker Protection:</strong> Imposes hard daily drawdown ceilings (e.g. 4.0%) to prevent emotional drawdown expansion.</li>
           </ul>
         </div>
       </div>
 
-      {/* Backend & Deployment Architecture */}
+      {/* Backend & Local Browser Storage Architecture */}
       <div className="bg-terminal-950 p-4 rounded-xl border border-terminal-border space-y-3 font-mono text-xs">
         <h4 className="text-white font-bold text-sm flex items-center gap-2">
-          <Database className="w-4 h-4 text-cyan-400" />
-          <span>Local Browser Backend Storage & Vercel Execution Pipeline</span>
+          <HardDrive className="w-4 h-4 text-cyan-400" />
+          <span>Local Browser Storage & Vercel Serverless Architecture</span>
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
-            <span className="text-cyan-400 font-bold block mb-1">1. Local Browser Storage</span>
+            <span className="text-cyan-400 font-bold block mb-1">1. Local Browser Persistence</span>
             <p className="text-slate-400 text-[11px] font-sans">
-              All 20 monitored sources, active scrape feeds, custom headline updates, and unified decision logs are persistently stored in the user's local browser (localStorage).
+              All portfolio state, open positions, trade history, risk configurations, news wire cache, and decision logs are persisted directly in client browser storage (`localStorage`) for zero-latency instant state recovery.
             </p>
           </div>
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
-            <span className="text-blue-400 font-bold block mb-1">2. Continuous Real-Time Polling</span>
+            <span className="text-sky-400 font-bold block mb-1">2. 18-Source News Wire Scraper</span>
             <p className="text-slate-400 text-[11px] font-sans">
-              A background engine simulates continuous real-time web scraping, updates ping latencies, processes breaking wires, and recalculates sentiment meters.
+              Client-side and serverless scraping pipelines continuously ingest real-time headlines across Bloomberg, Reuters, Kitco, WSJ, CNBC, and FT with instant sentiment classification.
             </p>
           </div>
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
             <span className="text-emerald-400 font-bold block mb-1">3. Unified 5-Role Decision</span>
             <p className="text-slate-400 text-[11px] font-sans">
-              Findings from all five roles are compiled into a unified Buy/Sell verdict, immediately backed by the core fundamental reasons displayed directly on the dashboard.
+              Outputs a single consolidated BUY or SELL direction alongside the 5 underlying core fundamental, news, technical, intermarket, and risk reasons driving the decision.
             </p>
           </div>
         </div>

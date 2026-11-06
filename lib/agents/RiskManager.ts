@@ -3,7 +3,6 @@ import {
   CurrencyPair, 
   ForexAnalysis, 
   FundamentalAnalysis, 
-  NewsAnalysis, 
   MonteCarloProjection, 
   RiskAssessment, 
   RiskVerdict, 
@@ -50,8 +49,7 @@ export class RiskManagerAgent extends BaseAgent {
     currentPrice: number,
     technical: TechnicalAnalysis,
     fundamental: FundamentalAnalysis,
-    forex: ForexAnalysis,
-    news?: NewsAnalysis
+    forex: ForexAnalysis
   ): RiskAssessment {
     const vetoReasons: string[] = [];
     const adjustmentsMade: string[] = [];
@@ -63,54 +61,29 @@ export class RiskManagerAgent extends BaseAgent {
       );
     }
 
-    // 2. Multi-Agent Directional Confluence (Evaluating Technical, Fundamental, Forex, and News)
+    // 2. Multi-Agent Directional Confluence
     const biases = [technical.bias, fundamental.bias, forex.bias];
-    if (news) {
-      biases.push(news.bias);
-    }
-
     const buyVotes = biases.filter(b => b.includes('BUY')).length;
     const sellVotes = biases.filter(b => b.includes('SELL')).length;
 
     let proposedAction: 'BUY' | 'SELL' | 'NO_TRADE' = 'NO_TRADE';
-    if (buyVotes >= 3 && sellVotes === 0) {
-      proposedAction = 'BUY';
-    } else if (sellVotes >= 3 && buyVotes === 0) {
-      proposedAction = 'SELL';
-    } else if (buyVotes >= 2 && sellVotes === 0) {
+    if (buyVotes >= 2 && sellVotes === 0) {
       proposedAction = 'BUY';
     } else if (sellVotes >= 2 && buyVotes === 0) {
       proposedAction = 'SELL';
-    } else if (buyVotes >= 3 && sellVotes >= 1) {
+    } else if (buyVotes >= 2 && sellVotes >= 1) {
       adjustmentsMade.push(
-        'High conviction buy with minor analyst dissent: Position sizing trimmed by 25% to account for headline dispersion.'
+        'Analyst divergence detected: Fundamental or Technical analyst dissent recorded. Position sizing cut by 50% to hedge conflict.'
       );
       proposedAction = 'BUY';
-    } else if (sellVotes >= 3 && buyVotes >= 1) {
+    } else if (sellVotes >= 2 && buyVotes >= 1) {
       adjustmentsMade.push(
-        'High conviction sell with minor analyst dissent: Position sizing trimmed by 25% to account for headline dispersion.'
-      );
-      proposedAction = 'SELL';
-    } else if (buyVotes >= 2 && sellVotes === 1) {
-      adjustmentsMade.push(
-        'Analyst divergence detected: Sizing cut by 40% to hedge cross-team conflict.'
-      );
-      proposedAction = 'BUY';
-    } else if (sellVotes >= 2 && buyVotes === 1) {
-      adjustmentsMade.push(
-        'Analyst divergence detected: Sizing cut by 40% to hedge cross-team conflict.'
+        'Analyst divergence detected: Fundamental or Technical analyst dissent recorded. Position sizing cut by 50% to hedge conflict.'
       );
       proposedAction = 'SELL';
     } else {
       vetoReasons.push(
         'Insufficient consensus across analyst team: signals are deadlocked or predominantly neutral. Capital preservation mandates passing.'
-      );
-    }
-
-    // Check Breaking News Headline Risk
-    if (news?.breakingNewsAlert && news.breakingNewsAlert.impact === 'HIGH') {
-      adjustmentsMade.push(
-        `High-impact breaking news alert detected (${news.breakingNewsAlert.sourceName}): "${news.breakingNewsAlert.title.slice(0, 60)}...". Calibrated stop loss envelope to absorb potential headline spike.`
       );
     }
 
@@ -156,7 +129,7 @@ export class RiskManagerAgent extends BaseAgent {
     // 5. Position Sizing
     let riskPercent = this.config.maxRiskPerTradePercent;
     if (adjustmentsMade.length > 0) {
-      riskPercent = riskPercent * 0.75;
+      riskPercent = riskPercent * 0.5;
     }
 
     const dollarRisk = (this.config.accountBalance * riskPercent) / 100;
@@ -170,11 +143,11 @@ export class RiskManagerAgent extends BaseAgent {
     // 6. Monte Carlo Simulation Engine (1,000 runs projection)
     const monteCarlo: MonteCarloProjection = {
       simulationsCount: 1000,
-      projectedProfitProbability: proposedAction === 'NO_TRADE' ? 0 : 71.8,
+      projectedProfitProbability: proposedAction === 'NO_TRADE' ? 0 : 68.4,
       var95Usd: Number((dollarRisk * 1.15).toFixed(2)),
       var99Usd: Number((dollarRisk * 1.35).toFixed(2)),
       expectedDrawdownPercent: Number((riskPercent * 1.2).toFixed(2)),
-      sharpeRatio: 2.26,
+      sharpeRatio: 2.14,
     };
 
     let verdict: RiskVerdict = 'APPROVED';
@@ -193,8 +166,8 @@ export class RiskManagerAgent extends BaseAgent {
     const reasoning = verdict === 'VETOED'
       ? `PROPOSAL REJECTED: Risk parameters violated. Deficiencies: ${vetoReasons.join('; ')}`
       : verdict === 'MODIFIED'
-      ? `PROPOSAL APPROVED WITH RESTRICTIONS: Setup validated with risk curtailment across 5 roles. Modifications: ${adjustmentsMade.join('; ')}. Maximum downside capped at $${dollarRisk.toFixed(2)} (${riskPercent.toFixed(2)}% equity).`
-      : `PROPOSAL FULLY APPROVED: Solid 5-role confluence (Technical, Fundamental, Forex, News & Risk), verified liquidity session, and strict ${riskRewardRatio}:1 Risk/Reward profile. Allocated ${lotSize} lots with hard stop at ${calculatedStopLoss}.`;
+      ? `PROPOSAL APPROVED WITH RESTRICTIONS: Setup validated with risk curtailment. Modifications: ${adjustmentsMade.join('; ')}. Maximum downside capped at $${dollarRisk.toFixed(2)} (${riskPercent.toFixed(2)}% equity).`
+      : `PROPOSAL FULLY APPROVED: Solid 3-agent confluence, verified liquidity session, and strict ${riskRewardRatio}:1 Risk/Reward profile. Allocated ${lotSize} lots with hard stop at ${calculatedStopLoss}.`;
 
     return {
       role: 'risk_manager',

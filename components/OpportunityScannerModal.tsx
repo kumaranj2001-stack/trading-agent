@@ -57,7 +57,7 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
             <div className="min-w-0">
               <h3 className="font-bold text-white text-sm sm:text-base truncate">Multi-Market Opportunity Scanner</h3>
               <p className="text-[11px] text-slate-400 font-mono truncate">
-                Real-time scanning across Forex & Indian NSE/BSE markets (1,050+ rules)
+                Continuous scanning across Forex, Precious Metals, Energy & Indian Markets
               </p>
             </div>
           </div>
@@ -82,7 +82,7 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
         </div>
 
         {/* Filter Segment Tabs */}
-        <div className="p-2 sm:p-3 bg-terminal-950/60 border-b border-terminal-border flex items-center gap-1.5 font-mono text-xs overflow-x-auto scrollbar-none">
+        <div className="p-2 sm:p-3 bg-terminal-950/60 border-b border-terminal-border flex items-center gap-1.5 font-mono text-xs overflow-x-auto scrollbar-none whitespace-nowrap">
           <button
             onClick={() => setFilterSegment('ALL')}
             className={`px-3 py-1 rounded transition-colors ${filterSegment === 'ALL' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
@@ -96,10 +96,16 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
             Global Forex
           </button>
           <button
-            onClick={() => setFilterSegment('INDIAN_MARKET')}
-            className={`px-3 py-1 rounded transition-colors ${filterSegment === 'INDIAN_MARKET' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+            onClick={() => setFilterSegment('METALS_COMMODITIES')}
+            className={`px-3 py-1 rounded transition-colors ${filterSegment === 'METALS_COMMODITIES' ? 'bg-amber-500 text-black font-extrabold' : 'text-slate-400 hover:text-white'}`}
           >
-            🇮🇳 Indian Market (NSE)
+            🏆 Metals & Oil
+          </button>
+          <button
+            onClick={() => setFilterSegment('INDIAN_MARKET')}
+            className={`px-3 py-1 rounded transition-colors ${filterSegment === 'INDIAN_MARKET' ? 'bg-orange-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+          >
+            🇮🇳 NSE India
           </button>
         </div>
 

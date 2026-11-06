@@ -11,14 +11,14 @@ import {
   MarketScannerOpportunity, 
   MacroIndicator,
   MarketSegment,
-  KnowledgeRule,
-  FinancialNewsSource,
-  ScrapedNewsItem
+  KnowledgeRule 
 } from '@/lib/types';
 import { INITIAL_PORTFOLIO, PortfolioState } from '@/lib/store';
 import { DEFAULT_RISK_CONFIG, RiskManagerConfig } from '@/lib/agents/RiskManager';
+import { BrowserStorageManager } from '@/lib/browserStorage';
 import { Header } from '@/components/Header';
 import { TickerBar } from '@/components/TickerBar';
+import { UnifiedDecisionBanner } from '@/components/UnifiedDecisionBanner';
 import { ChartView } from '@/components/ChartView';
 import { AgentSwarmPanel } from '@/components/AgentSwarmPanel';
 import { AgentDebateFeed } from '@/components/AgentDebateFeed';
@@ -30,13 +30,12 @@ import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
-import { NewsScraperModal } from '@/components/NewsScraperModal';
+import { NewsWireModal } from '@/components/NewsWireModal';
 import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
-import { browserNewsStorage, MONITORED_FINANCIAL_SOURCES } from '@/lib/newsStorage';
 
 export default function Home() {
-  const [selectedPair, setSelectedPair] = useState<CurrencyPair>('EUR/USD');
-  const [marketSegment, setMarketSegment] = useState<MarketSegment>('FOREX');
+  const [selectedPair, setSelectedPair] = useState<CurrencyPair>('XAU/USD');
+  const [marketSegment, setMarketSegment] = useState<MarketSegment>('METALS_COMMODITIES');
   const [timeframe, setTimeframe] = useState<TimeFrame>('1h');
   const [activeTab, setActiveTab] = useState<'terminal' | 'debate' | 'backtest' | 'architecture'>('terminal');
   
@@ -46,16 +45,10 @@ export default function Home() {
   const [calendar, setCalendar] = useState<MacroIndicator[]>([]);
   const [activeSession, setActiveSession] = useState<string>('LONDON_NY_OVERLAP');
 
-  // Swarm State (5-Agent Swarm with News Analyst)
+  // Swarm State (5 Specialized Roles)
   const [consensus, setConsensus] = useState<SwarmConsensusResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [isDebating, setIsDebating] = useState<boolean>(false);
-
-  // Dedicated News Analyst & 20-Source Scraper Radar State
-  const [isNewsRadarOpen, setIsNewsRadarOpen] = useState<boolean>(false);
-  const [newsSources, setNewsSources] = useState<FinancialNewsSource[]>(MONITORED_FINANCIAL_SOURCES);
-  const [scrapedArticles, setScrapedArticles] = useState<ScrapedNewsItem[]>([]);
-  const [isScrapingNews, setIsScrapingNews] = useState<boolean>(false);
 
   // Modals & Tools
   const [executionMode, setExecutionMode] = useState<ExecutionMode>('MANUAL');
@@ -63,10 +56,12 @@ export default function Home() {
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const [isMonteCarloOpen, setIsMonteCarloOpen] = useState<boolean>(false);
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState<boolean>(false);
+  const [isNewsWireOpen, setIsNewsWireOpen] = useState<boolean>(false);
+  const [isScrapingNews, setIsScrapingNews] = useState<boolean>(false);
   const [opportunities, setOpportunities] = useState<MarketScannerOpportunity[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
 
-  // Portfolio State
+  // Portfolio State (Backed by Local Browser Storage)
   const [portfolio, setPortfolio] = useState<PortfolioState>(INITIAL_PORTFOLIO);
   const portfolioRef = useRef(portfolio);
   portfolioRef.current = portfolio;
@@ -86,7 +81,17 @@ export default function Home() {
     setTimeout(() => setNotification(null), 4500);
   };
 
-  // Fetch market data & rates
+  // 1. Initial Load from Local Browser Storage
+  useEffect(() => {
+    const savedPortfolio = BrowserStorageManager.loadPortfolio();
+    setPortfolio(savedPortfolio);
+    const savedRisk = BrowserStorageManager.loadRiskConfig();
+    setRiskConfig(savedRisk);
+    const savedMode = BrowserStorageManager.loadExecutionMode();
+    setExecutionMode(savedMode);
+  }, []);
+
+  // 2. Fetch market data & rates
   const fetchMarketData = useCallback(async (pair: CurrencyPair, tf: TimeFrame) => {
     try {
       const res = await fetch(`/api/market?pair=${encodeURIComponent(pair)}&timeframe=${tf}&count=60`);
@@ -112,8 +117,9 @@ export default function Home() {
 
               hasChanged = true;
               const isJpy = pos.symbol.includes('JPY');
-              const pipVal = PIP_VALUES[pos.symbol] || (isJpy ? 0.01 : 0.0001);
-              const pipDollar = 10;
+              const isGold = pos.symbol === 'XAU/USD';
+              const pipVal = PIP_VALUES[pos.symbol] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
+              const pipDollar = isGold ? 10 : 10;
               const pipDiff = pos.type === 'BUY' 
                 ? (currentLivePrice - pos.entryPrice) / pipVal
                 : (pos.entryPrice - currentLivePrice) / pipVal;
@@ -130,10 +136,12 @@ export default function Home() {
             });
 
             if (!hasChanged) return prev;
-            return {
+            const newPortfolio = {
               ...prev,
               positions: updatedPositions,
             };
+            BrowserStorageManager.savePortfolio(newPortfolio);
+            return newPortfolio;
           });
         }
       }
@@ -142,7 +150,7 @@ export default function Home() {
     }
   }, []);
 
-  // Fetch opportunity scanner results across both Forex and Indian markets
+  // 3. Fetch opportunity scanner results
   const fetchOpportunities = useCallback(async () => {
     setIsScanning(true);
     try {
@@ -158,7 +166,7 @@ export default function Home() {
     }
   }, []);
 
-  // Trigger Multi-Agent Swarm with all 5 roles (Technical, Fundamental, Forex, News & Risk)
+  // 4. Trigger 5-Agent Swarm (Technical + Fundamental + Forex + News + Risk)
   const triggerSwarm = useCallback(async (pair: CurrencyPair, tf: TimeFrame, currentCandles?: Candle[]) => {
     setIsAnalyzing(true);
     try {
@@ -176,6 +184,7 @@ export default function Home() {
       if (json.success && json.data) {
         const result: SwarmConsensusResult = json.data;
         setConsensus(result);
+        BrowserStorageManager.saveConsensusResult(result);
 
         // Autopilot Execution Check
         if (executionModeRef.current === 'FULL_AUTOPILOT' && result.executionSignal.authorized) {
@@ -202,14 +211,18 @@ export default function Home() {
             };
 
             const marginNeeded = (signal.lots * 100000) / 30;
-            setPortfolio(prev => ({
-              ...prev,
-              positions: [autoPos, ...prev.positions],
-              marginUsed: prev.marginUsed + marginNeeded,
-              freeMargin: Math.max(0, prev.balance - (prev.marginUsed + marginNeeded)),
-            }));
+            setPortfolio(prev => {
+              const updated = {
+                ...prev,
+                positions: [autoPos, ...prev.positions],
+                marginUsed: prev.marginUsed + marginNeeded,
+                freeMargin: Math.max(0, prev.balance - (prev.marginUsed + marginNeeded)),
+              };
+              BrowserStorageManager.savePortfolio(updated);
+              return updated;
+            });
 
-            showNotification(`AUTOPILOT TRIGGERED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} (5-Role Confluence: ${result.confluenceGrade})`);
+            showNotification(`AUTOPILOT TRIGGERED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} (Confluence: ${result.confluenceGrade})`);
           }
         }
       }
@@ -220,29 +233,7 @@ export default function Home() {
     }
   }, []);
 
-  // Initialize and run real-time background news scraper stored in local browser
-  useEffect(() => {
-    // Load initial sources & articles from local browser storage
-    const sources = browserNewsStorage.getSources();
-    const articles = browserNewsStorage.getArticles(selectedPair);
-    setNewsSources(sources);
-    setScrapedArticles(articles);
-
-    // Continuous real-time scraper polling loop (every 25s)
-    const interval = setInterval(() => {
-      const res = browserNewsStorage.runRealtimeScrape(selectedPair);
-      setNewsSources(browserNewsStorage.getSources());
-      setScrapedArticles(browserNewsStorage.getArticles(selectedPair));
-
-      if (res.newArticleAdded) {
-        showNotification(`NEWS WIRE: ${res.newArticleAdded.title.slice(0, 55)}...`);
-      }
-    }, 25000);
-
-    return () => clearInterval(interval);
-  }, [selectedPair]);
-
-  // Initial load and pair/timeframe change listener
+  // 5. Initial load and target symbol switch listener
   useEffect(() => {
     let isCancelled = false;
     const load = async () => {
@@ -258,13 +249,21 @@ export default function Home() {
     };
   }, [selectedPair, timeframe, fetchMarketData, triggerSwarm, fetchOpportunities]);
 
+  // 6. Real-time background scraper polling timer (every 25 seconds)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetchMarketData(selectedPair, timeframe);
+    }, 25000);
+    return () => clearInterval(timer);
+  }, [selectedPair, timeframe, fetchMarketData]);
+
   // Handle Pair Switch
   const handleSelectPair = (newPair: CurrencyPair) => {
     setSelectedPair(newPair);
     setMarketSegment(getMarketSegmentForSymbol(newPair));
   };
 
-  // Handle Market Segment Switch (Forex vs Indian Market)
+  // Handle Market Segment Switch (Forex vs Metals vs Indian Market)
   const handleSelectMarketSegment = (newSegment: MarketSegment) => {
     setMarketSegment(newSegment);
   };
@@ -277,31 +276,26 @@ export default function Home() {
   // Toggle execution mode
   const handleToggleExecutionMode = () => {
     setExecutionMode(prev => {
-      if (prev === 'MANUAL') return 'SEMI_AUTONOMOUS';
-      if (prev === 'SEMI_AUTONOMOUS') return 'FULL_AUTOPILOT';
-      return 'MANUAL';
+      let next: ExecutionMode = 'MANUAL';
+      if (prev === 'MANUAL') next = 'SEMI_AUTONOMOUS';
+      else if (prev === 'SEMI_AUTONOMOUS') next = 'FULL_AUTOPILOT';
+      BrowserStorageManager.saveExecutionMode(next);
+      return next;
     });
   };
 
-  // Handle Manual News Scrape Trigger
-  const handleManualNewsScrape = () => {
+  // Force Scrape 18 Financial Websites on demand
+  const handleForceScrape = async () => {
     setIsScrapingNews(true);
-    setTimeout(() => {
-      const res = browserNewsStorage.runRealtimeScrape(selectedPair);
-      setNewsSources(browserNewsStorage.getSources());
-      setScrapedArticles(browserNewsStorage.getArticles(selectedPair));
+    try {
+      await fetch(`/api/news?symbol=${encodeURIComponent(selectedPair)}`);
+      await triggerSwarm(selectedPair, timeframe);
+      showNotification(`18 Financial Websites & Wires freshly scraped for ${selectedPair}`);
+    } catch (e) {
+      console.error(e);
+    } finally {
       setIsScrapingNews(false);
-      showNotification(`SCRAPED 20 SOURCES: ${res.scrapedSourcesCount} outlets verified (${res.totalArticles} headlines indexed locally in browser).`);
-      // Re-trigger swarm analysis to incorporate newly scraped sentiment
-      triggerSwarm(selectedPair, timeframe, candles);
-    }, 800);
-  };
-
-  // Toggle News Source Enable / Disable
-  const handleToggleNewsSource = (sourceId: string) => {
-    const updated = browserNewsStorage.toggleSource(sourceId);
-    setNewsSources(updated);
-    triggerSwarm(selectedPair, timeframe, candles);
+    }
   };
 
   // Handle custom debate prompt
@@ -331,7 +325,7 @@ export default function Home() {
     }
   };
 
-  // Execute Approved Trade into Simulated Portfolio
+  // Execute Approved Trade into Simulated Portfolio (stored in local browser)
   const handleExecuteTrade = () => {
     if (!consensus || !consensus.executionSignal.authorized) return;
     const signal = consensus.executionSignal;
@@ -358,17 +352,20 @@ export default function Home() {
     const updatedPositions = [newPosition, ...portfolio.positions];
     const newMarginUsed = portfolio.marginUsed + marginUsedForTrade;
 
-    setPortfolio({
+    const updatedPortfolio = {
       ...portfolio,
       positions: updatedPositions,
       marginUsed: newMarginUsed,
       freeMargin: Math.max(0, portfolio.balance - newMarginUsed),
-    });
+    };
+
+    setPortfolio(updatedPortfolio);
+    BrowserStorageManager.savePortfolio(updatedPortfolio);
 
     showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${signal.entry}`);
   };
 
-  // Close Position
+  // Close Position & Save to Local Browser Storage
   const handleClosePosition = (posId: string) => {
     const pos = portfolio.positions.find(p => p.id === posId);
     if (!pos) return;
@@ -398,7 +395,7 @@ export default function Home() {
       strategyNotes: `Position closed at ${pos.currentPrice}. Realized P&L: $${pos.pnl.toFixed(2)}.`,
     };
 
-    setPortfolio({
+    const updatedPortfolio = {
       ...portfolio,
       balance: newBalance,
       equity: newBalance,
@@ -406,7 +403,10 @@ export default function Home() {
       marginUsed: newMarginUsed,
       freeMargin: Math.max(0, newBalance - newMarginUsed),
       tradeHistory: [historyItem, ...portfolio.tradeHistory],
-    });
+    };
+
+    setPortfolio(updatedPortfolio);
+    BrowserStorageManager.savePortfolio(updatedPortfolio);
 
     showNotification(`CLOSED POSITION: ${pos.symbol} | Realized P&L: ${pos.pnl >= 0 ? '+' : ''}$${pos.pnl.toFixed(2)}`);
   };
@@ -423,7 +423,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* Main Header with Market Selector, 5 Roles & 20-Source News Radar */}
+      {/* Main Header with Market Selector & 18-Source News Wire Tool */}
       <Header
         selectedPair={selectedPair}
         marketSegment={marketSegment}
@@ -439,7 +439,7 @@ export default function Home() {
         onOpenCalendar={() => setIsCalendarOpen(true)}
         onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
-        onOpenNewsRadar={() => setIsNewsRadarOpen(true)}
+        onOpenNewsWire={() => setIsNewsWireOpen(true)}
         isAnalyzing={isAnalyzing}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
         activeSession={activeSession}
@@ -448,7 +448,7 @@ export default function Home() {
         confluenceGrade={consensus?.confluenceGrade}
       />
 
-      {/* Live Ticker Bar (Forex or Indian Markets) */}
+      {/* Live Ticker Bar (Forex, Metals & Commodities, or Indian Markets) */}
       <TickerBar
         rates={rates}
         selectedPair={selectedPair}
@@ -461,7 +461,17 @@ export default function Home() {
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
           <div className="space-y-4">
-            {/* Top row: Candlestick Chart (with OANDA / TradingView Live option) */}
+            {/* 🌟 UNIFIED 5-ROLE BUY/SELL DECISION BANNER (Directly on Dashboard) */}
+            {consensus && (
+              <UnifiedDecisionBanner
+                consensus={consensus}
+                onExecuteTrade={handleExecuteTrade}
+                onOpenNewsWire={() => setIsNewsWireOpen(true)}
+                onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
+              />
+            )}
+
+            {/* Candlestick Chart (OANDA Live Streaming or Swarm Matrix) */}
             <ChartView
               candles={candles}
               pair={selectedPair}
@@ -472,7 +482,7 @@ export default function Home() {
               signalBias={consensus?.agents.technical.bias}
             />
 
-            {/* Middle row: 5 Specialized Agent Cards + Unified Consensus Banner */}
+            {/* 5 Specialized Agent Cards (Technical, Fundamental, News, Forex, Risk) */}
             {consensus && (
               <AgentSwarmPanel
                 technical={consensus.agents.technical}
@@ -480,14 +490,13 @@ export default function Home() {
                 forex={consensus.agents.forex}
                 news={consensus.agents.news}
                 risk={consensus.agents.risk}
-                unifiedDecision={consensus.unifiedDecision}
                 onExecuteTrade={handleExecuteTrade}
                 onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
-                onOpenNewsRadar={() => setIsNewsRadarOpen(true)}
+                onOpenNewsWire={() => setIsNewsWireOpen(true)}
               />
             )}
 
-            {/* Bottom row: Portfolio & Position Management */}
+            {/* Portfolio & Position Management (Saved in Local Browser) */}
             <PortfolioPanel
               portfolio={portfolio}
               onClosePosition={handleClosePosition}
@@ -495,7 +504,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Tab 2: Autonomous Agent Debate Feed (5 Roles) */}
+        {/* Tab 2: Autonomous 5-Agent Debate Feed */}
         {activeTab === 'debate' && (
           <AgentDebateFeed
             messages={consensus?.debateTranscript || []}
@@ -509,22 +518,21 @@ export default function Home() {
           <BacktestView />
         )}
 
-        {/* Tab 4: Architecture & Roles */}
+        {/* Tab 4: 5-Role Architecture & Local Storage */}
         {activeTab === 'architecture' && (
           <ArchitectureView />
         )}
       </main>
 
-      {/* 📰 Dedicated News & Sentiment Radar Modal (20 Sources) */}
-      <NewsScraperModal
-        isOpen={isNewsRadarOpen}
-        onClose={() => setIsNewsRadarOpen(false)}
-        sources={newsSources}
-        articles={scrapedArticles}
-        selectedPair={selectedPair}
-        onSelectPair={handleSelectPair}
-        onToggleSource={handleToggleNewsSource}
-        onRefreshScrape={handleManualNewsScrape}
+      {/* Real-Time Financial Scraper & News Wire Modal (18 Sources) */}
+      <NewsWireModal
+        isOpen={isNewsWireOpen}
+        onClose={() => setIsNewsWireOpen(false)}
+        articles={consensus?.agents.news.recentHeadlines || []}
+        sentimentScore={consensus?.agents.news.sentimentScore || 0}
+        marketMood={consensus?.agents.news.marketMood || 'NEUTRAL'}
+        symbol={selectedPair}
+        onRefreshScrape={handleForceScrape}
         isScraping={isScrapingNews}
       />
 
@@ -560,15 +568,20 @@ export default function Home() {
         pair={selectedPair}
       />
 
-      {/* Settings Modal */}
+      {/* Settings Modal (Persisted in Local Browser Storage) */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         config={riskConfig}
         onSaveConfig={(newCfg) => {
           setRiskConfig(newCfg);
-          setPortfolio(prev => ({ ...prev, balance: newCfg.accountBalance }));
-          showNotification('Risk parameters & capital balance updated successfully.');
+          BrowserStorageManager.saveRiskConfig(newCfg);
+          setPortfolio(prev => {
+            const updated = { ...prev, balance: newCfg.accountBalance };
+            BrowserStorageManager.savePortfolio(updated);
+            return updated;
+          });
+          showNotification('Risk parameters & capital balance updated and stored in local browser.');
         }}
       />
     </div>

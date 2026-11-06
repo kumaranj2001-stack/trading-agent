@@ -1,9 +1,9 @@
 'use client';
 
 import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Coins } from 'lucide-react';
 import { CurrencyPair, MarketSegment } from '@/lib/types';
-import { FOREX_PAIRS, INDIAN_MARKET_ASSETS } from '@/lib/marketData';
+import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES } from '@/lib/marketData';
 
 interface TickerItem {
   pair: CurrencyPair;
@@ -27,16 +27,20 @@ export const TickerBar: React.FC<TickerBarProps> = ({
   marketSegment
 }) => {
   const isIndian = marketSegment === 'INDIAN_MARKET';
+  const isMetals = marketSegment === 'METALS_COMMODITIES';
+
   const displayRates = rates.filter(r => {
-    return isIndian ? INDIAN_MARKET_ASSETS.includes(r.pair) : FOREX_PAIRS.includes(r.pair);
+    if (isIndian) return INDIAN_MARKET_ASSETS.includes(r.pair);
+    if (isMetals) return METALS_COMMODITIES.includes(r.pair);
+    return FOREX_PAIRS.includes(r.pair);
   });
 
   return (
-    <div className="bg-terminal-950 border-b border-terminal-border/80 px-4 py-1.5 overflow-x-auto scrollbar-none">
+    <div className="bg-terminal-950 border-b border-terminal-border/80 px-3 sm:px-4 py-1.5 overflow-x-auto scrollbar-none touch-pan-x">
       <div className="flex items-center gap-2 min-w-max">
-        <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mr-2 flex items-center gap-1">
+        <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mr-1.5 flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          {isIndian ? '🇮🇳 NSE/BSE RATES' : '🌐 GLOBAL FX RATES'}
+          {isIndian ? '🇮🇳 NSE/BSE RATES' : isMetals ? '🏆 PRECIOUS METALS & CRUDE OIL' : '🌐 GLOBAL FX RATES'}
         </span>
         {displayRates.map((item) => {
           const isSelected = item.pair === selectedPair;
@@ -44,7 +48,22 @@ export const TickerBar: React.FC<TickerBarProps> = ({
           const isJpy = item.pair.includes('JPY');
           const isIndianIndex = item.pair === 'NIFTY 50' || item.pair === 'BANK NIFTY';
           const isStock = item.pair === 'RELIANCE' || item.pair === 'TCS' || item.pair === 'HDFC BANK' || item.pair === 'INFY';
-          const decimalCount = (isIndianIndex || isStock) ? 2 : (isJpy || item.pair.includes('/INR') ? 3 : 5);
+          const isGold = item.pair === 'XAU/USD';
+          const isSilver = item.pair === 'XAG/USD';
+          const isPlatinum = item.pair === 'XPT/USD';
+          const isCopper = item.pair === 'COPPER';
+          const isOil = item.pair === 'WTI_CRUDE' || item.pair === 'BRENT_CRUDE';
+
+          let decimalCount = 5;
+          if (isIndianIndex || isStock || isGold || isPlatinum || isOil) decimalCount = 2;
+          else if (isSilver || isJpy || item.pair.includes('/INR')) decimalCount = 3;
+          else if (isCopper) decimalCount = 4;
+
+          const formatDisplayPrice = () => {
+            if (isIndianIndex) return `₹${item.price.toLocaleString('en-IN')}`;
+            if (isGold || isSilver || isPlatinum || isOil) return `$${item.price.toFixed(decimalCount)}`;
+            return item.price.toFixed(decimalCount);
+          };
 
           return (
             <button
@@ -60,7 +79,7 @@ export const TickerBar: React.FC<TickerBarProps> = ({
                 {item.pair}
               </span>
               <span className="text-white font-medium">
-                {isIndianIndex ? `₹${item.price.toLocaleString('en-IN')}` : item.price.toFixed(decimalCount)}
+                {formatDisplayPrice()}
               </span>
               <span className={`flex items-center text-[11px] font-semibold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {isPositive ? (

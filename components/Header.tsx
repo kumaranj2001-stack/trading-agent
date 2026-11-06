@@ -17,11 +17,12 @@ import {
   Database,
   Menu,
   X,
-  Newspaper
+  Radio,
+  Coins
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, TimeFrame } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
-import { FOREX_PAIRS, INDIAN_MARKET_ASSETS } from '@/lib/marketData';
+import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES } from '@/lib/marketData';
 
 interface HeaderProps {
   selectedPair: CurrencyPair;
@@ -38,7 +39,7 @@ interface HeaderProps {
   onOpenCalendar: () => void;
   onOpenMonteCarlo: () => void;
   onOpenKnowledge: () => void;
-  onOpenNewsRadar: () => void;
+  onOpenNewsWire?: () => void;
   isAnalyzing: boolean;
   onTriggerAnalysis: () => void;
   activeSession: string;
@@ -65,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCalendar,
   onOpenMonteCarlo,
   onOpenKnowledge,
-  onOpenNewsRadar,
+  onOpenNewsWire,
   isAnalyzing,
   onTriggerAnalysis,
   activeSession,
@@ -74,7 +75,12 @@ export const Header: React.FC<HeaderProps> = ({
   confluenceGrade,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const pairs = marketSegment === 'INDIAN_MARKET' ? INDIAN_MARKET_ASSETS : FOREX_PAIRS;
+  
+  const pairs = marketSegment === 'INDIAN_MARKET' 
+    ? INDIAN_MARKET_ASSETS 
+    : marketSegment === 'METALS_COMMODITIES'
+    ? METALS_COMMODITIES
+    : FOREX_PAIRS;
 
   return (
     <header className="border-b border-terminal-border bg-terminal-900/95 backdrop-blur-md sticky top-0 z-40">
@@ -106,13 +112,13 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="hidden xs:flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span className="truncate">{activeSession}</span>
-                <span className="text-cyan-400/90 font-bold">• 5 ROLES</span>
-                <span className="text-blue-400/90">• 20 NEWS SOURCES</span>
+                <span className="text-sky-400/90">• 18 NEWS WIRES</span>
+                <span className="text-cyan-400/80 hidden md:inline">• 1,050+ RULES</span>
               </div>
             </div>
           </div>
 
-          {/* Market Scope Selector: Forex vs Indian Market */}
+          {/* Market Scope Selector: Forex vs Metals/Commodities vs Indian Market */}
           <div className="flex items-center bg-terminal-950 p-0.5 sm:p-1 rounded-lg border border-terminal-border font-mono text-[11px] sm:text-xs">
             <button
               onClick={() => {
@@ -129,6 +135,23 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="hidden sm:inline">Forex</span>
               <span className="sm:hidden">FX</span>
             </button>
+
+            <button
+              onClick={() => {
+                onSelectMarketSegment('METALS_COMMODITIES');
+                onSelectPair('XAU/USD');
+              }}
+              className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
+                marketSegment === 'METALS_COMMODITIES'
+                  ? 'bg-amber-500 text-black font-extrabold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <span className="hidden sm:inline">Metals & Oil</span>
+              <span className="sm:hidden">Gold/Oil</span>
+            </button>
+
             <button
               onClick={() => {
                 onSelectMarketSegment('INDIAN_MARKET');
@@ -136,7 +159,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
               className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
                 marketSegment === 'INDIAN_MARKET'
-                  ? 'bg-amber-600 text-white font-bold shadow-sm'
+                  ? 'bg-orange-600 text-white font-bold shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
             >
@@ -158,7 +181,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Zap className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
-              <span className="hidden xs:inline">{isAnalyzing ? 'ANALYZING...' : 'RUN 5-AGENT SWARM'}</span>
+              <span className="hidden xs:inline">{isAnalyzing ? 'SYNCHRONIZING...' : 'RUN SWARM'}</span>
               <span className="xs:hidden">{isAnalyzing ? '...' : 'RUN'}</span>
             </button>
 
@@ -205,7 +228,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>Swarm Debate (5 Roles)</span>
+              <span>5-Agent Debate</span>
             </button>
             <button
               onClick={() => setActiveTab('backtest')}
@@ -227,22 +250,23 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Shield className="w-3.5 h-3.5" />
-              <span>Roles Specs</span>
+              <span>5 Roles</span>
             </button>
           </div>
 
           {/* Quick Tools */}
           <div className="flex items-center gap-1.5">
-            {/* 📰 News Radar Button (NEW) */}
-            <button
-              onClick={onOpenNewsRadar}
-              className="px-2.5 py-1 rounded bg-blue-950/70 hover:bg-blue-900 border border-blue-700/60 text-blue-300 flex items-center gap-1.5 transition-colors shadow-sm"
-              title="Real-time 20-source financial news & economic calendar scraper"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <Newspaper className="w-3.5 h-3.5 text-blue-400" />
-              <span className="font-bold">News Radar (20)</span>
-            </button>
+            {/* Live Wire Scraper Pill */}
+            {onOpenNewsWire && (
+              <button
+                onClick={onOpenNewsWire}
+                className="px-2.5 py-1 rounded bg-sky-950/70 hover:bg-sky-900 border border-sky-700/60 text-sky-300 flex items-center gap-1.5 transition-colors shadow-sm"
+                title="View 18 Financial Websites Real-Time Wire"
+              >
+                <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+                <span className="font-bold">News Wire (18)</span>
+              </button>
+            )}
 
             <button
               onClick={onOpenKnowledge}
@@ -250,7 +274,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="Open 1,000+ Rule Knowledge Base"
             >
               <Database className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="font-bold">1,050+ Rules</span>
+              <span className="font-bold">Knowledge (1,050+)</span>
             </button>
 
             <button
@@ -295,7 +319,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Pair & Timeframe Selectors */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1 bg-terminal-950 px-2.5 py-1 rounded border border-terminal-border">
-              <span className="text-[10px] text-slate-400">PAIR:</span>
+              <span className="text-[10px] text-slate-400">TARGET:</span>
               <select
                 value={selectedPair}
                 onChange={(e) => onSelectPair(e.target.value as CurrencyPair)}
@@ -330,7 +354,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Row 2 (Mobile / Tablet Controls): Scrollable Pair + Timeframes */}
         <div className="mt-2 pt-2 border-t border-terminal-border/40 flex lg:hidden items-center justify-between gap-2 overflow-x-auto scrollbar-none font-mono text-xs">
           <div className="flex items-center gap-1.5 shrink-0 bg-terminal-950 px-2 py-1 rounded border border-terminal-border">
-            <span className="text-[10px] text-slate-400">PAIR:</span>
+            <span className="text-[10px] text-slate-400">TARGET:</span>
             <select
               value={selectedPair}
               onChange={(e) => onSelectPair(e.target.value as CurrencyPair)}
@@ -386,7 +410,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>5-Role Debate</span>
+                <span>5-Agent Debate</span>
               </button>
               <button
                 onClick={() => { setActiveTab('backtest'); setMobileMenuOpen(false); }}
@@ -408,19 +432,21 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}
               >
                 <Shield className="w-3.5 h-3.5" />
-                <span>5 Roles Specs</span>
+                <span>5 Roles</span>
               </button>
             </div>
 
             {/* Mobile Quick Tools Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <button
-                onClick={() => { onOpenNewsRadar(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-blue-950/80 border border-blue-700/60 text-blue-300 font-bold flex items-center justify-center gap-1.5"
-              >
-                <Newspaper className="w-3.5 h-3.5 text-blue-400" />
-                <span>20 News Sources</span>
-              </button>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {onOpenNewsWire && (
+                <button
+                  onClick={() => { onOpenNewsWire(); setMobileMenuOpen(false); }}
+                  className="p-2 rounded bg-sky-950/80 border border-sky-700/60 text-sky-300 font-bold flex items-center justify-center gap-1.5"
+                >
+                  <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+                  <span>18 News Wires</span>
+                </button>
+              )}
 
               <button
                 onClick={() => { onOpenKnowledge(); setMobileMenuOpen(false); }}
@@ -462,10 +488,10 @@ export const Header: React.FC<HeaderProps> = ({
 
               <button
                 onClick={() => { onOpenMonteCarlo(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-terminal-800 text-emerald-400 border border-terminal-border flex items-center justify-center gap-1.5"
+                className="p-2 rounded bg-terminal-800 text-emerald-400 border border-terminal-border flex items-center justify-center gap-1.5 col-span-2 sm:col-span-4"
               >
                 <LineChart className="w-3.5 h-3.5" />
-                <span>VaR Engine</span>
+                <span>Monte Carlo 1,000-Path VaR</span>
               </button>
             </div>
           </div>

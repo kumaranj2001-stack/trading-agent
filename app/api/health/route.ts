@@ -5,10 +5,9 @@ export const runtime = 'nodejs';
 export async function GET() {
   return NextResponse.json({
     status: 'healthy',
-    system: 'Apex Multi-Agent Trading Swarm',
+    system: 'Apex 5-Agent Trading Swarm & Real-Time Wire Engine',
     version: '2.0.0',
-    deployment: 'Vercel Serverless & Local Browser Ready',
-    rolesCount: 5,
+    deployment: 'Vercel Serverless & Local Browser Storage',
     roles: [
       'technical_analyst',
       'fundamental_analyst',
@@ -16,7 +15,13 @@ export async function GET() {
       'news_analyst',
       'risk_manager'
     ],
-    monitoredFinancialSourcesCount: 20,
+    monitoredFinancialSources: 18,
+    coverage: [
+      'Forex Majors & Crosses',
+      'Precious Metals (Gold, Silver, Platinum)',
+      'Energy & Commodities (WTI Crude, Brent, Copper)',
+      'Indian Equities (NSE NIFTY 50, BANK NIFTY)'
+    ],
     timestamp: new Date().toISOString(),
   });
 }

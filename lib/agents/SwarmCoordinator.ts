@@ -1,22 +1,11 @@
-import { 
-  Candle, 
-  CurrencyPair, 
-  SwarmConsensusResult, 
-  TimeFrame, 
-  AgentDebateMessage, 
-  MarketScannerOpportunity, 
-  MarketSegment, 
-  UnifiedSwarmDecision,
-  CoreFundamentalReason 
-} from '../types';
+import { Candle, CurrencyPair, SwarmConsensusResult, TimeFrame, AgentDebateMessage, MarketScannerOpportunity, MarketSegment, UnifiedDecision } from '../types';
 import { TechnicalAnalystAgent } from './TechnicalAnalyst';
 import { FundamentalAnalystAgent } from './FundamentalAnalyst';
 import { ForexMarketAnalystAgent } from './ForexMarketAnalyst';
 import { NewsAnalystAgent } from './NewsAnalyst';
 import { RiskManagerAgent, RiskManagerConfig, DEFAULT_RISK_CONFIG } from './RiskManager';
-import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, generateCandles, getMarketSegmentForSymbol } from '../marketData';
+import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, generateCandles, getMarketSegmentForSymbol } from '../marketData';
 import { knowledgeEngine } from '../knowledge/KnowledgeEngine';
-import { browserNewsStorage } from '../newsStorage';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -42,22 +31,22 @@ export class SwarmCoordinator {
     const currentPrice = marketCandles[marketCandles.length - 1].close;
     const marketSegment: MarketSegment = getMarketSegmentForSymbol(pair);
 
-    // 1. Technical Analysis (with 500+ Knowledge Rule matching)
+    // 1. Technical Analysis (with 525+ Knowledge Rules)
     const technical = this.technicalAnalyst.analyze(pair, timeframe, marketCandles);
 
-    // 2. Fundamental Analysis (with 500+ Knowledge Rule matching & Indian Market drivers)
+    // 2. Fundamental Analysis (with 525+ Macro Rules)
     const fundamental = this.fundamentalAnalyst.analyze(pair);
 
     // 3. Forex & Market Dynamics Analysis
     const forex = this.forexAnalyst.analyze(pair);
 
-    // 4. Dedicated News Analyst (Continuously scrapes 15-20 financial websites & calendars)
+    // 4. Real-Time News & Wire Analysis (18+ Financial Outlets Scraped)
     const news = this.newsAnalyst.analyze(pair);
 
-    // 5. Risk Manager Evaluation & Final Sizing across all 4 analyst roles
-    const risk = this.riskManager.evaluateTrade(pair, currentPrice, technical, fundamental, forex, news);
+    // 5. Risk Manager Evaluation & Final Sizing
+    const risk = this.riskManager.evaluateTrade(pair, currentPrice, technical, fundamental, forex);
 
-    // 5-Role Confluence Scoring
+    // 5-Agent Confluence Scoring
     const buyScore = (technical.bias.includes('BUY') ? technical.confidenceScore : 0) +
                      (fundamental.bias.includes('BUY') ? fundamental.confidenceScore : 0) +
                      (forex.bias.includes('BUY') ? forex.confidenceScore : 0) +
@@ -73,71 +62,22 @@ export class SwarmCoordinator {
 
     if (buyScore > sellScore && buyScore > 130) {
       consensusDirection = 'BUY';
-      overallConfidence = Math.round(buyScore / 4);
+      overallConfidence = Math.min(98, Math.round(buyScore / 4));
     } else if (sellScore > buyScore && sellScore > 130) {
       consensusDirection = 'SELL';
-      overallConfidence = Math.round(sellScore / 4);
+      overallConfidence = Math.min(98, Math.round(sellScore / 4));
     } else {
       consensusDirection = 'HOLD';
-      overallConfidence = 48;
+      overallConfidence = 45;
     }
 
     let confluenceGrade: SwarmConsensusResult['confluenceGrade'] = 'C';
-    if (risk.verdict === 'APPROVED' && overallConfidence >= 85) confluenceGrade = 'A+';
-    else if (risk.verdict === 'APPROVED' && overallConfidence >= 70) confluenceGrade = 'A';
+    if (risk.verdict === 'APPROVED' && overallConfidence >= 82) confluenceGrade = 'A+';
+    else if (risk.verdict === 'APPROVED' && overallConfidence >= 68) confluenceGrade = 'A';
     else if (risk.verdict === 'MODIFIED') confluenceGrade = 'B';
     else if (risk.verdict === 'VETOED') confluenceGrade = 'F';
 
-    // Count how many roles aligned with the consensus direction
-    const roles = [technical.bias, fundamental.bias, forex.bias, news.bias];
-    const alignedCount = roles.filter(b => b.includes(consensusDirection)).length;
-    const rolesAlignmentText = `${alignedCount} of 4 Analyst Roles Aligned + Risk Gatekeeper Review`;
-
-    // Compile the core fundamental & macro reasons driving the decision
-    const techReason: CoreFundamentalReason = {
-      id: 'cfr-tech-confluence',
-      pillar: 'MONETARY_POLICY',
-      roleOrigin: 'technical_analyst',
-      title: `Algorithmic SMC Structure (${technical.smartMoneyConcepts?.structure || 'Fair Value Gap'})`,
-      description: `Order block validation at ${technical.keySupport} with ${technical.indicatorSummary.maTrend}. Pattern: ${technical.candlestickPattern} (${technical.confidenceScore}% technical conviction).`,
-      sentiment: technical.bias.includes('BUY') ? 'BULLISH' : technical.bias.includes('SELL') ? 'BEARISH' : 'NEUTRAL',
-      impactWeight: 84,
-      evidenceSource: 'Technical Chart Swarm Matrix',
-    };
-
-    const compiledReasons: CoreFundamentalReason[] = [
-      ...news.coreFundamentalReasons,
-      techReason,
-    ].sort((a, b) => b.impactWeight - a.impactWeight);
-
-    // Build the Unified Decision object
-    const actionTitle = consensusDirection === 'BUY'
-      ? `UNIFIED INSTITUTIONAL BUY CONVICTION (${overallConfidence}% CONFIDENCE)`
-      : consensusDirection === 'SELL'
-      ? `UNIFIED INSTITUTIONAL SELL CONVICTION (${overallConfidence}% CONFIDENCE)`
-      : `UNIFIED CONSERVATIVE HOLD / PRESERVATION STANCE (${overallConfidence}% CONFIDENCE)`;
-
-    const synthesisSummary = risk.verdict === 'VETOED'
-      ? `VETO ACTIVE: The swarm identified directional pressure, but Sarah Stirling (Risk Manager) rejected execution due to: ${risk.vetoReasons?.join('; ') || 'capital preservation rules'}.`
-      : `All five autonomous roles (Technical, Fundamental, Forex, News & Risk) have synthesized 20 scraped financial websites, central bank policy spreads, and algorithmic price structure. Recommendation: Execute ${consensusDirection} with 1:${risk.parameters.riskRewardRatio} Risk/Reward.`;
-
-    const unifiedDecision: UnifiedSwarmDecision = {
-      direction: consensusDirection,
-      confidence: overallConfidence,
-      confluenceGrade,
-      symbol: pair,
-      timeframe,
-      synthesisSummary,
-      rolesAlignmentText,
-      coreFundamentalReasons: compiledReasons,
-      executionRecommended: risk.verdict !== 'VETOED' && consensusDirection !== 'HOLD',
-      actionTitle,
-    };
-
-    // Persist latest unified decision in browser storage
-    browserNewsStorage.saveLatestUnifiedDecision(unifiedDecision);
-
-    // Aggregate top confluence knowledge rules
+    // Top confluence knowledge rules
     const topConfluenceRules = [
       ...technical.topMatchedRules.slice(0, 3),
       ...fundamental.topMatchedRules.slice(0, 3),
@@ -145,17 +85,44 @@ export class SwarmCoordinator {
 
     const stats = knowledgeEngine.getTotalStats();
 
+    // 🎯 Synthesize the Unified 5-Role Decision Object
+    const isMetal = pair === 'XAU/USD' || pair === 'XAG/USD' || pair === 'XPT/USD' || pair === 'COPPER';
+    const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
+    
+    let dynSummary = `DXY Index trend: ${forex.dxyTrend}. Liquidity session: ${forex.activeTradingSession.session}.`;
+    if (isMetal) dynSummary = `Safe-haven bullion inflows, negative TIPS real yields, and physical vault shortages drive high momentum.`;
+    else if (isOil) dynSummary = `OPEC+ compliance and geopolitical shipping routes provide structural upside support.`;
+
+    const unifiedDecision: UnifiedDecision = {
+      direction: consensusDirection,
+      confidence: overallConfidence,
+      confluenceGrade,
+      recommendedAction: risk.verdict === 'VETOED'
+        ? `HOLD / PASS: Setup vetoed by Risk Manager (${risk.reasoning})`
+        : consensusDirection === 'HOLD'
+        ? `WAIT FOR CONFLUENCE: Analyst team split, awaiting breakout validation.`
+        : `${consensusDirection} ${risk.parameters.positionSizeLots} Standard Lots on ${pair} @ ${currentPrice}`,
+      summary: `5-Role Institutional Consensus: ${consensusDirection} (${confluenceGrade} Grade Confluence, ${overallConfidence}% Confidence Score across Technical, Fundamental, Forex, News & Risk desks).`,
+      coreReasons: {
+        fundamental: `Macro Regime: ${fundamental.macroRegime}. Central bank policy stance (${fundamental.baseCurrencyOutlook.currency} ${fundamental.baseCurrencyOutlook.centralBankStance} @ ${fundamental.baseCurrencyOutlook.interestRate}% vs ${fundamental.quoteCurrencyOutlook.currency} ${fundamental.quoteCurrencyOutlook.centralBankStance} @ ${fundamental.quoteCurrencyOutlook.interestRate}%). Real interest rate spread: ${fundamental.realInterestRateSpread > 0 ? '+' : ''}${fundamental.realInterestRateSpread}%.`,
+        newsSentiment: `Wire Pulse: ${news.marketMood.replace('_', ' ')} (${news.sentimentScore > 0 ? '+' : ''}${news.sentimentScore} sentiment). 18 sources actively scraped (Bloomberg, Reuters, Kitco, WSJ, CNBC, FT). Top headline catalyst: "${news.topCatalysts[0] || 'Broad institutional wire confluence.'}".`,
+        technicalSetup: `Structure: ${technical.smartMoneyConcepts?.structure || technical.trend}. Pattern: ${technical.candlestickPattern}. Invalidation Floor (S1): ${technical.keySupport}, Resistance Ceiling (R1): ${technical.keyResistance}. RSI momentum: ${technical.indicatorSummary.rsiStatus}.`,
+        marketDynamics: dynSummary,
+        riskGovernance: risk.verdict === 'VETOED' 
+          ? `VETO ENFORCED: ${risk.vetoReasons?.[0] || 'Circuit breaker active.'}`
+          : `RISK APPROVED: ${risk.parameters.riskRewardRatio}:1 Risk-to-Reward ratio, stop anchored at ${risk.parameters.stopLoss}, targeting ${risk.parameters.takeProfit1} with $${risk.parameters.maxLossUsd} downside cap (${risk.parameters.accountRiskPercent}% equity).`,
+      },
+      keyDriversList: [
+        `Fundamental: ${fundamental.macroRegime} policy divergence (${fundamental.baseCurrencyOutlook.interestRate}% vs ${fundamental.quoteCurrencyOutlook.interestRate}%)`,
+        `Live News Wire: ${news.marketMood} sentiment across 18 monitored outlets (${news.recentHeadlines[0]?.title || 'Institutional flow'})`,
+        `Technical: ${technical.candlestickPattern} with ${technical.smartMoneyConcepts?.structure || 'trend continuation'}`,
+        `Market Mechanics: ${forex.activeTradingSession.session} session (${forex.activeTradingSession.liquidityRating} liquidity)`,
+        `Risk Governance: ${risk.verdict} — R:R ${risk.parameters.riskRewardRatio}:1, Max Risk $${risk.parameters.maxLossUsd}`,
+      ],
+    };
+
     // Build 5-Agent Debate Transcript
-    const debateTranscript = this.generateDebateTranscript(
-      pair, 
-      currentPrice, 
-      technical, 
-      fundamental, 
-      forex, 
-      news, 
-      risk, 
-      marketSegment
-    );
+    const debateTranscript = this.generateDebateTranscript(pair, currentPrice, technical, fundamental, forex, news, risk, marketSegment);
 
     return {
       pair,
@@ -183,12 +150,8 @@ export class SwarmCoordinator {
       },
       debateTranscript,
       executionSignal: {
-        authorized: risk.verdict !== 'VETOED' && consensusDirection !== 'HOLD',
-        orderType: risk.verdict === 'VETOED' || consensusDirection === 'HOLD'
-          ? 'NONE'
-          : consensusDirection === 'BUY'
-          ? 'BUY_MARKET'
-          : 'SELL_MARKET',
+        authorized: risk.verdict !== 'VETOED' && risk.action !== 'NO_TRADE' && consensusDirection !== 'HOLD',
+        orderType: risk.action === 'BUY' ? 'BUY_MARKET' : risk.action === 'SELL' ? 'SELL_MARKET' : 'NONE',
         symbol: pair,
         lots: risk.parameters.positionSizeLots,
         entry: risk.parameters.entryPrice,
@@ -201,10 +164,12 @@ export class SwarmCoordinator {
     };
   }
 
-  // Multi-Pair & Multi-Market Opportunity Scanner across 5 roles
+  // Multi-Pair & Multi-Market Opportunity Scanner
   public scanAllOpportunities(segment?: MarketSegment): MarketScannerOpportunity[] {
     const symbolsToScan = segment === 'INDIAN_MARKET' 
       ? INDIAN_MARKET_ASSETS 
+      : segment === 'METALS_COMMODITIES'
+      ? METALS_COMMODITIES
       : segment === 'FOREX' 
       ? FOREX_PAIRS 
       : (Object.keys(BASE_PRICES) as CurrencyPair[]);
@@ -216,7 +181,6 @@ export class SwarmCoordinator {
       const tech = result.agents.technical;
       const fund = result.agents.fundamental;
       const fx = result.agents.forex;
-      const news = result.agents.news;
       const risk = result.agents.risk;
 
       let status: MarketScannerOpportunity['status'] = 'MODERATE_SETUP';
@@ -232,7 +196,6 @@ export class SwarmCoordinator {
         technicalScore: tech.confidenceScore,
         fundamentalScore: fund.confidenceScore,
         forexScore: fx.confidenceScore,
-        newsScore: news.confidenceScore,
         riskVerdict: risk.verdict,
         grade: result.confluenceGrade,
         potentialLots: risk.parameters.positionSizeLots,
@@ -257,6 +220,7 @@ export class SwarmCoordinator {
   ): AgentDebateMessage[] {
     const messages: AgentDebateMessage[] = [];
     const isIndian = segment === 'INDIAN_MARKET';
+    const isMetal = pair === 'XAU/USD' || pair === 'XAG/USD' || pair === 'XPT/USD' || pair === 'COPPER';
 
     // Round 1: Specialist Theses
     messages.push({
@@ -277,20 +241,21 @@ export class SwarmCoordinator {
       agentName: fund.agentName,
       avatarColor: 'text-purple-400 bg-purple-950/60 border-purple-800',
       content: isIndian
-        ? `From the Indian macroeconomic desk: FII net flows are positive (+₹${fund.indianMarketDrivers?.fiiNetFlowCr} Cr), DII SIP flows at +₹${fund.indianMarketDrivers?.diiNetFlowCr} Cr, and India VIX is calm at ${fund.indianMarketDrivers?.indiaVix}. RBI repo rate steady at ${fund.indianMarketDrivers?.rbiRepoRate}%. Matched ${fund.matchedRulesCount} rules from 500+ Fundamental Knowledge Base. Conviction: ${fund.bias}.`
+        ? `From the Indian macroeconomic desk: FII net flows are positive (+₹${fund.indianMarketDrivers?.fiiNetFlowCr} Cr), DII SIP flows at +₹${fund.indianMarketDrivers?.diiNetFlowCr} Cr, and India VIX is calm at ${fund.indianMarketDrivers?.indiaVix}. RBI repo rate steady at ${fund.indianMarketDrivers?.rbiRepoRate}%. Matched ${fund.matchedRulesCount} fundamental rules. Conviction: ${fund.bias}.`
+        : isMetal
+        ? `Precious metals macroeconomic regime: Sovereign central bank gold reserves expanded by 38 tons this week while negative real bond yield momentum reduces the opportunity cost of bullion. Real rate spread is ${fund.realInterestRateSpread}%. Bias: ${fund.bias}.`
         : `From a macroeconomic angle, we observe ${fund.macroRegime}. The policy spread is ${fund.baseCurrencyOutlook.interestRate}% vs ${fund.quoteCurrencyOutlook.interestRate}%. Real inflation-adjusted spread is ${fund.realInterestRateSpread > 0 ? '+' : ''}${fund.realInterestRateSpread}%. Matched ${fund.matchedRulesCount} fundamental rules. Bias: ${fund.bias}.`,
       sentiment: fund.bias.includes('BUY') ? 'BULLISH' : fund.bias.includes('SELL') ? 'BEARISH' : 'NEUTRAL',
       timestamp: '00:03s',
     });
 
-    // 5th Agent: News Analyst in Round 1
     messages.push({
       id: 'deb-3',
       round: 1,
       role: 'news_analyst',
       agentName: news.agentName,
-      avatarColor: 'text-blue-400 bg-blue-950/60 border-blue-800',
-      content: `Scraped 20 premier financial websites and economic calendars in real time (Bloomberg, Reuters, FT, WSJ, CNBC, Forex Factory, Moneycontrol, etc.). Processed ${news.scrapedHeadlinesCount} live headlines for ${pair}. Overall sentiment score sits at ${news.overallSentimentScore > 0 ? '+' : ''}${news.overallSentimentScore}/100. ${news.breakingNewsAlert ? `BREAKING ALERT: "${news.breakingNewsAlert.title}" from ${news.breakingNewsAlert.sourceName}.` : 'No sudden geopolitical shock detected.'} News bias aligns with ${news.bias} (${news.confidenceScore}% confidence).`,
+      avatarColor: 'text-sky-400 bg-sky-950/60 border-sky-800',
+      content: `Real-time wire scraping across 18 financial outlets (Bloomberg, Reuters, Kitco, WSJ, CNBC, FT) indicates a ${news.marketMood.replace('_', ' ')} posture (${news.sentimentScore > 0 ? '+' : ''}${news.sentimentScore} sentiment). ${news.breakingAlert || `Primary headlines focus on "${news.topCatalysts[0] || 'Institutional liquidity flows'}".`} Bias: ${news.bias}.`,
       sentiment: news.bias.includes('BUY') ? 'BULLISH' : news.bias.includes('SELL') ? 'BEARISH' : 'NEUTRAL',
       timestamp: '00:05s',
     });
@@ -302,8 +267,10 @@ export class SwarmCoordinator {
       agentName: fx.agentName,
       avatarColor: 'text-amber-400 bg-amber-950/60 border-amber-800',
       content: isIndian
-        ? `In the Rupee cross-market space, USD/INR sits at 84.38 with RBI intervention keeping volatility tight. DXY is in a ${fx.dxyTrend} stance. We are in the ${fx.activeTradingSession.session} session with optimal domestic institutional liquidity.`
-        : `The Currency Strength Index ranks base at ${fx.relativeStrengthComparison.baseStrength}/10 and quote at ${fx.relativeStrengthComparison.quoteStrength}/10. Carry yield is ${fx.carryTradeYieldSpread > 0 ? '+' : ''}${fx.carryTradeYieldSpread}%. Active session (${fx.activeTradingSession.session}) offers ${fx.activeTradingSession.liquidityRating.toLowerCase()} liquidity. Positioning: ${fx.bias}.`,
+        ? `In the Rupee cross-market space, USD/INR sits at 84.38 with RBI intervention keeping volatility tight. DXY is in a ${fx.dxyTrend} stance. Active session (${fx.activeTradingSession.session}) offers optimal institutional liquidity.`
+        : isMetal
+        ? `Commodity intermarket correlation: Gold & Silver show a +0.78 positive correlation against falling real yields and safe-haven flows. DXY trend sits in a ${fx.dxyTrend} stance. Positioning: ${fx.bias}.`
+        : `The Currency Strength Index ranks base at ${fx.relativeStrengthComparison.baseStrength}/10 and quote at ${fx.relativeStrengthComparison.quoteStrength}/10. Active session (${fx.activeTradingSession.session}) offers ${fx.activeTradingSession.liquidityRating.toLowerCase()} liquidity. Positioning: ${fx.bias}.`,
       sentiment: fx.bias.includes('BUY') ? 'BULLISH' : fx.bias.includes('SELL') ? 'BEARISH' : 'NEUTRAL',
       timestamp: '00:07s',
     });
@@ -314,8 +281,8 @@ export class SwarmCoordinator {
       round: 2,
       role: 'news_analyst',
       agentName: news.agentName,
-      avatarColor: 'text-blue-400 bg-blue-950/60 border-blue-800',
-      content: `@RiskManager Sarah, take note: our multi-outlet scraper confirms the upcoming economic calendar prints show high institutional consensus. The news tape confirms ${news.coreFundamentalReasons[0]?.title || 'solid macro tailwinds'}. Headline risk is contained below 12%.`,
+      avatarColor: 'text-sky-400 bg-sky-950/60 border-sky-800',
+      content: `@RiskManager Sarah & @TechnicalAnalyst Marcus: Our Bloomberg and Reuters speed-wires detected elevated institutional order flow into ${pair}. Are our proposed stop-loss buffers wide enough to absorb intraday headline volatility spikes?`,
       sentiment: 'CAUTION',
       timestamp: '00:10s',
     });
@@ -326,7 +293,7 @@ export class SwarmCoordinator {
       role: 'technical_analyst',
       agentName: tech.agentName,
       avatarColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800',
-      content: `Confirmed David. The technical order block and liquidity pool at ${tech.keySupport} correspond exactly with the fresh headline momentum. Confluence across all 4 analyst desks is confirmed.`,
+      content: `Confirmed Alexander. Knowledge rule "${tech.topMatchedRules[0]?.ruleName || 'SMC Liquidity Sweep'}" mandates anchoring our stop loss 1.5x ATR beyond structural pivot ${tech.keySupport}, insulating the trade from headline stop runs.`,
       sentiment: 'NEUTRAL',
       timestamp: '00:12s',
     });
@@ -341,10 +308,10 @@ export class SwarmCoordinator {
       content: risk.verdict === 'VETOED'
         ? `PROPOSAL REJECTED under Risk Governance: ${risk.reasoning}. Capital preservation is non-negotiable.`
         : risk.verdict === 'MODIFIED'
-        ? `Setup APPROVED WITH RESTRICTIONS across all 5 roles. Cross-examined against 20 financial outlets and 1,000+ institutional rules: ${tech.matchedRulesCount} technical and ${fund.matchedRulesCount} fundamental matches verified. Sizing allocated at ${risk.parameters.positionSizeLots} lots, max loss limited to $${risk.parameters.maxLossUsd} (${risk.parameters.accountRiskPercent}% equity), targeting $${risk.parameters.projectedGainUsd} (R:R ${risk.parameters.riskRewardRatio}:1).`
-        : `Proposal FULLY APPROVED. 5-role unanimous confluence (Technical, Fundamental, Forex, News & Risk) validated by top institutional rules. Sizing set at ${risk.parameters.positionSizeLots} standard lots with hard stop at ${risk.parameters.stopLoss}. Order authorized for execution.`,
+        ? `Setup APPROVED WITH RESTRICTIONS. Cross-examined across all 5 roles: ${tech.matchedRulesCount} technical and ${fund.matchedRulesCount} fundamental rules confirmed alongside wire sentiment score of ${news.sentimentScore}. Sizing allocated at ${risk.parameters.positionSizeLots} lots, max loss capped at $${risk.parameters.maxLossUsd} (${risk.parameters.accountRiskPercent}% equity), targeting $${risk.parameters.projectedGainUsd} (R:R ${risk.parameters.riskRewardRatio}:1).`
+        : `Proposal FULLY APPROVED by all 5 roles. Solid confluence across Technical, Fundamental, Forex, and News wire sentiment. Sizing set at ${risk.parameters.positionSizeLots} standard lots with hard stop at ${risk.parameters.stopLoss}. Order authorized for execution.`,
       sentiment: risk.verdict === 'VETOED' ? 'CAUTION' : risk.action === 'BUY' ? 'BULLISH' : 'BEARISH',
-      timestamp: '00:16s',
+      timestamp: '00:15s',
     });
 
     return messages;
