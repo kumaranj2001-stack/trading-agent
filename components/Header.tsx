@@ -16,6 +16,8 @@ import {
   PlayCircle,
   Database,
   Menu,
+  MoreVertical,
+  BookOpen,
   X,
   Radio,
   Coins,
@@ -46,6 +48,8 @@ interface HeaderProps {
   onOpenKnowledge: () => void;
   onOpenNewsWire?: () => void;
   onOpenFirebase?: () => void;
+  onOpenJournal?: () => void;
+  onOpenLeftDrawer?: () => void;
   isAnalyzing: boolean;
   onTriggerAnalysis: () => void;
   activeSession: string;
@@ -76,6 +80,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenKnowledge,
   onOpenNewsWire,
   onOpenFirebase,
+  onOpenJournal,
+  onOpenLeftDrawer,
   isAnalyzing,
   onTriggerAnalysis,
   activeSession,
@@ -93,14 +99,26 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="border-b border-terminal-border bg-terminal-900/95 backdrop-blur-md sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5">
-        {/* Row 1: Brand, Mode, Market Scope & Mobile Menu Button */}
-        <div className="flex items-center justify-between gap-2">
-          {/* Brand & Setup Grade */}
-          <div className="flex items-center gap-2.5 min-w-0">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-2.5">
+        {/* Row 1: Left 3-Dot Drawer Button, Brand, Market Scope & Action Controls */}
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          {/* Attached completely to the left: Three-dot trigger + Brand */}
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            {/* Hamburger / Navigation Desk Three-Dot Trigger */}
+            <button
+              onClick={onOpenLeftDrawer}
+              className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
+              title="Open Navigation Menu"
+              aria-label="Open Navigation Menu"
+            >
+              <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+            </button>
+
+            {/* Brand Logo & Title */}
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
               <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
+
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="font-bold text-white tracking-wider text-xs sm:text-sm md:text-base truncate">
@@ -128,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Market Scope Selector: Forex vs Metals/Commodities vs Indian Market */}
-          <div className="flex items-center bg-terminal-950 p-1 rounded-lg border border-terminal-border text-xs sm:text-sm">
+          <div className="flex items-center bg-terminal-950 p-1 rounded-lg border border-terminal-border text-xs sm:text-sm shrink-0">
             <button
               onClick={() => {
                 onSelectMarketSegment('FOREX');
@@ -178,8 +196,8 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Action Trigger & Mobile Menu Toggle */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Action Trigger & Header Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={onTriggerAnalysis}
               disabled={isAnalyzing}
@@ -203,6 +221,7 @@ export const Header: React.FC<HeaderProps> = ({
               <Sliders className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
 
+            {/* Dark / Light Mode Toggle */}
             {onToggleTheme && (
               <button
                 onClick={onToggleTheme}
@@ -221,6 +240,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
+            {/* Mobile Menu Toggle Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-1.5 sm:p-2 rounded bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors"
@@ -283,6 +303,18 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Quick Tools */}
           <div className="flex items-center gap-2">
+            {/* Persistent Trading Journals */}
+            {onOpenJournal && (
+              <button
+                onClick={onOpenJournal}
+                className="px-3 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-600/60 text-emerald-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
+                title="Open Persistent Trade Journals & Loss Reviews"
+              >
+                <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Journals</span>
+              </button>
+            )}
+
             {/* Live Wire Scraper Pill */}
             {onOpenNewsWire && (
               <button
@@ -310,7 +342,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenKnowledge}
               className="px-3 py-1.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
-              title="Open 1,000+ Rule Knowledge Base"
+              title="Open 1,050+ Rule Knowledge Base"
             >
               <Database className="w-3.5 h-3.5 text-indigo-400" />
               <span>Knowledge (1,050+)</span>
@@ -477,6 +509,16 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Mobile Quick Tools Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {onOpenJournal && (
+                <button
+                  onClick={() => { onOpenJournal(); setMobileMenuOpen(false); }}
+                  className="p-2 rounded bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 font-bold flex items-center justify-center gap-1.5"
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Trade Journals</span>
+                </button>
+              )}
+
               {onOpenNewsWire && (
                 <button
                   onClick={() => { onOpenNewsWire(); setMobileMenuOpen(false); }}
@@ -537,10 +579,10 @@ export const Header: React.FC<HeaderProps> = ({
 
               <button
                 onClick={() => { onOpenMonteCarlo(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-terminal-800 text-emerald-400 border border-terminal-border flex items-center justify-center gap-1.5 col-span-2 sm:col-span-4"
+                className="p-2 rounded bg-terminal-800 text-emerald-400 border border-terminal-border flex items-center justify-center gap-1.5"
               >
                 <LineChart className="w-3.5 h-3.5" />
-                <span>Monte Carlo 1,000-Path VaR</span>
+                <span>1,000-Path VaR</span>
               </button>
 
               {onToggleTheme && (

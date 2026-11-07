@@ -6,6 +6,7 @@ import { NewsAnalystAgent } from './NewsAnalyst';
 import { RiskManagerAgent, RiskManagerConfig, DEFAULT_RISK_CONFIG } from './RiskManager';
 import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, generateCandles, getMarketSegmentForSymbol } from '../marketData';
 import { knowledgeEngine } from '../knowledge/KnowledgeEngine';
+import { JournalStorageManager } from '../journalStorage';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -124,6 +125,18 @@ export class SwarmCoordinator {
     // Build 5-Agent Debate Transcript
     const debateTranscript = this.generateDebateTranscript(pair, currentPrice, technical, fundamental, forex, news, risk, marketSegment);
 
+    // Active Pre-Trade Historical Journal Audit
+    const journalAudit = JournalStorageManager.analyzeHistoricalJournals(pair);
+    const symHistory = journalAudit.symbolStats[pair];
+    const journalAnalysisTelemetry = {
+      totalReviewedTrades: journalAudit.totalTrades,
+      symbolWinRate: symHistory ? symHistory.winRate : journalAudit.winRate,
+      recentLossesCount: journalAudit.losingTrades,
+      primaryPastLossFactor: journalAudit.primaryLossCauses[0]?.category.replace(/_/g, ' ') || 'Disciplined Executions',
+      guardrailActionApplied: journalAudit.activeGuardrailAction || 'Standard risk-adjusted sizing with 22-pip dynamic invalidation',
+      historicalSafetyScore: Math.min(95, Math.max(40, Math.round((symHistory?.winRate ?? journalAudit.winRate) * 1.15))),
+    };
+
     return {
       pair,
       marketSegment,
@@ -134,6 +147,7 @@ export class SwarmCoordinator {
       overallConfidence,
       confluenceGrade,
       unifiedDecision,
+      journalAnalysis: journalAnalysisTelemetry,
       knowledgeSummary: {
         totalTechnicalRulesLoaded: stats.technicalCount,
         totalFundamentalRulesLoaded: stats.fundamentalCount,

@@ -361,6 +361,14 @@ export interface SwarmConsensusResult {
     news: NewsAnalysis;
     risk: RiskAssessment;
   };
+  journalAnalysis?: {
+    totalReviewedTrades: number;
+    symbolWinRate: number;
+    recentLossesCount: number;
+    primaryPastLossFactor?: string;
+    guardrailActionApplied?: string;
+    historicalSafetyScore: number;
+  };
   debateTranscript: AgentDebateMessage[];
   executionSignal: {
     authorized: boolean;
@@ -421,4 +429,66 @@ export interface TradeHistoryItem {
   outcome: 'WIN' | 'LOSS' | 'SCRATCH';
   riskManagerVerdict: RiskVerdict;
   strategyNotes: string;
+}
+
+// ==========================================
+// 📓 PERSISTENT TRADING JOURNAL INTERFACES
+// ==========================================
+export type JournalLossCategory =
+  | 'SL_HIT_REGULAR_VOLATILITY'
+  | 'NEWS_SLIPPAGE'
+  | 'PREMATURE_EXIT'
+  | 'CHASED_MARKET'
+  | 'OVERLEVERAGED'
+  | 'COUNTER_TREND'
+  | 'SESSION_LIQUIDITY_DROP'
+  | 'NONE_DISCIPLINED_WIN';
+
+export interface JournalEntry {
+  id: string;
+  tradeId?: string;
+  symbol: CurrencyPair;
+  segment: MarketSegment;
+  orderType: 'BUY' | 'SELL';
+  lots: number;
+  entryPrice: number;
+  exitPrice?: number;
+  stopLoss: number;
+  takeProfit: number;
+  riskRewardRatio: number;
+  dollarRisk: number;
+  potentialDollarGain: number;
+  executionMode: ExecutionMode;
+  entryTimestamp: number;
+  entryTimeStr: string;
+  exitTimestamp?: number;
+  exitTimeStr?: string;
+  realizedPnl?: number;
+  pnlPercent?: number;
+  outcome: 'OPEN' | 'WIN' | 'LOSS' | 'SCRATCH';
+  confluenceGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  confidenceScore: number;
+  swarmDirection: 'BUY' | 'SELL' | 'HOLD';
+  riskManagerVerdict: RiskVerdict;
+  keyReasons: string[];
+  lossReasonCategory?: JournalLossCategory;
+  lessonLearned?: string;
+  notes?: string;
+  tags?: string[];
+}
+
+export interface HistoricalJournalAnalysis {
+  totalTrades: number;
+  winningTrades: number;
+  losingTrades: number;
+  winRate: number;
+  profitFactor: number;
+  netPnl: number;
+  avgWin: number;
+  avgLoss: number;
+  maxConsecutiveLosses: number;
+  symbolStats: Record<string, { trades: number; wins: number; losses: number; winRate: number; netPnl: number }>;
+  primaryLossCauses: Array<{ category: JournalLossCategory; count: number; percentage: number }>;
+  recurringMistakesWarning?: string;
+  activeGuardrailAction?: string;
 }

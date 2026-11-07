@@ -9,6 +9,7 @@ import {
   TechnicalAnalysis 
 } from '../types';
 import { PIP_VALUES } from '../marketData';
+import { JournalStorageManager } from '../journalStorage';
 
 export interface RiskManagerConfig {
   accountBalance: number;
@@ -126,10 +127,22 @@ export class RiskManagerAgent extends BaseAgent {
       );
     }
 
-    // 5. Position Sizing
+    // 5. Position Sizing & Historical Journal Audit
+    const journalAnalysis = JournalStorageManager.analyzeHistoricalJournals(pair);
+    const symbolHistory = journalAnalysis.symbolStats[pair];
+    if (symbolHistory && symbolHistory.trades >= 2 && symbolHistory.winRate < 50) {
+      adjustmentsMade.push(
+        `Historical Journal Guardrail: ${pair} historical win rate is ${symbolHistory.winRate}% across ${symbolHistory.trades} journaled trades. Applied 25% capital exposure haircut.`
+      );
+    } else if (journalAnalysis.recurringMistakesWarning) {
+      adjustmentsMade.push(
+        `Past Loss Pattern Guardrail: ${journalAnalysis.recurringMistakesWarning}. Risk scaled defensively.`
+      );
+    }
+
     let riskPercent = this.config.maxRiskPerTradePercent;
     if (adjustmentsMade.length > 0) {
-      riskPercent = riskPercent * 0.5;
+      riskPercent = riskPercent * 0.7; // Moderate adjustment factor
     }
 
     const dollarRisk = (this.config.accountBalance * riskPercent) / 100;

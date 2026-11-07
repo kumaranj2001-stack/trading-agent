@@ -32,6 +32,10 @@ import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
 import { NewsWireModal } from '@/components/NewsWireModal';
 import { FirebaseStatusModal } from '@/components/FirebaseStatusModal';
+import { LeftNavigationDrawer } from '@/components/LeftNavigationDrawer';
+import { JournalModal } from '@/components/JournalModal';
+import { HistoricalJournalDesk } from '@/components/HistoricalJournalDesk';
+import { JournalStorageManager } from '@/lib/journalStorage';
 import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
 
 export default function Home() {
@@ -53,6 +57,8 @@ export default function Home() {
 
   // Modals & Tools
   const [executionMode, setExecutionMode] = useState<ExecutionMode>('MANUAL');
+  const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState<boolean>(false);
+  const [isJournalOpen, setIsJournalOpen] = useState<boolean>(false);
   const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
   const [isMonteCarloOpen, setIsMonteCarloOpen] = useState<boolean>(false);
@@ -407,6 +413,9 @@ export default function Home() {
     setPortfolio(updatedPortfolio);
     BrowserStorageManager.savePortfolio(updatedPortfolio);
 
+    // 📓 Persistent Trading Journal: Auto-log entry credentials, stop-loss ratios & trade parameters
+    JournalStorageManager.recordTradeOpen(newPosition, consensus, executionMode);
+
     showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${signal.entry}`);
   };
 
@@ -453,6 +462,9 @@ export default function Home() {
     setPortfolio(updatedPortfolio);
     BrowserStorageManager.savePortfolio(updatedPortfolio);
 
+    // 📓 Persistent Trading Journal: Auto-log trade outcome, exit price & realized P&L
+    JournalStorageManager.recordTradeClose(pos.id, pos.currentPrice, pos.pnl);
+
     showNotification(`CLOSED POSITION: ${pos.symbol} | Realized P&L: ${pos.pnl >= 0 ? '+' : ''}$${pos.pnl.toFixed(2)}`);
   };
 
@@ -488,6 +500,8 @@ export default function Home() {
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
         onOpenNewsWire={() => setIsNewsWireOpen(true)}
         onOpenFirebase={() => setIsFirebaseModalOpen(true)}
+        onOpenJournal={() => setIsJournalOpen(true)}
+        onOpenLeftDrawer={() => setIsLeftDrawerOpen(true)}
         isAnalyzing={isAnalyzing}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
         activeSession={activeSession}
@@ -528,6 +542,13 @@ export default function Home() {
               takeProfit={consensus?.agents.risk.parameters.takeProfit1}
               entryPrice={consensus?.agents.risk.parameters.entryPrice}
               signalBias={consensus?.agents.technical.bias}
+            />
+
+            {/* 📓 Active Pre-Trade Historical Journal Loss Review & Guardrails Desk */}
+            <HistoricalJournalDesk
+              selectedPair={selectedPair}
+              onOpenJournalModal={() => setIsJournalOpen(true)}
+              journalAnalysis={consensus?.journalAnalysis}
             />
 
             {/* 5 Specialized Agent Cards (Technical, Fundamental, News, Forex, Risk) */}
@@ -637,6 +658,32 @@ export default function Home() {
       <FirebaseStatusModal
         isOpen={isFirebaseModalOpen}
         onClose={() => setIsFirebaseModalOpen(false)}
+      />
+
+      {/* 🧭 Collapsible Left-Hand Hamburger Navigation Drawer (12 Items) */}
+      <LeftNavigationDrawer
+        isOpen={isLeftDrawerOpen}
+        onClose={() => setIsLeftDrawerOpen(false)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onOpenJournal={() => setIsJournalOpen(true)}
+        onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
+        onOpenNewsWire={() => setIsNewsWireOpen(true)}
+        onOpenFirebase={() => setIsFirebaseModalOpen(true)}
+        onOpenKnowledge={() => setIsKnowledgeOpen(true)}
+        onOpenScanner={() => setIsScannerOpen(true)}
+        onOpenCalendar={() => setIsCalendarOpen(true)}
+        onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+        selectedPair={selectedPair}
+      />
+
+      {/* 📓 Persistent Trading Journal & Loss Attribution Modal */}
+      <JournalModal
+        isOpen={isJournalOpen}
+        onClose={() => setIsJournalOpen(false)}
+        selectedPair={selectedPair}
       />
     </div>
   );
