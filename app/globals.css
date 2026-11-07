@@ -5,6 +5,25 @@
 :root {
   --background: #090d16;
   --foreground: #f8fafc;
+  --terminal-950: 9 13 22;      /* #090d16 */
+  --terminal-900: 11 17 32;     /* #0b1120 */
+  --terminal-850: 15 23 42;     /* #0f172a */
+  --terminal-800: 19 30 51;     /* #131e33 */
+  --terminal-700: 30 41 59;     /* #1e293b */
+  --terminal-600: 51 65 85;     /* #334155 */
+  --terminal-border: 31 46 77;  /* #1f2e4d */
+}
+
+html.light, .light {
+  --background: #f1f5f9;
+  --foreground: #0f172a;
+  --terminal-950: 241 245 249;   /* #f1f5f9 light gray */
+  --terminal-900: 255 255 255;   /* #ffffff pure white card */
+  --terminal-850: 248 250 252;   /* #f8fafc soft slate */
+  --terminal-800: 226 232 240;   /* #e2e8f0 border/pill */
+  --terminal-700: 203 213 225;   /* #cbd5e1 soft edge */
+  --terminal-600: 148 163 184;   /* #94a3b8 muted */
+  --terminal-border: 203 213 225; /* #cbd5e1 sharp border */
 }
 
 body {
@@ -12,6 +31,78 @@ body {
   background: var(--background);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   overflow-x: hidden;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Light mode specific style refinements */
+html.light {
+  color-scheme: light;
+}
+
+html.light body {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* High-contrast text adaptations in light mode */
+html.light .text-slate-100,
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html.light .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Ensure vibrant colored badges and buttons remain visible and punchy in light mode */
+html.light .bg-emerald-950,
+html.light .bg-emerald-950\/60,
+html.light .bg-emerald-950\/70,
+html.light .bg-emerald-950\/80 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+}
+
+html.light .bg-rose-950,
+html.light .bg-rose-950\/60,
+html.light .bg-rose-950\/70,
+html.light .bg-rose-950\/80 {
+  background-color: rgba(244, 63, 94, 0.12) !important;
+}
+
+html.light .bg-cyan-950,
+html.light .bg-cyan-950\/60,
+html.light .bg-cyan-950\/70,
+html.light .bg-cyan-950\/80 {
+  background-color: rgba(6, 182, 212, 0.12) !important;
+}
+
+html.light .bg-purple-950,
+html.light .bg-purple-950\/60,
+html.light .bg-purple-950\/70,
+html.light .bg-purple-950\/80 {
+  background-color: rgba(168, 85, 247, 0.12) !important;
+}
+
+html.light .bg-amber-950,
+html.light .bg-amber-950\/60,
+html.light .bg-amber-950\/70,
+html.light .bg-amber-950\/80 {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+}
+
+html.light .bg-sky-950,
+html.light .bg-sky-950\/60,
+html.light .bg-sky-950\/70,
+html.light .bg-sky-950\/80 {
+  background-color: rgba(14, 165, 233, 0.12) !important;
 }
 
 /* Custom Scrollbars */
@@ -21,7 +112,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -29,6 +120,14 @@ body {
   border-radius: 3px;
 }
 
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #334155;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
