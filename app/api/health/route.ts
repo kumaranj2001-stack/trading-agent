@@ -5,7 +5,7 @@ export const runtime = 'nodejs';
 export async function GET() {
   return NextResponse.json({
     status: 'healthy',
-    system: 'Apex 5-Agent Trading Swarm & Real-Time Wire Engine',
+    system: 'Qri Trader 5-Agent Trading Swarm & Real-Time Wire Engine',
     version: '2.0.0',
     deployment: 'Vercel Serverless & Local Browser Storage',
     roles: [

@@ -2,10 +2,10 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Apex // Multi-Agent Institutional Trading Swarm',
-  description: 'Autonomous multi-agent trading intelligence featuring Technical Analyst, Fundamental Analyst, Forex Market Analyst, and Risk Manager roles with 1,050+ rule institutional knowledge base.',
-  keywords: ['Forex', 'NSE', 'Trading Swarm', 'Multi-Agent AI', 'Risk Management', 'Algorithmic Trading', 'Technical Analysis'],
-  authors: [{ name: 'Apex Algorithmic Intelligence' }],
+  title: 'Qri Trader // Autonomous Multi-Agent Trading Swarm',
+  description: 'Qri Trader - Autonomous multi-agent trading intelligence featuring Technical Analyst, Fundamental Analyst, Forex Market Analyst, News Analyst, and Risk Manager roles with 1,050+ rule institutional knowledge base.',
+  keywords: ['Qri Trader', 'Forex', 'NSE', 'Trading Swarm', 'Multi-Agent AI', 'Risk Management', 'Algorithmic Trading', 'Technical Analysis'],
+  authors: [{ name: 'Qri Trader' }],
 };
 
 export const viewport: Viewport = {
@@ -34,7 +34,7 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var saved = localStorage.getItem('apex_theme');
+                  var saved = localStorage.getItem('qri_theme') || localStorage.getItem('apex_theme');
                   var theme = saved === 'light' ? 'light' : 'dark';
                   document.documentElement.classList.remove('light', 'dark');
                   document.documentElement.classList.add(theme);

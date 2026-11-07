@@ -83,7 +83,7 @@ export default function Home() {
   // Hydrate theme from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('apex_theme') as 'dark' | 'light' | null;
+      const savedTheme = (localStorage.getItem('qri_theme') || localStorage.getItem('apex_theme')) as 'dark' | 'light' | null;
       if (savedTheme === 'light' || savedTheme === 'dark') {
         setTheme(savedTheme);
         document.documentElement.classList.remove('dark', 'light');
@@ -96,7 +96,7 @@ export default function Home() {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('apex_theme', nextTheme);
+      localStorage.setItem('qri_theme', nextTheme);
       document.documentElement.classList.remove('dark', 'light');
       document.documentElement.classList.add(nextTheme);
     }

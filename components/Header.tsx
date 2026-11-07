@@ -104,7 +104,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="font-bold text-white tracking-wider text-xs sm:text-sm md:text-base truncate">
-                  APEX <span className="text-cyan-400 font-mono">//</span> 5-AGENT SWARM
+                  QRI TRADER <span className="text-cyan-400 font-mono">//</span> 5-AGENT SWARM
                 </span>
                 {confluenceGrade && (
                   <span className={`text-xs px-2 py-0.5 rounded font-bold border shrink-0 ${

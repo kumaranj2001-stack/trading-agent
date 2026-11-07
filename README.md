@@ -1,4 +1,4 @@
-# 📈 Apex // Autonomous Multi-Agent Trading Swarm
+# 📈 Qri Trader // Autonomous Multi-Agent Trading Swarm
 
 A high-performance, **Vercel-deployable** multi-agent trading intelligence system architected around four specialized institutional roles: **Technical Analyst**, **Fundamental Analyst**, **Forex Market Analyst**, and **Risk Manager**.
 

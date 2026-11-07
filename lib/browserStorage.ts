@@ -17,6 +17,14 @@ import {
 } from 'firebase/firestore';
 
 const STORAGE_KEYS = {
+  PORTFOLIO: 'qri_storage_portfolio_v2',
+  RISK_CONFIG: 'qri_storage_risk_config_v2',
+  EXECUTION_MODE: 'qri_storage_execution_mode_v2',
+  NEWS_CACHE: 'qri_storage_news_cache_v2',
+  CONSENSUS_HISTORY: 'qri_storage_consensus_history_v2',
+};
+
+const LEGACY_STORAGE_KEYS = {
   PORTFOLIO: 'apex_storage_portfolio_v2',
   RISK_CONFIG: 'apex_storage_risk_config_v2',
   EXECUTION_MODE: 'apex_storage_execution_mode_v2',
@@ -61,7 +69,7 @@ export class BrowserStorageManager {
   public static loadPortfolio(): PortfolioState {
     if (!isBrowser) return INITIAL_PORTFOLIO;
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.PORTFOLIO);
+      const data = localStorage.getItem(STORAGE_KEYS.PORTFOLIO) || localStorage.getItem(LEGACY_STORAGE_KEYS.PORTFOLIO);
       if (data) {
         const parsed = JSON.parse(data);
         return {
@@ -151,7 +159,7 @@ export class BrowserStorageManager {
   public static loadRiskConfig(): RiskManagerConfig {
     if (!isBrowser) return DEFAULT_RISK_CONFIG;
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.RISK_CONFIG);
+      const data = localStorage.getItem(STORAGE_KEYS.RISK_CONFIG) || localStorage.getItem(LEGACY_STORAGE_KEYS.RISK_CONFIG);
       if (data) {
         return {
           ...DEFAULT_RISK_CONFIG,
@@ -214,7 +222,7 @@ export class BrowserStorageManager {
   public static loadExecutionMode(): ExecutionMode {
     if (!isBrowser) return 'MANUAL';
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.EXECUTION_MODE);
+      const data = localStorage.getItem(STORAGE_KEYS.EXECUTION_MODE) || localStorage.getItem(LEGACY_STORAGE_KEYS.EXECUTION_MODE);
       if (data === 'MANUAL' || data === 'SEMI_AUTONOMOUS' || data === 'FULL_AUTOPILOT') {
         return data;
       }
@@ -276,7 +284,7 @@ export class BrowserStorageManager {
   public static loadConsensusHistory(): SwarmConsensusResult[] {
     if (!isBrowser) return [];
     try {
-      const data = localStorage.getItem(STORAGE_KEYS.CONSENSUS_HISTORY);
+      const data = localStorage.getItem(STORAGE_KEYS.CONSENSUS_HISTORY) || localStorage.getItem(LEGACY_STORAGE_KEYS.CONSENSUS_HISTORY);
       if (data) return JSON.parse(data);
     } catch (e) {
       console.warn('Error reading consensus history from browser localStorage:', e);

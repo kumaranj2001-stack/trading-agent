@@ -1,8 +1,8 @@
 {
-  "name": "apex-trading-agent",
+  "name": "qri-trader",
   "version": "1.0.0",
   "private": true,
-  "description": "Autonomous Multi-Agent Trading Swarm with Technical, Fundamental, Forex Market Analysts and Risk Manager - Vercel Deployable",
+  "description": "Qri Trader - Autonomous Multi-Agent Trading Swarm with Technical, Fundamental, Forex Market, News Analysts and Risk Manager - Vercel Deployable",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
