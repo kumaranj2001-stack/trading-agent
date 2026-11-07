@@ -18,7 +18,8 @@ import {
   Menu,
   X,
   Radio,
-  Coins
+  Coins,
+  Cloud
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, TimeFrame } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
@@ -40,6 +41,7 @@ interface HeaderProps {
   onOpenMonteCarlo: () => void;
   onOpenKnowledge: () => void;
   onOpenNewsWire?: () => void;
+  onOpenFirebase?: () => void;
   isAnalyzing: boolean;
   onTriggerAnalysis: () => void;
   activeSession: string;
@@ -67,6 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMonteCarlo,
   onOpenKnowledge,
   onOpenNewsWire,
+  onOpenFirebase,
   isAnalyzing,
   onTriggerAnalysis,
   activeSession,
@@ -268,6 +271,18 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
 
+            {/* Firebase Cloud Sync Status */}
+            {onOpenFirebase && (
+              <button
+                onClick={onOpenFirebase}
+                className="px-2.5 py-1 rounded bg-amber-950/70 hover:bg-amber-900 border border-amber-600/60 text-amber-300 flex items-center gap-1.5 transition-colors shadow-sm"
+                title="Firebase Firestore Cloud Database"
+              >
+                <Cloud className="w-3.5 h-3.5 text-amber-400" />
+                <span className="font-bold">Firebase</span>
+              </button>
+            )}
+
             <button
               onClick={onOpenKnowledge}
               className="px-2.5 py-1 rounded bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 flex items-center gap-1.5 transition-colors shadow-sm"
@@ -445,6 +460,16 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
                   <span>18 News Wires</span>
+                </button>
+              )}
+
+              {onOpenFirebase && (
+                <button
+                  onClick={() => { onOpenFirebase(); setMobileMenuOpen(false); }}
+                  className="p-2 rounded bg-amber-950/80 border border-amber-600/60 text-amber-300 font-bold flex items-center justify-center gap-1.5"
+                >
+                  <Cloud className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Firebase Cloud</span>
                 </button>
               )}
 

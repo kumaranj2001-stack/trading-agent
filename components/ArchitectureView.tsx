@@ -131,27 +131,33 @@ export const ArchitectureView: React.FC = () => {
         </div>
       </div>
 
-      {/* Backend & Local Browser Storage Architecture */}
+      {/* Backend & Firebase Cloud Firestore + Local Storage Architecture */}
       <div className="bg-terminal-950 p-4 rounded-xl border border-terminal-border space-y-3 font-mono text-xs">
         <h4 className="text-white font-bold text-sm flex items-center gap-2">
-          <HardDrive className="w-4 h-4 text-cyan-400" />
-          <span>Local Browser Storage & Vercel Serverless Architecture</span>
+          <Database className="w-4 h-4 text-amber-400" />
+          <span>Firebase Cloud Firestore Backend & Local Storage Persistence</span>
         </h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
-            <span className="text-cyan-400 font-bold block mb-1">1. Local Browser Persistence</span>
+            <span className="text-amber-400 font-bold block mb-1">1. Firebase Firestore Backend</span>
             <p className="text-slate-400 text-[11px] font-sans">
-              All portfolio state, open positions, trade history, risk configurations, news wire cache, and decision logs are persisted directly in client browser storage (`localStorage`) for zero-latency instant state recovery.
+              Connected to project <code>trading-autonomous-agent</code>. Automatically synchronizes portfolio state, trade logs, consensus history, and execution parameters to Cloud Firestore in real time.
             </p>
           </div>
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
-            <span className="text-sky-400 font-bold block mb-1">2. 18-Source News Wire Scraper</span>
+            <span className="text-cyan-400 font-bold block mb-1">2. Local Browser Cache</span>
+            <p className="text-slate-400 text-[11px] font-sans">
+              All portfolio state, open positions, trade history, risk configurations, and decision logs are also mirrored in browser storage (<code>localStorage</code>) for instant 0ms latency offline/online operation.
+            </p>
+          </div>
+          <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
+            <span className="text-sky-400 font-bold block mb-1">3. 18-Source News Wire Scraper</span>
             <p className="text-slate-400 text-[11px] font-sans">
               Client-side and serverless scraping pipelines continuously ingest real-time headlines across Bloomberg, Reuters, Kitco, WSJ, CNBC, and FT with instant sentiment classification.
             </p>
           </div>
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
-            <span className="text-emerald-400 font-bold block mb-1">3. Unified 5-Role Decision</span>
+            <span className="text-emerald-400 font-bold block mb-1">4. Unified 5-Role Decision</span>
             <p className="text-slate-400 text-[11px] font-sans">
               Outputs a single consolidated BUY or SELL direction alongside the 5 underlying core fundamental, news, technical, intermarket, and risk reasons driving the decision.
             </p>

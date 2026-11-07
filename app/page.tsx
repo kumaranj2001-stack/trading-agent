@@ -31,6 +31,7 @@ import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
 import { NewsWireModal } from '@/components/NewsWireModal';
+import { FirebaseStatusModal } from '@/components/FirebaseStatusModal';
 import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
 
 export default function Home() {
@@ -57,11 +58,12 @@ export default function Home() {
   const [isMonteCarloOpen, setIsMonteCarloOpen] = useState<boolean>(false);
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState<boolean>(false);
   const [isNewsWireOpen, setIsNewsWireOpen] = useState<boolean>(false);
+  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
   const [isScrapingNews, setIsScrapingNews] = useState<boolean>(false);
   const [opportunities, setOpportunities] = useState<MarketScannerOpportunity[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
 
-  // Portfolio State (Backed by Local Browser Storage)
+  // Portfolio State (Backed by Firebase Firestore + Local Storage)
   const [portfolio, setPortfolio] = useState<PortfolioState>(INITIAL_PORTFOLIO);
   const portfolioRef = useRef(portfolio);
   portfolioRef.current = portfolio;
@@ -81,14 +83,32 @@ export default function Home() {
     setTimeout(() => setNotification(null), 4500);
   };
 
-  // 1. Initial Load from Local Browser Storage
+  // 1. Initial Load from Local Storage & Real-Time Firebase Sync
   useEffect(() => {
+    // Immediate local cache hydration (0ms UI latency)
     const savedPortfolio = BrowserStorageManager.loadPortfolio();
     setPortfolio(savedPortfolio);
     const savedRisk = BrowserStorageManager.loadRiskConfig();
     setRiskConfig(savedRisk);
     const savedMode = BrowserStorageManager.loadExecutionMode();
     setExecutionMode(savedMode);
+
+    // Asynchronous Cloud Firestore Hydration
+    BrowserStorageManager.loadPortfolioFromCloud().then(cloudPort => {
+      if (cloudPort) setPortfolio(cloudPort);
+    });
+    BrowserStorageManager.loadRiskConfigFromCloud().then(cloudRisk => {
+      if (cloudRisk) setRiskConfig(cloudRisk);
+    });
+
+    // Real-time Firestore Portfolio Listener
+    const unsubscribe = BrowserStorageManager.subscribeToPortfolio((updatedPortfolio) => {
+      setPortfolio(updatedPortfolio);
+    });
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   // 2. Fetch market data & rates
@@ -440,6 +460,7 @@ export default function Home() {
         onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
         onOpenNewsWire={() => setIsNewsWireOpen(true)}
+        onOpenFirebase={() => setIsFirebaseModalOpen(true)}
         isAnalyzing={isAnalyzing}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
         activeSession={activeSession}
@@ -568,7 +589,7 @@ export default function Home() {
         pair={selectedPair}
       />
 
-      {/* Settings Modal (Persisted in Local Browser Storage) */}
+      {/* Settings Modal (Persisted in Local Browser Storage & Firebase) */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -581,8 +602,14 @@ export default function Home() {
             BrowserStorageManager.savePortfolio(updated);
             return updated;
           });
-          showNotification('Risk parameters & capital balance updated and stored in local browser.');
+          showNotification('Risk parameters & capital balance updated and synced to Firebase Cloud.');
         }}
+      />
+
+      {/* Firebase Cloud Firestore Diagnostic Modal */}
+      <FirebaseStatusModal
+        isOpen={isFirebaseModalOpen}
+        onClose={() => setIsFirebaseModalOpen(false)}
       />
     </div>
   );
