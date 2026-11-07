@@ -83,7 +83,20 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleExecutionMode,
   confluenceGrade,
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+
+  // Close left drawer on Escape key
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setLeftDrawerOpen(false);
+      }
+    };
+    if (leftDrawerOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [leftDrawerOpen]);
   
   const pairs = marketSegment === 'INDIAN_MARKET' 
     ? INDIAN_MARKET_ASSETS 
@@ -94,10 +107,20 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="border-b border-terminal-border bg-terminal-900/95 backdrop-blur-md sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5">
-        {/* Row 1: Brand, Mode, Market Scope & Mobile Menu Button */}
+        {/* Row 1: Brand, Mode, Market Scope & Navigation Drawer Toggle */}
         <div className="flex items-center justify-between gap-2">
           {/* Brand & Setup Grade */}
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+            {/* Left Hamburger Menu Button */}
+            <button
+              onClick={() => setLeftDrawerOpen(true)}
+              className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-cyan-400 hover:text-white transition-all flex items-center justify-center shrink-0 shadow-sm"
+              title="Open Navigation Menu"
+              aria-label="Open Navigation Menu"
+            >
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
               <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
@@ -222,11 +245,11 @@ export const Header: React.FC<HeaderProps> = ({
             )}
 
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={() => setLeftDrawerOpen(true)}
               className="lg:hidden p-1.5 sm:p-2 rounded bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors"
               aria-label="Toggle navigation menu"
             >
-              {mobileMenuOpen ? <X className="w-4 h-4 text-cyan-400" /> : <Menu className="w-4 h-4" />}
+              <Menu className="w-4 h-4 text-cyan-400" />
             </button>
           </div>
         </div>
@@ -424,144 +447,402 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Mobile Navigation & Quick Tools Drawer */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden mt-3 pt-3 border-t border-terminal-border/70 flex flex-col gap-3 font-mono text-xs animate-fade-in">
-            {/* Mobile Nav Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-terminal-950 p-1.5 rounded-lg border border-terminal-border">
-              <button
-                onClick={() => { setActiveTab('terminal'); setMobileMenuOpen(false); }}
-                className={`py-2 px-2.5 rounded text-center flex items-center justify-center gap-1.5 transition-colors ${
-                  activeTab === 'terminal' 
-                    ? 'bg-terminal-800 text-cyan-400 font-bold border border-cyan-500/30' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Terminal</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('debate'); setMobileMenuOpen(false); }}
-                className={`py-2 px-2.5 rounded text-center flex items-center justify-center gap-1.5 transition-colors ${
-                  activeTab === 'debate' 
-                    ? 'bg-terminal-800 text-purple-400 font-bold border border-purple-500/30' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>5-Agent Debate</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('backtest'); setMobileMenuOpen(false); }}
-                className={`py-2 px-2.5 rounded text-center flex items-center justify-center gap-1.5 transition-colors ${
-                  activeTab === 'backtest' 
-                    ? 'bg-terminal-800 text-amber-400 font-bold border border-amber-500/30' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <History className="w-3.5 h-3.5" />
-                <span>Backtest</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('architecture'); setMobileMenuOpen(false); }}
-                className={`py-2 px-2.5 rounded text-center flex items-center justify-center gap-1.5 transition-colors ${
-                  activeTab === 'architecture' 
-                    ? 'bg-terminal-800 text-emerald-400 font-bold border border-emerald-500/30' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5" />
-                <span>5 Roles</span>
-              </button>
-            </div>
+        {/* Left-Attached Drawer Overlay & Menu (Attached completely to the left side) */}
+        {leftDrawerOpen && (
+          <div className="fixed inset-0 z-50 flex">
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity"
+              onClick={() => setLeftDrawerOpen(false)}
+              aria-hidden="true"
+            />
 
-            {/* Mobile Quick Tools Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {onOpenNewsWire && (
+            {/* Slide-out Drawer pinned to the left */}
+            <aside 
+              className="relative w-84 sm:w-96 max-w-[88vw] h-full bg-terminal-950 border-r border-terminal-border shadow-2xl flex flex-col z-10 animate-in slide-in-from-left duration-200"
+              role="dialog"
+              aria-label="Navigation Menu"
+            >
+              {/* Drawer Top Header */}
+              <div className="p-4 border-b border-terminal-border flex items-center justify-between bg-terminal-900/90 shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-md shrink-0">
+                    <Bot className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-sm tracking-wider flex items-center gap-1.5">
+                      QRI TRADER
+                      {confluenceGrade && (
+                        <span className="text-[10px] px-1.5 py-0.2 rounded font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          {confluenceGrade}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-cyan-400 font-semibold tracking-wide">
+                      5-AGENT AUTONOMOUS SWARM
+                    </div>
+                  </div>
+                </div>
                 <button
-                  onClick={() => { onOpenNewsWire(); setMobileMenuOpen(false); }}
-                  className="p-2 rounded bg-sky-950/80 border border-sky-700/60 text-sky-300 font-bold flex items-center justify-center gap-1.5"
+                  onClick={() => setLeftDrawerOpen(false)}
+                  className="p-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors"
+                  aria-label="Close menu"
                 >
-                  <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-                  <span>18 News Wires</span>
+                  <X className="w-5 h-5 text-cyan-400" />
                 </button>
-              )}
+              </div>
 
-              {onOpenFirebase && (
+              {/* Drawer Scrollable Content: Listed One by One */}
+              <div className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar">
+                {/* Section: Navigation Views */}
+                <div className="px-2 pt-1 pb-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                  Main Views
+                </div>
+
+                {/* 1. Terminal */}
                 <button
-                  onClick={() => { onOpenFirebase(); setMobileMenuOpen(false); }}
-                  className="p-2 rounded bg-amber-950/80 border border-amber-600/60 text-amber-300 font-bold flex items-center justify-center gap-1.5"
+                  onClick={() => { setActiveTab('terminal'); setLeftDrawerOpen(false); }}
+                  className={`w-full p-2.5 rounded-lg flex items-center justify-between border transition-all text-left ${
+                    activeTab === 'terminal'
+                      ? 'bg-terminal-800 text-cyan-400 border-cyan-500/50 shadow-sm'
+                      : 'bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-600'
+                  }`}
                 >
-                  <Cloud className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Firebase Cloud</span>
-                </button>
-              )}
-
-              <button
-                onClick={() => { onOpenKnowledge(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 font-bold flex items-center justify-center gap-1.5"
-              >
-                <Database className="w-3.5 h-3.5 text-indigo-400" />
-                <span>1,050+ Rules</span>
-              </button>
-
-              <button
-                onClick={onToggleExecutionMode}
-                className={`p-2 rounded font-bold border flex items-center justify-center gap-1.5 text-[11px] ${
-                  executionMode === 'FULL_AUTOPILOT'
-                    ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500'
-                    : executionMode === 'SEMI_AUTONOMOUS'
-                    ? 'bg-amber-600/20 text-amber-300 border-amber-500/50'
-                    : 'bg-terminal-800 text-slate-300 border-terminal-border'
-                }`}
-              >
-                <PlayCircle className="w-3.5 h-3.5" />
-                <span>{executionMode.replace('_', ' ')}</span>
-              </button>
-
-              <button
-                onClick={() => { onOpenScanner(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-terminal-800 text-cyan-400 border border-terminal-border flex items-center justify-center gap-1.5"
-              >
-                <Radar className="w-3.5 h-3.5" />
-                <span>Scanner</span>
-              </button>
-
-              <button
-                onClick={() => { onOpenCalendar(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-terminal-800 text-purple-400 border border-terminal-border flex items-center justify-center gap-1.5"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Calendar</span>
-              </button>
-
-              <button
-                onClick={() => { onOpenMonteCarlo(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-terminal-800 text-emerald-400 border border-terminal-border flex items-center justify-center gap-1.5 col-span-2 sm:col-span-4"
-              >
-                <LineChart className="w-3.5 h-3.5" />
-                <span>Monte Carlo 1,000-Path VaR</span>
-              </button>
-
-              {onToggleTheme && (
-                <button
-                  onClick={() => { onToggleTheme(); setMobileMenuOpen(false); }}
-                  className="p-2.5 rounded-lg bg-terminal-800 border border-terminal-border text-slate-100 font-bold flex items-center justify-center gap-2 col-span-2 sm:col-span-4 text-xs transition-colors"
-                >
-                  {theme === 'dark' ? (
-                    <>
-                      <Sun className="w-4 h-4 text-amber-400" />
-                      <span>Switch to Light Mode</span>
-                    </>
-                  ) : (
-                    <>
-                      <Moon className="w-4 h-4 text-indigo-400" />
-                      <span>Switch to Dark Mode</span>
-                    </>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-cyan-950/80 border border-cyan-800/60 text-cyan-400">
+                      <Activity className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Terminal</div>
+                      <div className="text-xs text-slate-400">Live charts, swarm consensus & positions</div>
+                    </div>
+                  </div>
+                  {activeTab === 'terminal' && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                      ACTIVE
+                    </span>
                   )}
                 </button>
-              )}
-            </div>
+
+                {/* 2. 5-Agent Debate */}
+                <button
+                  onClick={() => { setActiveTab('debate'); setLeftDrawerOpen(false); }}
+                  className={`w-full p-2.5 rounded-lg flex items-center justify-between border transition-all text-left ${
+                    activeTab === 'debate'
+                      ? 'bg-terminal-800 text-purple-400 border-purple-500/50 shadow-sm'
+                      : 'bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-purple-950/80 border border-purple-800/60 text-purple-400">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">5-Agent Debate</div>
+                      <div className="text-xs text-slate-400">Multi-agent adversarial consensus room</div>
+                    </div>
+                  </div>
+                  {activeTab === 'debate' && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      ACTIVE
+                    </span>
+                  )}
+                </button>
+
+                {/* 3. Backtest */}
+                <button
+                  onClick={() => { setActiveTab('backtest'); setLeftDrawerOpen(false); }}
+                  className={`w-full p-2.5 rounded-lg flex items-center justify-between border transition-all text-left ${
+                    activeTab === 'backtest'
+                      ? 'bg-terminal-800 text-amber-400 border-amber-500/50 shadow-sm'
+                      : 'bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-amber-950/80 border border-amber-800/60 text-amber-400">
+                      <History className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Backtest</div>
+                      <div className="text-xs text-slate-400">Historical simulation & performance metrics</div>
+                    </div>
+                  </div>
+                  {activeTab === 'backtest' && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      ACTIVE
+                    </span>
+                  )}
+                </button>
+
+                {/* 4. 5 Roles */}
+                <button
+                  onClick={() => { setActiveTab('architecture'); setLeftDrawerOpen(false); }}
+                  className={`w-full p-2.5 rounded-lg flex items-center justify-between border transition-all text-left ${
+                    activeTab === 'architecture'
+                      ? 'bg-terminal-800 text-emerald-400 border-emerald-500/50 shadow-sm'
+                      : 'bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-600'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-emerald-950/80 border border-emerald-800/60 text-emerald-400">
+                      <Shield className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">5 Roles</div>
+                      <div className="text-xs text-slate-400">Swarm architecture, agent roles & weights</div>
+                    </div>
+                  </div>
+                  {activeTab === 'architecture' && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      ACTIVE
+                    </span>
+                  )}
+                </button>
+
+                {/* Section: Live Intelligence & Cloud */}
+                <div className="px-2 pt-3 pb-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                  Intelligence & Backend
+                </div>
+
+                {/* 5. 18 News Wires */}
+                {onOpenNewsWire && (
+                  <button
+                    onClick={() => { onOpenNewsWire(); setLeftDrawerOpen(false); }}
+                    className="w-full p-2.5 rounded-lg flex items-center justify-between border border-sky-800/60 bg-sky-950/40 hover:bg-sky-900/60 text-sky-200 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-md bg-sky-900/80 border border-sky-700/60 text-sky-300">
+                        <Radio className="w-4 h-4 text-sky-400 animate-pulse" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-sky-200">18 News Wires</div>
+                        <div className="text-xs text-sky-300/70">18 financial sources & scrapers live</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                      LIVE
+                    </span>
+                  </button>
+                )}
+
+                {/* 6. Firebase Cloud */}
+                {onOpenFirebase && (
+                  <button
+                    onClick={() => { onOpenFirebase(); setLeftDrawerOpen(false); }}
+                    className="w-full p-2.5 rounded-lg flex items-center justify-between border border-amber-800/60 bg-amber-950/40 hover:bg-amber-900/60 text-amber-200 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-md bg-amber-900/80 border border-amber-700/60 text-amber-300">
+                        <Cloud className="w-4 h-4 text-amber-400" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-amber-200">Firebase Cloud</div>
+                        <div className="text-xs text-amber-300/70">Firestore cloud backend & state sync</div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      SYNC
+                    </span>
+                  </button>
+                )}
+
+                {/* 7. 1,050+ Rules */}
+                <button
+                  onClick={() => { onOpenKnowledge(); setLeftDrawerOpen(false); }}
+                  className="w-full p-2.5 rounded-lg flex items-center justify-between border border-indigo-800/60 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-200 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-indigo-900/80 border border-indigo-700/60 text-indigo-300">
+                      <Database className="w-4 h-4 text-indigo-400" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-indigo-200">1,050+ Rules</div>
+                      <div className="text-xs text-indigo-300/70">Institutional knowledge base & checklist</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    KNOWLEDGE
+                  </span>
+                </button>
+
+                {/* 8. Execution Mode (MANUAL / SEMI / AUTO) */}
+                <button
+                  onClick={onToggleExecutionMode}
+                  className={`w-full p-2.5 rounded-lg flex items-center justify-between border transition-all text-left ${
+                    executionMode === 'FULL_AUTOPILOT'
+                      ? 'bg-emerald-950/50 border-emerald-600/70 text-emerald-200'
+                      : executionMode === 'SEMI_AUTONOMOUS'
+                      ? 'bg-amber-950/50 border-amber-600/70 text-amber-200'
+                      : 'bg-terminal-900/70 border-terminal-border text-slate-200 hover:bg-terminal-800'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-md border ${
+                      executionMode === 'FULL_AUTOPILOT'
+                        ? 'bg-emerald-900/80 border-emerald-700/60 text-emerald-300'
+                        : executionMode === 'SEMI_AUTONOMOUS'
+                        ? 'bg-amber-900/80 border-amber-700/60 text-amber-300'
+                        : 'bg-terminal-800 border-terminal-border text-slate-300'
+                    }`}>
+                      <PlayCircle className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100 flex items-center gap-1.5">
+                        <span>Execution Mode</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-700 text-slate-300">CLICK TO CYCLE</span>
+                      </div>
+                      <div className="text-xs text-slate-400 font-mono font-semibold">
+                        {executionMode.replace('_', ' ')}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${
+                    executionMode === 'FULL_AUTOPILOT'
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                      : executionMode === 'SEMI_AUTONOMOUS'
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : 'bg-slate-700 text-slate-300 border-slate-600'
+                  }`}>
+                    {executionMode.replace('_', ' ')}
+                  </span>
+                </button>
+
+                {/* Section: Market Tools & Analytics */}
+                <div className="px-2 pt-3 pb-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                  Market Tools
+                </div>
+
+                {/* 9. Scanner */}
+                <button
+                  onClick={() => { onOpenScanner(); setLeftDrawerOpen(false); }}
+                  className="w-full p-2.5 rounded-lg flex items-center justify-between border border-cyan-800/50 bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-cyan-950/80 border border-cyan-800/60 text-cyan-400">
+                      <Radar className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Scanner</div>
+                      <div className="text-xs text-slate-400">Multi-asset opportunity scanner</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                    SCANNER
+                  </span>
+                </button>
+
+                {/* 10. Calendar */}
+                <button
+                  onClick={() => { onOpenCalendar(); setLeftDrawerOpen(false); }}
+                  className="w-full p-2.5 rounded-lg flex items-center justify-between border border-purple-800/50 bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-purple-950/80 border border-purple-800/60 text-purple-400">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Calendar</div>
+                      <div className="text-xs text-slate-400">High-impact economic & central bank events</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                    MACRO
+                  </span>
+                </button>
+
+                {/* 11. Monte Carlo 1,000-Path VaR */}
+                <button
+                  onClick={() => { onOpenMonteCarlo(); setLeftDrawerOpen(false); }}
+                  className="w-full p-2.5 rounded-lg flex items-center justify-between border border-emerald-800/50 bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-emerald-950/80 border border-emerald-800/60 text-emerald-400">
+                      <LineChart className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Monte Carlo 1,000-Path VaR</div>
+                      <div className="text-xs text-slate-400">Parametric & stochastic risk simulation</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    VaR
+                  </span>
+                </button>
+
+                {/* Section: Preferences & Settings */}
+                <div className="px-2 pt-3 pb-1 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                  Preferences & Settings
+                </div>
+
+                {/* 12. Switch to Light Mode / Dark Mode */}
+                {onToggleTheme && (
+                  <button
+                    onClick={onToggleTheme}
+                    className="w-full p-2.5 rounded-lg flex items-center justify-between border border-terminal-border bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 transition-all text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-md bg-terminal-800 border border-terminal-border">
+                        {theme === 'dark' ? (
+                          <Sun className="w-4 h-4 text-amber-400" />
+                        ) : (
+                          <Moon className="w-4 h-4 text-indigo-400" />
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-slate-100">
+                          {theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          Active: <span className="font-bold capitalize">{theme} Mode</span>
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-terminal-800 text-slate-300 border border-terminal-border">
+                      THEME
+                    </span>
+                  </button>
+                )}
+
+                {/* 13. Settings / Risk Controls */}
+                <button
+                  onClick={() => { onOpenSettings(); setLeftDrawerOpen(false); }}
+                  className="w-full p-2.5 rounded-lg flex items-center justify-between border border-terminal-border bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 transition-all text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-terminal-800 border border-terminal-border text-slate-300">
+                      <Sliders className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Risk & Swarm Settings</div>
+                      <div className="text-xs text-slate-400">Leverage, max drawdown & parameters</div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-terminal-800 text-slate-300 border border-terminal-border">
+                    CONFIG
+                  </span>
+                </button>
+              </div>
+
+              {/* Drawer Bottom Footer */}
+              <div className="p-3 border-t border-terminal-border bg-terminal-900/90 shrink-0 space-y-2">
+                <button
+                  onClick={() => { onTriggerAnalysis(); setLeftDrawerOpen(false); }}
+                  disabled={isAnalyzing}
+                  className={`w-full py-2.5 px-3 rounded-lg font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all ${
+                    isAnalyzing
+                      ? 'bg-terminal-700 text-slate-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-cyan-500/20 active:scale-95'
+                  }`}
+                >
+                  <Zap className={`w-4 h-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
+                  <span>{isAnalyzing ? 'SYNCHRONIZING SWARM...' : 'RUN 5-AGENT SWARM'}</span>
+                </button>
+                <div className="flex items-center justify-between text-[11px] text-slate-400 px-1">
+                  <span className="truncate">{activeSession}</span>
+                  <span className="text-emerald-400 font-semibold font-mono">QRI v1.0.0</span>
+                </div>
+              </div>
+            </aside>
           </div>
         )}
       </div>
