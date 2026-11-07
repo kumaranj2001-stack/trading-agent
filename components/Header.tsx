@@ -135,14 +135,14 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-2">
           {/* Brand & Setup Grade */}
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-            {/* Left-Attached Drawer Toggle Button */}
+            {/* Left Hamburger Menu Button */}
             <button
               onClick={() => setLeftDrawerOpen(true)}
               className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-cyan-400 hover:text-white transition-all flex items-center justify-center shrink-0 shadow-sm"
               title="Open Navigation Menu"
               aria-label="Open Navigation Menu"
             >
-              <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
 
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 shrink-0">
@@ -287,341 +287,281 @@ export const Header: React.FC<HeaderProps> = ({
               onMouseEnter={handleMenuMouseEnter}
               onMouseLeave={handleMenuMouseLeave}
             >
-              {/* Three-Dot Button */}
               <button
                 onClick={() => setThreeDotMenuOpen(prev => !prev)}
-                className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 transition-all text-xs font-semibold shadow-md ${
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg border flex items-center gap-2 transition-all text-xs font-semibold shadow-sm ${
                   threeDotMenuOpen 
-                    ? 'bg-terminal-800 text-cyan-300 border-cyan-500/70 shadow-cyan-500/20' 
-                    : 'bg-terminal-900 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-500'
+                    ? 'bg-terminal-800 text-cyan-300 border-cyan-500/60 shadow-cyan-500/10' 
+                    : 'bg-terminal-950 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-500'
                 }`}
                 aria-label="Navigation and Tools Menu (Terminal to VaR)"
                 aria-expanded={threeDotMenuOpen}
-                title="Three-Dot Navigation Menu (Terminal to VaR)"
+                title="Open Navigation Menu (Terminal to VaR)"
               >
-                <div className="p-1 rounded bg-terminal-950 border border-terminal-border text-cyan-400">
-                  <MoreVertical className="w-4 h-4 shrink-0" />
-                </div>
-                <span className="font-bold tracking-wider">NAVIGATION</span>
+                <MoreVertical className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span className="font-bold tracking-wide">Menu</span>
                 <span className="hidden xs:inline text-slate-500">•</span>
-                <span className="text-[11px] px-2 py-0.5 rounded font-mono font-bold bg-cyan-950 text-cyan-300 border border-cyan-800/60 uppercase truncate max-w-[120px]">
-                  {activeTab === 'architecture' ? 'Roles' : activeTab}
+                <span className="text-[11px] px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold uppercase truncate max-w-[110px]">
+                  {activeTab === 'architecture' ? '5 Roles' : activeTab}
                 </span>
               </button>
 
-              {/* Outside Click Dismissal Backdrop */}
+              {/* Clean Vertical Dropdown List (No Clipping & Auto-Collapse on Mouse Leave) */}
               {threeDotMenuOpen && (
                 <div 
-                  className="fixed inset-0 z-[65] bg-black/40 backdrop-blur-[1px]" 
-                  onClick={() => setThreeDotMenuOpen(false)}
-                  aria-hidden="true"
-                />
-              )}
-
-              {/* Clean Vertical Dropdown List (Proper Format & Proper Order Flow) */}
-              {threeDotMenuOpen && (
-                <div 
-                  className="absolute left-0 top-full mt-2 w-[340px] sm:w-[460px] md:w-[500px] max-w-[94vw] overflow-y-auto bg-terminal-950/98 backdrop-blur-2xl border border-terminal-border rounded-2xl shadow-2xl z-[70] p-2.5 space-y-1.5 custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-150"
-                  style={{ maxHeight: 'calc(100vh - 110px)' }}
+                  className="absolute left-0 top-full mt-1.5 w-76 sm:w-84 max-w-[92vw] overflow-y-auto bg-terminal-950/98 backdrop-blur-xl border border-terminal-border rounded-xl shadow-2xl z-[70] p-2 space-y-1 custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-150"
+                  style={{ maxHeight: 'calc(100vh - 120px)' }}
                   onMouseEnter={handleMenuMouseEnter}
                   onMouseLeave={handleMenuMouseLeave}
                 >
-                  <div className="px-3 py-2 text-[11px] font-bold tracking-wider text-slate-400 uppercase border-b border-terminal-border/60 mb-2 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <MoreVertical className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>Order Flow Navigation (11 Desks)</span>
-                    </div>
-                    <span className="text-cyan-400 text-[10px] font-mono">Terminal → VAR</span>
+                  <div className="px-2 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase border-b border-terminal-border/60 mb-1 flex items-center justify-between">
+                    <span>Navigation & Tools</span>
+                    <span className="text-cyan-400 text-[10px] font-mono">Terminal → VaR</span>
                   </div>
 
-                  {/* 1. Terminal — Live charts, agent consensus & positions. */}
+                  {/* 1. Terminal */}
                   <button
                     onClick={() => { setActiveTab('terminal'); setThreeDotMenuOpen(false); }}
-                    className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-all text-left text-xs border ${
+                    className={`w-full p-2 rounded-lg flex items-center justify-between transition-colors text-left text-xs ${
                       activeTab === 'terminal'
-                        ? 'bg-terminal-800 text-cyan-300 border-cyan-500/50 shadow-sm'
-                        : 'bg-terminal-950/60 hover:bg-terminal-800/80 text-slate-200 border-terminal-border/70 hover:border-slate-500'
+                        ? 'bg-terminal-800 text-cyan-400 border border-cyan-500/40 font-bold shadow-sm'
+                        : 'hover:bg-terminal-800/80 text-slate-200 border border-transparent'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className="p-2 rounded-lg bg-cyan-950/90 text-cyan-400 border border-cyan-800/60 shrink-0">
-                        <Activity className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-cyan-950/80 text-cyan-400 border border-cyan-800/50">
+                        <Activity className="w-3.5 h-3.5" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 flex-wrap">
-                          <span className="font-bold text-sm text-white">Terminal</span>
-                          <span className="text-slate-500 text-xs">—</span>
-                          <span className="text-xs text-slate-300 font-medium">Live charts, agent consensus & positions.</span>
-                        </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Terminal</div>
+                        <div className="text-[10px] text-slate-400 truncate">Live charts, swarm consensus & positions</div>
                       </div>
                     </div>
                     {activeTab === 'terminal' && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 shrink-0">
                         ACTIVE
                       </span>
                     )}
                   </button>
 
-                  {/* 2. Five-Agent Debate — Multi-agent adversarial consensus room. */}
+                  {/* 2. Five-Agent Debate */}
                   <button
                     onClick={() => { setActiveTab('debate'); setThreeDotMenuOpen(false); }}
-                    className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-all text-left text-xs border ${
+                    className={`w-full p-2 rounded-lg flex items-center justify-between transition-colors text-left text-xs ${
                       activeTab === 'debate'
-                        ? 'bg-terminal-800 text-purple-300 border-purple-500/50 shadow-sm'
-                        : 'bg-terminal-950/60 hover:bg-terminal-800/80 text-slate-200 border-terminal-border/70 hover:border-slate-500'
+                        ? 'bg-terminal-800 text-purple-400 border border-purple-500/40 font-bold shadow-sm'
+                        : 'hover:bg-terminal-800/80 text-slate-200 border border-transparent'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className="p-2 rounded-lg bg-purple-950/90 text-purple-400 border border-purple-800/60 shrink-0">
-                        <Layers className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-purple-950/80 text-purple-400 border border-purple-800/50">
+                        <Layers className="w-3.5 h-3.5" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 flex-wrap">
-                          <span className="font-bold text-sm text-white">Five-Agent Debate</span>
-                          <span className="text-slate-500 text-xs">—</span>
-                          <span className="text-xs text-slate-300 font-medium">Multi-agent adversarial consensus room.</span>
-                        </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Five-Agent Debate</div>
+                        <div className="text-[10px] text-slate-400 truncate">Multi-agent adversarial consensus room</div>
                       </div>
                     </div>
                     {activeTab === 'debate' && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 shrink-0">
                         ACTIVE
                       </span>
                     )}
                   </button>
 
-                  {/* 3. Backtest — Historical simulation & performance metrics. */}
+                  {/* 3. Backtest */}
                   <button
                     onClick={() => { setActiveTab('backtest'); setThreeDotMenuOpen(false); }}
-                    className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-all text-left text-xs border ${
+                    className={`w-full p-2 rounded-lg flex items-center justify-between transition-colors text-left text-xs ${
                       activeTab === 'backtest'
-                        ? 'bg-terminal-800 text-amber-300 border-amber-500/50 shadow-sm'
-                        : 'bg-terminal-950/60 hover:bg-terminal-800/80 text-slate-200 border-terminal-border/70 hover:border-slate-500'
+                        ? 'bg-terminal-800 text-amber-400 border border-amber-500/40 font-bold shadow-sm'
+                        : 'hover:bg-terminal-800/80 text-slate-200 border border-transparent'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className="p-2 rounded-lg bg-amber-950/90 text-amber-400 border border-amber-800/60 shrink-0">
-                        <History className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-amber-950/80 text-amber-400 border border-amber-800/50">
+                        <History className="w-3.5 h-3.5" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 flex-wrap">
-                          <span className="font-bold text-sm text-white">Backtest</span>
-                          <span className="text-slate-500 text-xs">—</span>
-                          <span className="text-xs text-slate-300 font-medium">Historical simulation & performance metrics.</span>
-                        </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Backtest</div>
+                        <div className="text-[10px] text-slate-400 truncate">Historical simulation & performance</div>
                       </div>
                     </div>
                     {activeTab === 'backtest' && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
                         ACTIVE
                       </span>
                     )}
                   </button>
 
-                  {/* 4. Roles — 5-agent architecture, weights & governance. */}
+                  {/* 4. Roles */}
                   <button
                     onClick={() => { setActiveTab('architecture'); setThreeDotMenuOpen(false); }}
-                    className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-all text-left text-xs border ${
+                    className={`w-full p-2 rounded-lg flex items-center justify-between transition-colors text-left text-xs ${
                       activeTab === 'architecture'
-                        ? 'bg-terminal-800 text-emerald-300 border-emerald-500/50 shadow-sm'
-                        : 'bg-terminal-950/60 hover:bg-terminal-800/80 text-slate-200 border-terminal-border/70 hover:border-slate-500'
+                        ? 'bg-terminal-800 text-emerald-400 border border-emerald-500/40 font-bold shadow-sm'
+                        : 'hover:bg-terminal-800/80 text-slate-200 border border-transparent'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className="p-2 rounded-lg bg-emerald-950/90 text-emerald-400 border border-emerald-800/60 shrink-0">
-                        <Shield className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
+                        <Shield className="w-3.5 h-3.5" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 flex-wrap">
-                          <span className="font-bold text-sm text-white">Roles</span>
-                          <span className="text-slate-500 text-xs">—</span>
-                          <span className="text-xs text-slate-300 font-medium">5-agent architecture, weights & governance.</span>
-                        </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Roles</div>
+                        <div className="text-[10px] text-slate-400 truncate">5-agent architecture & weights</div>
                       </div>
                     </div>
                     {activeTab === 'architecture' && (
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 shrink-0">
                         ACTIVE
                       </span>
                     )}
                   </button>
 
-                  <div className="my-1.5 border-t border-terminal-border/60"></div>
+                  <div className="my-1 border-t border-terminal-border/50"></div>
 
-                  {/* 5. Wire — 18 financial sources real-time news wire scraper. */}
+                  {/* 5. Wire */}
                   {onOpenNewsWire && (
                     <button
                       onClick={() => { onOpenNewsWire(); setThreeDotMenuOpen(false); }}
-                      className="w-full p-2.5 rounded-xl flex items-center justify-between hover:bg-sky-950/60 text-sky-200 border border-sky-800/50 hover:border-sky-700/70 transition-all text-left text-xs bg-terminal-950/60"
+                      className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-sky-950/60 text-sky-200 border border-sky-800/40 hover:border-sky-700/60 transition-colors text-left text-xs"
                     >
-                      <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                        <div className="p-2 rounded-lg bg-sky-950/90 text-sky-400 border border-sky-800/60 shrink-0">
-                          <Radio className="w-4 h-4 animate-pulse" />
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="p-1.5 rounded-md bg-sky-950/80 text-sky-400 border border-sky-800/50">
+                          <Radio className="w-3.5 h-3.5 animate-pulse" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline gap-1.5 flex-wrap">
-                            <span className="font-bold text-sm text-sky-200">Wire</span>
-                            <span className="text-sky-500/60 text-xs">—</span>
-                            <span className="text-xs text-sky-300/80 font-medium">18 financial sources real-time news wire scraper.</span>
-                          </div>
+                        <div className="truncate">
+                          <div className="font-bold text-sky-200">Wire</div>
+                          <div className="text-[10px] text-sky-300/70 truncate">18 financial sources scraper live</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 shrink-0">
                         18 LIVE
                       </span>
                     </button>
                   )}
 
-                  {/* 6. Firebase — Firestore cloud database sync & status. */}
+                  {/* 6. Firebase */}
                   {onOpenFirebase && (
                     <button
                       onClick={() => { onOpenFirebase(); setThreeDotMenuOpen(false); }}
-                      className="w-full p-2.5 rounded-xl flex items-center justify-between hover:bg-amber-950/60 text-amber-200 border border-amber-800/50 hover:border-amber-700/70 transition-all text-left text-xs bg-terminal-950/60"
+                      className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-amber-950/60 text-amber-200 border border-amber-800/40 hover:border-amber-700/60 transition-colors text-left text-xs"
                     >
-                      <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                        <div className="p-2 rounded-lg bg-amber-950/90 text-amber-400 border border-amber-800/60 shrink-0">
-                          <Cloud className="w-4 h-4" />
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="p-1.5 rounded-md bg-amber-950/80 text-amber-400 border border-amber-800/50">
+                          <Cloud className="w-3.5 h-3.5" />
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline gap-1.5 flex-wrap">
-                            <span className="font-bold text-sm text-amber-200">Firebase</span>
-                            <span className="text-amber-500/60 text-xs">—</span>
-                            <span className="text-xs text-amber-300/80 font-medium">Firestore cloud database sync & status.</span>
-                          </div>
+                        <div className="truncate">
+                          <div className="font-bold text-amber-200">Firebase</div>
+                          <div className="text-[10px] text-amber-300/70 truncate">Firestore database & sync status</div>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
                         SYNC
                       </span>
                     </button>
                   )}
 
-                  {/* 7. Knowledge — 1,050+ institutional trading rules & checklists. */}
+                  {/* 7. Knowledge */}
                   <button
                     onClick={() => { onOpenKnowledge(); setThreeDotMenuOpen(false); }}
-                    className="w-full p-2.5 rounded-xl flex items-center justify-between hover:bg-indigo-950/60 text-indigo-200 border border-indigo-800/50 hover:border-indigo-700/70 transition-all text-left text-xs bg-terminal-950/60"
+                    className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-indigo-950/60 text-indigo-200 border border-indigo-800/40 hover:border-indigo-700/60 transition-colors text-left text-xs"
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className="p-2 rounded-lg bg-indigo-950/90 text-indigo-400 border border-indigo-800/60 shrink-0">
-                        <Database className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-indigo-950/80 text-indigo-400 border border-indigo-800/50">
+                        <Database className="w-3.5 h-3.5" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 flex-wrap">
-                          <span className="font-bold text-sm text-indigo-200">Knowledge</span>
-                          <span className="text-indigo-500/60 text-xs">—</span>
-                          <span className="text-xs text-indigo-300/80 font-medium">1,050+ institutional trading rules & checklists.</span>
-                        </div>
+                      <div className="truncate">
+                        <div className="font-bold text-indigo-200">Knowledge</div>
+                        <div className="text-[10px] text-indigo-300/70 truncate">1,050+ institutional rules base</div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 shrink-0">
                       1,050+
                     </span>
                   </button>
 
-                  {/* 8. Execution Mode — Interactive toggle cycling Manual / Semi / Autopilot. */}
+                  {/* 8. Execution Mode */}
                   <button
                     onClick={onToggleExecutionMode}
-                    className={`w-full p-2.5 rounded-xl flex items-center justify-between transition-all text-left text-xs border ${
+                    className={`w-full p-2 rounded-lg flex items-center justify-between transition-colors text-left text-xs border ${
                       executionMode === 'FULL_AUTOPILOT'
-                        ? 'bg-emerald-950/50 border-emerald-600/70 text-emerald-200'
+                        ? 'bg-emerald-950/50 border-emerald-600/60 text-emerald-200'
                         : executionMode === 'SEMI_AUTONOMOUS'
-                        ? 'bg-amber-950/50 border-amber-600/70 text-amber-200'
-                        : 'bg-terminal-950/60 hover:bg-terminal-800 text-slate-200 border-terminal-border/70 hover:border-slate-500'
+                        ? 'bg-amber-950/50 border-amber-600/60 text-amber-200'
+                        : 'hover:bg-terminal-800 text-slate-200 border-terminal-border/80'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className={`p-2 rounded-lg border shrink-0 ${
-                        executionMode === 'FULL_AUTOPILOT'
-                          ? 'bg-emerald-900/80 border-emerald-700/60 text-emerald-300'
-                          : executionMode === 'SEMI_AUTONOMOUS'
-                          ? 'bg-amber-900/80 border-amber-700/60 text-amber-300'
-                          : 'bg-terminal-800 border-terminal-border text-slate-300'
-                      }`}>
-                        <PlayCircle className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-terminal-800 text-slate-300 border border-terminal-border">
+                        <PlayCircle className="w-3.5 h-3.5 text-emerald-400" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 flex-wrap">
-                          <span className="font-bold text-sm text-white">Execution Mode</span>
-                          <span className="text-slate-500 text-xs">—</span>
-                          <span className="text-xs text-slate-300 font-medium">Interactive toggle cycling Manual / Semi / Autopilot.</span>
-                        </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Mode: {executionMode.replace('_', ' ')}</div>
+                        <div className="text-[10px] text-slate-400 truncate">Click to cycle Auto/Semi/Manual</div>
                       </div>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase shrink-0 ${
-                      executionMode === 'FULL_AUTOPILOT'
-                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                        : executionMode === 'SEMI_AUTONOMOUS'
-                        ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                        : 'bg-terminal-800 text-slate-300 border-terminal-border'
-                    }`}>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-terminal-800 text-slate-300 border border-terminal-border shrink-0 uppercase">
                       {executionMode.replace('_', ' ')}
                     </span>
                   </button>
 
-                  <div className="my-1.5 border-t border-terminal-border/60"></div>
+                  <div className="my-1 border-t border-terminal-border/50"></div>
 
-                  {/* 9. Scanner — Real-time multi-asset opportunity scanner. */}
+                  {/* 9. Scanner */}
                   <button
                     onClick={() => { onOpenScanner(); setThreeDotMenuOpen(false); }}
-                    className="w-full p-2.5 rounded-xl flex items-center justify-between hover:bg-cyan-950/50 text-cyan-200 border border-cyan-800/40 hover:border-cyan-700/60 transition-all text-left text-xs bg-terminal-950/60"
+                    className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-terminal-800 text-cyan-300 border border-terminal-border hover:border-cyan-800 transition-colors text-left text-xs"
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className="p-2 rounded-lg bg-cyan-950/90 text-cyan-400 border border-cyan-800/60 shrink-0">
-                        <Radar className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-cyan-950/80 text-cyan-400 border border-cyan-800/50">
+                        <Radar className="w-3.5 h-3.5" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 flex-wrap">
-                          <span className="font-bold text-sm text-white">Scanner</span>
-                          <span className="text-slate-500 text-xs">—</span>
-                          <span className="text-xs text-slate-300 font-medium">Real-time multi-asset opportunity scanner.</span>
-                        </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Scanner</div>
+                        <div className="text-[10px] text-slate-400 truncate">Multi-asset opportunity scanner</div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 shrink-0">
                       SCAN
                     </span>
                   </button>
 
-                  {/* 10. Calendar — High-impact macroeconomic calendar. */}
+                  {/* 10. Calendar */}
                   <button
                     onClick={() => { onOpenCalendar(); setThreeDotMenuOpen(false); }}
-                    className="w-full p-2.5 rounded-xl flex items-center justify-between hover:bg-purple-950/50 text-purple-200 border border-purple-800/40 hover:border-purple-700/60 transition-all text-left text-xs bg-terminal-950/60"
+                    className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-terminal-800 text-purple-300 border border-terminal-border hover:border-purple-800 transition-colors text-left text-xs"
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className="p-2 rounded-lg bg-purple-950/90 text-purple-400 border border-purple-800/60 shrink-0">
-                        <Calendar className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-purple-950/80 text-purple-400 border border-purple-800/50">
+                        <Calendar className="w-3.5 h-3.5" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 flex-wrap">
-                          <span className="font-bold text-sm text-white">Calendar</span>
-                          <span className="text-slate-500 text-xs">—</span>
-                          <span className="text-xs text-slate-300 font-medium">High-impact macroeconomic calendar.</span>
-                        </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Calendar</div>
+                        <div className="text-[10px] text-slate-400 truncate">Economic high-impact events</div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 shrink-0">
                       MACRO
                     </span>
                   </button>
 
-                  {/* 11. VAR — Monte Carlo 1,000-Path VaR & tail-risk model. */}
+                  {/* 11. VAR */}
                   <button
                     onClick={() => { onOpenMonteCarlo(); setThreeDotMenuOpen(false); }}
-                    className="w-full p-2.5 rounded-xl flex items-center justify-between hover:bg-emerald-950/50 text-emerald-200 border border-emerald-800/40 hover:border-emerald-700/60 transition-all text-left text-xs bg-terminal-950/60"
+                    className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-terminal-800 text-emerald-300 border border-terminal-border hover:border-emerald-800 transition-colors text-left text-xs"
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className="p-2 rounded-lg bg-emerald-950/90 text-emerald-400 border border-emerald-800/60 shrink-0">
-                        <LineChart className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
+                        <LineChart className="w-3.5 h-3.5" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 flex-wrap">
-                          <span className="font-bold text-sm text-white">VAR</span>
-                          <span className="text-slate-500 text-xs">—</span>
-                          <span className="text-xs text-slate-300 font-medium">Monte Carlo 1,000-Path VaR & tail-risk model.</span>
-                        </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">VAR</div>
+                        <div className="text-[10px] text-slate-400 truncate">Monte Carlo 1,000-Path VaR model</div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 shrink-0">
                       VaR
                     </span>
                   </button>
@@ -725,7 +665,7 @@ export const Header: React.FC<HeaderProps> = ({
                   Main Views
                 </div>
 
-                {/* 1. Terminal — Live charts, agent consensus & positions. */}
+                {/* 1. Terminal */}
                 <button
                   onClick={() => { setActiveTab('terminal'); setLeftDrawerOpen(false); }}
                   className={`w-full p-2.5 rounded-lg flex items-center justify-between border transition-all text-left ${
@@ -734,26 +674,23 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-600'
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                    <div className="p-2 rounded-md bg-cyan-950/80 border border-cyan-800/60 text-cyan-400 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-cyan-950/80 border border-cyan-800/60 text-cyan-400">
                       <Activity className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-slate-100 flex items-baseline gap-1.5 flex-wrap">
-                        <span>Terminal</span>
-                        <span className="text-slate-500 text-xs">—</span>
-                        <span className="text-xs text-slate-300 font-medium">Live charts, agent consensus & positions.</span>
-                      </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Terminal</div>
+                      <div className="text-xs text-slate-400">Live charts, swarm consensus & positions</div>
                     </div>
                   </div>
                   {activeTab === 'terminal' && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
                       ACTIVE
                     </span>
                   )}
                 </button>
 
-                {/* 2. Five-Agent Debate — Multi-agent adversarial consensus room. */}
+                {/* 2. 5-Agent Debate */}
                 <button
                   onClick={() => { setActiveTab('debate'); setLeftDrawerOpen(false); }}
                   className={`w-full p-2.5 rounded-lg flex items-center justify-between border transition-all text-left ${
@@ -762,26 +699,23 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-600'
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                    <div className="p-2 rounded-md bg-purple-950/80 border border-purple-800/60 text-purple-400 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-purple-950/80 border border-purple-800/60 text-purple-400">
                       <Layers className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-slate-100 flex items-baseline gap-1.5 flex-wrap">
-                        <span>Five-Agent Debate</span>
-                        <span className="text-slate-500 text-xs">—</span>
-                        <span className="text-xs text-slate-300 font-medium">Multi-agent adversarial consensus room.</span>
-                      </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">5-Agent Debate</div>
+                      <div className="text-xs text-slate-400">Multi-agent adversarial consensus room</div>
                     </div>
                   </div>
                   {activeTab === 'debate' && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
                       ACTIVE
                     </span>
                   )}
                 </button>
 
-                {/* 3. Backtest — Historical simulation & performance metrics. */}
+                {/* 3. Backtest */}
                 <button
                   onClick={() => { setActiveTab('backtest'); setLeftDrawerOpen(false); }}
                   className={`w-full p-2.5 rounded-lg flex items-center justify-between border transition-all text-left ${
@@ -790,26 +724,23 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-600'
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                    <div className="p-2 rounded-md bg-amber-950/80 border border-amber-800/60 text-amber-400 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-amber-950/80 border border-amber-800/60 text-amber-400">
                       <History className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-slate-100 flex items-baseline gap-1.5 flex-wrap">
-                        <span>Backtest</span>
-                        <span className="text-slate-500 text-xs">—</span>
-                        <span className="text-xs text-slate-300 font-medium">Historical simulation & performance metrics.</span>
-                      </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Backtest</div>
+                      <div className="text-xs text-slate-400">Historical simulation & performance metrics</div>
                     </div>
                   </div>
                   {activeTab === 'backtest' && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                       ACTIVE
                     </span>
                   )}
                 </button>
 
-                {/* 4. Roles — 5-agent architecture, weights & governance. */}
+                {/* 4. 5 Roles */}
                 <button
                   onClick={() => { setActiveTab('architecture'); setLeftDrawerOpen(false); }}
                   className={`w-full p-2.5 rounded-lg flex items-center justify-between border transition-all text-left ${
@@ -818,20 +749,17 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-600'
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                    <div className="p-2 rounded-md bg-emerald-950/80 border border-emerald-800/60 text-emerald-400 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-emerald-950/80 border border-emerald-800/60 text-emerald-400">
                       <Shield className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-slate-100 flex items-baseline gap-1.5 flex-wrap">
-                        <span>Roles</span>
-                        <span className="text-slate-500 text-xs">—</span>
-                        <span className="text-xs text-slate-300 font-medium">5-agent architecture, weights & governance.</span>
-                      </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">5 Roles</div>
+                      <div className="text-xs text-slate-400">Swarm architecture, agent roles & weights</div>
                     </div>
                   </div>
                   {activeTab === 'architecture' && (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                       ACTIVE
                     </span>
                   )}
@@ -842,77 +770,68 @@ export const Header: React.FC<HeaderProps> = ({
                   Intelligence & Backend
                 </div>
 
-                {/* 5. Wire — 18 financial sources real-time news wire scraper. */}
+                {/* 5. 18 News Wires */}
                 {onOpenNewsWire && (
                   <button
                     onClick={() => { onOpenNewsWire(); setLeftDrawerOpen(false); }}
                     className="w-full p-2.5 rounded-lg flex items-center justify-between border border-sky-800/60 bg-sky-950/40 hover:bg-sky-900/60 text-sky-200 transition-all text-left"
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className="p-2 rounded-md bg-sky-900/80 border border-sky-700/60 text-sky-300 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-md bg-sky-900/80 border border-sky-700/60 text-sky-300">
                         <Radio className="w-4 h-4 text-sky-400 animate-pulse" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-bold text-sm text-sky-200 flex items-baseline gap-1.5 flex-wrap">
-                          <span>Wire</span>
-                          <span className="text-sky-500/60 text-xs">—</span>
-                          <span className="text-xs text-sky-300/80 font-medium">18 financial sources real-time news wire scraper.</span>
-                        </div>
+                      <div>
+                        <div className="font-bold text-sm text-sky-200">18 News Wires</div>
+                        <div className="text-xs text-sky-300/70">18 financial sources & scrapers live</div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 shrink-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
                       LIVE
                     </span>
                   </button>
                 )}
 
-                {/* 6. Firebase — Firestore cloud database sync & status. */}
+                {/* 6. Firebase Cloud */}
                 {onOpenFirebase && (
                   <button
                     onClick={() => { onOpenFirebase(); setLeftDrawerOpen(false); }}
                     className="w-full p-2.5 rounded-lg flex items-center justify-between border border-amber-800/60 bg-amber-950/40 hover:bg-amber-900/60 text-amber-200 transition-all text-left"
                   >
-                    <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                      <div className="p-2 rounded-md bg-amber-900/80 border border-amber-700/60 text-amber-300 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-md bg-amber-900/80 border border-amber-700/60 text-amber-300">
                         <Cloud className="w-4 h-4 text-amber-400" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-bold text-sm text-amber-200 flex items-baseline gap-1.5 flex-wrap">
-                          <span>Firebase</span>
-                          <span className="text-amber-500/60 text-xs">—</span>
-                          <span className="text-xs text-amber-300/80 font-medium">Firestore cloud database sync & status.</span>
-                        </div>
+                      <div>
+                        <div className="font-bold text-sm text-amber-200">Firebase Cloud</div>
+                        <div className="text-xs text-amber-300/70">Firestore cloud backend & state sync</div>
                       </div>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
                       SYNC
                     </span>
                   </button>
                 )}
 
-                {/* 7. Knowledge — 1,050+ institutional trading rules & checklists. */}
+                {/* 7. 1,050+ Rules */}
                 <button
                   onClick={() => { onOpenKnowledge(); setLeftDrawerOpen(false); }}
                   className="w-full p-2.5 rounded-lg flex items-center justify-between border border-indigo-800/60 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-200 transition-all text-left"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                    <div className="p-2 rounded-md bg-indigo-900/80 border border-indigo-700/60 text-indigo-300 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-indigo-900/80 border border-indigo-700/60 text-indigo-300">
                       <Database className="w-4 h-4 text-indigo-400" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-indigo-200 flex items-baseline gap-1.5 flex-wrap">
-                        <span>Knowledge</span>
-                        <span className="text-indigo-500/60 text-xs">—</span>
-                        <span className="text-xs text-indigo-300/80 font-medium">1,050+ institutional trading rules & checklists.</span>
-                      </div>
+                    <div>
+                      <div className="font-bold text-sm text-indigo-200">1,050+ Rules</div>
+                      <div className="text-xs text-indigo-300/70">Institutional knowledge base & checklist</div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
-                    1,050+
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    KNOWLEDGE
                   </span>
                 </button>
 
-                {/* 8. Execution Mode — Interactive toggle cycling Manual / Semi / Autopilot. */}
+                {/* 8. Execution Mode (MANUAL / SEMI / AUTO) */}
                 <button
                   onClick={onToggleExecutionMode}
                   className={`w-full p-2.5 rounded-lg flex items-center justify-between border transition-all text-left ${
@@ -923,8 +842,8 @@ export const Header: React.FC<HeaderProps> = ({
                       : 'bg-terminal-900/70 border-terminal-border text-slate-200 hover:bg-terminal-800'
                   }`}
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                    <div className={`p-2 rounded-md border shrink-0 ${
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-md border ${
                       executionMode === 'FULL_AUTOPILOT'
                         ? 'bg-emerald-900/80 border-emerald-700/60 text-emerald-300'
                         : executionMode === 'SEMI_AUTONOMOUS'
@@ -933,15 +852,17 @@ export const Header: React.FC<HeaderProps> = ({
                     }`}>
                       <PlayCircle className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-slate-100 flex items-baseline gap-1.5 flex-wrap">
+                    <div>
+                      <div className="font-bold text-sm text-slate-100 flex items-center gap-1.5">
                         <span>Execution Mode</span>
-                        <span className="text-slate-500 text-xs">—</span>
-                        <span className="text-xs text-slate-300 font-medium">Interactive toggle cycling Manual / Semi / Autopilot.</span>
+                        <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-700 text-slate-300">CLICK TO CYCLE</span>
+                      </div>
+                      <div className="text-xs text-slate-400 font-mono font-semibold">
+                        {executionMode.replace('_', ' ')}
                       </div>
                     </div>
                   </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase shrink-0 ${
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${
                     executionMode === 'FULL_AUTOPILOT'
                       ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                       : executionMode === 'SEMI_AUTONOMOUS'
@@ -957,68 +878,59 @@ export const Header: React.FC<HeaderProps> = ({
                   Market Tools
                 </div>
 
-                {/* 9. Scanner — Real-time multi-asset opportunity scanner. */}
+                {/* 9. Scanner */}
                 <button
                   onClick={() => { onOpenScanner(); setLeftDrawerOpen(false); }}
                   className="w-full p-2.5 rounded-lg flex items-center justify-between border border-cyan-800/50 bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 transition-all text-left"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                    <div className="p-2 rounded-md bg-cyan-950/80 border border-cyan-800/60 text-cyan-400 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-cyan-950/80 border border-cyan-800/60 text-cyan-400">
                       <Radar className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-slate-100 flex items-baseline gap-1.5 flex-wrap">
-                        <span>Scanner</span>
-                        <span className="text-slate-500 text-xs">—</span>
-                        <span className="text-xs text-slate-300 font-medium">Real-time multi-asset opportunity scanner.</span>
-                      </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Scanner</div>
+                      <div className="text-xs text-slate-400">Multi-asset opportunity scanner</div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shrink-0">
-                    SCAN
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                    SCANNER
                   </span>
                 </button>
 
-                {/* 10. Calendar — High-impact macroeconomic calendar. */}
+                {/* 10. Calendar */}
                 <button
                   onClick={() => { onOpenCalendar(); setLeftDrawerOpen(false); }}
                   className="w-full p-2.5 rounded-lg flex items-center justify-between border border-purple-800/50 bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 transition-all text-left"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                    <div className="p-2 rounded-md bg-purple-950/80 border border-purple-800/60 text-purple-400 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-purple-950/80 border border-purple-800/60 text-purple-400">
                       <Calendar className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-slate-100 flex items-baseline gap-1.5 flex-wrap">
-                        <span>Calendar</span>
-                        <span className="text-slate-500 text-xs">—</span>
-                        <span className="text-xs text-slate-300 font-medium">High-impact macroeconomic calendar.</span>
-                      </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Calendar</div>
+                      <div className="text-xs text-slate-400">High-impact economic & central bank events</div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">
                     MACRO
                   </span>
                 </button>
 
-                {/* 11. VAR — Monte Carlo 1,000-Path VaR & tail-risk model. */}
+                {/* 11. Monte Carlo 1,000-Path VaR */}
                 <button
                   onClick={() => { onOpenMonteCarlo(); setLeftDrawerOpen(false); }}
                   className="w-full p-2.5 rounded-lg flex items-center justify-between border border-emerald-800/50 bg-terminal-900/60 hover:bg-terminal-800 text-slate-200 transition-all text-left"
                 >
-                  <div className="flex items-center gap-3 min-w-0 flex-1 mr-2">
-                    <div className="p-2 rounded-md bg-emerald-950/80 border border-emerald-800/60 text-emerald-400 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-md bg-emerald-950/80 border border-emerald-800/60 text-emerald-400">
                       <LineChart className="w-4 h-4" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="font-bold text-sm text-slate-100 flex items-baseline gap-1.5 flex-wrap">
-                        <span>VAR</span>
-                        <span className="text-slate-500 text-xs">—</span>
-                        <span className="text-xs text-slate-300 font-medium">Monte Carlo 1,000-Path VaR & tail-risk model.</span>
-                      </div>
+                    <div>
+                      <div className="font-bold text-sm text-slate-100">Monte Carlo 1,000-Path VaR</div>
+                      <div className="text-xs text-slate-400">Parametric & stochastic risk simulation</div>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     VaR
                   </span>
                 </button>
