@@ -121,10 +121,10 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
           <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
           <span className="font-semibold text-white">{unifiedDecision.recommendedAction}</span>
         </div>
-        <div className="text-[11px] text-slate-400 flex items-center gap-3">
-          <span>Stop Loss: <strong className="text-rose-400">{executionSignal.stopLoss}</strong></span>
-          <span>Target: <strong className="text-emerald-400">{executionSignal.takeProfit}</strong></span>
-          <span>R:R: <strong className="text-cyan-400">{executionSignal.riskReward}:1</strong></span>
+        <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-2 sm:gap-3 tabular-nums">
+          <span className="whitespace-nowrap">Stop Loss: <strong className="text-rose-400">{executionSignal.stopLoss}</strong></span>
+          <span className="whitespace-nowrap">Target: <strong className="text-emerald-400">{executionSignal.takeProfit}</strong></span>
+          <span className="whitespace-nowrap">R:R: <strong className="text-cyan-400">{executionSignal.riskReward}:1</strong></span>
         </div>
       </div>
 

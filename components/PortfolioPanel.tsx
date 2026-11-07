@@ -23,40 +23,40 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({ portfolio, onClo
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
         <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
           <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Account Balance</span>
-          <span className="text-white font-bold text-base">
+          <span className="text-white font-bold text-base tabular-nums truncate block">
             ${portfolio.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         </div>
 
         <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
           <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Net Equity</span>
-          <span className="text-white font-bold text-base">
+          <span className="text-white font-bold text-base tabular-nums truncate block">
             ${(portfolio.balance + totalOpenPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         </div>
 
         <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
           <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Free Margin</span>
-          <span className="text-cyan-400 font-bold text-base">
+          <span className="text-cyan-400 font-bold text-base tabular-nums truncate block">
             ${portfolio.freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         </div>
 
         <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
           <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Open P&L</span>
-          <span className={`font-bold text-base ${totalOpenPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+          <span className={`font-bold text-base tabular-nums truncate block ${totalOpenPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {totalOpenPnl >= 0 ? '+' : ''}${totalOpenPnl.toFixed(2)}
           </span>
         </div>
 
         <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
           <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Win Rate</span>
-          <span className="text-emerald-400 font-bold text-base">{winRate}%</span>
+          <span className="text-emerald-400 font-bold text-base tabular-nums truncate block">{winRate}%</span>
         </div>
 
         <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
           <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Realized Profit</span>
-          <span className={`font-bold text-base ${totalRealizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+          <span className={`font-bold text-base tabular-nums truncate block ${totalRealizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {totalRealizedPnl >= 0 ? '+' : ''}${totalRealizedPnl.toFixed(2)}
           </span>
         </div>

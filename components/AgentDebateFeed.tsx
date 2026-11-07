@@ -95,7 +95,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                   }`}>
                     {msg.sentiment}
                   </span>
-                  <span className="text-[10px] text-slate-400">{msg.timestamp}</span>
+                  <span className="text-[10px] text-slate-400 shrink-0 tabular-nums whitespace-nowrap">{msg.timestamp}</span>
                 </div>
               </div>
 

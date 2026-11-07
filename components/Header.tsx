@@ -16,6 +16,7 @@ import {
   PlayCircle,
   Database,
   Menu,
+  MoreVertical,
   X,
   Radio,
   Coins,
@@ -84,19 +85,42 @@ export const Header: React.FC<HeaderProps> = ({
   confluenceGrade,
 }) => {
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
+  const [threeDotMenuOpen, setThreeDotMenuOpen] = useState(false);
+  const closeTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
-  // Close left drawer on Escape key
+  const handleMenuMouseEnter = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setThreeDotMenuOpen(true);
+  };
+
+  const handleMenuMouseLeave = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+    }
+    closeTimerRef.current = setTimeout(() => {
+      setThreeDotMenuOpen(false);
+    }, 220);
+  };
+
+  // Close menus on Escape key and cleanup timers
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setLeftDrawerOpen(false);
+        setThreeDotMenuOpen(false);
       }
     };
-    if (leftDrawerOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [leftDrawerOpen]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, []);
   
   const pairs = marketSegment === 'INDIAN_MARKET' 
     ? INDIAN_MARKET_ASSETS 
@@ -108,7 +132,7 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="border-b border-terminal-border bg-terminal-900/95 backdrop-blur-md sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5">
         {/* Row 1: Brand, Mode, Market Scope & Navigation Drawer Toggle */}
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap lg:flex-nowrap items-center justify-between gap-2">
           {/* Brand & Setup Grade */}
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             {/* Left Hamburger Menu Button */}
@@ -254,134 +278,310 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Row 2 (Desktop): Navigation Tabs, Quick Tools, Pair & Timeframe selector */}
-        <div className="mt-2.5 pt-2 border-t border-terminal-border/50 hidden lg:flex items-center justify-between gap-3 text-sm">
-          {/* Main Navigation Tabs */}
-          <div className="flex items-center bg-terminal-950/80 p-1 rounded-lg border border-terminal-border">
-            <button
-              onClick={() => setActiveTab('terminal')}
-              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
-                activeTab === 'terminal' 
-                  ? 'bg-terminal-800 text-cyan-400 font-bold border border-cyan-500/30' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
+        {/* Row 2: Collapsible Three-Dot Menu (Housing Terminal across to VaR) + Target Pair & Timeframes */}
+        <div className="mt-2.5 pt-2 border-t border-terminal-border/50 flex flex-wrap items-center justify-between gap-2.5 text-xs sm:text-sm">
+          {/* Left: Collapsible Three-Dot Menu housing Terminal across to VAR */}
+          <div className="flex items-center gap-2">
+            <div 
+              className="relative inline-block"
+              onMouseEnter={handleMenuMouseEnter}
+              onMouseLeave={handleMenuMouseLeave}
             >
-              <Activity className="w-4 h-4" />
-              <span>Terminal</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('debate')}
-              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
-                activeTab === 'debate' 
-                  ? 'bg-terminal-800 text-purple-400 font-bold border border-purple-500/30' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              <span>5-Agent Debate</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('backtest')}
-              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
-                activeTab === 'backtest' 
-                  ? 'bg-terminal-800 text-amber-400 font-bold border border-amber-500/30' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <History className="w-4 h-4" />
-              <span>Backtest</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('architecture')}
-              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
-                activeTab === 'architecture' 
-                  ? 'bg-terminal-800 text-emerald-400 font-bold border border-emerald-500/30' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              <span>5 Roles</span>
-            </button>
+              <button
+                onClick={() => setThreeDotMenuOpen(prev => !prev)}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg border flex items-center gap-2 transition-all text-xs font-semibold shadow-sm ${
+                  threeDotMenuOpen 
+                    ? 'bg-terminal-800 text-cyan-300 border-cyan-500/60 shadow-cyan-500/10' 
+                    : 'bg-terminal-950 hover:bg-terminal-800 text-slate-200 border-terminal-border hover:border-slate-500'
+                }`}
+                aria-label="Navigation and Tools Menu (Terminal to VaR)"
+                aria-expanded={threeDotMenuOpen}
+                title="Open Navigation Menu (Terminal to VaR)"
+              >
+                <MoreVertical className="w-4 h-4 text-cyan-400 shrink-0" />
+                <span className="font-bold tracking-wide">Menu</span>
+                <span className="hidden xs:inline text-slate-500">•</span>
+                <span className="text-[11px] px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 font-bold uppercase truncate max-w-[110px]">
+                  {activeTab === 'architecture' ? '5 Roles' : activeTab}
+                </span>
+              </button>
+
+              {/* Clean Vertical Dropdown List (No Clipping & Auto-Collapse on Mouse Leave) */}
+              {threeDotMenuOpen && (
+                <div 
+                  className="absolute left-0 top-full mt-1.5 w-76 sm:w-84 max-w-[92vw] overflow-y-auto bg-terminal-950/98 backdrop-blur-xl border border-terminal-border rounded-xl shadow-2xl z-[70] p-2 space-y-1 custom-scrollbar animate-in fade-in slide-in-from-top-1 duration-150"
+                  style={{ maxHeight: 'calc(100vh - 120px)' }}
+                  onMouseEnter={handleMenuMouseEnter}
+                  onMouseLeave={handleMenuMouseLeave}
+                >
+                  <div className="px-2 py-1 text-[10px] font-bold tracking-wider text-slate-400 uppercase border-b border-terminal-border/60 mb-1 flex items-center justify-between">
+                    <span>Navigation & Tools</span>
+                    <span className="text-cyan-400 text-[10px] font-mono">Terminal → VaR</span>
+                  </div>
+
+                  {/* 1. Terminal */}
+                  <button
+                    onClick={() => { setActiveTab('terminal'); setThreeDotMenuOpen(false); }}
+                    className={`w-full p-2 rounded-lg flex items-center justify-between transition-colors text-left text-xs ${
+                      activeTab === 'terminal'
+                        ? 'bg-terminal-800 text-cyan-400 border border-cyan-500/40 font-bold shadow-sm'
+                        : 'hover:bg-terminal-800/80 text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-cyan-950/80 text-cyan-400 border border-cyan-800/50">
+                        <Activity className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Terminal</div>
+                        <div className="text-[10px] text-slate-400 truncate">Live charts, swarm consensus & positions</div>
+                      </div>
+                    </div>
+                    {activeTab === 'terminal' && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 shrink-0">
+                        ACTIVE
+                      </span>
+                    )}
+                  </button>
+
+                  {/* 2. Five-Agent Debate */}
+                  <button
+                    onClick={() => { setActiveTab('debate'); setThreeDotMenuOpen(false); }}
+                    className={`w-full p-2 rounded-lg flex items-center justify-between transition-colors text-left text-xs ${
+                      activeTab === 'debate'
+                        ? 'bg-terminal-800 text-purple-400 border border-purple-500/40 font-bold shadow-sm'
+                        : 'hover:bg-terminal-800/80 text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-purple-950/80 text-purple-400 border border-purple-800/50">
+                        <Layers className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Five-Agent Debate</div>
+                        <div className="text-[10px] text-slate-400 truncate">Multi-agent adversarial consensus room</div>
+                      </div>
+                    </div>
+                    {activeTab === 'debate' && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 shrink-0">
+                        ACTIVE
+                      </span>
+                    )}
+                  </button>
+
+                  {/* 3. Backtest */}
+                  <button
+                    onClick={() => { setActiveTab('backtest'); setThreeDotMenuOpen(false); }}
+                    className={`w-full p-2 rounded-lg flex items-center justify-between transition-colors text-left text-xs ${
+                      activeTab === 'backtest'
+                        ? 'bg-terminal-800 text-amber-400 border border-amber-500/40 font-bold shadow-sm'
+                        : 'hover:bg-terminal-800/80 text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-amber-950/80 text-amber-400 border border-amber-800/50">
+                        <History className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Backtest</div>
+                        <div className="text-[10px] text-slate-400 truncate">Historical simulation & performance</div>
+                      </div>
+                    </div>
+                    {activeTab === 'backtest' && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
+                        ACTIVE
+                      </span>
+                    )}
+                  </button>
+
+                  {/* 4. Roles */}
+                  <button
+                    onClick={() => { setActiveTab('architecture'); setThreeDotMenuOpen(false); }}
+                    className={`w-full p-2 rounded-lg flex items-center justify-between transition-colors text-left text-xs ${
+                      activeTab === 'architecture'
+                        ? 'bg-terminal-800 text-emerald-400 border border-emerald-500/40 font-bold shadow-sm'
+                        : 'hover:bg-terminal-800/80 text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
+                        <Shield className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Roles</div>
+                        <div className="text-[10px] text-slate-400 truncate">5-agent architecture & weights</div>
+                      </div>
+                    </div>
+                    {activeTab === 'architecture' && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 shrink-0">
+                        ACTIVE
+                      </span>
+                    )}
+                  </button>
+
+                  <div className="my-1 border-t border-terminal-border/50"></div>
+
+                  {/* 5. Wire */}
+                  {onOpenNewsWire && (
+                    <button
+                      onClick={() => { onOpenNewsWire(); setThreeDotMenuOpen(false); }}
+                      className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-sky-950/60 text-sky-200 border border-sky-800/40 hover:border-sky-700/60 transition-colors text-left text-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="p-1.5 rounded-md bg-sky-950/80 text-sky-400 border border-sky-800/50">
+                          <Radio className="w-3.5 h-3.5 animate-pulse" />
+                        </div>
+                        <div className="truncate">
+                          <div className="font-bold text-sky-200">Wire</div>
+                          <div className="text-[10px] text-sky-300/70 truncate">18 financial sources scraper live</div>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 shrink-0">
+                        18 LIVE
+                      </span>
+                    </button>
+                  )}
+
+                  {/* 6. Firebase */}
+                  {onOpenFirebase && (
+                    <button
+                      onClick={() => { onOpenFirebase(); setThreeDotMenuOpen(false); }}
+                      className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-amber-950/60 text-amber-200 border border-amber-800/40 hover:border-amber-700/60 transition-colors text-left text-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="p-1.5 rounded-md bg-amber-950/80 text-amber-400 border border-amber-800/50">
+                          <Cloud className="w-3.5 h-3.5" />
+                        </div>
+                        <div className="truncate">
+                          <div className="font-bold text-amber-200">Firebase</div>
+                          <div className="text-[10px] text-amber-300/70 truncate">Firestore database & sync status</div>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 shrink-0">
+                        SYNC
+                      </span>
+                    </button>
+                  )}
+
+                  {/* 7. Knowledge */}
+                  <button
+                    onClick={() => { onOpenKnowledge(); setThreeDotMenuOpen(false); }}
+                    className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-indigo-950/60 text-indigo-200 border border-indigo-800/40 hover:border-indigo-700/60 transition-colors text-left text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-indigo-950/80 text-indigo-400 border border-indigo-800/50">
+                        <Database className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-indigo-200">Knowledge</div>
+                        <div className="text-[10px] text-indigo-300/70 truncate">1,050+ institutional rules base</div>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 shrink-0">
+                      1,050+
+                    </span>
+                  </button>
+
+                  {/* 8. Execution Mode */}
+                  <button
+                    onClick={onToggleExecutionMode}
+                    className={`w-full p-2 rounded-lg flex items-center justify-between transition-colors text-left text-xs border ${
+                      executionMode === 'FULL_AUTOPILOT'
+                        ? 'bg-emerald-950/50 border-emerald-600/60 text-emerald-200'
+                        : executionMode === 'SEMI_AUTONOMOUS'
+                        ? 'bg-amber-950/50 border-amber-600/60 text-amber-200'
+                        : 'hover:bg-terminal-800 text-slate-200 border-terminal-border/80'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-terminal-800 text-slate-300 border border-terminal-border">
+                        <PlayCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Mode: {executionMode.replace('_', ' ')}</div>
+                        <div className="text-[10px] text-slate-400 truncate">Click to cycle Auto/Semi/Manual</div>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-terminal-800 text-slate-300 border border-terminal-border shrink-0 uppercase">
+                      {executionMode.replace('_', ' ')}
+                    </span>
+                  </button>
+
+                  <div className="my-1 border-t border-terminal-border/50"></div>
+
+                  {/* 9. Scanner */}
+                  <button
+                    onClick={() => { onOpenScanner(); setThreeDotMenuOpen(false); }}
+                    className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-terminal-800 text-cyan-300 border border-terminal-border hover:border-cyan-800 transition-colors text-left text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-cyan-950/80 text-cyan-400 border border-cyan-800/50">
+                        <Radar className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Scanner</div>
+                        <div className="text-[10px] text-slate-400 truncate">Multi-asset opportunity scanner</div>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 shrink-0">
+                      SCAN
+                    </span>
+                  </button>
+
+                  {/* 10. Calendar */}
+                  <button
+                    onClick={() => { onOpenCalendar(); setThreeDotMenuOpen(false); }}
+                    className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-terminal-800 text-purple-300 border border-terminal-border hover:border-purple-800 transition-colors text-left text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-purple-950/80 text-purple-400 border border-purple-800/50">
+                        <Calendar className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">Calendar</div>
+                        <div className="text-[10px] text-slate-400 truncate">Economic high-impact events</div>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 shrink-0">
+                      MACRO
+                    </span>
+                  </button>
+
+                  {/* 11. VAR */}
+                  <button
+                    onClick={() => { onOpenMonteCarlo(); setThreeDotMenuOpen(false); }}
+                    className="w-full p-2 rounded-lg flex items-center justify-between hover:bg-terminal-800 text-emerald-300 border border-terminal-border hover:border-emerald-800 transition-colors text-left text-xs"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="p-1.5 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
+                        <LineChart className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="truncate">
+                        <div className="font-bold text-slate-100">VAR</div>
+                        <div className="text-[10px] text-slate-400 truncate">Monte Carlo 1,000-Path VaR model</div>
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 shrink-0">
+                      VaR
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Direct Active View Label */}
+            <div className="hidden sm:flex items-center gap-1.5 text-slate-400 text-xs font-medium pl-1">
+              <span className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Active:</span>
+              <span className="text-white font-bold capitalize">
+                {activeTab === 'architecture' ? '5 Roles Architecture' : activeTab === 'debate' ? '5-Agent Debate' : activeTab}
+              </span>
+            </div>
           </div>
 
-          {/* Quick Tools */}
-          <div className="flex items-center gap-2">
-            {/* Live Wire Scraper Pill */}
-            {onOpenNewsWire && (
-              <button
-                onClick={onOpenNewsWire}
-                className="px-3 py-1.5 rounded-lg bg-sky-950/70 hover:bg-sky-900 border border-sky-700/60 text-sky-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
-                title="View 18 Financial Websites Real-Time Wire"
-              >
-                <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-                <span>News Wire (18)</span>
-              </button>
-            )}
-
-            {/* Firebase Cloud Sync Status */}
-            {onOpenFirebase && (
-              <button
-                onClick={onOpenFirebase}
-                className="px-3 py-1.5 rounded-lg bg-amber-950/70 hover:bg-amber-900 border border-amber-600/60 text-amber-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
-                title="Firebase Firestore Cloud Database"
-              >
-                <Cloud className="w-3.5 h-3.5 text-amber-400" />
-                <span>Firebase</span>
-              </button>
-            )}
-
-            <button
-              onClick={onOpenKnowledge}
-              className="px-3 py-1.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
-              title="Open 1,000+ Rule Knowledge Base"
-            >
-              <Database className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Knowledge (1,050+)</span>
-            </button>
-
-            <button
-              onClick={onToggleExecutionMode}
-              className={`px-3 py-1.5 rounded-lg font-bold border flex items-center gap-1.5 transition-all text-xs ${
-                executionMode === 'FULL_AUTOPILOT'
-                  ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500 animate-pulse'
-                  : executionMode === 'SEMI_AUTONOMOUS'
-                  ? 'bg-amber-600/20 text-amber-300 border-amber-500/50'
-                  : 'bg-terminal-800 text-slate-300 border-terminal-border'
-              }`}
-            >
-              <PlayCircle className="w-3.5 h-3.5" />
-              <span>{executionMode.replace('_', ' ')}</span>
-            </button>
-
-            <button
-              onClick={onOpenScanner}
-              className="px-2 py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-cyan-400 border border-terminal-border flex items-center gap-1 transition-colors"
-            >
-              <Radar className="w-3.5 h-3.5" />
-              <span>Scanner</span>
-            </button>
-
-            <button
-              onClick={onOpenCalendar}
-              className="px-2 py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-purple-400 border border-terminal-border flex items-center gap-1 transition-colors"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Calendar</span>
-            </button>
-
-            <button
-              onClick={onOpenMonteCarlo}
-              className="px-2 py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-emerald-400 border border-terminal-border flex items-center gap-1 transition-colors"
-            >
-              <LineChart className="w-3.5 h-3.5" />
-              <span>VaR</span>
-            </button>
-          </div>
-
-          {/* Pair & Timeframe Selectors */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-terminal-950 px-2.5 py-1 rounded border border-terminal-border">
-              <span className="text-[10px] text-slate-400">TARGET:</span>
+          {/* Right: Pair Selector + Timeframe Selector (Responsive & Zoom-Resilient) */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            <div className="flex items-center gap-1 bg-terminal-950 px-2 py-1 rounded-lg border border-terminal-border shrink-0">
+              <span className="text-[10px] text-slate-400 font-semibold">TARGET:</span>
               <select
                 value={selectedPair}
                 onChange={(e) => onSelectPair(e.target.value as CurrencyPair)}
@@ -395,14 +595,14 @@ export const Header: React.FC<HeaderProps> = ({
               </select>
             </div>
 
-            <div className="flex items-center gap-0.5 bg-terminal-950 p-0.5 rounded border border-terminal-border">
+            <div className="flex items-center gap-0.5 bg-terminal-950 p-0.5 rounded-lg border border-terminal-border shrink-0 overflow-x-auto scrollbar-none">
               {TIMEFRAMES.map(tf => (
                 <button
                   key={tf}
                   onClick={() => onSelectTimeframe(tf)}
-                  className={`px-1.5 py-0.5 rounded text-[11px] transition-all ${
+                  className={`px-1.5 sm:px-2 py-0.5 rounded text-[11px] font-semibold transition-all ${
                     timeframe === tf 
-                      ? 'bg-indigo-600 text-white font-bold' 
+                      ? 'bg-indigo-600 text-white font-bold shadow-sm' 
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
@@ -410,40 +610,6 @@ export const Header: React.FC<HeaderProps> = ({
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-
-        {/* Row 2 (Mobile / Tablet Controls): Scrollable Pair + Timeframes */}
-        <div className="mt-2 pt-2 border-t border-terminal-border/40 flex lg:hidden items-center justify-between gap-2 overflow-x-auto scrollbar-none font-mono text-xs">
-          <div className="flex items-center gap-1.5 shrink-0 bg-terminal-950 px-2 py-1 rounded border border-terminal-border">
-            <span className="text-[10px] text-slate-400">TARGET:</span>
-            <select
-              value={selectedPair}
-              onChange={(e) => onSelectPair(e.target.value as CurrencyPair)}
-              className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
-            >
-              {pairs.map(p => (
-                <option key={p} value={p} className="bg-terminal-900 text-white font-medium">
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0 bg-terminal-950 p-0.5 rounded border border-terminal-border">
-            {TIMEFRAMES.map(tf => (
-              <button
-                key={tf}
-                onClick={() => onSelectTimeframe(tf)}
-                className={`px-1.5 py-0.5 rounded text-[11px] transition-all ${
-                  timeframe === tf 
-                    ? 'bg-indigo-600 text-white font-bold' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {tf.toUpperCase()}
-              </button>
-            ))}
           </div>
         </div>
 
