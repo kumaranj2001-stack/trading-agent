@@ -19,13 +19,17 @@ import {
   X,
   Radio,
   Coins,
-  Cloud
+  Cloud,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, TimeFrame } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
 import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES } from '@/lib/marketData';
 
 interface HeaderProps {
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
   selectedPair: CurrencyPair;
   marketSegment: MarketSegment;
   onSelectMarketSegment: (seg: MarketSegment) => void;
@@ -54,6 +58,8 @@ interface HeaderProps {
 const TIMEFRAMES: TimeFrame[] = ['1m', '5m', '15m', '1h', '4h', '1d'];
 
 export const Header: React.FC<HeaderProps> = ({
+  theme = 'dark',
+  onToggleTheme,
   selectedPair,
   marketSegment,
   onSelectMarketSegment,
@@ -101,28 +107,28 @@ export const Header: React.FC<HeaderProps> = ({
                   APEX <span className="text-cyan-400 font-mono">//</span> 5-AGENT SWARM
                 </span>
                 {confluenceGrade && (
-                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded font-bold border shrink-0 ${
+                  <span className={`text-xs px-2 py-0.5 rounded font-bold border shrink-0 ${
                     confluenceGrade === 'A+' || confluenceGrade === 'A'
                       ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                       : confluenceGrade === 'B'
                       ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
                       : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
                   }`}>
-                    {confluenceGrade}
+                    GRADE {confluenceGrade}
                   </span>
                 )}
               </div>
-              <div className="hidden xs:flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="truncate">{activeSession}</span>
-                <span className="text-sky-400/90">• 18 NEWS WIRES</span>
-                <span className="text-cyan-400/80 hidden md:inline">• 1,050+ RULES</span>
+              <div className="hidden xs:flex items-center gap-2 text-xs text-slate-400">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span className="truncate font-semibold">{activeSession}</span>
+                <span className="text-sky-400/90 font-medium">• 18 NEWS WIRES</span>
+                <span className="text-cyan-400/80 hidden md:inline font-medium">• 1,050+ RULES</span>
               </div>
             </div>
           </div>
 
           {/* Market Scope Selector: Forex vs Metals/Commodities vs Indian Market */}
-          <div className="flex items-center bg-terminal-950 p-0.5 sm:p-1 rounded-lg border border-terminal-border font-mono text-[11px] sm:text-xs">
+          <div className="flex items-center bg-terminal-950 p-1 rounded-lg border border-terminal-border text-xs sm:text-sm">
             <button
               onClick={() => {
                 onSelectMarketSegment('FOREX');
@@ -197,6 +203,24 @@ export const Header: React.FC<HeaderProps> = ({
               <Sliders className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
 
+            {onToggleTheme && (
+              <button
+                onClick={onToggleTheme}
+                className="p-1.5 sm:p-2 rounded bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                aria-label="Toggle Theme Mode"
+              >
+                {theme === 'dark' ? (
+                  <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400 animate-spin-slow" />
+                ) : (
+                  <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-500" />
+                )}
+                <span className="hidden sm:inline text-xs font-bold uppercase tracking-wider">
+                  {theme === 'dark' ? 'Light' : 'Dark'}
+                </span>
+              </button>
+            )}
+
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-1.5 sm:p-2 rounded bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors"
@@ -208,66 +232,66 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Row 2 (Desktop): Navigation Tabs, Quick Tools, Pair & Timeframe selector */}
-        <div className="mt-2.5 pt-2 border-t border-terminal-border/50 hidden lg:flex items-center justify-between gap-3 text-xs font-mono">
+        <div className="mt-2.5 pt-2 border-t border-terminal-border/50 hidden lg:flex items-center justify-between gap-3 text-sm">
           {/* Main Navigation Tabs */}
-          <div className="flex items-center bg-terminal-950/80 p-0.5 rounded-lg border border-terminal-border">
+          <div className="flex items-center bg-terminal-950/80 p-1 rounded-lg border border-terminal-border">
             <button
               onClick={() => setActiveTab('terminal')}
-              className={`px-3 py-1 rounded flex items-center gap-1.5 transition-colors ${
+              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
                 activeTab === 'terminal' 
                   ? 'bg-terminal-800 text-cyan-400 font-bold border border-cyan-500/30' 
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Activity className="w-3.5 h-3.5" />
+              <Activity className="w-4 h-4" />
               <span>Terminal</span>
             </button>
             <button
               onClick={() => setActiveTab('debate')}
-              className={`px-3 py-1 rounded flex items-center gap-1.5 transition-colors ${
+              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
                 activeTab === 'debate' 
                   ? 'bg-terminal-800 text-purple-400 font-bold border border-purple-500/30' 
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Layers className="w-3.5 h-3.5" />
+              <Layers className="w-4 h-4" />
               <span>5-Agent Debate</span>
             </button>
             <button
               onClick={() => setActiveTab('backtest')}
-              className={`px-3 py-1 rounded flex items-center gap-1.5 transition-colors ${
+              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
                 activeTab === 'backtest' 
                   ? 'bg-terminal-800 text-amber-400 font-bold border border-amber-500/30' 
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <History className="w-3.5 h-3.5" />
+              <History className="w-4 h-4" />
               <span>Backtest</span>
             </button>
             <button
               onClick={() => setActiveTab('architecture')}
-              className={`px-3 py-1 rounded flex items-center gap-1.5 transition-colors ${
+              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
                 activeTab === 'architecture' 
                   ? 'bg-terminal-800 text-emerald-400 font-bold border border-emerald-500/30' 
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              <Shield className="w-3.5 h-3.5" />
+              <Shield className="w-4 h-4" />
               <span>5 Roles</span>
             </button>
           </div>
 
           {/* Quick Tools */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             {/* Live Wire Scraper Pill */}
             {onOpenNewsWire && (
               <button
                 onClick={onOpenNewsWire}
-                className="px-2.5 py-1 rounded bg-sky-950/70 hover:bg-sky-900 border border-sky-700/60 text-sky-300 flex items-center gap-1.5 transition-colors shadow-sm"
+                className="px-3 py-1.5 rounded-lg bg-sky-950/70 hover:bg-sky-900 border border-sky-700/60 text-sky-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
                 title="View 18 Financial Websites Real-Time Wire"
               >
                 <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-                <span className="font-bold">News Wire (18)</span>
+                <span>News Wire (18)</span>
               </button>
             )}
 
@@ -275,26 +299,26 @@ export const Header: React.FC<HeaderProps> = ({
             {onOpenFirebase && (
               <button
                 onClick={onOpenFirebase}
-                className="px-2.5 py-1 rounded bg-amber-950/70 hover:bg-amber-900 border border-amber-600/60 text-amber-300 flex items-center gap-1.5 transition-colors shadow-sm"
+                className="px-3 py-1.5 rounded-lg bg-amber-950/70 hover:bg-amber-900 border border-amber-600/60 text-amber-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
                 title="Firebase Firestore Cloud Database"
               >
                 <Cloud className="w-3.5 h-3.5 text-amber-400" />
-                <span className="font-bold">Firebase</span>
+                <span>Firebase</span>
               </button>
             )}
 
             <button
               onClick={onOpenKnowledge}
-              className="px-2.5 py-1 rounded bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 flex items-center gap-1.5 transition-colors shadow-sm"
+              className="px-3 py-1.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
               title="Open 1,000+ Rule Knowledge Base"
             >
               <Database className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="font-bold">Knowledge (1,050+)</span>
+              <span>Knowledge (1,050+)</span>
             </button>
 
             <button
               onClick={onToggleExecutionMode}
-              className={`px-2.5 py-1 rounded font-bold border flex items-center gap-1.5 transition-all text-[11px] ${
+              className={`px-3 py-1.5 rounded-lg font-bold border flex items-center gap-1.5 transition-all text-xs ${
                 executionMode === 'FULL_AUTOPILOT'
                   ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500 animate-pulse'
                   : executionMode === 'SEMI_AUTONOMOUS'
@@ -518,6 +542,25 @@ export const Header: React.FC<HeaderProps> = ({
                 <LineChart className="w-3.5 h-3.5" />
                 <span>Monte Carlo 1,000-Path VaR</span>
               </button>
+
+              {onToggleTheme && (
+                <button
+                  onClick={() => { onToggleTheme(); setMobileMenuOpen(false); }}
+                  className="p-2.5 rounded-lg bg-terminal-800 border border-terminal-border text-slate-100 font-bold flex items-center justify-center gap-2 col-span-2 sm:col-span-4 text-xs transition-colors"
+                >
+                  {theme === 'dark' ? (
+                    <>
+                      <Sun className="w-4 h-4 text-amber-400" />
+                      <span>Switch to Light Mode</span>
+                    </>
+                  ) : (
+                    <>
+                      <Moon className="w-4 h-4 text-indigo-400" />
+                      <span>Switch to Dark Mode</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         )}

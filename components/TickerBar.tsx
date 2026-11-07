@@ -36,11 +36,11 @@ export const TickerBar: React.FC<TickerBarProps> = ({
   });
 
   return (
-    <div className="bg-terminal-950 border-b border-terminal-border/80 px-3 sm:px-4 py-1.5 overflow-x-auto scrollbar-none touch-pan-x">
-      <div className="flex items-center gap-2 min-w-max">
-        <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest mr-1.5 flex items-center gap-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-          {isIndian ? '🇮🇳 NSE/BSE RATES' : isMetals ? '🏆 PRECIOUS METALS & CRUDE OIL' : '🌐 GLOBAL FX RATES'}
+    <div className="bg-terminal-950 border-b border-terminal-border/80 px-3 sm:px-4 py-2 overflow-x-auto scrollbar-none touch-pan-x">
+      <div className="flex items-center gap-2.5 min-w-max">
+        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2 flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          {isIndian ? '🇮🇳 NSE/BSE LIVE' : isMetals ? '🏆 PRECIOUS METALS & CRUDE' : '🌐 GLOBAL FX RATES'}
         </span>
         {displayRates.map((item) => {
           const isSelected = item.pair === selectedPair;
@@ -69,19 +69,19 @@ export const TickerBar: React.FC<TickerBarProps> = ({
             <button
               key={item.pair}
               onClick={() => onSelectPair(item.pair)}
-              className={`flex items-center gap-2 px-2.5 py-1 rounded transition-all text-xs font-mono border ${
+              className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg transition-all text-xs sm:text-sm border ${
                 isSelected 
                   ? 'bg-terminal-800/90 border-cyan-500/60 shadow-sm shadow-cyan-500/10' 
-                  : 'bg-terminal-900/60 border-terminal-border hover:border-slate-600 hover:bg-terminal-800/50'
+                  : 'bg-terminal-900/60 border-terminal-border hover:border-slate-500 hover:bg-terminal-800/50'
               }`}
             >
-              <span className={`font-semibold ${isSelected ? 'text-cyan-400' : 'text-slate-200'}`}>
+              <span className={`font-bold ${isSelected ? 'text-cyan-400' : 'text-slate-200'}`}>
                 {item.pair}
               </span>
-              <span className="text-white font-medium">
+              <span className="text-white font-semibold">
                 {formatDisplayPrice()}
               </span>
-              <span className={`flex items-center text-[11px] font-semibold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <span className={`flex items-center text-xs font-bold ${isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
                 {isPositive ? (
                   <TrendingUp className="w-3 h-3 mr-0.5 inline" />
                 ) : (

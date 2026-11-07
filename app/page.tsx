@@ -78,6 +78,31 @@ export default function Home() {
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
 
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  // Hydrate theme from localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('apex_theme') as 'dark' | 'light' | null;
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        setTheme(savedTheme);
+        document.documentElement.classList.remove('dark', 'light');
+        document.documentElement.classList.add(savedTheme);
+      }
+    }
+  }, []);
+
+  const handleToggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('apex_theme', nextTheme);
+      document.documentElement.classList.remove('dark', 'light');
+      document.documentElement.classList.add(nextTheme);
+    }
+    showNotification(`Switched to ${nextTheme === 'light' ? 'Light' : 'Dark'} Mode.`);
+  };
+
   const showNotification = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 4500);
@@ -454,6 +479,8 @@ export default function Home() {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         portfolio={portfolio}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenScanner={() => setIsScannerOpen(true)}
         onOpenCalendar={() => setIsCalendarOpen(true)}

@@ -142,91 +142,91 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 font-mono text-xs">
           {/* Pillar 1: Fundamental Macro Catalyst */}
-          <div className="bg-terminal-950/80 border border-purple-800/40 rounded-xl p-3 flex flex-col justify-between hover:border-purple-600/60 transition-colors">
+          <div className="bg-terminal-950/80 border border-purple-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-purple-600/60 transition-colors">
             <div>
-              <div className="flex items-center justify-between mb-1.5 text-purple-400 text-[11px] font-bold">
+              <div className="flex items-center justify-between mb-2 text-purple-400 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
-                  <Globe2 className="w-3.5 h-3.5" />
-                  1. Fundamental & Central Bank Drivers
+                  <Globe2 className="w-4 h-4" />
+                  1. Fundamental Drivers
                 </span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-950/60 border border-purple-800">
+                <span className="text-xs px-2 py-0.5 rounded font-bold bg-purple-950/60 border border-purple-800">
                   {agents.fundamental.bias}
                 </span>
               </div>
-              <p className="text-slate-300 text-[11px] font-sans leading-relaxed">
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
                 {unifiedDecision.coreReasons.fundamental}
               </p>
             </div>
           </div>
 
           {/* Pillar 2: Real-Time News Wire & Financial Websites Scraper */}
-          <div className="bg-terminal-950/80 border border-sky-800/40 rounded-xl p-3 flex flex-col justify-between hover:border-sky-600/60 transition-colors">
+          <div className="bg-terminal-950/80 border border-sky-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-sky-600/60 transition-colors">
             <div>
-              <div className="flex items-center justify-between mb-1.5 text-sky-400 text-[11px] font-bold">
+              <div className="flex items-center justify-between mb-2 text-sky-400 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
-                  <Newspaper className="w-3.5 h-3.5" />
-                  2. Live Wire & News Scraper (18 Outlets)
+                  <Newspaper className="w-4 h-4" />
+                  2. 18-Source News Wire
                 </span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-sky-950/60 border border-sky-800">
+                <span className="text-xs px-2 py-0.5 rounded font-bold bg-sky-950/60 border border-sky-800">
                   {agents.news.bias}
                 </span>
               </div>
-              <p className="text-slate-300 text-[11px] font-sans leading-relaxed">
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
                 {unifiedDecision.coreReasons.newsSentiment}
               </p>
             </div>
             {agents.news.breakingAlert && (
-              <div className="mt-2 pt-1.5 border-t border-sky-900/60 text-[10px] text-amber-300 truncate">
+              <div className="mt-2.5 pt-2 border-t border-sky-900/60 text-xs font-semibold text-amber-300 truncate">
                 ⚡ {agents.news.breakingAlert}
               </div>
             )}
           </div>
 
           {/* Pillar 3: Technical Structure & Smart Money Concepts */}
-          <div className="bg-terminal-950/80 border border-cyan-800/40 rounded-xl p-3 flex flex-col justify-between hover:border-cyan-600/60 transition-colors">
+          <div className="bg-terminal-950/80 border border-cyan-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-cyan-600/60 transition-colors">
             <div>
-              <div className="flex items-center justify-between mb-1.5 text-cyan-400 text-[11px] font-bold">
+              <div className="flex items-center justify-between mb-2 text-cyan-400 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
-                  <BarChart3 className="w-3.5 h-3.5" />
-                  3. Technical Structure & SMC Setup
+                  <BarChart3 className="w-4 h-4" />
+                  3. Technical Structure
                 </span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-cyan-950/60 border border-cyan-800">
+                <span className="text-xs px-2 py-0.5 rounded font-bold bg-cyan-950/60 border border-cyan-800">
                   {agents.technical.bias}
                 </span>
               </div>
-              <p className="text-slate-300 text-[11px] font-sans leading-relaxed">
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
                 {unifiedDecision.coreReasons.technicalSetup}
               </p>
             </div>
           </div>
 
           {/* Pillar 4: Market Mechanics & Intermarket Correlation */}
-          <div className="bg-terminal-950/80 border border-amber-800/40 rounded-xl p-3 flex flex-col justify-between hover:border-amber-600/60 transition-colors">
+          <div className="bg-terminal-950/80 border border-amber-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-amber-600/60 transition-colors">
             <div>
-              <div className="flex items-center justify-between mb-1.5 text-amber-400 text-[11px] font-bold">
+              <div className="flex items-center justify-between mb-2 text-amber-400 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
-                  <Scale className="w-3.5 h-3.5" />
-                  4. Intermarket Flows & Liquidity Dynamics
+                  <Scale className="w-4 h-4" />
+                  4. Intermarket Flows
                 </span>
-                <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-950/60 border border-amber-800">
+                <span className="text-xs px-2 py-0.5 rounded font-bold bg-amber-950/60 border border-amber-800">
                   {agents.forex.bias}
                 </span>
               </div>
-              <p className="text-slate-300 text-[11px] font-sans leading-relaxed">
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
                 {unifiedDecision.coreReasons.marketDynamics}
               </p>
             </div>
           </div>
 
           {/* Pillar 5: Risk Manager & Capital Preservation */}
-          <div className="bg-terminal-950/80 border border-emerald-800/40 rounded-xl p-3 flex flex-col justify-between hover:border-emerald-600/60 transition-colors md:col-span-2 lg:col-span-2">
+          <div className="bg-terminal-950/80 border border-emerald-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-emerald-600/60 transition-colors md:col-span-2 lg:col-span-2">
             <div>
-              <div className="flex items-center justify-between mb-1.5 text-emerald-400 text-[11px] font-bold">
+              <div className="flex items-center justify-between mb-2 text-emerald-400 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  5. Risk Governance & Monte Carlo Edge
+                  <ShieldCheck className="w-4 h-4" />
+                  5. Risk Governance & Edge
                 </span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded ${
+                <span className={`text-xs px-2 py-0.5 rounded font-bold ${
                   isApproved 
                     ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-300' 
                     : 'bg-rose-950/60 border border-rose-800 text-rose-300'
@@ -234,12 +234,12 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                   {agents.risk.verdict}
                 </span>
               </div>
-              <p className="text-slate-300 text-[11px] font-sans leading-relaxed">
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
                 {unifiedDecision.coreReasons.riskGovernance}
               </p>
             </div>
             {agents.risk.monteCarlo && (
-              <div className="mt-2 pt-1.5 border-t border-emerald-900/60 flex flex-wrap items-center justify-between text-[10px] text-slate-400">
+              <div className="mt-2.5 pt-2 border-t border-emerald-900/60 flex flex-wrap items-center justify-between text-xs text-slate-300 font-medium">
                 <span>Monte Carlo 1,000 Paths: Win Prob {agents.risk.monteCarlo.projectedProfitProbability}%</span>
                 <span>95% VaR: ${agents.risk.monteCarlo.var95Usd}</span>
                 <span>Sharpe: {agents.risk.monteCarlo.sharpeRatio}</span>

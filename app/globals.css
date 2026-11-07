@@ -2,33 +2,276 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ========================================================
+   UNIVERSAL SANS-SERIF TYPOGRAPHY & BASE RESIZING
+   ======================================================== */
 :root {
   --background: #090d16;
   --foreground: #f8fafc;
+  --color-border: #1f2e4d;
+  --color-card-bg: #0b1120;
+  --color-subtle-bg: #131e33;
+}
+
+html {
+  font-size: 15.5px;
+  -webkit-text-size-adjust: 100%;
+}
+
+@media (min-width: 1024px) {
+  html {
+    font-size: 16px;
+  }
+}
+
+/* Enforce Sans-Serif Everywhere with Tabular Numbers */
+html,
+body,
+*,
+*::before,
+*::after,
+code,
+pre,
+kbd,
+samp {
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+  font-feature-settings: 'tnum' 1, 'cv05' 1;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   overflow-x: hidden;
+  letter-spacing: -0.011em;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Custom Scrollbars */
+/* Global Typography Resizing: Prevent illegible microscopic fonts */
+.text-\[9px\], [class*="text-[9px]"] {
+  font-size: 0.725rem !important; /* ~11.5px */
+  line-height: 1.05rem !important;
+}
+
+.text-\[10px\], [class*="text-[10px]"] {
+  font-size: 0.775rem !important; /* ~12.5px */
+  line-height: 1.15rem !important;
+}
+
+.text-\[11px\], [class*="text-[11px]"] {
+  font-size: 0.825rem !important; /* ~13.2px */
+  line-height: 1.25rem !important;
+}
+
+/* ========================================================
+   LIGHT MODE SYSTEM ARCHITECTURE
+   ======================================================== */
+.light {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --color-border: #e2e8f0;
+  --color-card-bg: #ffffff;
+  --color-subtle-bg: #f1f5f9;
+}
+
+.light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Main Background Overrides */
+.light .bg-terminal-950,
+.light [class*="bg-terminal-950"] {
+  background-color: #f8fafc !important;
+}
+
+.light .bg-terminal-900,
+.light [class*="bg-terminal-900"] {
+  background-color: #ffffff !important;
+}
+
+.light .bg-terminal-850,
+.light [class*="bg-terminal-850"] {
+  background-color: #f1f5f9 !important;
+}
+
+.light .bg-terminal-800,
+.light [class*="bg-terminal-800"] {
+  background-color: #f1f5f9 !important;
+}
+
+.light .bg-terminal-700,
+.light [class*="bg-terminal-700"] {
+  background-color: #e2e8f0 !important;
+}
+
+/* Border Overrides */
+.light .border-terminal-border,
+.light [class*="border-terminal-border"],
+.light .border-terminal-700,
+.light .border-terminal-800 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Typography Overrides in Light Mode */
+.light .text-white {
+  color: #0f172a !important;
+}
+
+.light .text-slate-100 {
+  color: #1e293b !important;
+}
+
+.light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+.light .text-slate-300 {
+  color: #334155 !important;
+}
+
+.light .text-slate-400 {
+  color: #475569 !important;
+}
+
+.light .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Light Mode High-Contrast Accents */
+.light .text-cyan-400,
+.light .text-cyan-300 {
+  color: #0891b2 !important;
+}
+
+.light .text-emerald-400,
+.light .text-emerald-300 {
+  color: #059669 !important;
+}
+
+.light .text-rose-400,
+.light .text-rose-300 {
+  color: #e11d48 !important;
+}
+
+.light .text-amber-400,
+.light .text-amber-300 {
+  color: #d97706 !important;
+}
+
+.light .text-purple-400,
+.light .text-purple-300 {
+  color: #7c3aed !important;
+}
+
+.light .text-sky-400,
+.light .text-sky-300 {
+  color: #0284c7 !important;
+}
+
+/* Light Mode Badges & Soft Containers */
+.light [class*="bg-emerald-950"],
+.light [class*="bg-emerald-900"] {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+}
+
+.light [class*="bg-rose-950"],
+.light [class*="bg-rose-900"] {
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 !important;
+}
+
+.light [class*="bg-amber-950"],
+.light [class*="bg-amber-900"] {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+}
+
+.light [class*="bg-purple-950"],
+.light [class*="bg-purple-900"] {
+  background-color: #faf5ff !important;
+  border-color: #e9d5ff !important;
+}
+
+.light [class*="bg-cyan-950"],
+.light [class*="bg-cyan-900"],
+.light [class*="bg-sky-950"],
+.light [class*="bg-sky-900"] {
+  background-color: #f0f9ff !important;
+  border-color: #bae6fd !important;
+}
+
+.light [class*="bg-indigo-950"],
+.light [class*="bg-indigo-900"] {
+  background-color: #eef2ff !important;
+  border-color: #c7d2fe !important;
+}
+
+/* Light Mode Modals & Overlays */
+.light .bg-black\/80,
+.light .bg-black\/70 {
+  background-color: rgba(15, 23, 42, 0.45) !important;
+}
+
+.light .shadow-2xl,
+.light .shadow-xl,
+.light .shadow-lg {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Light Mode Form Elements */
+.light input,
+.light select,
+.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light input:focus,
+.light select:focus,
+.light textarea:focus {
+  border-color: #0891b2 !important;
+  box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.2) !important;
+}
+
+/* Light Mode Header & Sticky Elements */
+.light header {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+/* ========================================================
+   CUSTOM SCROLLBARS (DARK & LIGHT ADAPTIVE)
+   ======================================================== */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #090d16;
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  background: #334155;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #475569;
+}
+
+.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
