@@ -459,7 +459,7 @@ export default function Home() {
   const triggeredRules: KnowledgeRule[] = consensus ? consensus.knowledgeSummary.topConfluenceRules : [];
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden flex flex-col bg-terminal-950 text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen flex flex-col bg-terminal-950 text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200">
       {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-mono text-xs font-semibold shadow-2xl flex items-center gap-2 border border-emerald-400 animate-fade-in max-w-[90vw]">
@@ -505,7 +505,7 @@ export default function Home() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-2.5 sm:p-4 space-y-4 overflow-hidden">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 space-y-4">
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
           <div className="space-y-4">
