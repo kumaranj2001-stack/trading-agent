@@ -11,9 +11,7 @@ import {
   Newspaper, 
   Radio, 
   Database, 
-  HardDrive,
-  History,
-  BookOpen
+  HardDrive 
 } from 'lucide-react';
 
 export const ArchitectureView: React.FC = () => {
@@ -24,18 +22,18 @@ export const ArchitectureView: React.FC = () => {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
             <Cpu className="w-5 h-5 text-cyan-400" />
-            <span>6-Specialist Institutional Swarm Architecture & Roles</span>
+            <span>5-Agent Institutional Swarm Architecture & Roles</span>
           </h2>
           <span className="px-2.5 py-0.5 rounded text-[11px] font-mono bg-sky-500/20 text-sky-400 border border-sky-500/40">
-            6 ROLES + 18 NEWS WIRES + MEMORY LOOP
+            5 ROLES + 18 NEWS WIRES
           </span>
         </div>
         <p className="text-xs text-slate-400 font-mono mt-1">
-          Complete structural specifications of the 6 autonomous trading desks, real-time 18-source financial scraper, and persistent trade journal feedback loop.
+          Complete structural specifications of the 5 autonomous trading roles, real-time financial news scraper, and local browser persistence engine.
         </p>
       </div>
 
-      {/* The 6 Roles Grid */}
+      {/* The 5 Roles Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Role 1: Technical Analyst */}
         <div className="bg-terminal-950 p-4 rounded-xl border border-cyan-800/50 space-y-2.5">
@@ -113,40 +111,21 @@ export const ArchitectureView: React.FC = () => {
           </ul>
         </div>
 
-        {/* Role 5: Historical Memory & Trade Journal Specialist */}
-        <div className="bg-terminal-950 p-4 rounded-xl border border-rose-800/60 space-y-2.5">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-rose-950 border border-rose-600 text-rose-400">
-              <History className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-sm">Role 5: Historical Memory & Trade Journal</h3>
-              <span className="text-[11px] font-mono text-rose-400">Persistent Loss Prevention Feedback Loop</span>
-            </div>
-          </div>
-          <ul className="text-xs text-slate-300 font-sans space-y-1.5 list-disc pl-4">
-            <li><strong>Persistent Execution Journal:</strong> Automatically logs entry credentials, stop ratios, R-multiples, and post-trade retrospectives in local browser storage.</li>
-            <li><strong>Pre-Execution Loss Pattern Radar:</strong> Compares candidate setups against historical losses to prevent repeating false breakouts and wick-outs.</li>
-            <li><strong>Dynamic MAE Stop Buffers:</strong> Enforces Maximum Adverse Excursion cushions tailored to empirical trade archives on Gold, Silver, and FX.</li>
-            <li><strong>Loss Prevention Sizing Cuts:</strong> Automatically scales position sizing down 25-50% when high structural similarity to past losses is detected.</li>
-          </ul>
-        </div>
-
-        {/* Role 6: Risk Manager & Gatekeeper */}
-        <div className="bg-terminal-950 p-4 rounded-xl border border-emerald-800/50 space-y-2.5">
+        {/* Role 5: Risk Manager & Gatekeeper */}
+        <div className="bg-terminal-950 p-4 rounded-xl border border-emerald-800/50 space-y-2.5 md:col-span-2 lg:col-span-2">
           <div className="flex items-center gap-2">
             <div className="p-2 rounded-lg bg-emerald-950 border border-emerald-600 text-emerald-400">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-white text-sm">Role 6: Risk Manager (Chief Gatekeeper)</h3>
+              <h3 className="font-bold text-white text-sm">Role 5: Risk Manager (Chief Gatekeeper)</h3>
               <span className="text-[11px] font-mono text-emerald-400">Capital Preservation, Sizing & Absolute Veto</span>
             </div>
           </div>
           <ul className="text-xs text-slate-300 font-sans space-y-1.5 list-disc pl-4">
-            <li><strong>Absolute Veto Authority:</strong> Automatically rejects setups where technical, fundamental, news, or historical memory signals trigger warnings.</li>
+            <li><strong>Absolute Veto Authority:</strong> Automatically rejects setups where technical, fundamental, and news signals contradict.</li>
             <li><strong>Mathematical Expectancy:</strong> Enforces minimum 1:1.8 Risk-to-Reward ratio with hard volatility-insulated stop losses.</li>
-            <li><strong>1,000-Path Monte Carlo Engine:</strong> Simulates 1,000 stochastic price paths calibrated against empirical win rate from the trade journal.</li>
+            <li><strong>1,000-Path Monte Carlo Engine:</strong> Simulates 1,000 stochastic price paths to calculate 95% Value-at-Risk (VaR) and win probability.</li>
             <li><strong>Circuit Breaker Protection:</strong> Imposes hard daily drawdown ceilings (e.g. 4.0%) to prevent emotional drawdown expansion.</li>
           </ul>
         </div>
@@ -160,9 +139,9 @@ export const ArchitectureView: React.FC = () => {
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
-            <span className="text-cyan-400 font-bold block mb-1">1. Local Browser Persistence & Journal</span>
+            <span className="text-cyan-400 font-bold block mb-1">1. Local Browser Persistence</span>
             <p className="text-slate-400 text-[11px] font-sans">
-              All portfolio state, persistent trade journal entries, historical retrospectives, risk configurations, news wire cache, and decision logs are persisted directly in client browser storage (`localStorage`) for zero-latency instant state recovery.
+              All portfolio state, open positions, trade history, risk configurations, news wire cache, and decision logs are persisted directly in client browser storage (`localStorage`) for zero-latency instant state recovery.
             </p>
           </div>
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
@@ -172,9 +151,9 @@ export const ArchitectureView: React.FC = () => {
             </p>
           </div>
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
-            <span className="text-emerald-400 font-bold block mb-1">3. Unified 6-Role Consensus</span>
+            <span className="text-emerald-400 font-bold block mb-1">3. Unified 5-Role Decision</span>
             <p className="text-slate-400 text-[11px] font-sans">
-              Outputs a single consolidated BUY or SELL direction alongside the 6 underlying core fundamental, news, technical, intermarket, memory journal, and risk reasons driving the decision.
+              Outputs a single consolidated BUY or SELL direction alongside the 5 underlying core fundamental, news, technical, intermarket, and risk reasons driving the decision.
             </p>
           </div>
         </div>

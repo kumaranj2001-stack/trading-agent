@@ -49,7 +49,6 @@ export type AgentRole =
   | 'fundamental_analyst'
   | 'forex_analyst'
   | 'news_analyst'
-  | 'journal_analyst'
   | 'risk_manager';
 
 export type ExecutionMode = 'MANUAL' | 'SEMI_AUTONOMOUS' | 'FULL_AUTOPILOT';
@@ -266,92 +265,7 @@ export interface NewsAnalysis {
 }
 
 // ==========================================
-// 📓 PERSISTENT TRADING JOURNAL INTERFACES
-// ==========================================
-export interface JournalMetrics {
-  totalTrades: number;
-  openTrades: number;
-  closedTrades: number;
-  winningTrades: number;
-  losingTrades: number;
-  winRatePercent: number;
-  profitFactor: number;
-  totalRealizedPnlUsd: number;
-  totalRMultiple: number;
-  avgWinUsd: number;
-  avgLossUsd: number;
-  lossPreventionSavesCount: number;
-}
-
-export interface JournalTradeEntry {
-  id: string;
-  positionId?: string;
-  symbol: CurrencyPair;
-  marketSegment: MarketSegment;
-  direction: 'BUY' | 'SELL';
-  entryPrice: number;
-  exitPrice?: number;
-  lots: number;
-  units: number;
-  initialStopLoss: number;
-  initialTakeProfit: number;
-  plannedRiskRewardRatio: number;
-  plannedRiskAmountUsd: number;
-  stopDistancePips: number;
-  entryTime: string;
-  entryTimestamp: number;
-  exitTime?: string;
-  exitTimestamp?: number;
-  status: 'OPEN' | 'CLOSED';
-  exitReason?: 'STOP_LOSS' | 'TAKE_PROFIT' | 'TRAILING_STOP' | 'MANUAL_CLOSE' | 'VETO_TRIGGERED';
-  realizedPnlUsd?: number;
-  realizedRMultiple?: number; // e.g. -1.0, +2.4
-  confluenceGradeAtEntry: 'A+' | 'A' | 'B' | 'C' | 'F';
-  agentConfidenceAtEntry: number;
-  setupSnapshot: {
-    timeframe: TimeFrame;
-    candlestickPattern?: string;
-    rsiAtEntry?: number;
-    marketRegime?: string;
-    newsSentimentScore?: number;
-    primaryCatalyst?: string;
-  };
-  lossCategory?: 'PREMATURE_BREAKOUT' | 'COUNTER_TREND_CHOP' | 'SPREAD_EXPANSION_NEWS' | 'STOP_TOO_TIGHT' | 'TARGET_UNREACHED_REVERSAL' | 'NONE';
-  retrospectiveNotes?: string;
-  preventativeTakeaway?: string;
-}
-
-export interface JournalMemoryAnalysis {
-  role: 'journal_analyst';
-  agentName: string;
-  symbolAnalyzed: CurrencyPair;
-  totalHistoricalTrades: number;
-  symbolTradesCount: number;
-  symbolWinRate: number; // percentage, e.g. 71.4%
-  symbolProfitFactor: number;
-  avgRMultiple: number;
-  similarPastLossesCount: number;
-  lossSimilarityScore: number; // 0 to 100%
-  lossPreventionVerdict: 'SAFE_TO_EXECUTE' | 'CAUTION_SIMILAR_TO_PAST_LOSS' | 'HIGH_RISK_LOSS_PATTERN_DETECTED' | 'FAVORABLE_WINNING_PATTERN_MATCH';
-  activeMemoryRecall: {
-    pastTradeId?: string;
-    dateOrTimeAgo: string;
-    setupSummary: string;
-    outcomeDescription: string;
-    mistakeIdentified: string;
-  };
-  strategicAdjustments: {
-    stopLossBufferPips: number; // e.g. +5.5 pips added to protect against historical adverse excursion
-    sizeModifierPercent: number; // e.g. 100% for full size, 75% or 50% if cautious
-    entryFilterRule: string; // e.g. "Wait for H1 candle close to avoid false wick breakout seen in Trade #14"
-    reasoning: string;
-  };
-  thesis: string;
-  timestamp: string;
-}
-
-// ==========================================
-// 🎯 UNIFIED MULTI-ROLE DECISION INTERFACE
+// 🎯 UNIFIED 5-ROLE DECISION INTERFACE
 // ==========================================
 export interface UnifiedDecision {
   direction: 'BUY' | 'SELL' | 'HOLD';
@@ -364,7 +278,6 @@ export interface UnifiedDecision {
     newsSentiment: string;
     technicalSetup: string;
     marketDynamics: string;
-    journalMemory: string;
     riskGovernance: string;
   };
   keyDriversList: string[];
@@ -446,7 +359,6 @@ export interface SwarmConsensusResult {
     fundamental: FundamentalAnalysis;
     forex: ForexAnalysis;
     news: NewsAnalysis;
-    journal: JournalMemoryAnalysis;
     risk: RiskAssessment;
   };
   debateTranscript: AgentDebateMessage[];

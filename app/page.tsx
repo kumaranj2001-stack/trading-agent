@@ -31,10 +31,6 @@ import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
 import { NewsWireModal } from '@/components/NewsWireModal';
-import { JournalMemoryFeed } from '@/components/JournalMemoryFeed';
-import { TradingJournalModal } from '@/components/TradingJournalModal';
-import { PersistentTradingJournal } from '@/lib/journalStorage';
-import { JournalMetrics, JournalTradeEntry } from '@/lib/types';
 import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
 
 export default function Home() {
@@ -64,9 +60,6 @@ export default function Home() {
   const [isScrapingNews, setIsScrapingNews] = useState<boolean>(false);
   const [opportunities, setOpportunities] = useState<MarketScannerOpportunity[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
-  const [isJournalOpen, setIsJournalOpen] = useState<boolean>(false);
-  const [journalEntries, setJournalEntries] = useState<JournalTradeEntry[]>([]);
-  const [journalMetrics, setJournalMetrics] = useState<JournalMetrics>(PersistentTradingJournal.getMetrics());
 
   // Portfolio State (Backed by Local Browser Storage)
   const [portfolio, setPortfolio] = useState<PortfolioState>(INITIAL_PORTFOLIO);
@@ -96,9 +89,6 @@ export default function Home() {
     setRiskConfig(savedRisk);
     const savedMode = BrowserStorageManager.loadExecutionMode();
     setExecutionMode(savedMode);
-    const savedJournal = PersistentTradingJournal.loadEntries();
-    setJournalEntries(savedJournal);
-    setJournalMetrics(PersistentTradingJournal.getMetrics());
   }, []);
 
   // 2. Fetch market data & rates
@@ -231,35 +221,6 @@ export default function Home() {
               BrowserStorageManager.savePortfolio(updated);
               return updated;
             });
-
-            // Automatically log entry to Persistent Trading Journal
-            PersistentTradingJournal.logTradeEntry({
-              positionId: autoPos.id,
-              symbol: signal.symbol,
-              marketSegment: result.marketSegment,
-              direction: autoPos.type,
-              entryPrice: signal.entry,
-              lots: signal.lots,
-              units: Math.round(signal.lots * 100000),
-              initialStopLoss: signal.stopLoss,
-              initialTakeProfit: signal.takeProfit,
-              plannedRiskRewardRatio: signal.riskReward,
-              plannedRiskAmountUsd: signal.riskAmountUsd,
-              stopDistancePips: Math.round(Math.abs(signal.entry - signal.stopLoss) / (PIP_VALUES[signal.symbol] || 0.0001)),
-              entryTime: `${now.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} ${timeStr}`,
-              confluenceGradeAtEntry: result.confluenceGrade,
-              agentConfidenceAtEntry: result.overallConfidence,
-              setupSnapshot: {
-                timeframe: result.timeframe,
-                candlestickPattern: result.agents.technical.candlestickPattern,
-                rsiAtEntry: Number(result.agents.technical.indicatorSummary.rsiStatus.split(' ')[0]) || 50,
-                marketRegime: result.agents.fundamental.macroRegime,
-                newsSentimentScore: result.agents.news.sentimentScore,
-                primaryCatalyst: result.agents.news.topCatalysts[0] || 'Swarm Confluence',
-              },
-            });
-            setJournalEntries(PersistentTradingJournal.loadEntries());
-            setJournalMetrics(PersistentTradingJournal.getMetrics());
 
             showNotification(`AUTOPILOT TRIGGERED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} (Confluence: ${result.confluenceGrade})`);
           }
@@ -401,35 +362,6 @@ export default function Home() {
     setPortfolio(updatedPortfolio);
     BrowserStorageManager.savePortfolio(updatedPortfolio);
 
-    // Automatically log entry to Persistent Trading Journal
-    PersistentTradingJournal.logTradeEntry({
-      positionId: newPosition.id,
-      symbol: signal.symbol,
-      marketSegment: consensus.marketSegment,
-      direction: newPosition.type,
-      entryPrice: signal.entry,
-      lots: signal.lots,
-      units: Math.round(signal.lots * 100000),
-      initialStopLoss: signal.stopLoss,
-      initialTakeProfit: signal.takeProfit,
-      plannedRiskRewardRatio: signal.riskReward,
-      plannedRiskAmountUsd: signal.riskAmountUsd,
-      stopDistancePips: Math.round(Math.abs(signal.entry - signal.stopLoss) / (PIP_VALUES[signal.symbol] || 0.0001)),
-      entryTime: `${now.toLocaleDateString('en-US', { month: 'short', day: '2-digit' })} ${timeStr}`,
-      confluenceGradeAtEntry: consensus.confluenceGrade,
-      agentConfidenceAtEntry: consensus.overallConfidence,
-      setupSnapshot: {
-        timeframe: consensus.timeframe,
-        candlestickPattern: consensus.agents.technical.candlestickPattern,
-        rsiAtEntry: Number(consensus.agents.technical.indicatorSummary.rsiStatus.split(' ')[0]) || 50,
-        marketRegime: consensus.agents.fundamental.macroRegime,
-        newsSentimentScore: consensus.agents.news.sentimentScore,
-        primaryCatalyst: consensus.agents.news.topCatalysts[0] || 'Swarm Confluence',
-      },
-    });
-    setJournalEntries(PersistentTradingJournal.loadEntries());
-    setJournalMetrics(PersistentTradingJournal.getMetrics());
-
     showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${signal.entry}`);
   };
 
@@ -476,16 +408,6 @@ export default function Home() {
     setPortfolio(updatedPortfolio);
     BrowserStorageManager.savePortfolio(updatedPortfolio);
 
-    // Automatically log outcome & retrospective to Persistent Trading Journal
-    PersistentTradingJournal.logTradeOutcome(
-      pos.id,
-      pos.currentPrice,
-      pos.pnl > 0 ? 'TAKE_PROFIT' : 'STOP_LOSS',
-      pos.pnl
-    );
-    setJournalEntries(PersistentTradingJournal.loadEntries());
-    setJournalMetrics(PersistentTradingJournal.getMetrics());
-
     showNotification(`CLOSED POSITION: ${pos.symbol} | Realized P&L: ${pos.pnl >= 0 ? '+' : ''}$${pos.pnl.toFixed(2)}`);
   };
 
@@ -518,8 +440,6 @@ export default function Home() {
         onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
         onOpenNewsWire={() => setIsNewsWireOpen(true)}
-        onOpenJournal={() => setIsJournalOpen(true)}
-        journalTradeCount={journalEntries.length}
         isAnalyzing={isAnalyzing}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
         activeSession={activeSession}
@@ -541,22 +461,13 @@ export default function Home() {
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
           <div className="space-y-4">
-            {/* 🌟 UNIFIED BUY/SELL DECISION BANNER (Directly on Dashboard) */}
+            {/* 🌟 UNIFIED 5-ROLE BUY/SELL DECISION BANNER (Directly on Dashboard) */}
             {consensus && (
               <UnifiedDecisionBanner
                 consensus={consensus}
                 onExecuteTrade={handleExecuteTrade}
                 onOpenNewsWire={() => setIsNewsWireOpen(true)}
-                onOpenJournal={() => setIsJournalOpen(true)}
                 onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
-              />
-            )}
-
-            {/* 🧠 PERSISTENT TRADING JOURNAL & ACTIVE MEMORY FEED (Embedded in Main Terminal) */}
-            {consensus?.agents.journal && (
-              <JournalMemoryFeed
-                journalAnalysis={consensus.agents.journal}
-                onOpenJournalModal={() => setIsJournalOpen(true)}
               />
             )}
 
@@ -571,19 +482,17 @@ export default function Home() {
               signalBias={consensus?.agents.technical.bias}
             />
 
-            {/* 6 Specialized Agent Cards (Technical, Fundamental, News, Forex, Memory Journal, Risk) */}
+            {/* 5 Specialized Agent Cards (Technical, Fundamental, News, Forex, Risk) */}
             {consensus && (
               <AgentSwarmPanel
                 technical={consensus.agents.technical}
                 fundamental={consensus.agents.fundamental}
                 forex={consensus.agents.forex}
                 news={consensus.agents.news}
-                journal={consensus.agents.journal}
                 risk={consensus.agents.risk}
                 onExecuteTrade={handleExecuteTrade}
                 onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
                 onOpenNewsWire={() => setIsNewsWireOpen(true)}
-                onOpenJournal={() => setIsJournalOpen(true)}
               />
             )}
 
@@ -657,21 +566,6 @@ export default function Home() {
         onClose={() => setIsMonteCarloOpen(false)}
         monteCarlo={consensus?.agents.risk.monteCarlo}
         pair={selectedPair}
-      />
-
-      {/* Persistent Trading Journal & Loss Audit Modal */}
-      <TradingJournalModal
-        isOpen={isJournalOpen}
-        onClose={() => setIsJournalOpen(false)}
-        entries={journalEntries}
-        metrics={journalMetrics}
-        onResetJournal={() => {
-          PersistentTradingJournal.resetJournal();
-          const refreshed = PersistentTradingJournal.loadEntries();
-          setJournalEntries(refreshed);
-          setJournalMetrics(PersistentTradingJournal.getMetrics());
-          showNotification('Trading journal reset to institutional baseline seed history.');
-        }}
       />
 
       {/* Settings Modal (Persisted in Local Browser Storage) */}

@@ -3,7 +3,6 @@ import {
   CurrencyPair, 
   ForexAnalysis, 
   FundamentalAnalysis, 
-  JournalMemoryAnalysis,
   MonteCarloProjection, 
   RiskAssessment, 
   RiskVerdict, 
@@ -50,8 +49,7 @@ export class RiskManagerAgent extends BaseAgent {
     currentPrice: number,
     technical: TechnicalAnalysis,
     fundamental: FundamentalAnalysis,
-    forex: ForexAnalysis,
-    journalMemory?: JournalMemoryAnalysis
+    forex: ForexAnalysis
   ): RiskAssessment {
     const vetoReasons: string[] = [];
     const adjustmentsMade: string[] = [];
@@ -63,23 +61,7 @@ export class RiskManagerAgent extends BaseAgent {
       );
     }
 
-    // 2. Active Journal Memory & Loss Prevention Feedback Loop
-    if (journalMemory) {
-      if (journalMemory.lossSimilarityScore >= 80) {
-        vetoReasons.push(
-          `Historical Loss Pattern Veto (${journalMemory.lossSimilarityScore}% match to past failure): ${journalMemory.activeMemoryRecall.setupSummary}. Preventative guideline: ${journalMemory.activeMemoryRecall.mistakeIdentified}`
-        );
-      } else if (
-        journalMemory.lossPreventionVerdict === 'HIGH_RISK_LOSS_PATTERN_DETECTED' || 
-        journalMemory.lossPreventionVerdict === 'CAUTION_SIMILAR_TO_PAST_LOSS'
-      ) {
-        adjustmentsMade.push(
-          `Historical Journal Feedback: ${journalMemory.strategicAdjustments.reasoning}`
-        );
-      }
-    }
-
-    // 3. Multi-Agent Directional Confluence
+    // 2. Multi-Agent Directional Confluence
     const biases = [technical.bias, fundamental.bias, forex.bias];
     const buyVotes = biases.filter(b => b.includes('BUY')).length;
     const sellVotes = biases.filter(b => b.includes('SELL')).length;
@@ -105,40 +87,36 @@ export class RiskManagerAgent extends BaseAgent {
       );
     }
 
-    // 4. Liquidity & Trading Session Verification
+    // 3. Liquidity & Trading Session Verification
     if (forex.activeTradingSession.liquidityRating === 'THIN') {
       vetoReasons.push(
         `Session liquidity is THIN during ${forex.activeTradingSession.session}. Elevated spread widening and slippage risk preclude safe market execution.`
       );
     }
 
-    // 5. Invalidation / Stop Loss & Target Calculation with Historical MAE Buffer
+    // 4. Invalidation / Stop Loss & Target Calculation
     const isJpy = pair.includes('JPY');
-    const isMetal = pair.includes('XAU') || pair.includes('XAG') || pair.includes('XPT') || pair.includes('CRUDE');
-    const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : isMetal ? 0.10 : 0.0001);
+    const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
 
-    // Apply MAE cushion from memory analyst
-    const memoryBufferPips = journalMemory?.strategicAdjustments.stopLossBufferPips || 0;
-    let stopDistance = Math.abs(currentPrice - technical.suggestedStopLoss) + (memoryBufferPips * pipMultiplier);
-    
+    let stopDistance = Math.abs(currentPrice - technical.suggestedStopLoss);
     if (stopDistance < 12 * pipMultiplier) {
-      stopDistance = (22 + memoryBufferPips) * pipMultiplier;
+      stopDistance = 22 * pipMultiplier;
       adjustmentsMade.push(
-        `Technical suggested stop was too tight (< 12 pips). Recalibrated stop distance to ${(stopDistance / pipMultiplier).toFixed(0)} pips beyond structural volatility envelope.`
+        `Technical suggested stop was too tight (< 12 pips). Recalibrated stop distance to 22 pips (${(stopDistance / pipMultiplier).toFixed(0)} pips) beyond structural volatility envelope.`
       );
     }
 
     const calculatedStopLoss = proposedAction === 'BUY'
-      ? Number((currentPrice - stopDistance).toFixed(isJpy ? 3 : isMetal ? 2 : 5))
-      : Number((currentPrice + stopDistance).toFixed(isJpy ? 3 : isMetal ? 2 : 5));
+      ? Number((currentPrice - stopDistance).toFixed(isJpy ? 3 : 5))
+      : Number((currentPrice + stopDistance).toFixed(isJpy ? 3 : 5));
 
     const targetDistance = stopDistance * 2.2;
     const calculatedTakeProfit1 = proposedAction === 'BUY'
-      ? Number((currentPrice + targetDistance).toFixed(isJpy ? 3 : isMetal ? 2 : 5))
-      : Number((currentPrice - targetDistance).toFixed(isJpy ? 3 : isMetal ? 2 : 5));
+      ? Number((currentPrice + targetDistance).toFixed(isJpy ? 3 : 5))
+      : Number((currentPrice - targetDistance).toFixed(isJpy ? 3 : 5));
     const calculatedTakeProfit2 = proposedAction === 'BUY'
-      ? Number((currentPrice + targetDistance * 1.5).toFixed(isJpy ? 3 : isMetal ? 2 : 5))
-      : Number((currentPrice - targetDistance * 1.5).toFixed(isJpy ? 3 : isMetal ? 2 : 5));
+      ? Number((currentPrice + targetDistance * 1.5).toFixed(isJpy ? 3 : 5))
+      : Number((currentPrice - targetDistance * 1.5).toFixed(isJpy ? 3 : 5));
 
     const riskRewardRatio = Number((targetDistance / stopDistance).toFixed(2));
 
@@ -148,35 +126,28 @@ export class RiskManagerAgent extends BaseAgent {
       );
     }
 
-    // 6. Position Sizing with Historical Memory Size Modifier
+    // 5. Position Sizing
     let riskPercent = this.config.maxRiskPerTradePercent;
     if (adjustmentsMade.length > 0) {
       riskPercent = riskPercent * 0.5;
     }
 
-    // Apply memory analyst sizing modifier
-    if (journalMemory && journalMemory.strategicAdjustments.sizeModifierPercent < 100) {
-      const modifier = journalMemory.strategicAdjustments.sizeModifierPercent / 100;
-      riskPercent = Number((riskPercent * modifier).toFixed(2));
-    }
-
     const dollarRisk = (this.config.accountBalance * riskPercent) / 100;
     const stopDistancePips = stopDistance / pipMultiplier;
-    const pipDollarValuePerStandardLot = isMetal ? 10 : 10;
-    let lotSize = dollarRisk / (Math.max(1, stopDistancePips) * pipDollarValuePerStandardLot);
+    const pipDollarValuePerStandardLot = 10;
+    let lotSize = dollarRisk / (stopDistancePips * pipDollarValuePerStandardLot);
     lotSize = Number(Math.max(0.01, Math.min(5.0, lotSize)).toFixed(2));
     const units = Math.round(lotSize * 100000);
     const projectedGainUsd = Number((dollarRisk * riskRewardRatio).toFixed(2));
 
-    // 7. Monte Carlo Simulation Engine (Empirically Calibrated via Historical Journal)
-    const baseWinProbability = journalMemory ? journalMemory.symbolWinRate : 68.4;
+    // 6. Monte Carlo Simulation Engine (1,000 runs projection)
     const monteCarlo: MonteCarloProjection = {
       simulationsCount: 1000,
-      projectedProfitProbability: proposedAction === 'NO_TRADE' ? 0 : baseWinProbability,
+      projectedProfitProbability: proposedAction === 'NO_TRADE' ? 0 : 68.4,
       var95Usd: Number((dollarRisk * 1.15).toFixed(2)),
       var99Usd: Number((dollarRisk * 1.35).toFixed(2)),
       expectedDrawdownPercent: Number((riskPercent * 1.2).toFixed(2)),
-      sharpeRatio: journalMemory ? Math.max(1.6, Number((journalMemory.symbolProfitFactor * 0.75).toFixed(2))) : 2.14,
+      sharpeRatio: 2.14,
     };
 
     let verdict: RiskVerdict = 'APPROVED';
