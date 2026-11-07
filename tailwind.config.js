@@ -11,13 +11,13 @@ module.exports = {
     extend: {
       colors: {
         terminal: {
-          950: 'rgb(var(--terminal-950) / <alpha-value>)',
-          900: 'rgb(var(--terminal-900) / <alpha-value>)',
-          850: 'rgb(var(--terminal-850) / <alpha-value>)',
-          800: 'rgb(var(--terminal-800) / <alpha-value>)',
-          700: 'rgb(var(--terminal-700) / <alpha-value>)',
-          600: 'rgb(var(--terminal-600) / <alpha-value>)',
-          border: 'rgb(var(--terminal-border) / <alpha-value>)',
+          950: '#090d16',
+          900: '#0b1120',
+          850: '#0f172a',
+          800: '#131e33',
+          700: '#1e293b',
+          600: '#334155',
+          border: '#1f2e4d',
         },
         trade: {
           green: '#10b981',

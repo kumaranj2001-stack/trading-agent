@@ -17,7 +17,6 @@ import { INITIAL_PORTFOLIO, PortfolioState } from '@/lib/store';
 import { DEFAULT_RISK_CONFIG, RiskManagerConfig } from '@/lib/agents/RiskManager';
 import { BrowserStorageManager } from '@/lib/browserStorage';
 import { Header } from '@/components/Header';
-import { NavigationSidebar } from '@/components/NavigationSidebar';
 import { TickerBar } from '@/components/TickerBar';
 import { UnifiedDecisionBanner } from '@/components/UnifiedDecisionBanner';
 import { ChartView } from '@/components/ChartView';
@@ -43,8 +42,6 @@ export default function Home() {
   const [marketSegment, setMarketSegment] = useState<MarketSegment>('METALS_COMMODITIES');
   const [timeframe, setTimeframe] = useState<TimeFrame>('1h');
   const [activeTab, setActiveTab] = useState<'terminal' | 'debate' | 'backtest' | 'architecture'>('terminal');
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   
   // Market Data state
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -102,15 +99,7 @@ export default function Home() {
     const savedJournal = PersistentTradingJournal.loadEntries();
     setJournalEntries(savedJournal);
     setJournalMetrics(PersistentTradingJournal.getMetrics());
-    const savedTheme = BrowserStorageManager.loadTheme();
-    setTheme(savedTheme);
   }, []);
-
-  const handleToggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-    BrowserStorageManager.saveTheme(next);
-  };
 
   // 2. Fetch market data & rates
   const fetchMarketData = useCallback(async (pair: CurrencyPair, tf: TimeFrame) => {
@@ -512,47 +501,31 @@ export default function Home() {
         </div>
       )}
 
-      {/* Collapsible Hamburger Navigation Drawer */}
-      <NavigationSidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        onOpenJournal={() => setIsJournalOpen(true)}
-        onOpenNewsWire={() => setIsNewsWireOpen(true)}
-        onOpenKnowledge={() => setIsKnowledgeOpen(true)}
-        onOpenScanner={() => setIsScannerOpen(true)}
-        onOpenCalendar={() => setIsCalendarOpen(true)}
-        onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        journalTradeCount={journalEntries.length}
-        journalWinRate={journalMetrics.winRatePercent}
-        executionMode={executionMode}
-        onToggleExecutionMode={handleToggleExecutionMode}
-        portfolioBalance={portfolio.balance}
-        portfolioEquity={portfolio.equity}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
-      />
-
-      {/* Main Header with Collapsible Hamburger, Streamlined Trading Controls & Dark/Light Toggle */}
+      {/* Main Header with Market Selector & 18-Source News Wire Tool */}
       <Header
-        onToggleSidebar={() => setIsSidebarOpen(prev => !prev)}
         selectedPair={selectedPair}
         marketSegment={marketSegment}
         onSelectMarketSegment={handleSelectMarketSegment}
         timeframe={timeframe}
         onSelectPair={handleSelectPair}
         onSelectTimeframe={handleSelectTimeframe}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
         portfolio={portfolio}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenScanner={() => setIsScannerOpen(true)}
+        onOpenCalendar={() => setIsCalendarOpen(true)}
+        onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
+        onOpenKnowledge={() => setIsKnowledgeOpen(true)}
+        onOpenNewsWire={() => setIsNewsWireOpen(true)}
+        onOpenJournal={() => setIsJournalOpen(true)}
+        journalTradeCount={journalEntries.length}
         isAnalyzing={isAnalyzing}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
         activeSession={activeSession}
         executionMode={executionMode}
         onToggleExecutionMode={handleToggleExecutionMode}
         confluenceGrade={consensus?.confluenceGrade}
-        theme={theme}
-        onToggleTheme={handleToggleTheme}
       />
 
       {/* Live Ticker Bar (Forex, Metals & Commodities, or Indian Markets) */}

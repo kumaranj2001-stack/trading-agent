@@ -8,7 +8,6 @@ const STORAGE_KEYS = {
   EXECUTION_MODE: 'apex_storage_execution_mode_v2',
   NEWS_CACHE: 'apex_storage_news_cache_v2',
   CONSENSUS_HISTORY: 'apex_storage_consensus_history_v2',
-  THEME: 'apex_storage_theme_v2',
 };
 
 const isBrowser = typeof window !== 'undefined';
@@ -113,35 +112,7 @@ export class BrowserStorageManager {
     return [];
   }
 
-  // 5. Theme Preference (Dark / Light Mode)
-  public static loadTheme(): 'dark' | 'light' {
-    if (!isBrowser) return 'dark';
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.THEME);
-      if (saved === 'light' || saved === 'dark') return saved;
-    } catch (e) {
-      console.warn('Error reading theme from browser localStorage:', e);
-    }
-    return 'dark';
-  }
-
-  public static saveTheme(theme: 'dark' | 'light'): void {
-    if (!isBrowser) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.THEME, theme);
-      if (theme === 'light') {
-        document.documentElement.classList.remove('dark');
-        document.documentElement.classList.add('light');
-      } else {
-        document.documentElement.classList.remove('light');
-        document.documentElement.classList.add('dark');
-      }
-    } catch (e) {
-      console.warn('Error saving theme to browser localStorage:', e);
-    }
-  }
-
-  // 6. Reset All Local Browser Storage
+  // 5. Reset All Local Browser Storage
   public static resetAll(): void {
     if (!isBrowser) return;
     try {
