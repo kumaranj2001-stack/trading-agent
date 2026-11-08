@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SwarmCoordinator } from '@/lib/agents/SwarmCoordinator';
 import { CurrencyPair, TimeFrame, Candle } from '@/lib/types';
 import { BASE_PRICES } from '@/lib/marketData';
+import { RealMarketDataService } from '@/lib/realMarketDataService';
 
 export const runtime = 'nodejs';
 
@@ -58,12 +59,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // If client did not provide candles, ingest directly from RealMarketDataService SSOT
+    if (!sanitizedCandles || sanitizedCandles.length === 0) {
+      const real = await RealMarketDataService.fetchRealLiveCandles(pair, timeframe, 60);
+      sanitizedCandles = real.candles;
+    }
+
     const coordinator = new SwarmCoordinator(riskConfig);
     const result = coordinator.runConsensus(pair, timeframe, sanitizedCandles);
 
+    // Strict Pre-Execution Guardrail: 500ms freshness and 0.05% price deviation tolerance
+    const livePrice = result.currentPrice;
+    const now = Date.now();
+    const guardrailCheck = RealMarketDataService.validatePreExecutionGuardrail(
+      livePrice,
+      result.executionSignal.entry,
+      now,
+      0.05,
+      500
+    );
+
     return NextResponse.json({
       success: true,
-      data: result,
+      data: {
+        ...result,
+        parityGuardrail: {
+          verified: guardrailCheck.valid,
+          livePrice,
+          freshnessLatencyMs: guardrailCheck.freshnessLatencyMs,
+          maxTolerancePercent: 0.05,
+          isWithinTolerance: guardrailCheck.isWithinTolerance,
+          timestamp: now,
+        },
+      },
     });
   } catch (error: any) {
     return NextResponse.json(

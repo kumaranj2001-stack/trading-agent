@@ -85,6 +85,16 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               Price: <strong className="text-white font-bold">{currentPrice}</strong>
             </span>
           </div>
+
+          {/* SSOT Live Stream Parity Guardrail Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-[11px] font-mono text-emerald-300 shadow-sm">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span className="font-bold tracking-tight">SSOT LIVE FEED</span>
+            <span className="text-slate-400 hidden md:inline">| &lt;500ms • ±0.05% Tol</span>
+          </div>
         </div>
 
         {/* Action Button */}

@@ -13,32 +13,32 @@ export const INDIAN_MARKET_ASSETS: CurrencyPair[] = [
 ];
 
 export const BASE_PRICES: Record<CurrencyPair, number> = {
-  // Forex Majors
-  'EUR/USD': 1.0850,
-  'GBP/USD': 1.2940,
-  'USD/JPY': 153.25,
-  'AUD/USD': 0.6580,
-  'USD/CAD': 1.3890,
-  'USD/CHF': 0.8670,
-  'NZD/USD': 0.5980,
-  'EUR/GBP': 0.8385,
-  // Metals & Energy Commodities
-  'XAU/USD': 2735.40, // Spot Gold ($/oz)
-  'XAG/USD': 33.65,   // Spot Silver ($/oz)
-  'XPT/USD': 1012.80, // Spot Platinum ($/oz)
-  'COPPER': 4.385,    // COMEX Copper ($/lb)
-  'WTI_CRUDE': 71.85, // WTI Light Sweet Crude Oil ($/bbl)
-  'BRENT_CRUDE': 75.40,// Brent Global Benchmark ($/bbl)
-  // Indian Market & Currency
-  'NIFTY 50': 24180.50,
-  'BANK NIFTY': 51840.25,
-  'USD/INR': 84.38,
-  'EUR/INR': 91.55,
-  'GBP/INR': 109.28,
-  'RELIANCE': 2715.40,
-  'TCS': 4125.60,
-  'HDFC BANK': 1748.20,
-  'INFY': 1828.50,
+  // Forex Majors (Live Market Parity)
+  'EUR/USD': 1.1143,
+  'GBP/USD': 1.3356,
+  'USD/JPY': 158.42,
+  'AUD/USD': 0.6868,
+  'USD/CAD': 1.4128,
+  'USD/CHF': 0.8200,
+  'NZD/USD': 0.5548,
+  'EUR/GBP': 0.8347,
+  // Metals & Energy Commodities (Live Spot/Benchmark Parity)
+  'XAU/USD': 4074.90, // Spot Gold ($/oz) (Matches TradingView / COMEX benchmark)
+  'XAG/USD': 51.94,   // Spot Silver ($/oz)
+  'XPT/USD': 1536.90, // Spot Platinum ($/oz)
+  'COPPER': 6.238,    // COMEX Copper ($/lb)
+  'WTI_CRUDE': 90.83, // WTI Light Sweet Crude Oil ($/bbl)
+  'BRENT_CRUDE': 98.32,// Brent Global Benchmark ($/bbl)
+  // Indian Market & Currency (Live NSE & FX Parity)
+  'NIFTY 50': 24986.40,
+  'BANK NIFTY': 58850.65,
+  'USD/INR': 93.91,
+  'EUR/INR': 104.62,
+  'GBP/INR': 125.36,
+  'RELIANCE': 1324.00,
+  'TCS': 2498.80,
+  'HDFC BANK': 784.10,
+  'INFY': 1171.60,
 };
 
 export const PIP_VALUES: Record<CurrencyPair, number> = {
@@ -128,19 +128,19 @@ export function generateCandles(pair: CurrencyPair, timeframe: TimeFrame, count:
     volatility = basePrice * 0.0025; // ~5-10 INR
   } else if (isGold) {
     pip = 0.10;
-    volatility = 8.50; // ~$8.50 per gold candle
+    volatility = 18.50; // ~$18.50 per gold candle on $4,074/oz Gold
   } else if (isSilver) {
     pip = 0.01;
-    volatility = 0.28; // ~$0.28 silver move
+    volatility = 0.55; // ~$0.55 silver move
   } else if (isPlatinum) {
     pip = 0.10;
-    volatility = 4.20;
+    volatility = 8.20;
   } else if (isCopper) {
     pip = 0.001;
-    volatility = 0.025;
+    volatility = 0.035;
   } else if (isOil) {
     pip = 0.01;
-    volatility = 0.65; // ~$0.65 crude move
+    volatility = 0.95; // ~$0.95 crude move
   } else if (isRupeePair) {
     pip = 0.0025;
     volatility = 0.04;

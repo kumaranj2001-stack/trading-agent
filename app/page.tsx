@@ -403,6 +403,14 @@ export default function Home() {
   const handleExecuteTrade = () => {
     if (!consensus || !consensus.executionSignal.authorized) return;
     const signal = consensus.executionSignal;
+
+    // Strict Pre-Execution Guardrail: 500ms freshness and 0.05% price deviation tolerance
+    const guardrail = LiveMarketFeedManager.verifyPreExecutionGuardrail(signal.symbol, signal.entry, 0.05, 500);
+    if (!guardrail.valid) {
+      showNotification(`PRE-EXECUTION HALTED: ${guardrail.error || 'Live price deviation exceeded 0.05%'}`);
+      return;
+    }
+
     const liveEntryPrice = LiveMarketFeedManager.getCanonicalPrice(signal.symbol);
 
     const now = new Date();

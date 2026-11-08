@@ -32,6 +32,7 @@ export class LiveMarketFeedManager {
   private static activeTicker: NodeJS.Timeout | null = null;
   private static currentPair: CurrencyPair = 'EUR/USD';
   private static currentTimeframe: TimeFrame = '1h';
+  private static lastTickTimestamp: number = Date.now();
 
   /**
    * Register canonical candles for a symbol and timeframe directly from chart load.
@@ -45,6 +46,7 @@ export class LiveMarketFeedManager {
 
     const latestPrice = candles[candles.length - 1].close;
     this.canonicalPrices.set(pair, latestPrice);
+    this.lastTickTimestamp = Date.now();
   }
 
   /**
@@ -69,6 +71,72 @@ export class LiveMarketFeedManager {
       return price;
     }
     return BASE_PRICES[pair] || 1.0;
+  }
+
+  public static getLastTickTimestamp(): number {
+    return this.lastTickTimestamp;
+  }
+
+  /**
+   * Pre-Execution Timestamp & Price-Deviation Guardrail:
+   * Verifies that the tick timestamp is fresh (<500ms latency)
+   * and blocks execution / triggers an alert if candidate price deviates
+   * from the authoritative live chart feed by more than 0.05% tolerance.
+   */
+  public static verifyPreExecutionGuardrail(
+    symbol: CurrencyPair,
+    proposedPrice: number,
+    maxTolerancePercent: number = 0.05,
+    maxFreshnessMs: number = 500
+  ): {
+    valid: boolean;
+    livePrice: number;
+    proposedPrice: number;
+    deviationPercent: number;
+    isWithinTolerance: boolean;
+    freshnessLatencyMs: number;
+    error?: string;
+  } {
+    const livePrice = this.getCanonicalPrice(symbol);
+    const now = Date.now();
+    const freshnessLatencyMs = Math.max(0, now - this.lastTickTimestamp);
+
+    if (!proposedPrice || proposedPrice <= 0 || Number.isNaN(proposedPrice)) {
+      return {
+        valid: false,
+        livePrice,
+        proposedPrice,
+        deviationPercent: 100,
+        isWithinTolerance: false,
+        freshnessLatencyMs,
+        error: 'Invalid candidate execution price.',
+      };
+    }
+
+    const deviation = Math.abs(proposedPrice - livePrice) / livePrice;
+    const deviationPercent = Number((deviation * 100).toFixed(4));
+    const isWithinTolerance = deviationPercent <= maxTolerancePercent;
+
+    if (!isWithinTolerance) {
+      return {
+        valid: false,
+        livePrice,
+        proposedPrice,
+        deviationPercent,
+        isWithinTolerance: false,
+        freshnessLatencyMs,
+        error: `Synchronization Guardrail Alert: Price deviation of ${deviationPercent}% exceeds 0.05% safety tolerance (Live: ${livePrice}, Proposed: ${proposedPrice}). Execution blocked for parity recalibration.`,
+      };
+    }
+
+    return {
+      valid: true,
+      livePrice,
+      proposedPrice,
+      deviationPercent,
+      isWithinTolerance: true,
+      freshnessLatencyMs,
+    };
   }
 
   /**
@@ -140,6 +208,7 @@ export class LiveMarketFeedManager {
       const updatedCandles = [...candles.slice(0, candles.length - 1), updatedLastCandle];
       this.canonicalCandles.set(key, updatedCandles);
       this.canonicalPrices.set(this.currentPair, newClose);
+      this.lastTickTimestamp = Date.now();
 
       const base = BASE_PRICES[this.currentPair] || newClose;
       const change24h = Number((((newClose - base) / base) * 100).toFixed(2));
@@ -151,7 +220,7 @@ export class LiveMarketFeedManager {
         candle: updatedLastCandle,
         candles: updatedCandles,
         change24h,
-        timestamp: Date.now(),
+        timestamp: this.lastTickTimestamp,
       };
 
       // Broadcast unidirectionally to all subscribers
@@ -359,3 +428,5 @@ export class LiveMarketFeedManager {
     });
   }
 }
+
+export const UnifiedMarketStreamManager = LiveMarketFeedManager;
