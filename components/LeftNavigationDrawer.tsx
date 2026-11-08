@@ -22,7 +22,6 @@ import {
   TrendingUp,
   PlayCircle,
   Sliders,
-  Sparkles,
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment } from '@/lib/types';
 
@@ -34,11 +33,11 @@ export interface LeftNavigationDrawerProps {
   onOpenJournal: () => void;
   onOpenMonteCarlo: () => void;
   onOpenNewsWire: () => void;
+  onOpenNewsTerminal?: () => void;
   onOpenFirebase: () => void;
   onOpenKnowledge: () => void;
   onOpenScanner: () => void;
   onOpenCalendar: () => void;
-  onOpenAIMarketAnalysis?: () => void;
   onOpenSettings?: () => void;
   executionMode?: ExecutionMode;
   onToggleExecutionMode?: () => void;
@@ -57,11 +56,11 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
   onOpenJournal,
   onOpenMonteCarlo,
   onOpenNewsWire,
+  onOpenNewsTerminal,
   onOpenFirebase,
   onOpenKnowledge,
   onOpenScanner,
   onOpenCalendar,
-  onOpenAIMarketAnalysis,
   onOpenSettings,
   executionMode,
   onToggleExecutionMode,
@@ -227,8 +226,8 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     {
       id: 'wire',
       number: '08',
-      label: 'Wire',
-      description: '18 Live Financial Outlets & Scrapers',
+      label: 'Wire & Terminal',
+      description: '18 Live Outlets, Memory Engine & Insights',
       icon: Radio,
       color: 'text-red-400',
       activeBg: 'bg-red-500/15 border-red-500/40 text-red-300 font-semibold',
@@ -237,7 +236,11 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       badgeColor: 'bg-red-500/20 text-red-400 border-red-500/30',
       action: () => {
         onClose();
-        onOpenNewsWire();
+        if (onOpenNewsTerminal) {
+          onOpenNewsTerminal();
+        } else {
+          onOpenNewsWire();
+        }
       },
     },
     {
@@ -304,24 +307,6 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
         onOpenCalendar();
       },
     },
-    {
-      id: 'ai-market-analysis',
-      number: '13',
-      label: 'AI Market Analysis',
-      description: '1,050+ Strategy Matcher & Live Signal Overlay',
-      icon: Sparkles,
-      color: 'text-fuchsia-400',
-      activeBg: 'bg-fuchsia-500/15 border-fuchsia-500/40 text-fuchsia-300 font-semibold',
-      isActive: false,
-      badge: '1,050+ AI',
-      badgeColor: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
-      action: () => {
-        onClose();
-        if (onOpenAIMarketAnalysis) {
-          onOpenAIMarketAnalysis();
-        }
-      },
-    },
   ];
 
   return (
@@ -366,7 +351,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             ACTIVE: <strong className="text-white">{selectedPair}</strong>
           </span>
-          <span className="text-[10px] text-fuchsia-400 font-bold uppercase">13 MODULES</span>
+          <span className="text-[10px] text-slate-400 uppercase">12 MODULES</span>
         </div>
 
         {/* Scrollable Navigation Items List (Vertically 1 by 1 without clipping) */}

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { realTimeNewsEngine, MONITORED_FINANCIAL_SOURCES } from '@/lib/newsEngine';
-import { NewsMemoryStorageManager } from '@/lib/newsMemoryStorage';
+import { NewsMemoryStorage } from '@/lib/newsMemoryStorage';
 import { CurrencyPair } from '@/lib/types';
 import { BASE_PRICES } from '@/lib/marketData';
 
@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     const headlines = realTimeNewsEngine.scrapeNewsForSymbol(symbol);
     const synthesis = realTimeNewsEngine.synthesizeSentiment(headlines);
     const sources = MONITORED_FINANCIAL_SOURCES;
-    const dailyMemory = NewsMemoryStorageManager.getDailyMemory();
+    const dailyReflections = NewsMemoryStorage.generateDailyReflections();
+    const chronologicalThreads = NewsMemoryStorage.getChronologicalStoryThreads();
 
     return NextResponse.json({
       success: true,
@@ -29,7 +30,8 @@ export async function GET(req: NextRequest) {
         marketMood: synthesis.marketMood,
         breakingAlert: synthesis.breakingAlert,
         topCatalysts: synthesis.topCatalysts,
-        dailyMemory,
+        dailyReflections,
+        chronologicalThreads,
         scrapedAt: new Date().toISOString(),
       },
     });
@@ -47,14 +49,14 @@ export async function POST(req: NextRequest) {
     const symbol: CurrencyPair = (body.symbol in BASE_PRICES) ? body.symbol : 'XAU/USD';
     
     // Generate a fresh live second-by-second event
-    const liveArticle = realTimeNewsEngine.generateLiveSecondWireEvent(symbol);
-    const updatedMemory = NewsMemoryStorageManager.getDailyMemory();
+    const liveArticle = realTimeNewsEngine.generateLiveSecondBySecondEvent(symbol);
+    const recordedMemory = NewsMemoryStorage.recordMemory(liveArticle);
 
     return NextResponse.json({
       success: true,
       data: {
         liveArticle,
-        updatedMemory,
+        recordedMemory,
         emittedAt: new Date().toISOString(),
       }
     });

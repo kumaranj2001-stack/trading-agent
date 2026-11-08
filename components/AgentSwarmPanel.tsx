@@ -37,6 +37,7 @@ interface AgentSwarmPanelProps {
   onExecuteTrade?: () => void;
   onOpenMonteCarlo?: () => void;
   onOpenNewsWire?: () => void;
+  onOpenNewsTerminal?: () => void;
 }
 
 export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
@@ -48,6 +49,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
   onExecuteTrade,
   onOpenMonteCarlo,
   onOpenNewsWire,
+  onOpenNewsTerminal,
 }) => {
   const getBiasBadge = (bias: SignalDirection) => {
     if (bias.includes('BUY')) {
@@ -320,8 +322,8 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
                   <span className="font-bold text-white">{news.sentimentScore > 0 ? '+' : ''}{news.sentimentScore} / 1.0</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Active Wires:</span>
-                  <span className="text-cyan-300 font-semibold">18 Institutional Websites Live</span>
+                  <span className="text-slate-400">Coverage:</span>
+                  <span className="text-slate-200">Bloomberg, Reuters, Kitco, WSJ, CNBC, FT</span>
                 </div>
               </div>
 
@@ -332,18 +334,29 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
               )}
             </div>
 
-            {/* Recent Scraped Wire Headlines */}
+            {/* Recent Scraped Wire Headlines (Independent Scroll Container) */}
             <div className="bg-terminal-950/70 p-3 rounded-lg border border-terminal-border/40 space-y-2">
-              <span className="text-slate-400 text-xs uppercase font-bold block">Latest Scraped Wire Prints</span>
-              {news.recentHeadlines.slice(0, 2).map((item) => (
-                <div key={item.id} className="text-xs sm:text-sm border-b border-terminal-border/30 last:border-b-0 pb-1.5 last:pb-0">
-                  <div className="flex items-center justify-between text-xs text-sky-400 mb-0.5">
-                    <span className="font-semibold">{item.source}</span>
-                    <span className="text-slate-400">{item.publishedTime}</span>
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-slate-400 uppercase font-bold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Real-Time Wire Feed
+                </span>
+                <span className="text-[10px] text-cyan-400 font-mono">18 SOURCES</span>
+              </div>
+              <div 
+                onWheel={(e) => e.stopPropagation()}
+                className="max-h-36 overflow-y-auto space-y-2 pr-1 scrollbar-thin overscroll-contain"
+              >
+                {news.recentHeadlines.slice(0, 5).map((item) => (
+                  <div key={item.id} className="text-xs border-b border-terminal-border/30 last:border-b-0 pb-1.5 last:pb-0">
+                    <div className="flex items-center justify-between text-[11px] text-sky-400 mb-0.5">
+                      <span className="font-semibold truncate">{item.source}</span>
+                      <span className="text-slate-400 shrink-0">{item.publishedTime}</span>
+                    </div>
+                    <p className="text-white font-medium line-clamp-1">{item.title}</p>
                   </div>
-                  <p className="text-white font-medium line-clamp-1">{item.title}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             <p className="text-slate-300 text-xs sm:text-sm leading-relaxed pt-1">
@@ -354,15 +367,26 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
 
         <div className="mt-3.5 pt-2.5 border-t border-terminal-border/40 text-xs text-slate-400 flex items-center justify-between font-medium">
           <span>Sources Scraped: 18 / 18</span>
-          {onOpenNewsWire && (
-            <button
-              onClick={onOpenNewsWire}
-              className="text-sky-400 hover:text-sky-300 flex items-center gap-1 font-semibold underline"
-            >
-              <span>View Full Wire</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
-          )}
+          <div className="flex items-center gap-2.5">
+            {onOpenNewsTerminal && (
+              <button
+                onClick={onOpenNewsTerminal}
+                className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-semibold underline text-xs"
+              >
+                <span>News Terminal</span>
+                <Sparkles className="w-3 h-3 text-cyan-400" />
+              </button>
+            )}
+            {onOpenNewsWire && (
+              <button
+                onClick={onOpenNewsWire}
+                className="text-sky-400 hover:text-sky-300 flex items-center gap-1 font-semibold underline text-xs"
+              >
+                <span>Full Wire</span>
+                <ExternalLink className="w-3 h-3" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

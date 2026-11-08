@@ -246,7 +246,70 @@ export interface NewsArticle {
   impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
   relatedSymbols: string[];
   summary: string;
-  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'BREAKING' | 'GLOBAL_WIRE';
+  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'BREAKING';
+  threadId?: string;
+  isStreamingFlash?: boolean;
+}
+
+// ==========================================
+// 🧠 PERSISTENT DAILY NEWS MEMORY INTERFACES
+// ==========================================
+export interface NewsMemoryEntry {
+  id: string;
+  timestamp: number;
+  timeStr: string;
+  source: string;
+  sourceDomain: string;
+  title: string;
+  summary: string;
+  sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  sentimentScore: number;
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  category: NewsArticle['category'];
+  relatedSymbols: string[];
+  threadId?: string;
+  chronologicalSequence?: number;
+}
+
+export interface ChronologicalStoryEvent {
+  step: number;
+  timeStr: string;
+  source: string;
+  sourceDomain: string;
+  headline: string;
+  marketReaction: string;
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+}
+
+export interface ChronologicalStoryThread {
+  id: string;
+  title: string;
+  theme: string;
+  category: NewsArticle['category'];
+  startTimeStr: string;
+  latestTimeStr: string;
+  articlesCount: number;
+  eventChain: ChronologicalStoryEvent[];
+  causeAndEffectSummary: string;
+  synthesizedMacroBias: 'BULLISH_USD' | 'BEARISH_USD' | 'BULLISH_GOLD' | 'RISK_OFF' | 'RISK_ON';
+}
+
+export interface DailyNewsReflection {
+  id: string;
+  dateStr: string;
+  title: string;
+  overallMacroNarrative: string;
+  keyStoryLinks: string[];
+  synthesizedExecutionInsights: string[];
+  affectedAssets: Array<{
+    symbol: string;
+    direction: 'FAVOR_LONGS' | 'FAVOR_SHORTS' | 'STAND_ASIDE';
+    rationale: string;
+  }>;
+  riskWarnings: string[];
+  totalMemoriesAnalyzed: number;
+  activeThreadsCount: number;
+  timestamp: number;
 }
 
 export interface NewsAnalysis {
@@ -262,54 +325,6 @@ export interface NewsAnalysis {
   marketMood: 'EXTREME_GREED' | 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF' | 'EXTREME_FEAR';
   thesis: string;
   timestamp: string;
-}
-
-// ==========================================
-// 🧠 PERSISTENT NEWS MEMORY & NARRATIVE CHAINS
-// ==========================================
-export interface NewsNarrativeChain {
-  id: string;
-  themeTitle: string;
-  category: 'CENTRAL_BANK_POLICY' | 'BULLION_SAFE_HAVEN' | 'GEOPOLITICAL_ENERGY' | 'CURRENCY_INTERVENTION' | 'MACRO_REGIME';
-  articleIds: string[];
-  articles: NewsArticle[];
-  timeSpanStr: string;
-  chronologicalProgression: {
-    stage: 'ORIGIN' | 'CATALYST' | 'TRANSMISSION' | 'MARKET_IMPACT';
-    headline: string;
-    source: string;
-    timestamp: number;
-    timeAgo: string;
-    takeaway: string;
-  }[];
-  synthesizedInsight: string;
-  executionImplication: string;
-  confidence: number;
-  affectedAssets: CurrencyPair[];
-}
-
-export interface DailyNewsReflection {
-  id: string;
-  dateStr: string;
-  timestamp: number;
-  macroRegimeShift: string;
-  intermarketTransmission: string;
-  executionEdgeDirective: string;
-  sentimentTrajectory: 'ACCELERATING_BULLISH' | 'DIVERGENT_BEARISH' | 'CONSOLIDATING' | 'VOLATILITY_EXPANSION';
-  keyNarrativeCount: number;
-  dominantThemes: string[];
-  totalEventsProcessed: number;
-  primaryRiskWarning: string;
-}
-
-export interface DailyNewsMemory {
-  id: string;
-  dateStr: string;
-  lastUpdated: number;
-  totalEventsCount: number;
-  articles: NewsArticle[];
-  narrativeChains: NewsNarrativeChain[];
-  reflections: DailyNewsReflection;
 }
 
 // ==========================================
@@ -540,71 +555,3 @@ export interface HistoricalJournalAnalysis {
   recurringMistakesWarning?: string;
   activeGuardrailAction?: string;
 }
-
-// ==========================================
-// 🧠 13TH COMPONENT: AI MARKET ANALYSIS TYPES
-// ==========================================
-export interface AISignalOverlayItem {
-  id: string;
-  type: 'BUY' | 'SELL';
-  price: number;
-  time: string;
-  timestamp: number;
-  confidence: number;
-  strategyId: string;
-  strategyName: string;
-  expectedWinRate: number;
-  timeframe: TimeFrame;
-  rationale: string;
-  targetPrice?: number;
-  stopPrice?: number;
-  candleIndex?: number;
-}
-
-export interface AIOrderFlowPressure {
-  buyVolumeDelta: number;
-  sellVolumeDelta: number;
-  imbalanceRatio: number;
-  deltaStatus: 'STRONG_BULLISH' | 'BULLISH' | 'NEUTRAL' | 'BEARISH' | 'STRONG_BEARISH';
-  vwap: number;
-  orderFlowAbsorption: boolean;
-  cumulativeDelta: number;
-}
-
-export interface AIMultiTimeframeSynthesis {
-  timeframe: TimeFrame;
-  bias: SignalDirection;
-  score: number;
-  matchedStrategy: string;
-  confluence: boolean;
-}
-
-export interface AIStrategyMatch {
-  ruleId: string;
-  name: string;
-  category: string;
-  subcategory: string;
-  winRate: number;
-  confidence: number;
-  action: SignalDirection;
-  rationale: string;
-}
-
-export interface AIMarketAnalysisResult {
-  symbol: CurrencyPair;
-  timeframe: TimeFrame;
-  timestamp: number;
-  currentPrice: number;
-  predictiveBias: SignalDirection;
-  predictiveConfidence: number;
-  projectedTarget: number;
-  projectedStop: number;
-  orderFlowPressure: AIOrderFlowPressure;
-  multiTimeframeSynthesis: AIMultiTimeframeSynthesis[];
-  topMatchedStrategies: AIStrategyMatch[];
-  totalKnowledgeRulesEvaluated: number;
-  activeSignals: AISignalOverlayItem[];
-  latencyMs: number;
-  pipelineStatus: 'LIVE_CONNECTED' | 'SYNTHESIZING' | 'OFFLINE';
-}
-
