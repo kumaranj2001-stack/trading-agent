@@ -673,6 +673,9 @@ export default function Home() {
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
         onOpenScanner={() => setIsScannerOpen(true)}
         onOpenCalendar={() => setIsCalendarOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        executionMode={executionMode}
+        onToggleExecutionMode={handleToggleExecutionMode}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
         theme={theme}
         onToggleTheme={handleToggleTheme}

@@ -20,8 +20,10 @@ import {
   ExternalLink,
   ChevronRight,
   TrendingUp,
+  PlayCircle,
+  Sliders,
 } from 'lucide-react';
-import { CurrencyPair, MarketSegment } from '@/lib/types';
+import { CurrencyPair, ExecutionMode, MarketSegment } from '@/lib/types';
 
 export interface LeftNavigationDrawerProps {
   isOpen: boolean;
@@ -35,6 +37,9 @@ export interface LeftNavigationDrawerProps {
   onOpenKnowledge: () => void;
   onOpenScanner: () => void;
   onOpenCalendar: () => void;
+  onOpenSettings?: () => void;
+  executionMode?: ExecutionMode;
+  onToggleExecutionMode?: () => void;
   onTriggerAnalysis?: () => void;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
@@ -54,6 +59,9 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
   onOpenKnowledge,
   onOpenScanner,
   onOpenCalendar,
+  onOpenSettings,
+  executionMode,
+  onToggleExecutionMode,
   onTriggerAnalysis,
   theme = 'dark',
   onToggleTheme,
@@ -387,12 +395,52 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
           })}
         </nav>
 
-        {/* Drawer Footer with Theme Toggle & Status */}
+        {/* Drawer Footer with Execution Mode, Settings, Theme Toggle & Status */}
         <div className="p-3 border-t border-terminal-border bg-terminal-950/80 space-y-2 shrink-0">
+          {/* Quick Execution Mode Controller */}
+          {onToggleExecutionMode && executionMode && (
+            <button
+              onClick={onToggleExecutionMode}
+              className={`w-full py-2 px-3 rounded-lg border flex items-center justify-between text-xs font-semibold transition-all shadow-sm ${
+                executionMode === 'FULL_AUTOPILOT'
+                  ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/30'
+                  : executionMode === 'SEMI_AUTONOMOUS'
+                  ? 'bg-amber-600/20 text-amber-300 border-amber-500/50 hover:bg-amber-600/30'
+                  : 'bg-terminal-800 text-slate-300 border-terminal-border hover:bg-terminal-700'
+              }`}
+              title="Toggle Autopilot / Semi-Autonomous Execution"
+            >
+              <div className="flex items-center gap-2">
+                <PlayCircle className="w-4 h-4 text-cyan-400" />
+                <span>Execution Mode</span>
+              </div>
+              <span className="font-mono text-[10px] uppercase px-2 py-0.5 rounded bg-terminal-900 border border-terminal-border text-white">
+                {executionMode.replace('_', ' ')}
+              </span>
+            </button>
+          )}
+
+          {/* Quick Risk Parameters & Settings */}
+          {onOpenSettings && (
+            <button
+              onClick={() => {
+                onClose();
+                onOpenSettings();
+              }}
+              className="w-full py-2 px-3 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-200 hover:text-white flex items-center justify-between text-xs font-semibold transition-colors shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <Sliders className="w-4 h-4 text-indigo-400" />
+                <span>Risk & Account Settings</span>
+              </div>
+              <span className="font-mono text-[10px] text-slate-400">CONFIG</span>
+            </button>
+          )}
+
           {onToggleTheme && (
             <button
               onClick={onToggleTheme}
-              className="w-full py-2 px-3 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-200 hover:text-white flex items-center justify-between text-xs font-semibold transition-colors"
+              className="w-full py-2 px-3 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-200 hover:text-white flex items-center justify-between text-xs font-semibold transition-colors shadow-sm"
             >
               <div className="flex items-center gap-2">
                 {theme === 'dark' ? (

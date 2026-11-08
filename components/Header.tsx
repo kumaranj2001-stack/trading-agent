@@ -1,35 +1,22 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { 
-  Activity, 
-  Shield, 
   Sliders, 
-  Layers, 
-  History, 
   Bot, 
   Zap, 
   Globe, 
-  Radar, 
-  Calendar, 
-  LineChart, 
-  PlayCircle,
-  Database,
-  Menu,
   MoreVertical,
-  BookOpen,
-  X,
-  Radio,
   Coins,
-  Cloud,
   Sun,
-  Moon
+  Moon,
+  ChevronDown
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, TimeFrame } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
 import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES } from '@/lib/marketData';
 
-interface HeaderProps {
+export interface HeaderProps {
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
   selectedPair: CurrencyPair;
@@ -38,14 +25,14 @@ interface HeaderProps {
   timeframe: TimeFrame;
   onSelectPair: (p: CurrencyPair) => void;
   onSelectTimeframe: (tf: TimeFrame) => void;
-  activeTab: 'terminal' | 'debate' | 'backtest' | 'architecture';
-  setActiveTab: (tab: 'terminal' | 'debate' | 'backtest' | 'architecture') => void;
-  portfolio: PortfolioState;
-  onOpenSettings: () => void;
-  onOpenScanner: () => void;
-  onOpenCalendar: () => void;
-  onOpenMonteCarlo: () => void;
-  onOpenKnowledge: () => void;
+  activeTab?: 'terminal' | 'debate' | 'backtest' | 'architecture';
+  setActiveTab?: (tab: 'terminal' | 'debate' | 'backtest' | 'architecture') => void;
+  portfolio?: PortfolioState;
+  onOpenSettings?: () => void;
+  onOpenScanner?: () => void;
+  onOpenCalendar?: () => void;
+  onOpenMonteCarlo?: () => void;
+  onOpenKnowledge?: () => void;
   onOpenNewsWire?: () => void;
   onOpenFirebase?: () => void;
   onOpenJournal?: () => void;
@@ -53,8 +40,8 @@ interface HeaderProps {
   isAnalyzing: boolean;
   onTriggerAnalysis: () => void;
   activeSession: string;
-  executionMode: ExecutionMode;
-  onToggleExecutionMode: () => void;
+  executionMode?: ExecutionMode;
+  onToggleExecutionMode?: () => void;
   confluenceGrade?: string;
   knowledgeStats?: { tech: number; fund: number };
 }
@@ -70,48 +57,46 @@ export const Header: React.FC<HeaderProps> = ({
   timeframe,
   onSelectPair,
   onSelectTimeframe,
-  activeTab,
-  setActiveTab,
-  portfolio,
   onOpenSettings,
-  onOpenScanner,
-  onOpenCalendar,
-  onOpenMonteCarlo,
-  onOpenKnowledge,
-  onOpenNewsWire,
-  onOpenFirebase,
-  onOpenJournal,
   onOpenLeftDrawer,
   isAnalyzing,
   onTriggerAnalysis,
   activeSession,
-  executionMode,
-  onToggleExecutionMode,
   confluenceGrade,
 }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
   const pairs = marketSegment === 'INDIAN_MARKET' 
     ? INDIAN_MARKET_ASSETS 
     : marketSegment === 'METALS_COMMODITIES'
     ? METALS_COMMODITIES
     : FOREX_PAIRS;
 
+  const segmentIcon = marketSegment === 'INDIAN_MARKET'
+    ? '🇮🇳'
+    : marketSegment === 'METALS_COMMODITIES'
+    ? <Coins className="w-3.5 h-3.5 text-amber-400" />
+    : <Globe className="w-3.5 h-3.5 text-cyan-400" />;
+
+  const segmentLabel = marketSegment === 'INDIAN_MARKET'
+    ? 'NSE India'
+    : marketSegment === 'METALS_COMMODITIES'
+    ? 'Metals & Commodities'
+    : 'Spot Forex';
+
   return (
-    <header className="border-b border-terminal-border bg-terminal-900/95 backdrop-blur-md sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 sm:py-2.5">
-        {/* Row 1: Left 3-Dot Drawer Button, Brand, Market Scope & Action Controls */}
-        <div className="flex items-center justify-between gap-2 min-w-0">
-          {/* Attached completely to the left: Three-dot trigger + Brand */}
-          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+    <header className="border-b border-terminal-border bg-terminal-900/95 backdrop-blur-md sticky top-0 z-40 w-full transition-colors duration-200">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 space-y-2">
+        {/* Row 1: Left 3-Dot Drawer Button, Brand, Market Scope Switcher & Header Controls */}
+        <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-2.5 sm:gap-3 w-full min-w-0">
+          {/* Left: Attached completely to the left - Three-dot drawer button + Brand */}
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 shrink-0">
             {/* Hamburger / Navigation Desk Three-Dot Trigger */}
             <button
               onClick={onOpenLeftDrawer}
-              className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors flex items-center justify-center shrink-0 active:scale-95 shadow-sm"
-              title="Open Navigation Menu"
+              className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors flex items-center justify-center shrink-0 active:scale-95 shadow-sm group"
+              title="Open Navigation Menu (Terminal, Debate, Backtest, Journals, VaR, Wire, Calendar, Firebase, Knowledge, Scanner)"
               aria-label="Open Navigation Menu"
             >
-              <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+              <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
             </button>
 
             {/* Brand Logo & Title */}
@@ -125,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({
                   QRI TRADER <span className="text-cyan-400 font-mono">//</span> 5-AGENT SWARM
                 </span>
                 {confluenceGrade && (
-                  <span className={`text-xs px-2 py-0.5 rounded font-bold border shrink-0 ${
+                  <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded font-bold border shrink-0 ${
                     confluenceGrade === 'A+' || confluenceGrade === 'A'
                       ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                       : confluenceGrade === 'B'
@@ -136,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 )}
               </div>
-              <div className="hidden xs:flex items-center gap-2 text-xs text-slate-400">
+              <div className="hidden xs:flex items-center gap-2 text-[11px] text-slate-400">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span className="truncate font-semibold">{activeSession}</span>
                 <span className="text-sky-400/90 font-medium">• 18 NEWS WIRES</span>
@@ -145,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Market Scope Selector: Forex vs Metals/Commodities vs Indian Market */}
+          {/* Middle: Market Scope Selector: Forex vs Metals/Commodities vs Indian Market */}
           <div className="flex items-center bg-terminal-950 p-1 rounded-lg border border-terminal-border text-xs sm:text-sm shrink-0">
             <button
               onClick={() => {
@@ -196,12 +181,12 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Action Trigger & Header Controls */}
+          {/* Right: Swarm Synchronizer, Risk Settings, and Dark/Light Mode */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={onTriggerAnalysis}
               disabled={isAnalyzing}
-              className={`px-2.5 sm:px-3 py-1.5 rounded font-mono text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all shadow-md ${
+              className={`px-2.5 sm:px-3.5 py-1.5 rounded-lg font-mono text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all shadow-md ${
                 isAnalyzing
                   ? 'bg-terminal-700 text-slate-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-cyan-500/20 active:scale-95'
@@ -212,20 +197,21 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="xs:hidden">{isAnalyzing ? '...' : 'RUN'}</span>
             </button>
 
-            <button
-              onClick={onOpenSettings}
-              className="p-1.5 sm:p-2 rounded bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors"
-              title="Configure Risk & Settings"
-              aria-label="Settings"
-            >
-              <Sliders className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
+            {onOpenSettings && (
+              <button
+                onClick={onOpenSettings}
+                className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors shadow-sm"
+                title="Configure Risk & Settings"
+                aria-label="Settings"
+              >
+                <Sliders className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
+            )}
 
-            {/* Dark / Light Mode Toggle */}
             {onToggleTheme && (
               <button
                 onClick={onToggleTheme}
-                className="p-1.5 sm:p-2 rounded bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors flex items-center gap-1.5"
+                className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 shadow-sm"
                 title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                 aria-label="Toggle Theme Mode"
               >
@@ -239,180 +225,61 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
               </button>
             )}
-
-            {/* Mobile Menu Toggle Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-1.5 sm:p-2 rounded bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors"
-              aria-label="Toggle navigation menu"
-            >
-              {mobileMenuOpen ? <X className="w-4 h-4 text-cyan-400" /> : <Menu className="w-4 h-4" />}
-            </button>
           </div>
         </div>
 
-        {/* Row 2 (Desktop): Navigation Tabs, Quick Tools, Pair & Timeframe selector */}
-        <div className="mt-2.5 pt-2 border-t border-terminal-border/50 hidden lg:flex items-center justify-between gap-3 text-sm">
-          {/* Main Navigation Tabs */}
-          <div className="flex items-center bg-terminal-950/80 p-1 rounded-lg border border-terminal-border">
-            <button
-              onClick={() => setActiveTab('terminal')}
-              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
-                activeTab === 'terminal' 
-                  ? 'bg-terminal-800 text-cyan-400 font-bold border border-cyan-500/30' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Activity className="w-4 h-4" />
-              <span>Terminal</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('debate')}
-              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
-                activeTab === 'debate' 
-                  ? 'bg-terminal-800 text-purple-400 font-bold border border-purple-500/30' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Layers className="w-4 h-4" />
-              <span>5-Agent Debate</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('backtest')}
-              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
-                activeTab === 'backtest' 
-                  ? 'bg-terminal-800 text-amber-400 font-bold border border-amber-500/30' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <History className="w-4 h-4" />
-              <span>Backtest</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('architecture')}
-              className={`px-3.5 py-1.5 rounded-md flex items-center gap-1.5 transition-colors ${
-                activeTab === 'architecture' 
-                  ? 'bg-terminal-800 text-emerald-400 font-bold border border-emerald-500/30' 
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              <span>5 Roles</span>
-            </button>
-          </div>
+        {/* Row 2: REDESIGNED STREAMLINED AREA
+            (Navigation tabs from Terminal through VaR are removed and housed in the 3-dot menu).
+            This area now exclusively showcases the Target & Currency Pair alongside Timeframes in a
+            fully responsive, perfectly aligned layout with zero empty corner gaps and zoom stability. */}
+        <div className="pt-2 border-t border-terminal-border/50 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2.5 sm:gap-4 bg-terminal-950/70 rounded-xl px-3 sm:px-4 py-2 border border-terminal-border/60 shadow-sm min-w-0">
+          {/* Target Asset & Currency Pair Selector in New Layout */}
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+            <div className="flex items-center gap-2 bg-terminal-900 px-3 py-1.5 rounded-lg border border-terminal-border shadow-inner min-w-0">
+              <span className="flex items-center gap-1 text-[11px] font-mono uppercase tracking-wider text-cyan-400 font-bold shrink-0">
+                {segmentIcon}
+                <span className="hidden xs:inline">TARGET PAIR:</span>
+                <span className="xs:hidden">PAIR:</span>
+              </span>
 
-          {/* Quick Tools */}
-          <div className="flex items-center gap-2">
-            {/* Persistent Trading Journals */}
-            {onOpenJournal && (
-              <button
-                onClick={onOpenJournal}
-                className="px-3 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900 border border-emerald-600/60 text-emerald-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
-                title="Open Persistent Trade Journals & Loss Reviews"
-              >
-                <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Journals</span>
-              </button>
-            )}
+              <div className="relative flex items-center min-w-0">
+                <select
+                  value={selectedPair}
+                  onChange={(e) => onSelectPair(e.target.value as CurrencyPair)}
+                  className="bg-transparent text-white font-mono text-xs sm:text-sm font-extrabold focus:outline-none cursor-pointer tracking-wide appearance-none pr-5 truncate"
+                >
+                  {pairs.map((p) => (
+                    <option key={p} value={p} className="bg-terminal-900 text-white font-medium">
+                      {p}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-0" />
+              </div>
 
-            {/* Live Wire Scraper Pill */}
-            {onOpenNewsWire && (
-              <button
-                onClick={onOpenNewsWire}
-                className="px-3 py-1.5 rounded-lg bg-sky-950/70 hover:bg-sky-900 border border-sky-700/60 text-sky-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
-                title="View 18 Financial Websites Real-Time Wire"
-              >
-                <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-                <span>News Wire (18)</span>
-              </button>
-            )}
-
-            {/* Firebase Cloud Sync Status */}
-            {onOpenFirebase && (
-              <button
-                onClick={onOpenFirebase}
-                className="px-3 py-1.5 rounded-lg bg-amber-950/70 hover:bg-amber-900 border border-amber-600/60 text-amber-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
-                title="Firebase Firestore Cloud Database"
-              >
-                <Cloud className="w-3.5 h-3.5 text-amber-400" />
-                <span>Firebase</span>
-              </button>
-            )}
-
-            <button
-              onClick={onOpenKnowledge}
-              className="px-3 py-1.5 rounded-lg bg-indigo-950/70 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 flex items-center gap-1.5 transition-colors shadow-sm text-xs font-semibold"
-              title="Open 1,050+ Rule Knowledge Base"
-            >
-              <Database className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Knowledge (1,050+)</span>
-            </button>
-
-            <button
-              onClick={onToggleExecutionMode}
-              className={`px-3 py-1.5 rounded-lg font-bold border flex items-center gap-1.5 transition-all text-xs ${
-                executionMode === 'FULL_AUTOPILOT'
-                  ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500 animate-pulse'
-                  : executionMode === 'SEMI_AUTONOMOUS'
-                  ? 'bg-amber-600/20 text-amber-300 border-amber-500/50'
-                  : 'bg-terminal-800 text-slate-300 border-terminal-border'
-              }`}
-            >
-              <PlayCircle className="w-3.5 h-3.5" />
-              <span>{executionMode.replace('_', ' ')}</span>
-            </button>
-
-            <button
-              onClick={onOpenScanner}
-              className="px-2 py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-cyan-400 border border-terminal-border flex items-center gap-1 transition-colors"
-            >
-              <Radar className="w-3.5 h-3.5" />
-              <span>Scanner</span>
-            </button>
-
-            <button
-              onClick={onOpenCalendar}
-              className="px-2 py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-purple-400 border border-terminal-border flex items-center gap-1 transition-colors"
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Calendar</span>
-            </button>
-
-            <button
-              onClick={onOpenMonteCarlo}
-              className="px-2 py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-emerald-400 border border-terminal-border flex items-center gap-1 transition-colors"
-            >
-              <LineChart className="w-3.5 h-3.5" />
-              <span>VaR</span>
-            </button>
-          </div>
-
-          {/* Pair & Timeframe Selectors */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 bg-terminal-950 px-2.5 py-1 rounded border border-terminal-border">
-              <span className="text-[10px] text-slate-400">TARGET:</span>
-              <select
-                value={selectedPair}
-                onChange={(e) => onSelectPair(e.target.value as CurrencyPair)}
-                className="bg-transparent text-white font-mono text-xs focus:outline-none cursor-pointer font-bold"
-              >
-                {pairs.map(p => (
-                  <option key={p} value={p} className="bg-terminal-900 text-white font-medium">
-                    {p}
-                  </option>
-                ))}
-              </select>
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ml-1" title="Live Market Stream Active" />
             </div>
 
-            <div className="flex items-center gap-0.5 bg-terminal-950 p-0.5 rounded border border-terminal-border">
-              {TIMEFRAMES.map(tf => (
+            {/* Dynamic Market Segment Badge */}
+            <span className="hidden md:inline-flex items-center text-[10px] font-mono px-2.5 py-1 rounded-md bg-terminal-900 border border-terminal-border text-slate-400 uppercase tracking-wider font-semibold shrink-0">
+              {segmentLabel}
+            </span>
+          </div>
+
+          {/* Timeframe Selector in New Layout */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold hidden sm:inline shrink-0">
+              TIMEFRAME:
+            </span>
+            <div className="flex items-center bg-terminal-900 p-0.5 rounded-lg border border-terminal-border shadow-inner">
+              {TIMEFRAMES.map((tf) => (
                 <button
                   key={tf}
                   onClick={() => onSelectTimeframe(tf)}
-                  className={`px-1.5 py-0.5 rounded text-[11px] transition-all ${
-                    timeframe === tf 
-                      ? 'bg-indigo-600 text-white font-bold' 
-                      : 'text-slate-400 hover:text-white'
+                  className={`px-2 sm:px-2.5 py-1 rounded-md text-xs font-mono font-bold transition-all ${
+                    timeframe === tf
+                      ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-sm shadow-cyan-500/20'
+                      : 'text-slate-400 hover:text-white hover:bg-terminal-800'
                   }`}
                 >
                   {tf.toUpperCase()}
@@ -421,191 +288,6 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
         </div>
-
-        {/* Row 2 (Mobile / Tablet Controls): Scrollable Pair + Timeframes */}
-        <div className="mt-2 pt-2 border-t border-terminal-border/40 flex lg:hidden items-center justify-between gap-2 overflow-x-auto scrollbar-none font-mono text-xs">
-          <div className="flex items-center gap-1.5 shrink-0 bg-terminal-950 px-2 py-1 rounded border border-terminal-border">
-            <span className="text-[10px] text-slate-400">TARGET:</span>
-            <select
-              value={selectedPair}
-              onChange={(e) => onSelectPair(e.target.value as CurrencyPair)}
-              className="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer"
-            >
-              {pairs.map(p => (
-                <option key={p} value={p} className="bg-terminal-900 text-white font-medium">
-                  {p}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center gap-1 shrink-0 bg-terminal-950 p-0.5 rounded border border-terminal-border">
-            {TIMEFRAMES.map(tf => (
-              <button
-                key={tf}
-                onClick={() => onSelectTimeframe(tf)}
-                className={`px-1.5 py-0.5 rounded text-[11px] transition-all ${
-                  timeframe === tf 
-                    ? 'bg-indigo-600 text-white font-bold' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {tf.toUpperCase()}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Mobile Navigation & Quick Tools Drawer */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden mt-3 pt-3 border-t border-terminal-border/70 flex flex-col gap-3 font-mono text-xs animate-fade-in">
-            {/* Mobile Nav Tabs */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-terminal-950 p-1.5 rounded-lg border border-terminal-border">
-              <button
-                onClick={() => { setActiveTab('terminal'); setMobileMenuOpen(false); }}
-                className={`py-2 px-2.5 rounded text-center flex items-center justify-center gap-1.5 transition-colors ${
-                  activeTab === 'terminal' 
-                    ? 'bg-terminal-800 text-cyan-400 font-bold border border-cyan-500/30' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Activity className="w-3.5 h-3.5" />
-                <span>Terminal</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('debate'); setMobileMenuOpen(false); }}
-                className={`py-2 px-2.5 rounded text-center flex items-center justify-center gap-1.5 transition-colors ${
-                  activeTab === 'debate' 
-                    ? 'bg-terminal-800 text-purple-400 font-bold border border-purple-500/30' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Layers className="w-3.5 h-3.5" />
-                <span>5-Agent Debate</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('backtest'); setMobileMenuOpen(false); }}
-                className={`py-2 px-2.5 rounded text-center flex items-center justify-center gap-1.5 transition-colors ${
-                  activeTab === 'backtest' 
-                    ? 'bg-terminal-800 text-amber-400 font-bold border border-amber-500/30' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <History className="w-3.5 h-3.5" />
-                <span>Backtest</span>
-              </button>
-              <button
-                onClick={() => { setActiveTab('architecture'); setMobileMenuOpen(false); }}
-                className={`py-2 px-2.5 rounded text-center flex items-center justify-center gap-1.5 transition-colors ${
-                  activeTab === 'architecture' 
-                    ? 'bg-terminal-800 text-emerald-400 font-bold border border-emerald-500/30' 
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                <Shield className="w-3.5 h-3.5" />
-                <span>5 Roles</span>
-              </button>
-            </div>
-
-            {/* Mobile Quick Tools Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {onOpenJournal && (
-                <button
-                  onClick={() => { onOpenJournal(); setMobileMenuOpen(false); }}
-                  className="p-2 rounded bg-emerald-950/80 border border-emerald-600/60 text-emerald-300 font-bold flex items-center justify-center gap-1.5"
-                >
-                  <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Trade Journals</span>
-                </button>
-              )}
-
-              {onOpenNewsWire && (
-                <button
-                  onClick={() => { onOpenNewsWire(); setMobileMenuOpen(false); }}
-                  className="p-2 rounded bg-sky-950/80 border border-sky-700/60 text-sky-300 font-bold flex items-center justify-center gap-1.5"
-                >
-                  <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-                  <span>18 News Wires</span>
-                </button>
-              )}
-
-              {onOpenFirebase && (
-                <button
-                  onClick={() => { onOpenFirebase(); setMobileMenuOpen(false); }}
-                  className="p-2 rounded bg-amber-950/80 border border-amber-600/60 text-amber-300 font-bold flex items-center justify-center gap-1.5"
-                >
-                  <Cloud className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Firebase Cloud</span>
-                </button>
-              )}
-
-              <button
-                onClick={() => { onOpenKnowledge(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 font-bold flex items-center justify-center gap-1.5"
-              >
-                <Database className="w-3.5 h-3.5 text-indigo-400" />
-                <span>1,050+ Rules</span>
-              </button>
-
-              <button
-                onClick={onToggleExecutionMode}
-                className={`p-2 rounded font-bold border flex items-center justify-center gap-1.5 text-[11px] ${
-                  executionMode === 'FULL_AUTOPILOT'
-                    ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500'
-                    : executionMode === 'SEMI_AUTONOMOUS'
-                    ? 'bg-amber-600/20 text-amber-300 border-amber-500/50'
-                    : 'bg-terminal-800 text-slate-300 border-terminal-border'
-                }`}
-              >
-                <PlayCircle className="w-3.5 h-3.5" />
-                <span>{executionMode.replace('_', ' ')}</span>
-              </button>
-
-              <button
-                onClick={() => { onOpenScanner(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-terminal-800 text-cyan-400 border border-terminal-border flex items-center justify-center gap-1.5"
-              >
-                <Radar className="w-3.5 h-3.5" />
-                <span>Scanner</span>
-              </button>
-
-              <button
-                onClick={() => { onOpenCalendar(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-terminal-800 text-purple-400 border border-terminal-border flex items-center justify-center gap-1.5"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Calendar</span>
-              </button>
-
-              <button
-                onClick={() => { onOpenMonteCarlo(); setMobileMenuOpen(false); }}
-                className="p-2 rounded bg-terminal-800 text-emerald-400 border border-terminal-border flex items-center justify-center gap-1.5"
-              >
-                <LineChart className="w-3.5 h-3.5" />
-                <span>1,000-Path VaR</span>
-              </button>
-
-              {onToggleTheme && (
-                <button
-                  onClick={() => { onToggleTheme(); setMobileMenuOpen(false); }}
-                  className="p-2.5 rounded-lg bg-terminal-800 border border-terminal-border text-slate-100 font-bold flex items-center justify-center gap-2 col-span-2 sm:col-span-4 text-xs transition-colors"
-                >
-                  {theme === 'dark' ? (
-                    <>
-                      <Sun className="w-4 h-4 text-amber-400" />
-                      <span>Switch to Light Mode</span>
-                    </>
-                  ) : (
-                    <>
-                      <Moon className="w-4 h-4 text-indigo-400" />
-                      <span>Switch to Dark Mode</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </header>
   );
