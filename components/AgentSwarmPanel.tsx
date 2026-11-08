@@ -320,8 +320,8 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
                   <span className="font-bold text-white">{news.sentimentScore > 0 ? '+' : ''}{news.sentimentScore} / 1.0</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Coverage:</span>
-                  <span className="text-slate-200">Bloomberg, Reuters, Kitco, WSJ, CNBC, FT</span>
+                  <span className="text-slate-400">Active Wires:</span>
+                  <span className="text-cyan-300 font-semibold">18 Institutional Websites Live</span>
                 </div>
               </div>
 

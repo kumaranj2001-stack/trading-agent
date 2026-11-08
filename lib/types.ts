@@ -246,7 +246,7 @@ export interface NewsArticle {
   impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
   relatedSymbols: string[];
   summary: string;
-  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'BREAKING';
+  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'BREAKING' | 'GLOBAL_WIRE';
 }
 
 export interface NewsAnalysis {
@@ -262,6 +262,54 @@ export interface NewsAnalysis {
   marketMood: 'EXTREME_GREED' | 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF' | 'EXTREME_FEAR';
   thesis: string;
   timestamp: string;
+}
+
+// ==========================================
+// 🧠 PERSISTENT NEWS MEMORY & NARRATIVE CHAINS
+// ==========================================
+export interface NewsNarrativeChain {
+  id: string;
+  themeTitle: string;
+  category: 'CENTRAL_BANK_POLICY' | 'BULLION_SAFE_HAVEN' | 'GEOPOLITICAL_ENERGY' | 'CURRENCY_INTERVENTION' | 'MACRO_REGIME';
+  articleIds: string[];
+  articles: NewsArticle[];
+  timeSpanStr: string;
+  chronologicalProgression: {
+    stage: 'ORIGIN' | 'CATALYST' | 'TRANSMISSION' | 'MARKET_IMPACT';
+    headline: string;
+    source: string;
+    timestamp: number;
+    timeAgo: string;
+    takeaway: string;
+  }[];
+  synthesizedInsight: string;
+  executionImplication: string;
+  confidence: number;
+  affectedAssets: CurrencyPair[];
+}
+
+export interface DailyNewsReflection {
+  id: string;
+  dateStr: string;
+  timestamp: number;
+  macroRegimeShift: string;
+  intermarketTransmission: string;
+  executionEdgeDirective: string;
+  sentimentTrajectory: 'ACCELERATING_BULLISH' | 'DIVERGENT_BEARISH' | 'CONSOLIDATING' | 'VOLATILITY_EXPANSION';
+  keyNarrativeCount: number;
+  dominantThemes: string[];
+  totalEventsProcessed: number;
+  primaryRiskWarning: string;
+}
+
+export interface DailyNewsMemory {
+  id: string;
+  dateStr: string;
+  lastUpdated: number;
+  totalEventsCount: number;
+  articles: NewsArticle[];
+  narrativeChains: NewsNarrativeChain[];
+  reflections: DailyNewsReflection;
 }
 
 // ==========================================
