@@ -57,7 +57,7 @@ export interface MarketSessionInfo {
   lastClosePrice: number;
 }
 
-export type MarketCloseEventType = 'MARKET_CLOSED' | 'MARKET_OPENED' | 'GLOBAL_FREEZE' | 'RESUME_TRADING' | 'COUNTDOWN_TICK';
+export type MarketCloseEventType = 'MARKET_CLOSED' | 'MARKET_OPENED' | 'GLOBAL_FREEZE' | 'RESUME_TRADING';
 
 export interface MarketCloseEvent {
   type: MarketCloseEventType;

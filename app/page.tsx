@@ -614,14 +614,6 @@ export default function Home() {
             setIsMarketFrozen(frozen);
             showNotification(frozen ? '❄️ State re-frozen.' : '🟢 State temporarily unfrozen for simulation.');
           }}
-          onMarketResume={() => {
-            MarketSessionManager.setManualFreeze(false);
-            const fresh = MarketSessionManager.getMarketSessionInfo(selectedPair);
-            setSessionInfo(fresh);
-            setIsMarketFrozen(fresh.isFrozen);
-            showNotification(`🟢 TRADING RESUMED: ${selectedPair} session has opened. Global state unfrozen.`);
-            triggerSwarm(selectedPair, timeframe, candles);
-          }}
         />
 
         {/* Tab 1: Terminal */}
