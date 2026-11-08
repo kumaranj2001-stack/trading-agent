@@ -26,24 +26,29 @@ export async function GET(req: NextRequest) {
     const count = Number.isFinite(parsedCount) ? Math.min(Math.max(parsedCount, 10), 300) : 60;
 
     const candles = generateCandles(pair, timeframe, count);
+    const chartLiveClose = candles[candles.length - 1].close;
     const session = getActiveTradingSession();
 
-    // Rates with realistic simulated jitter
+    // 4. Rates strictly calibrated against Chart Market Data Feed (Single Source of Truth)
     const pairs = Object.keys(BASE_PRICES) as CurrencyPair[];
     const rates = pairs.map(p => {
       const base = BASE_PRICES[p];
-      const jitter = (Math.random() - 0.49) * 0.0008 * base;
       const isJpy = p.includes('JPY');
       const isIndian = p === 'NIFTY 50' || p === 'BANK NIFTY' || p === 'RELIANCE' || p === 'TCS' || p === 'HDFC BANK' || p === 'INFY';
       const decimals = isIndian ? 2 : (isJpy || p.includes('/INR') ? 3 : 5);
-      const price = Number((base + jitter).toFixed(decimals));
+      
+      // If p matches the selected chart pair, price MUST strictly equal the chart's latest candle close!
+      const price = p === pair 
+        ? chartLiveClose 
+        : Number((base + (Math.sin(p.charCodeAt(0)) * 0.0004 * base)).toFixed(decimals));
+
       const change24h = Number(((Math.random() - 0.48) * 0.8).toFixed(2));
       return {
         pair: p,
         price,
         change24h,
-        high24h: Number((price * 1.003).toFixed(decimals)),
-        low24h: Number((price * 0.997).toFixed(decimals)),
+        high24h: Number((Math.max(price, price * 1.003)).toFixed(decimals)),
+        low24h: Number((Math.min(price, price * 0.997)).toFixed(decimals)),
       };
     });
 

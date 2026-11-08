@@ -37,6 +37,7 @@ import { JournalModal } from '@/components/JournalModal';
 import { HistoricalJournalDesk } from '@/components/HistoricalJournalDesk';
 import { JournalStorageManager } from '@/lib/journalStorage';
 import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
+import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 
 export default function Home() {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>('XAU/USD');
@@ -142,59 +143,43 @@ export default function Home() {
     };
   }, []);
 
-  // 2. Fetch market data & rates
+  // 2. Fetch market data & rates (calibrating against Live Chart Feed as Single Source of Truth)
   const fetchMarketData = useCallback(async (pair: CurrencyPair, tf: TimeFrame) => {
     try {
       const res = await fetch(`/api/market?pair=${encodeURIComponent(pair)}&timeframe=${tf}&count=60`);
       const json = await res.json();
       if (json.success && json.data) {
-        setCandles(json.data.candles || []);
-        setRates(json.data.rates || []);
-        setCalendar(json.data.calendar || []);
+        const incomingCandles: Candle[] = json.data.candles || [];
+        LiveMarketFeedManager.setCanonicalFeed(pair, tf, incomingCandles);
+        setCandles(incomingCandles);
+
+        const livePrice = LiveMarketFeedManager.getCanonicalPrice(pair);
+        const syncedRates = LiveMarketFeedManager.synchronizeRates(json.data.rates || [], pair, livePrice);
+        setRates(syncedRates);
+
+        if (json.data.calendar) setCalendar(json.data.calendar);
         if (json.data.activeSession?.session) {
           setActiveSession(json.data.activeSession.session);
         }
 
-        // Live update active position P&L from latest rates
-        if (json.data.rates && Array.isArray(json.data.rates)) {
-          const rateMap = new Map<string, number>();
-          json.data.rates.forEach((r: any) => rateMap.set(r.pair, r.price));
-
-          setPortfolio(prev => {
-            let hasChanged = false;
-            const updatedPositions = prev.positions.map(pos => {
-              const currentLivePrice = rateMap.get(pos.symbol);
-              if (!currentLivePrice || currentLivePrice === pos.currentPrice) return pos;
-
-              hasChanged = true;
-              const isJpy = pos.symbol.includes('JPY');
-              const isGold = pos.symbol === 'XAU/USD';
-              const pipVal = PIP_VALUES[pos.symbol] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
-              const pipDollar = isGold ? 10 : 10;
-              const pipDiff = pos.type === 'BUY' 
-                ? (currentLivePrice - pos.entryPrice) / pipVal
-                : (pos.entryPrice - currentLivePrice) / pipVal;
-
-              const pnl = Number((pipDiff * pipDollar * pos.lots).toFixed(2));
-              const pnlPercent = Number(((pnl / (pos.lots * 1000)) * 100).toFixed(2));
-
-              return {
-                ...pos,
-                currentPrice: currentLivePrice,
-                pnl,
-                pnlPercent,
-              };
+        // Live update active position P&L strictly from Chart Feed price
+        setPortfolio(prev => {
+          const { positions: updatedPositions, totalOpenPnl, hasChanged } = 
+            LiveMarketFeedManager.calibratePositions(prev.positions, (sym) => {
+              if (sym === pair) return livePrice;
+              const matched = syncedRates.find((r: any) => r.pair === sym);
+              return matched ? matched.price : LiveMarketFeedManager.getCanonicalPrice(sym);
             });
 
-            if (!hasChanged) return prev;
-            const newPortfolio = {
-              ...prev,
-              positions: updatedPositions,
-            };
-            BrowserStorageManager.savePortfolio(newPortfolio);
-            return newPortfolio;
-          });
-        }
+          if (!hasChanged) return prev;
+          const newPortfolio = {
+            ...prev,
+            positions: updatedPositions,
+            freeMargin: Math.max(0, prev.balance - prev.marginUsed + totalOpenPnl),
+          };
+          BrowserStorageManager.savePortfolio(newPortfolio);
+          return newPortfolio;
+        });
       }
     } catch (e) {
       console.error('Market fetch error:', e);
@@ -217,10 +202,14 @@ export default function Home() {
     }
   }, []);
 
-  // 4. Trigger 5-Agent Swarm (Technical + Fundamental + Forex + News + Risk)
+  // 4. Trigger 5-Agent Swarm (calibrating strictly against Canonical Chart Feed)
   const triggerSwarm = useCallback(async (pair: CurrencyPair, tf: TimeFrame, currentCandles?: Candle[]) => {
     setIsAnalyzing(true);
     try {
+      const chartCandles = currentCandles && currentCandles.length > 0 
+        ? currentCandles 
+        : LiveMarketFeedManager.getCanonicalCandles(pair, tf);
+
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -228,22 +217,23 @@ export default function Home() {
           pair,
           timeframe: tf,
           riskConfig: riskConfigRef.current,
-          candles: currentCandles,
+          candles: chartCandles.length > 0 ? chartCandles : undefined,
         }),
       });
       const json = await res.json();
       if (json.success && json.data) {
-        const result: SwarmConsensusResult = json.data;
-        setConsensus(result);
-        BrowserStorageManager.saveConsensusResult(result);
+        const livePrice = LiveMarketFeedManager.getCanonicalPrice(pair);
+        const calibratedResult = LiveMarketFeedManager.calibrateSwarmConsensus(json.data, livePrice);
+        setConsensus(calibratedResult);
+        BrowserStorageManager.saveConsensusResult(calibratedResult);
 
         // Autopilot Execution Check
-        if (executionModeRef.current === 'FULL_AUTOPILOT' && result.executionSignal.authorized) {
+        if (executionModeRef.current === 'FULL_AUTOPILOT' && calibratedResult.executionSignal.authorized) {
           const currentPositions = portfolioRef.current.positions;
-          const alreadyOpen = currentPositions.some(p => p.symbol === result.pair);
+          const alreadyOpen = currentPositions.some(p => p.symbol === calibratedResult.pair);
           
           if (!alreadyOpen) {
-            const signal = result.executionSignal;
+            const signal = calibratedResult.executionSignal;
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
             const autoPos: Position = {
@@ -251,8 +241,8 @@ export default function Home() {
               symbol: signal.symbol,
               type: signal.orderType === 'BUY_MARKET' ? 'BUY' : 'SELL',
               lots: signal.lots,
-              entryPrice: signal.entry,
-              currentPrice: signal.entry,
+              entryPrice: livePrice,
+              currentPrice: livePrice,
               stopLoss: signal.stopLoss,
               takeProfit: signal.takeProfit,
               openTime: timeStr,
@@ -273,7 +263,7 @@ export default function Home() {
               return updated;
             });
 
-            showNotification(`AUTOPILOT TRIGGERED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} (Confluence: ${result.confluenceGrade})`);
+            showNotification(`AUTOPILOT TRIGGERED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} @ ${livePrice} (Confluence: ${calibratedResult.confluenceGrade})`);
           }
         }
       }
@@ -300,13 +290,46 @@ export default function Home() {
     };
   }, [selectedPair, timeframe, fetchMarketData, triggerSwarm, fetchOpportunities]);
 
-  // 6. Real-time background scraper polling timer (every 25 seconds)
+  // 6. Unidirectional Live Market Data Feed Engine (Single Source of Truth)
   useEffect(() => {
-    const timer = setInterval(() => {
-      fetchMarketData(selectedPair, timeframe);
-    }, 25000);
-    return () => clearInterval(timer);
-  }, [selectedPair, timeframe, fetchMarketData]);
+    // Start authoritative real-time live ticker on the chart feed (every 1.5s)
+    const stopTicker = LiveMarketFeedManager.startLiveFeed(selectedPair, timeframe, 1500);
+
+    const unsubscribe = LiveMarketFeedManager.subscribe((event) => {
+      if (event.pair !== selectedPair || event.timeframe !== timeframe) return;
+
+      // 1. Update chart candles with live tick in-place (visual rendering remains pristine)
+      setCandles(event.candles);
+
+      // 2. Synchronize TickerBar rates
+      setRates(prevRates => LiveMarketFeedManager.synchronizeRates(prevRates, selectedPair, event.livePrice));
+
+      // 3. Dynamically calibrate Swarm Matrix & Unified Decision Banner
+      setConsensus(prev => prev ? LiveMarketFeedManager.calibrateSwarmConsensus(prev, event.livePrice) : null);
+
+      // 4. Dynamically calibrate active position values and P&L
+      setPortfolio(prev => {
+        const { positions: updatedPositions, totalOpenPnl, hasChanged } = 
+          LiveMarketFeedManager.calibratePositions(prev.positions, (sym) => {
+            if (sym === selectedPair) return event.livePrice;
+            return LiveMarketFeedManager.getCanonicalPrice(sym);
+          });
+        if (!hasChanged) return prev;
+        const updated = {
+          ...prev,
+          positions: updatedPositions,
+          freeMargin: Math.max(0, prev.balance - prev.marginUsed + totalOpenPnl),
+        };
+        BrowserStorageManager.savePortfolio(updated);
+        return updated;
+      });
+    });
+
+    return () => {
+      unsubscribe();
+      stopTicker();
+    };
+  }, [selectedPair, timeframe]);
 
   // Handle Pair Switch
   const handleSelectPair = (newPair: CurrencyPair) => {
@@ -376,10 +399,11 @@ export default function Home() {
     }
   };
 
-  // Execute Approved Trade into Simulated Portfolio (stored in local browser)
+  // Execute Approved Trade into Simulated Portfolio (strictly calibrated against live chart feed)
   const handleExecuteTrade = () => {
     if (!consensus || !consensus.executionSignal.authorized) return;
     const signal = consensus.executionSignal;
+    const liveEntryPrice = LiveMarketFeedManager.getCanonicalPrice(signal.symbol);
 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -389,8 +413,8 @@ export default function Home() {
       symbol: signal.symbol,
       type: signal.orderType === 'BUY_MARKET' ? 'BUY' : 'SELL',
       lots: signal.lots,
-      entryPrice: signal.entry,
-      currentPrice: signal.entry,
+      entryPrice: liveEntryPrice,
+      currentPrice: liveEntryPrice,
       stopLoss: signal.stopLoss,
       takeProfit: signal.takeProfit,
       openTime: timeStr,
@@ -416,16 +440,26 @@ export default function Home() {
     // 📓 Persistent Trading Journal: Auto-log entry credentials, stop-loss ratios & trade parameters
     JournalStorageManager.recordTradeOpen(newPosition, consensus, executionMode);
 
-    showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${signal.entry}`);
+    showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${liveEntryPrice}`);
   };
 
-  // Close Position & Save to Local Browser Storage
+  // Close Position & Save to Local Browser Storage (calibrated against live chart feed)
   const handleClosePosition = (posId: string) => {
     const pos = portfolio.positions.find(p => p.id === posId);
     if (!pos) return;
 
+    const liveExitPrice = LiveMarketFeedManager.getCanonicalPrice(pos.symbol);
+    const isJpy = pos.symbol.includes('JPY');
+    const isGold = pos.symbol === 'XAU/USD';
+    const pipVal = PIP_VALUES[pos.symbol] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
+    const pipDollar = 10;
+    const pipDiff = pos.type === 'BUY'
+      ? (liveExitPrice - pos.entryPrice) / pipVal
+      : (pos.entryPrice - liveExitPrice) / pipVal;
+
+    const finalPnl = Number((pipDiff * pipDollar * pos.lots).toFixed(2));
     const updatedPositions = portfolio.positions.filter(p => p.id !== posId);
-    const newBalance = Number((portfolio.balance + pos.pnl).toFixed(2));
+    const newBalance = Number((portfolio.balance + finalPnl).toFixed(2));
     const marginFreed = (pos.lots * 100000) / 30;
     const newMarginUsed = Math.max(0, portfolio.marginUsed - marginFreed);
 
@@ -438,15 +472,15 @@ export default function Home() {
       type: pos.type,
       lots: pos.lots,
       entryPrice: pos.entryPrice,
-      exitPrice: pos.currentPrice,
+      exitPrice: liveExitPrice,
       stopLoss: pos.stopLoss,
       takeProfit: pos.takeProfit,
       openTime: pos.openTime,
       closeTime: timeStr,
-      pnl: pos.pnl,
-      outcome: (pos.pnl > 0 ? 'WIN' : pos.pnl < 0 ? 'LOSS' : 'SCRATCH') as 'WIN' | 'LOSS' | 'SCRATCH',
+      pnl: finalPnl,
+      outcome: (finalPnl > 0 ? 'WIN' : finalPnl < 0 ? 'LOSS' : 'SCRATCH') as 'WIN' | 'LOSS' | 'SCRATCH',
       riskManagerVerdict: 'APPROVED' as const,
-      strategyNotes: `Position closed at ${pos.currentPrice}. Realized P&L: $${pos.pnl.toFixed(2)}.`,
+      strategyNotes: `Position closed at ${liveExitPrice}. Realized P&L: $${finalPnl.toFixed(2)}.`,
     };
 
     const updatedPortfolio = {
@@ -463,9 +497,9 @@ export default function Home() {
     BrowserStorageManager.savePortfolio(updatedPortfolio);
 
     // 📓 Persistent Trading Journal: Auto-log trade outcome, exit price & realized P&L
-    JournalStorageManager.recordTradeClose(pos.id, pos.currentPrice, pos.pnl);
+    JournalStorageManager.recordTradeClose(pos.id, liveExitPrice, finalPnl);
 
-    showNotification(`CLOSED POSITION: ${pos.symbol} | Realized P&L: ${pos.pnl >= 0 ? '+' : ''}$${pos.pnl.toFixed(2)}`);
+    showNotification(`CLOSED POSITION: ${pos.symbol} @ ${liveExitPrice} | Realized P&L: ${finalPnl >= 0 ? '+' : ''}$${finalPnl.toFixed(2)}`);
   };
 
   const triggeredRules: KnowledgeRule[] = consensus ? consensus.knowledgeSummary.topConfluenceRules : [];

@@ -97,6 +97,21 @@ export class RiskManagerAgent extends BaseAgent {
 
     // 4. Invalidation / Stop Loss & Target Calculation
     const isJpy = pair.includes('JPY');
+    const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY' || 
+                     pair === 'RELIANCE' || pair === 'TCS' || 
+                     pair === 'HDFC BANK' || pair === 'INFY';
+    const isGold = pair === 'XAU/USD';
+    const isSilver = pair === 'XAG/USD';
+    const isPlatinum = pair === 'XPT/USD';
+    const isCopper = pair === 'COPPER';
+    const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
+    const isRupee = pair.includes('/INR');
+
+    let decimals = 5;
+    if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
+    else if (isSilver || isJpy || isRupee) decimals = 3;
+    else if (isCopper) decimals = 4;
+
     const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
 
     let stopDistance = Math.abs(currentPrice - technical.suggestedStopLoss);
@@ -108,16 +123,16 @@ export class RiskManagerAgent extends BaseAgent {
     }
 
     const calculatedStopLoss = proposedAction === 'BUY'
-      ? Number((currentPrice - stopDistance).toFixed(isJpy ? 3 : 5))
-      : Number((currentPrice + stopDistance).toFixed(isJpy ? 3 : 5));
+      ? Number((currentPrice - stopDistance).toFixed(decimals))
+      : Number((currentPrice + stopDistance).toFixed(decimals));
 
     const targetDistance = stopDistance * 2.2;
     const calculatedTakeProfit1 = proposedAction === 'BUY'
-      ? Number((currentPrice + targetDistance).toFixed(isJpy ? 3 : 5))
-      : Number((currentPrice - targetDistance).toFixed(isJpy ? 3 : 5));
+      ? Number((currentPrice + targetDistance).toFixed(decimals))
+      : Number((currentPrice - targetDistance).toFixed(decimals));
     const calculatedTakeProfit2 = proposedAction === 'BUY'
-      ? Number((currentPrice + targetDistance * 1.5).toFixed(isJpy ? 3 : 5))
-      : Number((currentPrice - targetDistance * 1.5).toFixed(isJpy ? 3 : 5));
+      ? Number((currentPrice + targetDistance * 1.5).toFixed(decimals))
+      : Number((currentPrice - targetDistance * 1.5).toFixed(decimals));
 
     const riskRewardRatio = Number((targetDistance / stopDistance).toFixed(2));
 

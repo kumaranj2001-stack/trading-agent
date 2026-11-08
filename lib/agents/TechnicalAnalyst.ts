@@ -126,14 +126,30 @@ export class TechnicalAnalystAgent extends BaseAgent {
       alignment: score > 30 ? 'PERFECT_BULLISH' : score < -30 ? 'PERFECT_BEARISH' : 'MIXED_CHOP',
     };
 
+    const isJpy = pair.includes('JPY');
+    const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY' || 
+                     pair === 'RELIANCE' || pair === 'TCS' || 
+                     pair === 'HDFC BANK' || pair === 'INFY';
+    const isGold = pair === 'XAU/USD';
+    const isSilver = pair === 'XAG/USD';
+    const isPlatinum = pair === 'XPT/USD';
+    const isCopper = pair === 'COPPER';
+    const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
+    const isRupee = pair.includes('/INR');
+
+    let decimals = 5;
+    if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
+    else if (isSilver || isJpy || isRupee) decimals = 3;
+    else if (isCopper) decimals = 4;
+
     const atr = indicators.atr;
     let suggestedEntry = currentPrice;
     let suggestedStopLoss = bias.includes('BUY') 
-      ? Number((currentPrice - 1.5 * atr).toFixed(5)) 
-      : Number((currentPrice + 1.5 * atr).toFixed(5));
+      ? Number((currentPrice - 1.5 * atr).toFixed(decimals)) 
+      : Number((currentPrice + 1.5 * atr).toFixed(decimals));
     let suggestedTakeProfit = bias.includes('BUY')
-      ? Number((currentPrice + 3.0 * atr).toFixed(5))
-      : Number((currentPrice - 3.0 * atr).toFixed(5));
+      ? Number((currentPrice + 3.0 * atr).toFixed(decimals))
+      : Number((currentPrice - 3.0 * atr).toFixed(decimals));
 
     const thesis = `Technical matrix validates ${bias.replace('_', ' ')} posture with algorithmic score ${score > 0 ? '+' : ''}${score}/100. Matched ${knowledgeMatch.matchedCount} institutional rules from 500+ Technical Knowledge Base. SMC Structure: ${smc.marketStructure} with ${smc.liquiditySweep.detected ? `${smc.liquiditySweep.type} sweep confirmed` : 'clean flow'}. Primary support: ${indicators.supportLevels[0]}, Resistance: ${indicators.resistanceLevels[0]}. Top rule: "${knowledgeMatch.topRules[0]?.ruleName || 'Standard Momentum'}".`;
 
