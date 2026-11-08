@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { TrendingUp, TrendingDown, Coins } from 'lucide-react';
-import { CurrencyPair, MarketSegment } from '@/lib/types';
+import { TrendingUp, TrendingDown, Coins, Snowflake, Lock } from 'lucide-react';
+import { CurrencyPair, MarketSegment, MarketSessionInfo } from '@/lib/types';
 import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES } from '@/lib/marketData';
 
 interface TickerItem {
@@ -18,13 +18,17 @@ interface TickerBarProps {
   selectedPair: CurrencyPair;
   onSelectPair: (p: CurrencyPair) => void;
   marketSegment: MarketSegment;
+  isMarketFrozen?: boolean;
+  sessionInfo?: MarketSessionInfo | null;
 }
 
 export const TickerBar: React.FC<TickerBarProps> = ({ 
   rates, 
   selectedPair, 
   onSelectPair,
-  marketSegment
+  marketSegment,
+  isMarketFrozen = false,
+  sessionInfo = null,
 }) => {
   const isIndian = marketSegment === 'INDIAN_MARKET';
   const isMetals = marketSegment === 'METALS_COMMODITIES';
@@ -38,9 +42,17 @@ export const TickerBar: React.FC<TickerBarProps> = ({
   return (
     <div className="bg-terminal-950 border-b border-terminal-border/80 px-3 sm:px-4 py-2 overflow-x-auto scrollbar-none touch-pan-x">
       <div className="flex items-center gap-2.5 min-w-max">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider mr-2 flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          {isIndian ? '🇮🇳 NSE/BSE LIVE' : isMetals ? '🏆 PRECIOUS METALS & CRUDE' : '🌐 GLOBAL FX RATES'}
+        <span className={`text-xs font-semibold uppercase tracking-wider mr-2 flex items-center gap-1.5 ${
+          isMarketFrozen ? 'text-sky-300' : 'text-slate-400'
+        }`}>
+          {isMarketFrozen ? (
+            <Snowflake className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+          ) : (
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          )}
+          {isMarketFrozen
+            ? `${isIndian ? '🇮🇳 NSE' : isMetals ? '🏆 COMEX' : '🌐 FX'} CLOSED • STATE FROZEN`
+            : isIndian ? '🇮🇳 NSE/BSE LIVE' : isMetals ? '🏆 PRECIOUS METALS & CRUDE' : '🌐 GLOBAL FX RATES'}
         </span>
         {displayRates.map((item) => {
           const isSelected = item.pair === selectedPair;
@@ -75,8 +87,9 @@ export const TickerBar: React.FC<TickerBarProps> = ({
                   : 'bg-terminal-900/60 border-terminal-border hover:border-slate-500 hover:bg-terminal-800/50'
               }`}
             >
-              <span className={`font-bold ${isSelected ? 'text-cyan-400' : 'text-slate-200'}`}>
+              <span className={`font-bold flex items-center gap-1 ${isSelected ? 'text-cyan-400' : 'text-slate-200'}`}>
                 {item.pair}
+                {isMarketFrozen && <Lock className="w-2.5 h-2.5 text-sky-400/80" />}
               </span>
               <span className="text-white font-semibold">
                 {formatDisplayPrice()}

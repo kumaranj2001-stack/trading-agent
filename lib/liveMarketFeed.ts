@@ -1,5 +1,6 @@
 import { Candle, CurrencyPair, MarketSegment, Position, SwarmConsensusResult, TimeFrame } from './types';
 import { BASE_PRICES, PIP_VALUES, getMarketSegmentForSymbol } from './marketData';
+import { MarketSessionManager } from './marketSessionManager';
 
 export interface MarketFeedTickEvent {
   pair: CurrencyPair;
@@ -9,6 +10,7 @@ export interface MarketFeedTickEvent {
   candles: Candle[];
   change24h: number;
   timestamp: number;
+  isFrozen?: boolean;
 }
 
 export type FeedListener = (event: MarketFeedTickEvent) => void;
@@ -101,6 +103,20 @@ export class LiveMarketFeedManager {
     const now = Date.now();
     const freshnessLatencyMs = Math.max(0, now - this.lastTickTimestamp);
 
+    // ❄️ Market Closure & Global State Freeze Guardrail:
+    const session = MarketSessionManager.getMarketSessionInfo(symbol);
+    if (session.isFrozen) {
+      return {
+        valid: false,
+        livePrice,
+        proposedPrice,
+        deviationPercent: 0,
+        isWithinTolerance: false,
+        freshnessLatencyMs,
+        error: `GLOBAL STATE FREEZE ACTIVE: Trading on ${symbol} is locked (${session.statusLabel}). All background workers and execution figures are frozen until market resumes (${session.nextOpenFormatted}).`,
+      };
+    }
+
     if (!proposedPrice || proposedPrice <= 0 || Number.isNaN(proposedPrice)) {
       return {
         valid: false,
@@ -167,7 +183,44 @@ export class LiveMarketFeedManager {
       this.activeTicker = null;
     }
 
+    const session = MarketSessionManager.getMarketSessionInfo(pair);
+
+    // ❄️ Global State Freeze: If market is closed, immediately lock state and suppress ticker jitter
+    if (session.isFrozen) {
+      const key = `${this.currentPair}_${this.currentTimeframe}`;
+      const candles = this.canonicalCandles.get(key) || [];
+      if (candles.length > 0) {
+        const lastCandle = candles[candles.length - 1];
+        const lockedPrice = lastCandle.close;
+        MarketSessionManager.setFrozenPrice(this.currentPair, lockedPrice);
+        const base = BASE_PRICES[this.currentPair] || lockedPrice;
+        const change24h = Number((((lockedPrice - base) / base) * 100).toFixed(2));
+        
+        const frozenEvent: MarketFeedTickEvent = {
+          pair: this.currentPair,
+          timeframe: this.currentTimeframe,
+          livePrice: lockedPrice,
+          candle: lastCandle,
+          candles,
+          change24h,
+          timestamp: this.lastTickTimestamp,
+          isFrozen: true,
+        };
+        this.listeners.forEach(fn => fn(frozenEvent));
+      }
+
+      return () => {
+        this.stopLiveFeed();
+      };
+    }
+
     this.activeTicker = setInterval(() => {
+      // In case session transitions to closed during the interval
+      if (MarketSessionManager.isMarketFrozen(this.currentPair)) {
+        this.stopLiveFeed();
+        return;
+      }
+
       const key = `${this.currentPair}_${this.currentTimeframe}`;
       const candles = this.canonicalCandles.get(key);
       if (!candles || candles.length === 0) return;
@@ -361,6 +414,16 @@ export class LiveMarketFeedManager {
     let totalOpenPnl = 0;
 
     const updatedPositions = positions.map(pos => {
+      // ❄️ If market for this symbol is closed/frozen, lock price to official close and suppress phantom P&L recalculations
+      if (MarketSessionManager.isMarketFrozen(pos.symbol)) {
+        const frozenPrice = MarketSessionManager.getFrozenPrice(pos.symbol) || pos.currentPrice;
+        totalOpenPnl += pos.pnl;
+        return {
+          ...pos,
+          currentPrice: frozenPrice,
+        };
+      }
+
       const livePrice = typeof livePriceMap === 'function' 
         ? livePriceMap(pos.symbol) 
         : livePriceMap.get(pos.symbol);

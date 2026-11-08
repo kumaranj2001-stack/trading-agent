@@ -38,11 +38,16 @@ import { HistoricalJournalDesk } from '@/components/HistoricalJournalDesk';
 import { JournalStorageManager } from '@/lib/journalStorage';
 import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { MarketSessionInfo } from '@/lib/types';
+import { MarketSessionManager } from '@/lib/marketSessionManager';
+import { MarketCloseFreezeBanner } from '@/components/MarketCloseFreezeBanner';
 
 export default function Home() {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>('XAU/USD');
   const [marketSegment, setMarketSegment] = useState<MarketSegment>('METALS_COMMODITIES');
   const [timeframe, setTimeframe] = useState<TimeFrame>('1h');
+  const [sessionInfo, setSessionInfo] = useState<MarketSessionInfo | null>(null);
+  const [isMarketFrozen, setIsMarketFrozen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'terminal' | 'debate' | 'backtest' | 'architecture'>('terminal');
   
   // Market Data state
@@ -143,12 +148,39 @@ export default function Home() {
     };
   }, []);
 
+  // Automated Market Close & Global State Freeze Event Listener
+  useEffect(() => {
+    const currentInfo = MarketSessionManager.getMarketSessionInfo(selectedPair);
+    setSessionInfo(currentInfo);
+    setIsMarketFrozen(currentInfo.isFrozen);
+
+    const unsubscribe = MarketSessionManager.subscribe((event) => {
+      if (event.pair === selectedPair) {
+        setSessionInfo(event.sessionInfo);
+        setIsMarketFrozen(event.isFrozen);
+
+        if (event.type === 'MARKET_CLOSED' || event.type === 'GLOBAL_FREEZE') {
+          showNotification(`❄️ GLOBAL STATE FREEZE: ${event.pair} market closed. Pricing drift suppressed.`);
+        } else if (event.type === 'MARKET_OPENED' || event.type === 'RESUME_TRADING') {
+          showNotification(`🟢 TRADING RESUMED: ${event.pair} session opened.`);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedPair]);
+
   // 2. Fetch market data & rates (calibrating against Live Chart Feed as Single Source of Truth)
   const fetchMarketData = useCallback(async (pair: CurrencyPair, tf: TimeFrame) => {
     try {
       const res = await fetch(`/api/market?pair=${encodeURIComponent(pair)}&timeframe=${tf}&count=60`);
       const json = await res.json();
       if (json.success && json.data) {
+        if (json.data.sessionInfo) {
+          setSessionInfo(json.data.sessionInfo);
+          setIsMarketFrozen(json.data.sessionInfo.isFrozen);
+        }
+
         const incomingCandles: Candle[] = json.data.candles || [];
         LiveMarketFeedManager.setCanonicalFeed(pair, tf, incomingCandles);
         setCandles(incomingCandles);
@@ -550,6 +582,14 @@ export default function Home() {
         executionMode={executionMode}
         onToggleExecutionMode={handleToggleExecutionMode}
         confluenceGrade={consensus?.confluenceGrade}
+        isMarketFrozen={isMarketFrozen}
+        sessionInfo={sessionInfo}
+        onToggleFreeze={() => {
+          const next = !isMarketFrozen;
+          MarketSessionManager.setManualFreeze(next);
+          setIsMarketFrozen(next);
+          showNotification(next ? '❄️ Global State Freeze activated.' : '🟢 Trading resumed. Global State Unfrozen.');
+        }}
       />
 
       {/* Live Ticker Bar (Forex, Metals & Commodities, or Indian Markets) */}
@@ -558,10 +598,22 @@ export default function Home() {
         selectedPair={selectedPair}
         onSelectPair={handleSelectPair}
         marketSegment={marketSegment}
+        isMarketFrozen={isMarketFrozen}
+        sessionInfo={sessionInfo}
       />
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 space-y-4">
+        {/* ❄️ Global State Freeze upon Market Closure Banner */}
+        <MarketCloseFreezeBanner
+          sessionInfo={sessionInfo}
+          onToggleManualOverride={(override) => {
+            const frozen = !override && MarketSessionManager.isMarketFrozen(selectedPair);
+            setIsMarketFrozen(frozen);
+            showNotification(frozen ? '❄️ State re-frozen.' : '🟢 State temporarily unfrozen for simulation.');
+          }}
+        />
+
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
           <div className="space-y-4">
@@ -572,6 +624,8 @@ export default function Home() {
                 onExecuteTrade={handleExecuteTrade}
                 onOpenNewsWire={() => setIsNewsWireOpen(true)}
                 onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
+                isMarketFrozen={isMarketFrozen}
+                sessionInfo={sessionInfo}
               />
             )}
 

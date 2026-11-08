@@ -287,22 +287,45 @@ export const CURRENCY_STRENGTH_INDEX: CurrencyStrength[] = [
   { currency: 'CHF', score: 7.1, trend: 'STRENGTHENING' },
 ];
 
-export function getActiveTradingSession(): {
-  session: 'TOKYO' | 'LONDON' | 'NEW_YORK' | 'LONDON_NY_OVERLAP' | 'NSE_INDIA' | 'OFF_HOURS';
+export function getActiveTradingSession(targetDate: Date = new Date()): {
+  session: 'TOKYO' | 'LONDON' | 'NEW_YORK' | 'LONDON_NY_OVERLAP' | 'NSE_INDIA' | 'OFF_HOURS' | 'WEEKEND_FREEZE';
   liquidityRating: 'OPTIMAL' | 'MODERATE' | 'LOW' | 'THIN';
   volatilityExpected: 'HIGH' | 'NORMAL' | 'SUBDUED';
+  isMarketClosed?: boolean;
 } {
-  const currentUtcHour = new Date().getUTCHours();
-  const currentUtcMinute = new Date().getUTCMinutes();
-  const istMinutes = currentUtcHour * 60 + currentUtcMinute + 330;
-  const istHour = Math.floor((istMinutes / 60) % 24);
+  const currentUtcDay = targetDate.getUTCDay();
+  const currentUtcHour = targetDate.getUTCHours();
+  const currentUtcMinute = targetDate.getUTCMinutes();
+  const currentUtcMinutes = currentUtcHour * 60 + currentUtcMinute;
 
-  // NSE Indian hours: 09:15 to 15:30 IST (03:45 to 10:00 UTC)
-  if (istHour >= 9 && istHour <= 15) {
+  const istMinutes = currentUtcMinutes + 330;
+  const istDay = (currentUtcDay + Math.floor(istMinutes / 1440)) % 7;
+  const istHour = Math.floor((istMinutes / 60) % 24);
+  const istMinute = istMinutes % 60;
+  const istTotal = istHour * 60 + istMinute;
+
+  // Weekend check: Friday 22:00 UTC to Sunday 22:00 UTC
+  const isWeekend = 
+    (currentUtcDay === 5 && currentUtcMinutes >= 22 * 60) || // Friday after 22:00 UTC
+    (currentUtcDay === 6) ||                                 // All Saturday
+    (currentUtcDay === 0 && currentUtcMinutes < 22 * 60);    // Sunday before 22:00 UTC
+
+  if (isWeekend) {
+    return {
+      session: 'WEEKEND_FREEZE',
+      liquidityRating: 'THIN',
+      volatilityExpected: 'SUBDUED',
+      isMarketClosed: true,
+    };
+  }
+
+  // NSE Indian hours: Monday-Friday 09:15 to 15:30 IST (03:45 to 10:00 UTC)
+  if (istDay >= 1 && istDay <= 5 && istTotal >= (9 * 60 + 15) && istTotal <= (15 * 60 + 30)) {
     return {
       session: 'NSE_INDIA',
       liquidityRating: 'OPTIMAL',
       volatilityExpected: 'HIGH',
+      isMarketClosed: false,
     };
   }
 
@@ -311,30 +334,35 @@ export function getActiveTradingSession(): {
       session: 'LONDON_NY_OVERLAP',
       liquidityRating: 'OPTIMAL',
       volatilityExpected: 'HIGH',
+      isMarketClosed: false,
     };
   } else if (currentUtcHour >= 8 && currentUtcHour < 13) {
     return {
       session: 'LONDON',
       liquidityRating: 'OPTIMAL',
       volatilityExpected: 'HIGH',
+      isMarketClosed: false,
     };
   } else if (currentUtcHour > 16 && currentUtcHour <= 21) {
     return {
       session: 'NEW_YORK',
       liquidityRating: 'MODERATE',
       volatilityExpected: 'NORMAL',
+      isMarketClosed: false,
     };
   } else if (currentUtcHour >= 0 && currentUtcHour < 8) {
     return {
       session: 'TOKYO',
       liquidityRating: 'MODERATE',
       volatilityExpected: 'NORMAL',
+      isMarketClosed: false,
     };
   } else {
     return {
       session: 'OFF_HOURS',
       liquidityRating: 'THIN',
       volatilityExpected: 'SUBDUED',
+      isMarketClosed: false,
     };
   }
 }

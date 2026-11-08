@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { BASE_PRICES, CURRENCY_STRENGTH_INDEX, getActiveTradingSession, MACRO_ECONOMIC_CALENDAR } from '@/lib/marketData';
 import { CurrencyPair, TimeFrame } from '@/lib/types';
 import { RealMarketDataService } from '@/lib/realMarketDataService';
+import { MarketSessionManager } from '@/lib/marketSessionManager';
 
 export const runtime = 'nodejs';
 
@@ -29,6 +30,12 @@ export async function GET(req: NextRequest) {
     // 4. Ingest real-time live OHLCV bar data from Unified SSOT Market Stream
     const { candles, livePrice, ssotVerified } = await RealMarketDataService.fetchRealLiveCandles(pair, timeframe, count);
     const session = getActiveTradingSession();
+    const sessionInfo = MarketSessionManager.getMarketSessionInfo(pair);
+
+    // ❄️ Global State Freeze: If market is closed, lock canonical close price
+    if (sessionInfo.isFrozen) {
+      MarketSessionManager.setFrozenPrice(pair, livePrice);
+    }
 
     // 5. Ingest all live rates strictly calibrated with the active pair's verified price
     const rates = await RealMarketDataService.fetchAllLiveRates(pair, livePrice);
@@ -42,6 +49,8 @@ export async function GET(req: NextRequest) {
         rates,
         currencyStrength: CURRENCY_STRENGTH_INDEX,
         activeSession: session,
+        sessionInfo,
+        isMarketFrozen: sessionInfo.isFrozen,
         calendar: MACRO_ECONOMIC_CALENDAR,
         ssotVerification: {
           provider: 'UNIFIED_BROKER_BENCHMARK_STREAM',
@@ -50,6 +59,9 @@ export async function GET(req: NextRequest) {
           isParityGuaranteed: true,
           deviationTolerancePercent: 0.05,
           upstreamConnected: ssotVerified,
+          marketStatus: sessionInfo.status,
+          isFrozen: sessionInfo.isFrozen,
+          zeroDriftGuaranteed: true,
         },
       },
     });

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { SwarmConsensusResult } from '@/lib/types';
+import { MarketSessionInfo, SwarmConsensusResult } from '@/lib/types';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -14,7 +14,9 @@ import {
   ArrowRight,
   ShieldAlert,
   Flame,
-  Radio
+  Radio,
+  Snowflake,
+  Lock
 } from 'lucide-react';
 
 interface UnifiedDecisionBannerProps {
@@ -22,6 +24,8 @@ interface UnifiedDecisionBannerProps {
   onExecuteTrade?: () => void;
   onOpenNewsWire?: () => void;
   onOpenMonteCarlo?: () => void;
+  isMarketFrozen?: boolean;
+  sessionInfo?: MarketSessionInfo | null;
 }
 
 export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
@@ -29,6 +33,8 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   onExecuteTrade,
   onOpenNewsWire,
   onOpenMonteCarlo,
+  isMarketFrozen = false,
+  sessionInfo = null,
 }) => {
   const { unifiedDecision, agents, executionSignal, currentPrice, pair } = consensus;
   const isBuy = unifiedDecision.direction === 'BUY';
@@ -86,31 +92,49 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </span>
           </div>
 
-          {/* SSOT Live Stream Parity Guardrail Badge */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-[11px] font-mono text-emerald-300 shadow-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-            <span className="font-bold tracking-tight">SSOT LIVE FEED</span>
-            <span className="text-slate-400 hidden md:inline">| &lt;500ms • ±0.05% Tol</span>
-          </div>
+          {/* SSOT Live Stream Parity & State Freeze Guardrail Badge */}
+          {isMarketFrozen ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-950/70 border border-sky-500/50 text-[11px] font-mono text-sky-300 shadow-sm">
+              <Snowflake className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
+              <span className="font-bold tracking-tight">STATE FROZEN</span>
+              <span className="text-slate-400 hidden md:inline">| Zero Drift • Market Closed</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-[11px] font-mono text-emerald-300 shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="font-bold tracking-tight">SSOT LIVE FEED</span>
+              <span className="text-slate-400 hidden md:inline">| &lt;500ms • ±0.05% Tol</span>
+            </div>
+          )}
         </div>
 
         {/* Action Button */}
         <div className="flex items-center gap-2">
           {executionSignal.authorized && onExecuteTrade && (
-            <button
-              onClick={onExecuteTrade}
-              className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 ${
-                isBuy
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                  : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
-              }`}
-            >
-              <span>EXECUTE {executionSignal.orderType.replace('_', ' ')} ({executionSignal.lots} LOTS)</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            isMarketFrozen ? (
+              <div 
+                className="px-3.5 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 bg-sky-950/80 border border-sky-600/50 text-sky-300 cursor-not-allowed shadow-md"
+                title={`Market Closed (${sessionInfo?.statusLabel || 'State Frozen'}). Trading resumes: ${sessionInfo?.nextOpenFormatted || 'next session'}`}
+              >
+                <Lock className="w-3.5 h-3.5 text-sky-400" />
+                <span>EXECUTION FROZEN ({sessionInfo?.statusLabel || 'MARKET CLOSED'})</span>
+              </div>
+            ) : (
+              <button
+                onClick={onExecuteTrade}
+                className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 ${
+                  isBuy
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
+                }`}
+              >
+                <span>EXECUTE {executionSignal.orderType.replace('_', ' ')} ({executionSignal.lots} LOTS)</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            )
           )}
 
           {onOpenNewsWire && (

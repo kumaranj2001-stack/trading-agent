@@ -10,9 +10,11 @@ import {
   Coins,
   Sun,
   Moon,
-  ChevronDown
+  ChevronDown,
+  Snowflake,
+  Lock
 } from 'lucide-react';
-import { CurrencyPair, ExecutionMode, MarketSegment, TimeFrame } from '@/lib/types';
+import { CurrencyPair, ExecutionMode, MarketSegment, MarketSessionInfo, TimeFrame } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
 import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES } from '@/lib/marketData';
 
@@ -44,6 +46,9 @@ export interface HeaderProps {
   onToggleExecutionMode?: () => void;
   confluenceGrade?: string;
   knowledgeStats?: { tech: number; fund: number };
+  isMarketFrozen?: boolean;
+  sessionInfo?: MarketSessionInfo | null;
+  onToggleFreeze?: () => void;
 }
 
 const TIMEFRAMES: TimeFrame[] = ['1m', '5m', '15m', '1h', '4h', '1d'];
@@ -63,6 +68,9 @@ export const Header: React.FC<HeaderProps> = ({
   onTriggerAnalysis,
   activeSession,
   confluenceGrade,
+  isMarketFrozen = false,
+  sessionInfo = null,
+  onToggleFreeze,
 }) => {
   const pairs = marketSegment === 'INDIAN_MARKET' 
     ? INDIAN_MARKET_ASSETS 
@@ -121,10 +129,16 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 )}
               </div>
-              <div className="hidden xs:flex items-center gap-2 text-[11px] text-slate-400">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span className="truncate font-semibold">{activeSession}</span>
-                <span className="text-sky-400/90 font-medium">• 18 NEWS WIRES</span>
+              <div className="hidden xs:flex items-center gap-2 text-[11px]">
+                <span className={`inline-block w-2 h-2 rounded-full ${
+                  isMarketFrozen ? 'bg-sky-400' : 'bg-emerald-400 animate-pulse'
+                }`}></span>
+                <span className={`truncate font-semibold ${
+                  isMarketFrozen ? 'text-sky-300 font-bold' : 'text-slate-400'
+                }`}>
+                  {isMarketFrozen ? `❄️ STATE FROZEN (${sessionInfo?.statusLabel || activeSession})` : activeSession}
+                </span>
+                <span className="text-sky-400/90 font-medium hidden sm:inline">• 18 NEWS WIRES</span>
                 <span className="text-cyan-400/80 hidden md:inline font-medium">• 1,050+ RULES</span>
               </div>
             </div>
@@ -197,6 +211,24 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="xs:hidden">{isAnalyzing ? '...' : 'RUN'}</span>
             </button>
 
+            {onToggleFreeze && (
+              <button
+                onClick={onToggleFreeze}
+                className={`p-1.5 sm:p-2 rounded-lg border transition-colors flex items-center gap-1 shadow-sm ${
+                  isMarketFrozen 
+                    ? 'bg-sky-950/80 border-sky-500/60 text-sky-300 hover:bg-sky-900' 
+                    : 'bg-terminal-800 hover:bg-terminal-700 border-terminal-border text-slate-300'
+                }`}
+                title={isMarketFrozen ? 'Global State Frozen upon Market Close (Click to simulate live)' : 'Simulate Market Close State Freeze'}
+                aria-label="Toggle Global State Freeze"
+              >
+                <Snowflake className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isMarketFrozen ? 'text-sky-300 animate-pulse' : 'text-slate-400'}`} />
+                <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">
+                  {isMarketFrozen ? 'Frozen' : 'Live'}
+                </span>
+              </button>
+            )}
+
             {onOpenSettings && (
               <button
                 onClick={onOpenSettings}
@@ -257,7 +289,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400 pointer-events-none absolute right-0" />
               </div>
 
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ml-1" title="Live Market Stream Active" />
+              {isMarketFrozen ? (
+                <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-sky-950/90 text-sky-300 border border-sky-500/50 shrink-0 ml-1 flex items-center gap-1" title="Market Closed - Global State Frozen">
+                  <Snowflake className="w-2.5 h-2.5 text-sky-400" />
+                  FROZEN
+                </span>
+              ) : (
+                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ml-1" title="Live Market Stream Active" />
+              )}
             </div>
 
             {/* Dynamic Market Segment Badge */}

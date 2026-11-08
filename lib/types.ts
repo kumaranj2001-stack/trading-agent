@@ -35,6 +35,40 @@ export type CurrencyPair = TradableSymbol;
 
 export type TimeFrame = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
+export type MarketSessionStatus = 
+  | 'OPEN'
+  | 'CLOSED_WEEKEND'
+  | 'CLOSED_AFTER_HOURS'
+  | 'CLOSED_DAILY_MAINTENANCE'
+  | 'MANUAL_FREEZE';
+
+export interface MarketSessionInfo {
+  pair: CurrencyPair;
+  segment: MarketSegment;
+  isOpen: boolean;
+  isFrozen: boolean;
+  status: MarketSessionStatus;
+  statusLabel: string;
+  sessionName: string;
+  nextOpenDate?: string;
+  nextOpenFormatted: string;
+  secondsUntilOpen: number;
+  reason: string;
+  lastClosePrice: number;
+}
+
+export type MarketCloseEventType = 'MARKET_CLOSED' | 'MARKET_OPENED' | 'GLOBAL_FREEZE' | 'RESUME_TRADING';
+
+export interface MarketCloseEvent {
+  type: MarketCloseEventType;
+  pair: CurrencyPair;
+  segment: MarketSegment;
+  isFrozen: boolean;
+  frozenPrice: number;
+  sessionInfo: MarketSessionInfo;
+  timestamp: number;
+}
+
 export type SignalDirection = 
   | 'STRONG_BUY' 
   | 'BUY' 
@@ -222,9 +256,10 @@ export interface ForexAnalysis {
     interpretation: string;
   }[];
   activeTradingSession: {
-    session: 'TOKYO' | 'LONDON' | 'NEW_YORK' | 'LONDON_NY_OVERLAP' | 'NSE_INDIA' | 'OFF_HOURS';
+    session: 'TOKYO' | 'LONDON' | 'NEW_YORK' | 'LONDON_NY_OVERLAP' | 'NSE_INDIA' | 'OFF_HOURS' | 'WEEKEND_FREEZE';
     liquidityRating: 'OPTIMAL' | 'MODERATE' | 'LOW' | 'THIN';
     volatilityExpected: 'HIGH' | 'NORMAL' | 'SUBDUED';
+    isMarketClosed?: boolean;
   };
   thesis: string;
   timestamp: string;
