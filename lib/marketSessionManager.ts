@@ -339,6 +339,17 @@ export class MarketSessionManager {
           sessionInfo: info,
           timestamp: now.getTime(),
         });
+      } else if (info.isFrozen) {
+        // Emit dynamic real-time countdown tick so state management actively updates
+        this.emitEvent({
+          type: 'COUNTDOWN_TICK',
+          pair: symbol,
+          segment: info.segment,
+          isFrozen: true,
+          frozenPrice: info.lastClosePrice,
+          sessionInfo: info,
+          timestamp: now.getTime(),
+        });
       }
     }
   }

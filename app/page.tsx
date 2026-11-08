@@ -480,12 +480,7 @@ export default function Home() {
     BrowserStorageManager.savePortfolio(updatedPortfolio);
 
     // 📓 Persistent Trading Journal: Auto-log entry credentials, stop-loss ratios & trade parameters
-    const loggedEntry = JournalStorageManager.recordTradeOpen(newPosition, consensus, executionMode);
-    fetch('/api/journal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(loggedEntry),
-    }).catch(err => console.error('Failed to log trade to /api/journal:', err));
+    JournalStorageManager.recordTradeOpen(newPosition, consensus, executionMode);
 
     showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${liveEntryPrice}`);
   };
@@ -545,18 +540,6 @@ export default function Home() {
 
     // 📓 Persistent Trading Journal: Auto-log trade outcome, exit price & realized P&L
     JournalStorageManager.recordTradeClose(pos.id, liveExitPrice, finalPnl);
-    fetch('/api/journal', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: `jrn-${pos.id}`,
-        tradeId: pos.id,
-        symbol: pos.symbol,
-        exitPrice: liveExitPrice,
-        realizedPnl: finalPnl,
-        outcome: finalPnl >= 0 ? 'WIN' : 'LOSS',
-      }),
-    }).catch(err => console.error('Failed to update closed trade to /api/journal:', err));
 
     showNotification(`CLOSED POSITION: ${pos.symbol} @ ${liveExitPrice} | Realized P&L: ${finalPnl >= 0 ? '+' : ''}$${finalPnl.toFixed(2)}`);
   };
@@ -630,6 +613,14 @@ export default function Home() {
             const frozen = !override && MarketSessionManager.isMarketFrozen(selectedPair);
             setIsMarketFrozen(frozen);
             showNotification(frozen ? '❄️ State re-frozen.' : '🟢 State temporarily unfrozen for simulation.');
+          }}
+          onMarketResume={() => {
+            MarketSessionManager.setManualFreeze(false);
+            const fresh = MarketSessionManager.getMarketSessionInfo(selectedPair);
+            setSessionInfo(fresh);
+            setIsMarketFrozen(fresh.isFrozen);
+            showNotification(`🟢 TRADING RESUMED: ${selectedPair} session has opened. Global state unfrozen.`);
+            triggerSwarm(selectedPair, timeframe, candles);
           }}
         />
 
