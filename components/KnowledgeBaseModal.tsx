@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Database, CheckCircle, X } from 'lucide-react';
 import { KnowledgeRule } from '@/lib/types';
 import { TECHNICAL_KNOWLEDGE_BASE } from '@/lib/knowledge/technicalKnowledge';
@@ -19,12 +19,44 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'ALL' | 'TECHNICAL' | 'FUNDAMENTAL' | 'INDIAN_MARKET' | 'TRIGGERED'>('ALL');
+  const [apiRules, setApiRules] = useState<KnowledgeRule[] | null>(null);
+  const [apiStats, setApiStats] = useState<any>(null);
+  const [isLoadingApi, setIsLoadingApi] = useState<boolean>(false);
+
+  // Dynamic Backend API Integration
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchKnowledgeFromApi = async () => {
+      setIsLoadingApi(true);
+      try {
+        const catParam = activeTab === 'ALL' || activeTab === 'TRIGGERED' ? '' : `&category=${activeTab}`;
+        const queryParam = searchTerm.trim() ? `&query=${encodeURIComponent(searchTerm.trim())}` : '';
+        const res = await fetch(`/api/knowledge?${catParam}${queryParam}`);
+        const json = await res.json();
+        if (json.success && json.data) {
+          setApiRules(json.data.rules);
+          setApiStats(json.data.stats);
+        }
+      } catch (err) {
+        console.error('Failed to fetch knowledge via API:', err);
+      } finally {
+        setIsLoadingApi(false);
+      }
+    };
+
+    fetchKnowledgeFromApi();
+  }, [isOpen, activeTab, searchTerm]);
 
   const allRules: KnowledgeRule[] = useMemo(() => {
     return [...TECHNICAL_KNOWLEDGE_BASE, ...FUNDAMENTAL_KNOWLEDGE_BASE];
   }, []);
 
   const filteredRules = useMemo(() => {
+    // If backend API returned filtered rules, prioritize API result unless on TRIGGERED tab
+    if (activeTab !== 'TRIGGERED' && apiRules && apiRules.length > 0) {
+      return apiRules;
+    }
+
     return allRules.filter(rule => {
       // Tab filter
       if (activeTab === 'TECHNICAL' && rule.category !== 'TECHNICAL') return false;
@@ -45,7 +77,7 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
         rule.id.toLowerCase().includes(s)
       );
     });
-  }, [allRules, activeTab, searchTerm, activeTriggeredRules]);
+  }, [allRules, activeTab, searchTerm, activeTriggeredRules, apiRules]);
 
   if (!isOpen) return null;
 
@@ -63,6 +95,9 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
                 <h3 className="font-bold text-white text-sm sm:text-base truncate">Institutional Knowledge Base</h3>
                 <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                   {allRules.length} VERIFIED RULES
+                </span>
+                <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                  {isLoadingApi ? 'SYNCING API...' : 'REST API INTEGRATED'}
                 </span>
               </div>
               <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">

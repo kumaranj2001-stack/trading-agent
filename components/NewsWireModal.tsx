@@ -86,9 +86,21 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
   // 2. Initialize news data from all 18 sources and persistent memories
   useEffect(() => {
     if (isOpen) {
-      // Scrape news across all 18 sources
-      const allSourcesArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol as CurrencyPair);
-      setLiveArticles(allSourcesArticles);
+      // Scrape news across all 18 sources via API with fallback
+      fetch(`/api/news?symbol=${encodeURIComponent(symbol)}`)
+        .then(res => res.json())
+        .then(json => {
+          if (json.success && Array.isArray(json.data?.headlines) && json.data.headlines.length > 0) {
+            setLiveArticles(json.data.headlines);
+          } else {
+            const allSourcesArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol as CurrencyPair);
+            setLiveArticles(allSourcesArticles);
+          }
+        })
+        .catch(() => {
+          const allSourcesArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol as CurrencyPair);
+          setLiveArticles(allSourcesArticles);
+        });
 
       // Load persistent memories & narrative threads
       const loadedThreads = NewsMemoryStorageManager.getNarrativeThreads();

@@ -22,10 +22,36 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
   onRefreshScan,
 }) => {
   const [filterSegment, setFilterSegment] = useState<'ALL' | MarketSegment>('ALL');
+  const [localOpps, setLocalOpps] = useState<MarketScannerOpportunity[]>(opportunities);
+  const [isApiLoading, setIsApiLoading] = useState<boolean>(false);
+
+  const fetchScanFromApi = async (segment: 'ALL' | MarketSegment) => {
+    setIsApiLoading(true);
+    try {
+      const segParam = segment !== 'ALL' ? `?segment=${encodeURIComponent(segment)}` : '';
+      const res = await fetch(`/api/scanner${segParam}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data?.opportunities)) {
+        setLocalOpps(json.data.opportunities);
+      }
+    } catch (e) {
+      console.error('Failed to scan opportunities via API:', e);
+    } finally {
+      setIsApiLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (isOpen) {
+      fetchScanFromApi(filterSegment);
+    }
+  }, [isOpen, filterSegment]);
+
+  const activeOpps = localOpps.length > 0 ? localOpps : opportunities;
 
   if (!isOpen) return null;
 
-  const filteredOpps = opportunities.filter(o => {
+  const filteredOpps = activeOpps.filter(o => {
     if (filterSegment === 'ALL') return true;
     return o.segment === filterSegment;
   });
@@ -64,11 +90,14 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
 
           <div className="flex items-center gap-2 font-mono text-xs">
             <button
-              onClick={onRefreshScan}
-              disabled={isScanning}
+              onClick={() => {
+                fetchScanFromApi(filterSegment);
+                onRefreshScan();
+              }}
+              disabled={isScanning || isApiLoading}
               className="px-2.5 sm:px-3 py-1.5 rounded bg-terminal-800 hover:bg-terminal-700 text-cyan-400 border border-terminal-border transition-colors disabled:opacity-50"
             >
-              {isScanning ? 'SCANNING...' : 'REFRESH'}
+              {isScanning || isApiLoading ? 'SCANNING API...' : 'REFRESH'}
             </button>
             <button
               onClick={onClose}

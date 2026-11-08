@@ -64,14 +64,25 @@ export const DedicatedNewsTerminal: React.FC<DedicatedNewsTerminalProps> = ({
   }, [isOpen]);
 
   // 2. Initial load of all 18 sources and persistent daily memories
-  const loadData = () => {
-    const scraped = realTimeNewsEngine.scrapeNewsForSymbol(selectedPair);
-    setArticles(scraped);
-
-    // Save initial batch to memory storage
-    scraped.forEach((art) => {
-      NewsMemoryStorage.recordMemory(art);
-    });
+  const loadData = async () => {
+    try {
+      const res = await fetch(`/api/news?symbol=${encodeURIComponent(selectedPair)}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data?.headlines) && json.data.headlines.length > 0) {
+        setArticles(json.data.headlines);
+        json.data.headlines.forEach((art: any) => {
+          NewsMemoryStorage.recordMemory(art);
+        });
+      } else {
+        const scraped = realTimeNewsEngine.scrapeNewsForSymbol(selectedPair);
+        setArticles(scraped);
+        scraped.forEach((art) => NewsMemoryStorage.recordMemory(art));
+      }
+    } catch {
+      const scraped = realTimeNewsEngine.scrapeNewsForSymbol(selectedPair);
+      setArticles(scraped);
+      scraped.forEach((art) => NewsMemoryStorage.recordMemory(art));
+    }
 
     setThreads(NewsMemoryStorage.getChronologicalStoryThreads());
     setReflections(NewsMemoryStorage.generateDailyReflections());

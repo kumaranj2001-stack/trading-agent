@@ -35,7 +35,20 @@ export const HistoricalJournalDesk: React.FC<HistoricalJournalDeskProps> = ({
   onOpenJournalModal,
   journalAnalysis,
 }) => {
-  const analysis: HistoricalJournalAnalysis = JournalStorageManager.analyzeHistoricalJournals(selectedPair);
+  const [liveAnalysis, setLiveAnalysis] = React.useState<HistoricalJournalAnalysis | null>(null);
+
+  React.useEffect(() => {
+    fetch(`/api/journal?symbol=${encodeURIComponent(selectedPair)}`)
+      .then(res => res.json())
+      .then(json => {
+        if (json.success && json.data?.analysis) {
+          setLiveAnalysis(json.data.analysis);
+        }
+      })
+      .catch(e => console.error('Failed to query journal API:', e));
+  }, [selectedPair]);
+
+  const analysis: HistoricalJournalAnalysis = liveAnalysis || JournalStorageManager.analyzeHistoricalJournals(selectedPair);
   const symbolStats = analysis.symbolStats[selectedPair] || {
     trades: 0,
     wins: 0,

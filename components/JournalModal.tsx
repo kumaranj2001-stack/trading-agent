@@ -54,17 +54,44 @@ export const JournalModal: React.FC<JournalModalProps> = ({
   const [newLossReason, setNewLossReason] = useState<JournalLossCategory>('NONE_DISCIPLINED_WIN');
   const [newNotes, setNewNotes] = useState<string>('');
   const [newLesson, setNewLesson] = useState<string>('');
+  const [isApiLoading, setIsApiLoading] = useState<boolean>(false);
 
-  const loadData = () => {
-    const list = JournalStorageManager.getJournals();
-    setJournals(list);
+  const loadData = async () => {
+    setIsApiLoading(true);
+    try {
+      const symParam = filterSymbol !== 'ALL' ? `?symbol=${encodeURIComponent(filterSymbol)}` : '';
+      const res = await fetch(`/api/journal${symParam}`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data?.journals)) {
+        setJournals(json.data.journals);
+        setSyncStatus('Live REST API Synced • Central Cloud Database');
+      } else {
+        const list = JournalStorageManager.getJournals();
+        setJournals(list);
+      }
+    } catch {
+      const list = JournalStorageManager.getJournals();
+      setJournals(list);
+    } finally {
+      setIsApiLoading(false);
+    }
   };
 
   useEffect(() => {
     if (isOpen) {
       loadData();
     }
-  }, [isOpen]);
+  }, [isOpen, filterSymbol]);
+
+  const handleDeleteEntry = async (id: string) => {
+    JournalStorageManager.deleteJournal(id);
+    try {
+      await fetch(`/api/journal?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    } catch (e) {
+      console.error('Failed to delete via API:', e);
+    }
+    loadData();
+  };
 
   if (!isOpen) return null;
 
@@ -85,13 +112,13 @@ export const JournalModal: React.FC<JournalModalProps> = ({
     return true;
   });
 
-  const handleCreateSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const pipDiff = Math.abs(newEntryPrice - newStopLoss);
     const targetDiff = Math.abs(newTakeProfit - newEntryPrice);
     const rr = pipDiff > 0 ? Number((targetDiff / pipDiff).toFixed(2)) : 2.0;
 
-    JournalStorageManager.saveJournal({
+    const entryData: JournalEntry = {
       id: `jrn-${Date.now()}`,
       symbol: newSymbol,
       segment: newSymbol.includes('/') ? 'FOREX' : 'METALS_COMMODITIES',
@@ -121,11 +148,25 @@ export const JournalModal: React.FC<JournalModalProps> = ({
       lessonLearned: newLesson || undefined,
       notes: newNotes || 'Manual journal entry logged from Qri Trader terminal.',
       tags: ['Manual', newSymbol, newOrderType],
-    });
+    };
+
+    // Save locally
+    JournalStorageManager.saveJournal(entryData);
+
+    // Save via backend REST API
+    try {
+      await fetch('/api/journal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entryData),
+      });
+      setSyncStatus('Entry recorded to REST API & LocalStorage!');
+    } catch (e) {
+      console.error('Failed to post journal entry to API:', e);
+    }
 
     loadData();
     setIsCreating(false);
-    setSyncStatus('Entry recorded to LocalStorage & Firestore!');
   };
 
   const handleExport = () => {
@@ -455,12 +496,13 @@ export const JournalModal: React.FC<JournalModalProps> = ({
                     <th className="py-2.5 px-3">R:R & Lots</th>
                     <th className="py-2.5 px-3">Outcome & P&L</th>
                     <th className="py-2.5 px-3">Loss Attribution / Notes</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-terminal-border/60">
                   {filteredJournals.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500 font-sans">
+                      <td colSpan={7} className="py-8 text-center text-slate-500 font-sans">
                         No trade journal entries match the selected filters.
                       </td>
                     </tr>
@@ -527,6 +569,16 @@ export const JournalModal: React.FC<JournalModalProps> = ({
                           <p className="text-[11px] text-slate-300 font-sans line-clamp-1">
                             {item.notes || item.lessonLearned || item.keyReasons[0] || 'Logged trade'}
                           </p>
+                        </td>
+
+                        <td className="py-2.5 px-3 whitespace-nowrap text-right">
+                          <button
+                            onClick={() => handleDeleteEntry(item.id)}
+                            title="Delete entry from API & LocalStorage"
+                            className="p-1 rounded bg-terminal-900 hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 border border-terminal-border hover:border-rose-500/40 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     ))
