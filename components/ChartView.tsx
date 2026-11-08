@@ -35,7 +35,17 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const isJpy = pair.includes('JPY');
   const isIndianIndex = pair === 'NIFTY 50' || pair === 'BANK NIFTY';
   const isIndianStock = pair === 'RELIANCE' || pair === 'TCS' || pair === 'HDFC BANK' || pair === 'INFY';
-  const decimalCount = (isIndianIndex || isIndianStock) ? 2 : (isJpy || pair.includes('/INR') ? 3 : 5);
+  const isGold = pair === 'XAU/USD';
+  const isSilver = pair === 'XAG/USD';
+  const isPlatinum = pair === 'XPT/USD';
+  const isCopper = pair === 'COPPER';
+  const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
+  const isRupee = pair.includes('/INR');
+
+  let decimalCount = 5;
+  if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil) decimalCount = 2;
+  else if (isSilver || isJpy || isRupee) decimalCount = 3;
+  else if (isCopper) decimalCount = 4;
 
   const safeCandles = candles && candles.length > 0 ? candles : [];
   const closes = safeCandles.length > 0 ? safeCandles.map(c => c.close) : [1.0];

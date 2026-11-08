@@ -6,7 +6,8 @@ import {
   MonteCarloProjection, 
   RiskAssessment, 
   RiskVerdict, 
-  TechnicalAnalysis 
+  TechnicalAnalysis,
+  NewsAnalysis 
 } from '../types';
 import { PIP_VALUES } from '../marketData';
 import { JournalStorageManager } from '../journalStorage';
@@ -50,7 +51,8 @@ export class RiskManagerAgent extends BaseAgent {
     currentPrice: number,
     technical: TechnicalAnalysis,
     fundamental: FundamentalAnalysis,
-    forex: ForexAnalysis
+    forex: ForexAnalysis,
+    news?: NewsAnalysis
   ): RiskAssessment {
     const vetoReasons: string[] = [];
     const adjustmentsMade: string[] = [];
@@ -62,29 +64,43 @@ export class RiskManagerAgent extends BaseAgent {
       );
     }
 
-    // 2. Multi-Agent Directional Confluence
+    // 2. Multi-Agent Directional Confluence (5-Desk Integration)
     const biases = [technical.bias, fundamental.bias, forex.bias];
+    if (news) {
+      biases.push(news.bias);
+    }
     const buyVotes = biases.filter(b => b.includes('BUY')).length;
     const sellVotes = biases.filter(b => b.includes('SELL')).length;
 
     let proposedAction: 'BUY' | 'SELL' | 'NO_TRADE' = 'NO_TRADE';
-    if (buyVotes >= 2 && sellVotes === 0) {
+    if (buyVotes >= 3 && sellVotes === 0) {
+      proposedAction = 'BUY';
+    } else if (sellVotes >= 3 && buyVotes === 0) {
+      proposedAction = 'SELL';
+    } else if (buyVotes >= 2 && sellVotes === 0) {
       proposedAction = 'BUY';
     } else if (sellVotes >= 2 && buyVotes === 0) {
       proposedAction = 'SELL';
     } else if (buyVotes >= 2 && sellVotes >= 1) {
       adjustmentsMade.push(
-        'Analyst divergence detected: Fundamental or Technical analyst dissent recorded. Position sizing cut by 50% to hedge conflict.'
+        'Analyst divergence detected: Fundamental, Technical or News analyst dissent recorded. Position sizing cut by 50% to hedge conflict.'
       );
       proposedAction = 'BUY';
     } else if (sellVotes >= 2 && buyVotes >= 1) {
       adjustmentsMade.push(
-        'Analyst divergence detected: Fundamental or Technical analyst dissent recorded. Position sizing cut by 50% to hedge conflict.'
+        'Analyst divergence detected: Fundamental, Technical or News analyst dissent recorded. Position sizing cut by 50% to hedge conflict.'
       );
       proposedAction = 'SELL';
     } else {
       vetoReasons.push(
         'Insufficient consensus across analyst team: signals are deadlocked or predominantly neutral. Capital preservation mandates passing.'
+      );
+    }
+
+    // 2b. Breaking News Risk Filter
+    if (news?.breakingAlert && proposedAction !== 'NO_TRADE') {
+      adjustmentsMade.push(
+        `Breaking wire catalyst noted: "${news.breakingAlert}". Volatility buffer widened.`
       );
     }
 

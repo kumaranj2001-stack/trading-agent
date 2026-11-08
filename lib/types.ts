@@ -520,6 +520,7 @@ export interface MarketScannerOpportunity {
   technicalScore: number;
   fundamentalScore: number;
   forexScore: number;
+  newsScore?: number;
   riskVerdict: RiskVerdict;
   grade: 'A+' | 'A' | 'B' | 'C' | 'F';
   potentialLots: number;

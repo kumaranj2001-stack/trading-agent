@@ -48,7 +48,7 @@ export const INITIAL_NARRATIVE_THREADS: NarrativeStoryThread[] = [
         source: 'Kitco Metals & Bullion Desk',
         impact: 'HIGH',
         sentimentScore: 0.78,
-        linkageNote: 'Physical supply constraint establishes baseline support at $2,700/oz.',
+        linkageNote: 'Physical supply constraint establishes baseline support at $4,050/oz.',
       },
       {
         id: 'evt-gold-2',
@@ -68,7 +68,7 @@ export const INITIAL_NARRATIVE_THREADS: NarrativeStoryThread[] = [
         source: 'Reuters Global Financial Wire',
         impact: 'CRITICAL',
         sentimentScore: 0.84,
-        linkageNote: 'Safe-haven velocity accelerates breakout above institutional resistance ceiling at $2,725.',
+        linkageNote: 'Safe-haven velocity accelerates breakout above institutional resistance ceiling at $4,080.',
       },
       {
         id: 'evt-gold-4',
@@ -78,12 +78,12 @@ export const INITIAL_NARRATIVE_THREADS: NarrativeStoryThread[] = [
         source: 'DailyFX Currency & Gold Radar',
         impact: 'HIGH',
         sentimentScore: 0.75,
-        linkageNote: 'Retail and momentum funds join central bank bid; trailing floor ratcheted up to $2,715.',
+        linkageNote: 'Retail and momentum funds join central bank bid; trailing floor ratcheted up to $4,065.',
       },
     ],
-    synthesizedEvolution: 'Morning vault drawdowns across London and New York established an inelastic physical supply floor. By midday, confirmation of official central bank reserve accumulation triggered algorithmic buy programs, causing spot gold to surge past $2,725 despite a firm US Dollar.',
+    synthesizedEvolution: 'Morning vault drawdowns across London and New York established an inelastic physical supply floor. By midday, confirmation of official central bank reserve accumulation triggered algorithmic buy programs, causing spot gold to surge past $4,075 despite a firm US Dollar.',
     macroReflection: 'Gold is undergoing a structural re-monetization regime. Correlation with 10Y TIPS yields has turned inverse-to-decoupled as central bank reserve preservation supersedes opportunity cost metrics.',
-    executionInsight: 'LONG setups on XAU/USD and XAG/USD maintain highest confluence. Treat pullbacks into $2,715-$2,720 liquidity pools as institutional re-accumulation zones with invalidation anchored below $2,705.',
+    executionInsight: 'LONG setups on XAU/USD and XAG/USD maintain highest confluence. Treat pullbacks into $4,060-$4,070 liquidity pools as institutional re-accumulation zones with invalidation anchored below $4,045.',
   },
   {
     id: 'thread-fed-yields',

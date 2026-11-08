@@ -112,7 +112,9 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
         {/* Scanner Opportunities List */}
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-2.5 font-mono text-xs scrollbar-thin">
           {filteredOpps.map((opp) => {
-            const avgConfidence = Math.round((opp.technicalScore + opp.fundamentalScore + opp.forexScore) / 3);
+            const scores = [opp.technicalScore, opp.fundamentalScore, opp.forexScore];
+            if (opp.newsScore) scores.push(opp.newsScore);
+            const avgConfidence = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
             const isBuy = opp.bias.includes('BUY');
             const isSell = opp.bias.includes('SELL');
 

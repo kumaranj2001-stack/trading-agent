@@ -44,8 +44,8 @@ export class SwarmCoordinator {
     // 4. Real-Time News & Wire Analysis (18+ Financial Outlets Scraped)
     const news = this.newsAnalyst.analyze(pair);
 
-    // 5. Risk Manager Evaluation & Final Sizing
-    const risk = this.riskManager.evaluateTrade(pair, currentPrice, technical, fundamental, forex);
+    // 5. Risk Manager Evaluation & Final Sizing (Unified 5-Desk Integration)
+    const risk = this.riskManager.evaluateTrade(pair, currentPrice, technical, fundamental, forex, news);
 
     // 5-Agent Confluence Scoring
     const buyScore = (technical.bias.includes('BUY') ? technical.confidenceScore : 0) +
@@ -210,6 +210,7 @@ export class SwarmCoordinator {
         technicalScore: tech.confidenceScore,
         fundamentalScore: fund.confidenceScore,
         forexScore: fx.confidenceScore,
+        newsScore: result.agents.news.confidenceScore,
         riskVerdict: risk.verdict,
         grade: result.confluenceGrade,
         potentialLots: risk.parameters.positionSizeLots,
