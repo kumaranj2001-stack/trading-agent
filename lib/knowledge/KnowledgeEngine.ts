@@ -27,6 +27,39 @@ export class KnowledgeEngine {
     };
   }
 
+  public getTechnicalRules(): KnowledgeRule[] {
+    return this.technicalRules;
+  }
+
+  public getFundamentalRules(): KnowledgeRule[] {
+    return this.fundamentalRules;
+  }
+
+  public getOpposingRules(segment: MarketSegment, dominantSide: 'BUY' | 'SELL'): {
+    supportingTech: KnowledgeRule[];
+    opposingTech: KnowledgeRule[];
+    supportingFund: KnowledgeRule[];
+    opposingFund: KnowledgeRule[];
+  } {
+    const oppSide = dominantSide === 'BUY' ? 'SELL' : 'BUY';
+    const filterRules = (rules: KnowledgeRule[], side: 'BUY' | 'SELL') => {
+      return rules
+        .filter(r => {
+          if (segment === 'INDIAN_MARKET' && r.marketScope === 'FOREX') return false;
+          if (segment === 'FOREX' && r.marketScope === 'INDIAN_MARKET') return false;
+          return r.signalAction.includes(side);
+        })
+        .sort((a, b) => b.expectedWinRate - a.expectedWinRate);
+    };
+
+    return {
+      supportingTech: filterRules(this.technicalRules, dominantSide),
+      opposingTech: filterRules(this.technicalRules, oppSide),
+      supportingFund: filterRules(this.fundamentalRules, dominantSide),
+      opposingFund: filterRules(this.fundamentalRules, oppSide),
+    };
+  }
+
   // High-accuracy matcher across 500+ Technical Rules
   public matchTechnicalKnowledge(
     pair: CurrencyPair,

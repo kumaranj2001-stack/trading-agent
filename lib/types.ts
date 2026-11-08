@@ -463,6 +463,46 @@ export interface AgentDebateMessage {
   content: string;
   sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL' | 'CAUTION';
   timestamp: string;
+  citedRuleId?: string;
+  citedRuleName?: string;
+  strategyCategory?: string;
+  winRate?: number;
+  side?: 'BUY' | 'SELL' | 'NEUTRAL';
+}
+
+export interface DebatePriceThresholds {
+  entryPrice: number;
+  takeProfit: number;
+  stopLoss: number;
+  riskRewardRatio: number;
+  positionSizeLots: number;
+  maxLossUsd: number;
+  projectedGainUsd: number;
+  invalidationCriteria: string;
+  trajectoryHorizonBars: number;
+  projectedPriceMove: number;
+}
+
+export interface DebateCitedRule {
+  ruleId: string;
+  ruleName: string;
+  category: 'TECHNICAL' | 'FUNDAMENTAL' | 'RISK' | 'NEWS';
+  winRate: number;
+  side: 'BUY' | 'SELL';
+  rationale: string;
+}
+
+export interface DebateSynthesisResult {
+  pair: CurrencyPair;
+  timeframe: TimeFrame;
+  definitiveBias: SignalDirection;
+  confluenceGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  confidenceScore: number;
+  priceThresholds: DebatePriceThresholds;
+  citedRules: DebateCitedRule[];
+  summary: string;
+  consensusVerdict: string;
+  timestamp: string;
 }
 
 export interface SwarmConsensusResult {
@@ -498,6 +538,7 @@ export interface SwarmConsensusResult {
     historicalSafetyScore: number;
   };
   debateTranscript: AgentDebateMessage[];
+  debateSynthesis?: DebateSynthesisResult;
   executionSignal: {
     authorized: boolean;
     orderType: 'BUY_MARKET' | 'SELL_MARKET' | 'NONE';

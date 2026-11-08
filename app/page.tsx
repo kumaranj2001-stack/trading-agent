@@ -414,6 +414,7 @@ export default function Home() {
         body: JSON.stringify({
           pair: selectedPair,
           timeframe,
+          candles,
           userPrompt: prompt,
         }),
       });
@@ -422,6 +423,7 @@ export default function Home() {
         setConsensus({
           ...consensus,
           debateTranscript: json.data.transcript,
+          debateSynthesis: json.data.synthesis || consensus.debateSynthesis,
         });
       }
     } catch (e) {
@@ -673,6 +675,11 @@ export default function Home() {
         {activeTab === 'debate' && (
           <AgentDebateFeed
             messages={consensus?.debateTranscript || []}
+            candles={candles}
+            pair={selectedPair}
+            timeframe={timeframe}
+            synthesis={consensus?.debateSynthesis}
+            onExecuteTrade={handleExecuteTrade}
             onSendCustomPrompt={handleCustomDebatePrompt}
             isDebating={isDebating}
           />

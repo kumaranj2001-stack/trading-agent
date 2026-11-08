@@ -31,8 +31,19 @@ export async function POST(req: NextRequest) {
       .replace(/[<>]/g, '')
       .trim();
 
+    // Validate optional incoming real-time terminal chart candles
+    const candlesInput = Array.isArray(body.candles) && body.candles.length > 0
+      ? body.candles.filter((c: any) => 
+          typeof c === 'object' && 
+          typeof c.open === 'number' && 
+          typeof c.high === 'number' && 
+          typeof c.low === 'number' && 
+          typeof c.close === 'number'
+        )
+      : undefined;
+
     const coordinator = new SwarmCoordinator();
-    const result = coordinator.runConsensus(pair, timeframe);
+    const result = coordinator.runConsensus(pair, timeframe, candlesInput);
 
     // If user provided a specific prompt/question, enhance the debate with custom context
     const debate = [...result.debateTranscript];
@@ -43,9 +54,14 @@ export async function POST(req: NextRequest) {
         role: 'risk_manager',
         agentName: 'Sarah Stirling (Risk Manager)',
         avatarColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800',
-        content: `Regarding the scenario "${sanitizedPrompt}": Our stress tests show this could trigger sudden volatility expansion. We recommend reducing position sizing by 30% and tightening stops to preserve capital.`,
+        content: `Custom Scenario Ingestion — "${sanitizedPrompt}": Chief Risk Office evaluated against real-time chart structure on ${pair} [${timeframe}]. Stress tests indicate potential intraday spread expansion; dynamic hard stop-loss anchored at ${result.debateSynthesis?.priceThresholds.stopLoss ?? 'structural floor'} insulates the position while maintaining our ${result.debateSynthesis?.priceThresholds.riskRewardRatio ?? 2.2}:1 R:R profile.`,
         sentiment: 'CAUTION',
         timestamp: 'Just now',
+        citedRuleId: 'RISK-STRESS-001',
+        citedRuleName: 'Macro Stress Scenario Invalidation Filter',
+        strategyCategory: 'RISK',
+        winRate: 85.0,
+        side: 'NEUTRAL',
       });
     }
 
@@ -53,9 +69,12 @@ export async function POST(req: NextRequest) {
       success: true,
       data: {
         pair,
+        timeframe,
         transcript: debate,
+        synthesis: result.debateSynthesis,
         consensus: result.consensusDirection,
         confidence: result.overallConfidence,
+        priceThresholds: result.debateSynthesis?.priceThresholds,
       },
     });
   } catch (error: any) {
