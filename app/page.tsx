@@ -36,6 +36,9 @@ import { LeftNavigationDrawer } from '@/components/LeftNavigationDrawer';
 import { JournalModal } from '@/components/JournalModal';
 import { HistoricalJournalDesk } from '@/components/HistoricalJournalDesk';
 import { JournalStorageManager } from '@/lib/journalStorage';
+import { AIMarketAnalysisModal } from '@/components/AIMarketAnalysisModal';
+import { aiMarketAnalysisEngine } from '@/lib/aiMarketAnalysisEngine';
+import { AIMarketAnalysisResult } from '@/lib/types';
 import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
 
 export default function Home() {
@@ -65,6 +68,9 @@ export default function Home() {
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState<boolean>(false);
   const [isNewsWireOpen, setIsNewsWireOpen] = useState<boolean>(false);
   const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
+  const [isAIMarketAnalysisOpen, setIsAIMarketAnalysisOpen] = useState<boolean>(false);
+  const [aiAnalysisResult, setAiAnalysisResult] = useState<AIMarketAnalysisResult | null>(null);
+  const [isRefreshingAI, setIsRefreshingAI] = useState<boolean>(false);
   const [isScrapingNews, setIsScrapingNews] = useState<boolean>(false);
   const [opportunities, setOpportunities] = useState<MarketScannerOpportunity[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
@@ -308,6 +314,66 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [selectedPair, timeframe, fetchMarketData]);
 
+  // 🧠 13th Component: Real-time Bi-directional AI Market Analysis Pipeline
+  // Synthesizes live terminal feed with 1,050+ validated strategies & calculates dynamic visual signals
+  useEffect(() => {
+    if (candles && candles.length > 0) {
+      try {
+        const analysis = aiMarketAnalysisEngine.analyzeMarket(
+          selectedPair,
+          timeframe,
+          candles,
+          undefined,
+          marketSegment
+        );
+        setAiAnalysisResult(analysis);
+      } catch (err) {
+        console.error('Error in real-time AI Market Analysis pipeline:', err);
+      }
+    }
+  }, [candles, selectedPair, timeframe, marketSegment]);
+
+  const handleRefreshAIAnalysis = useCallback(async () => {
+    setIsRefreshingAI(true);
+    try {
+      const res = await fetch('/api/ai-market-analysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: selectedPair,
+          timeframe,
+          candles,
+          segment: marketSegment,
+        }),
+      });
+      const json = await res.json();
+      if (json.success && json.data) {
+        setAiAnalysisResult(json.data);
+        showNotification(`AI Pipeline Synchronized • ${json.data.topMatchedStrategies?.length || 0} strategies active (${json.latencyMs}ms)`);
+      } else {
+        const fallback = aiMarketAnalysisEngine.analyzeMarket(
+          selectedPair,
+          timeframe,
+          candles,
+          undefined,
+          marketSegment
+        );
+        setAiAnalysisResult(fallback);
+      }
+    } catch {
+      const fallback = aiMarketAnalysisEngine.analyzeMarket(
+        selectedPair,
+        timeframe,
+        candles,
+        undefined,
+        marketSegment
+      );
+      setAiAnalysisResult(fallback);
+    } finally {
+      setIsRefreshingAI(false);
+    }
+  }, [selectedPair, timeframe, candles, marketSegment]);
+
   // Handle Pair Switch
   const handleSelectPair = (newPair: CurrencyPair) => {
     setSelectedPair(newPair);
@@ -542,6 +608,9 @@ export default function Home() {
               takeProfit={consensus?.agents.risk.parameters.takeProfit1}
               entryPrice={consensus?.agents.risk.parameters.entryPrice}
               signalBias={consensus?.agents.technical.bias}
+              aiSignals={aiAnalysisResult?.activeSignals || []}
+              aiAnalysis={aiAnalysisResult}
+              onOpenAIMarketAnalysis={() => setIsAIMarketAnalysisOpen(true)}
             />
 
             {/* 📓 Active Pre-Trade Historical Journal Loss Review & Guardrails Desk */}
@@ -660,7 +729,7 @@ export default function Home() {
         onClose={() => setIsFirebaseModalOpen(false)}
       />
 
-      {/* 🧭 Collapsible Left-Hand Hamburger Navigation Drawer (12 Items) */}
+      {/* 🧭 Collapsible Left-Hand Hamburger Navigation Drawer (13 Items) */}
       <LeftNavigationDrawer
         isOpen={isLeftDrawerOpen}
         onClose={() => setIsLeftDrawerOpen(false)}
@@ -673,6 +742,7 @@ export default function Home() {
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
         onOpenScanner={() => setIsScannerOpen(true)}
         onOpenCalendar={() => setIsCalendarOpen(true)}
+        onOpenAIMarketAnalysis={() => setIsAIMarketAnalysisOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         executionMode={executionMode}
         onToggleExecutionMode={handleToggleExecutionMode}
@@ -680,6 +750,17 @@ export default function Home() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         selectedPair={selectedPair}
+      />
+
+      {/* 🧠 13TH CORE COMPONENT: AI Market Analysis Console & 1,050+ Strategy Matcher */}
+      <AIMarketAnalysisModal
+        isOpen={isAIMarketAnalysisOpen}
+        onClose={() => setIsAIMarketAnalysisOpen(false)}
+        analysis={aiAnalysisResult}
+        pair={selectedPair}
+        timeframe={timeframe}
+        onRefresh={handleRefreshAIAnalysis}
+        isRefreshing={isRefreshingAI}
       />
 
       {/* 📓 Persistent Trading Journal & Loss Attribution Modal */}

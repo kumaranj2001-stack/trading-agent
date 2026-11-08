@@ -1,8 +1,27 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Candle, CurrencyPair, SignalDirection, TechnicalIndicators, TimeFrame } from '@/lib/types';
-import { BarChart2, Eye, EyeOff, LayoutGrid, MonitorPlay } from 'lucide-react';
+import { 
+  Candle, 
+  CurrencyPair, 
+  SignalDirection, 
+  TechnicalIndicators, 
+  TimeFrame,
+  AISignalOverlayItem,
+  AIMarketAnalysisResult 
+} from '@/lib/types';
+import { 
+  BarChart2, 
+  Eye, 
+  EyeOff, 
+  LayoutGrid, 
+  MonitorPlay,
+  Sparkles,
+  TrendingUp,
+  TrendingDown,
+  Target,
+  Zap,
+} from 'lucide-react';
 import { calculateEMA, calculateRSI } from '@/lib/indicators';
 import { OandaTradingViewChart } from './OandaTradingViewChart';
 
@@ -15,6 +34,9 @@ interface ChartViewProps {
   takeProfit?: number;
   entryPrice?: number;
   signalBias?: SignalDirection;
+  aiSignals?: AISignalOverlayItem[];
+  aiAnalysis?: AIMarketAnalysisResult | null;
+  onOpenAIMarketAnalysis?: () => void;
 }
 
 export const ChartView: React.FC<ChartViewProps> = ({
@@ -26,10 +48,14 @@ export const ChartView: React.FC<ChartViewProps> = ({
   takeProfit,
   entryPrice,
   signalBias,
+  aiSignals = [],
+  aiAnalysis,
+  onOpenAIMarketAnalysis,
 }) => {
   const [chartMode, setChartMode] = useState<'ALGO_SWARM' | 'OANDA_LIVE'>('OANDA_LIVE');
   const [showIndicators, setShowIndicators] = useState(true);
   const [showRsi, setShowRsi] = useState(true);
+  const [showAiOverlay, setShowAiOverlay] = useState(true);
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
 
   const isJpy = pair.includes('JPY');
@@ -128,6 +154,31 @@ export const ChartView: React.FC<ChartViewProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* AI Signals (1,050+ Strategies) Overlay Toggle */}
+          <button
+            onClick={() => setShowAiOverlay(!showAiOverlay)}
+            className={`px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-[11px] flex items-center gap-1 border transition-colors ${
+              showAiOverlay
+                ? 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40 font-bold shadow-sm shadow-fuchsia-500/20'
+                : 'bg-terminal-800 text-slate-400 border-terminal-border hover:text-slate-200'
+            }`}
+            title="Toggle Real-Time AI Buy/Sell Signal Arrows Overlay (1,050+ Strategies)"
+          >
+            <Sparkles className={`w-3 h-3 ${showAiOverlay ? 'text-fuchsia-400 animate-pulse' : 'text-slate-400'}`} />
+            <span>AI Signals {aiSignals && aiSignals.length > 0 ? `(${aiSignals.length})` : ''}</span>
+          </button>
+
+          {onOpenAIMarketAnalysis && (
+            <button
+              onClick={onOpenAIMarketAnalysis}
+              className="px-2 py-0.5 sm:py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 text-[10px] sm:text-[11px] flex items-center gap-1 border border-terminal-border transition-colors"
+              title="Open AI Market Analysis Console"
+            >
+              <Zap className="w-3 h-3 text-cyan-400" />
+              <span className="hidden sm:inline">AI Analysis</span>
+            </button>
+          )}
+
           {signalBias && (
             <span className={`px-2 py-0.5 rounded font-bold text-[10px] sm:text-[11px] border ${
               signalBias.includes('BUY') 
@@ -164,7 +215,73 @@ export const ChartView: React.FC<ChartViewProps> = ({
 
       {/* View 1: Real OANDA / TradingView Live Advanced Chart */}
       {chartMode === 'OANDA_LIVE' && (
-        <OandaTradingViewChart symbol={pair} height={460} />
+        <div className="relative w-full overflow-hidden rounded-lg">
+          <OandaTradingViewChart symbol={pair} height={460} />
+
+          {/* Dynamic AI Market Analysis Signal Overlay HUD */}
+          {showAiOverlay && aiAnalysis && (
+            <div className="absolute top-3 right-3 z-10 pointer-events-none max-w-[280px] sm:max-w-xs transition-all">
+              <div className="pointer-events-auto bg-terminal-950/90 backdrop-blur-md border border-fuchsia-500/40 rounded-xl p-2.5 shadow-xl shadow-fuchsia-950/40 text-xs font-mono space-y-1.5">
+                <div className="flex items-center justify-between gap-2 border-b border-terminal-border/60 pb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-fuchsia-400 animate-pulse" />
+                    <span className="font-bold text-white tracking-wide text-[11px]">AI SIGNAL HUD</span>
+                    <span className="px-1.5 py-0.2 rounded bg-fuchsia-500/20 text-fuchsia-300 text-[9px] border border-fuchsia-500/30">
+                      1,050+ AI
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-bold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    {aiAnalysis.latencyMs}ms
+                  </span>
+                </div>
+
+                {/* Primary Signal Pill */}
+                {aiAnalysis.activeSignals.length > 0 && (
+                  <div className={`p-1.5 rounded-lg border flex items-center justify-between gap-1.5 ${
+                    aiAnalysis.activeSignals[0].type === 'BUY'
+                      ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                      : 'bg-rose-950/40 border-rose-500/40 text-rose-300'
+                  }`}>
+                    <div className="flex items-center gap-1.5">
+                      {aiAnalysis.activeSignals[0].type === 'BUY' ? (
+                        <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                      ) : (
+                        <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
+                      )}
+                      <span className="font-extrabold text-[11px]">
+                        {aiAnalysis.activeSignals[0].type} SIGNAL @ {aiAnalysis.activeSignals[0].price.toFixed(decimalCount)}
+                      </span>
+                    </div>
+                    <span className="font-bold text-[10px] px-1.5 py-0.5 rounded bg-terminal-900 border border-current">
+                      {aiAnalysis.activeSignals[0].confidence}%
+                    </span>
+                  </div>
+                )}
+
+                {/* Matched Strategy Summary */}
+                <div className="text-[10px] text-slate-300 space-y-0.5 pt-0.5">
+                  <div className="truncate text-fuchsia-300 font-semibold" title={aiAnalysis.topMatchedStrategies[0]?.name}>
+                    {aiAnalysis.topMatchedStrategies[0]?.name || 'Institutional Order Block Entry'}
+                  </div>
+                  <div className="flex items-center justify-between text-slate-400 pt-1">
+                    <span>Order Flow: <strong className={aiAnalysis.orderFlowPressure.deltaStatus.includes('BULL') ? 'text-emerald-400' : 'text-rose-400'}>
+                      {aiAnalysis.orderFlowPressure.buyVolumeDelta}% Buy
+                    </strong></span>
+                    {onOpenAIMarketAnalysis && (
+                      <button
+                        onClick={onOpenAIMarketAnalysis}
+                        className="text-cyan-400 hover:text-cyan-300 underline font-semibold flex items-center gap-0.5"
+                      >
+                        Details &rarr;
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* View 2: Apex Swarm Algorithmic SVG Candlestick Chart */}
@@ -250,6 +367,96 @@ export const ChartView: React.FC<ChartViewProps> = ({
                     <rect x={x} y={bodyY} width={candleWidth} height={bodyHeight} fill={color} rx="1" />
                   </g>
                 );
+              })}
+
+              {/* Actionable Visual Buy & Sell Signal Arrows Overlay (1,050+ Strategies) */}
+              {showAiOverlay && aiSignals && aiSignals.map((sig) => {
+                let idx = sig.candleIndex;
+                if (idx === undefined || idx < 0 || idx >= safeCandles.length) {
+                  idx = safeCandles.findIndex((c) => c.timestamp === sig.timestamp);
+                  if (idx === -1) idx = safeCandles.length - 1;
+                }
+                const candle = safeCandles[idx];
+                if (!candle) return null;
+
+                const x = 20 + idx * (candleWidth + 2) + candleWidth / 2;
+                const isBuy = sig.type === 'BUY';
+
+                if (isBuy) {
+                  const arrowTipY = getY(candle.low) + 5;
+                  const arrowBaseY = arrowTipY + 8;
+                  return (
+                    <g key={sig.id} className="cursor-pointer group select-none">
+                      <title>{`${sig.type} SIGNAL: ${sig.strategyName} (${sig.confidence}% Conf, ${sig.expectedWinRate}% WR)`}</title>
+                      <circle cx={x} cy={arrowTipY + 4} r="8" fill="#10b981" opacity="0.25" className="animate-pulse" />
+                      <polygon
+                        points={`${x},${arrowTipY} ${x - 5},${arrowBaseY} ${x + 5},${arrowBaseY}`}
+                        fill="#10b981"
+                        stroke="#064e3b"
+                        strokeWidth="1"
+                      />
+                      <rect
+                        x={x - 20}
+                        y={arrowBaseY + 2}
+                        width="40"
+                        height="12"
+                        rx="2"
+                        fill="#064e3b"
+                        stroke="#10b981"
+                        strokeWidth="0.8"
+                        opacity="0.95"
+                      />
+                      <text
+                        x={x}
+                        y={arrowBaseY + 11}
+                        fill="#6ee7b7"
+                        fontSize="7.5"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                        textAnchor="middle"
+                      >
+                        ▲ BUY {sig.confidence}%
+                      </text>
+                    </g>
+                  );
+                } else {
+                  const arrowTipY = getY(candle.high) - 5;
+                  const arrowBaseY = arrowTipY - 8;
+                  return (
+                    <g key={sig.id} className="cursor-pointer group select-none">
+                      <title>{`${sig.type} SIGNAL: ${sig.strategyName} (${sig.confidence}% Conf, ${sig.expectedWinRate}% WR)`}</title>
+                      <circle cx={x} cy={arrowTipY - 4} r="8" fill="#f43f5e" opacity="0.25" className="animate-pulse" />
+                      <polygon
+                        points={`${x},${arrowTipY} ${x - 5},${arrowBaseY} ${x + 5},${arrowBaseY}`}
+                        fill="#f43f5e"
+                        stroke="#7f1d1d"
+                        strokeWidth="1"
+                      />
+                      <rect
+                        x={x - 20}
+                        y={arrowBaseY - 14}
+                        width="40"
+                        height="12"
+                        rx="2"
+                        fill="#7f1d1d"
+                        stroke="#f43f5e"
+                        strokeWidth="0.8"
+                        opacity="0.95"
+                      />
+                      <text
+                        x={x}
+                        y={arrowBaseY - 5}
+                        fill="#fca5a5"
+                        fontSize="7.5"
+                        fontFamily="monospace"
+                        fontWeight="bold"
+                        textAnchor="middle"
+                      >
+                        ▼ SELL {sig.confidence}%
+                      </text>
+                    </g>
+                  );
+                }
               })}
 
               {showIndicators && (

@@ -540,3 +540,71 @@ export interface HistoricalJournalAnalysis {
   recurringMistakesWarning?: string;
   activeGuardrailAction?: string;
 }
+
+// ==========================================
+// 🧠 13TH COMPONENT: AI MARKET ANALYSIS TYPES
+// ==========================================
+export interface AISignalOverlayItem {
+  id: string;
+  type: 'BUY' | 'SELL';
+  price: number;
+  time: string;
+  timestamp: number;
+  confidence: number;
+  strategyId: string;
+  strategyName: string;
+  expectedWinRate: number;
+  timeframe: TimeFrame;
+  rationale: string;
+  targetPrice?: number;
+  stopPrice?: number;
+  candleIndex?: number;
+}
+
+export interface AIOrderFlowPressure {
+  buyVolumeDelta: number;
+  sellVolumeDelta: number;
+  imbalanceRatio: number;
+  deltaStatus: 'STRONG_BULLISH' | 'BULLISH' | 'NEUTRAL' | 'BEARISH' | 'STRONG_BEARISH';
+  vwap: number;
+  orderFlowAbsorption: boolean;
+  cumulativeDelta: number;
+}
+
+export interface AIMultiTimeframeSynthesis {
+  timeframe: TimeFrame;
+  bias: SignalDirection;
+  score: number;
+  matchedStrategy: string;
+  confluence: boolean;
+}
+
+export interface AIStrategyMatch {
+  ruleId: string;
+  name: string;
+  category: string;
+  subcategory: string;
+  winRate: number;
+  confidence: number;
+  action: SignalDirection;
+  rationale: string;
+}
+
+export interface AIMarketAnalysisResult {
+  symbol: CurrencyPair;
+  timeframe: TimeFrame;
+  timestamp: number;
+  currentPrice: number;
+  predictiveBias: SignalDirection;
+  predictiveConfidence: number;
+  projectedTarget: number;
+  projectedStop: number;
+  orderFlowPressure: AIOrderFlowPressure;
+  multiTimeframeSynthesis: AIMultiTimeframeSynthesis[];
+  topMatchedStrategies: AIStrategyMatch[];
+  totalKnowledgeRulesEvaluated: number;
+  activeSignals: AISignalOverlayItem[];
+  latencyMs: number;
+  pipelineStatus: 'LIVE_CONNECTED' | 'SYNTHESIZING' | 'OFFLINE';
+}
+
