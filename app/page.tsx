@@ -31,7 +31,6 @@ import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
 import { NewsWireModal } from '@/components/NewsWireModal';
-import { DedicatedNewsTerminal } from '@/components/DedicatedNewsTerminal';
 import { FirebaseStatusModal } from '@/components/FirebaseStatusModal';
 import { LeftNavigationDrawer } from '@/components/LeftNavigationDrawer';
 import { JournalModal } from '@/components/JournalModal';
@@ -65,7 +64,6 @@ export default function Home() {
   const [isMonteCarloOpen, setIsMonteCarloOpen] = useState<boolean>(false);
   const [isKnowledgeOpen, setIsKnowledgeOpen] = useState<boolean>(false);
   const [isNewsWireOpen, setIsNewsWireOpen] = useState<boolean>(false);
-  const [isNewsTerminalOpen, setIsNewsTerminalOpen] = useState<boolean>(false);
   const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
   const [isScrapingNews, setIsScrapingNews] = useState<boolean>(false);
   const [opportunities, setOpportunities] = useState<MarketScannerOpportunity[]>([]);
@@ -564,7 +562,6 @@ export default function Home() {
                 onExecuteTrade={handleExecuteTrade}
                 onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
                 onOpenNewsWire={() => setIsNewsWireOpen(true)}
-                onOpenNewsTerminal={() => setIsNewsTerminalOpen(true)}
               />
             )}
 
@@ -606,17 +603,6 @@ export default function Home() {
         symbol={selectedPair}
         onRefreshScrape={handleForceScrape}
         isScraping={isScrapingNews}
-        onOpenAdvancedTerminal={() => {
-          setIsNewsWireOpen(false);
-          setIsNewsTerminalOpen(true);
-        }}
-      />
-
-      {/* 🧠 Dedicated News Terminal with Chronological Story Links & Reflections */}
-      <DedicatedNewsTerminal
-        isOpen={isNewsTerminalOpen}
-        onClose={() => setIsNewsTerminalOpen(false)}
-        selectedPair={selectedPair}
       />
 
       {/* Institutional Knowledge Base Explorer Modal */}
@@ -683,7 +669,6 @@ export default function Home() {
         onOpenJournal={() => setIsJournalOpen(true)}
         onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
         onOpenNewsWire={() => setIsNewsWireOpen(true)}
-        onOpenNewsTerminal={() => setIsNewsTerminalOpen(true)}
         onOpenFirebase={() => setIsFirebaseModalOpen(true)}
         onOpenKnowledge={() => setIsKnowledgeOpen(true)}
         onOpenScanner={() => setIsScannerOpen(true)}

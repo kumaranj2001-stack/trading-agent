@@ -247,69 +247,7 @@ export interface NewsArticle {
   relatedSymbols: string[];
   summary: string;
   category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'BREAKING';
-  threadId?: string;
   isStreamingFlash?: boolean;
-}
-
-// ==========================================
-// 🧠 PERSISTENT DAILY NEWS MEMORY INTERFACES
-// ==========================================
-export interface NewsMemoryEntry {
-  id: string;
-  timestamp: number;
-  timeStr: string;
-  source: string;
-  sourceDomain: string;
-  title: string;
-  summary: string;
-  sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
-  sentimentScore: number;
-  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
-  category: NewsArticle['category'];
-  relatedSymbols: string[];
-  threadId?: string;
-  chronologicalSequence?: number;
-}
-
-export interface ChronologicalStoryEvent {
-  step: number;
-  timeStr: string;
-  source: string;
-  sourceDomain: string;
-  headline: string;
-  marketReaction: string;
-  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
-}
-
-export interface ChronologicalStoryThread {
-  id: string;
-  title: string;
-  theme: string;
-  category: NewsArticle['category'];
-  startTimeStr: string;
-  latestTimeStr: string;
-  articlesCount: number;
-  eventChain: ChronologicalStoryEvent[];
-  causeAndEffectSummary: string;
-  synthesizedMacroBias: 'BULLISH_USD' | 'BEARISH_USD' | 'BULLISH_GOLD' | 'RISK_OFF' | 'RISK_ON';
-}
-
-export interface DailyNewsReflection {
-  id: string;
-  dateStr: string;
-  title: string;
-  overallMacroNarrative: string;
-  keyStoryLinks: string[];
-  synthesizedExecutionInsights: string[];
-  affectedAssets: Array<{
-    symbol: string;
-    direction: 'FAVOR_LONGS' | 'FAVOR_SHORTS' | 'STAND_ASIDE';
-    rationale: string;
-  }>;
-  riskWarnings: string[];
-  totalMemoriesAnalyzed: number;
-  activeThreadsCount: number;
-  timestamp: number;
 }
 
 export interface NewsAnalysis {
@@ -325,6 +263,98 @@ export interface NewsAnalysis {
   marketMood: 'EXTREME_GREED' | 'RISK_ON' | 'NEUTRAL' | 'RISK_OFF' | 'EXTREME_FEAR';
   thesis: string;
   timestamp: string;
+}
+
+// ==========================================
+// 🧠 PERSISTENT DAILY NEWS MEMORIES & NARRATIVES
+// ==========================================
+export interface NewsMemoryEntry {
+  id: string;
+  title: string;
+  source: string;
+  sourceDomain: string;
+  url: string;
+  publishedTime: string;
+  timestamp: number;
+  timeFormatted: string; // e.g. "17:54:12"
+  sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  sentimentScore: number;
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  relatedSymbols: string[];
+  summary: string;
+  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'BREAKING';
+  narrativeThreadId: string;
+  narrativeThreadTitle: string;
+  isFlashWire?: boolean;
+}
+
+export interface ChronologicalStoryEvent {
+  id: string;
+  timeStr: string;
+  timestamp: number;
+  headline: string;
+  source: string;
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  sentimentScore: number;
+  linkageNote: string;
+}
+
+export interface NarrativeStoryThread {
+  id: string;
+  title: string;
+  category: string;
+  primarySymbols: string[];
+  status: 'ACTIVE' | 'DEVELOPING' | 'RESOLVED';
+  startTime: string;
+  lastUpdatedTime: string;
+  events: ChronologicalStoryEvent[];
+  synthesizedEvolution: string; // Chronological evolution of the narrative
+  macroReflection: string;       // Structural market reflection
+  executionInsight: string;      // Actionable trade execution directive
+  sentimentBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  impactLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+}
+
+export interface DailyNewsMemorySummary {
+  date: string;
+  totalMemories: number;
+  activeThreadsCount: number;
+  criticalAlertsCount: number;
+  dominantSentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  synthesizedKeyTakeaway: string;
+  executionDirectives: string[];
+}
+
+export interface StoryEventStep {
+  step: number;
+  timeStr: string;
+  source: string;
+  headline: string;
+  marketReaction: string;
+}
+
+export interface ChronologicalStoryThread {
+  id: string;
+  title: string;
+  theme: string;
+  articlesCount: number;
+  synthesizedMacroBias: string;
+  eventChain: StoryEventStep[];
+  causeAndEffectSummary: string;
+}
+
+export interface AffectedAssetReflection {
+  symbol: string;
+  direction: 'FAVOR_LONGS' | 'FAVOR_SHORTS' | 'DEFENSIVE_HOLD';
+  rationale: string;
+}
+
+export interface DailyNewsReflection {
+  dateStr: string;
+  overallMacroNarrative: string;
+  synthesizedExecutionInsights: string[];
+  affectedAssets: AffectedAssetReflection[];
+  riskWarnings: string[];
 }
 
 // ==========================================

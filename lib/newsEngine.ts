@@ -8,8 +8,6 @@ export interface FinancialSource {
   refreshRateSeconds: number;
   status: 'ACTIVE' | 'STREAMING';
   tier: 'INSTITUTIONAL' | 'PRIMARY' | 'WIRE';
-  headlinesCount?: number;
-  lastPingSecondsAgo?: number;
 }
 
 export const MONITORED_FINANCIAL_SOURCES: FinancialSource[] = [
@@ -33,571 +31,477 @@ export const MONITORED_FINANCIAL_SOURCES: FinancialSource[] = [
   { id: 'opec', name: 'OPEC+ & IEA Energy Monitor', domain: 'opec.org', specialization: 'METALS_COMMODITIES', refreshRateSeconds: 40, status: 'ACTIVE', tier: 'INSTITUTIONAL' },
 ];
 
-export interface SourceArticleTemplate {
+export interface ScrapeTemplate {
   sourceId: string;
+  source: string;
+  domain: string;
   title: string;
   category: NewsArticle['category'];
   sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   sentimentScore: number;
   impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
   summary: string;
-  threadId: string;
+  relatedSymbols: string[];
 }
 
-// 🌐 MASTER TEMPLATE REPOSITORY COVERING ALL 18 MONITORED SOURCES FOR EACH ASSET CLASS
-const ALL_18_METALS_TEMPLATES: Record<string, SourceArticleTemplate> = {
-  bbg: {
+// 18-Source comprehensive institutional news bank
+export const ALL_18_SOURCE_TEMPLATES: ScrapeTemplate[] = [
+  // 1. Bloomberg
+  {
     sourceId: 'bbg',
-    title: 'Real Yields Slip Following Dovish Fed Dot Plot Signals; Institutional Bullion Breakout Validated',
+    source: 'Bloomberg Terminal Markets',
+    domain: 'bloomberg.com',
+    title: 'Fed Rate Cut Pricing Shifts: December 25bp Likelihood Retests 58% on Resilient US Labor Data',
     category: 'CENTRAL_BANK',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.79,
-    impact: 'HIGH',
-    summary: 'US 10-year TIPS yield declined 8 bps, reducing the opportunity cost of holding non-yielding metals as sovereign allocators increase allocations.',
-    threadId: 'thread-yields-dollar',
-  },
-  rtrs: {
-    sourceId: 'rtrs',
-    title: 'Geopolitical Tensions in Middle East & Eastern Europe Spur Physical Gold Inflows into Swiss Refineries',
-    category: 'GEOPOLITICAL',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.84,
+    sentiment: 'BEARISH',
+    sentimentScore: -0.48,
     impact: 'CRITICAL',
-    summary: 'ETF bullion holdings recorded their 4th consecutive week of positive net creations, reinforcing structural support above key moving averages.',
-    threadId: 'thread-geopolitics-energy',
+    summary: 'Swap markets adjust terminal rate expectations higher as consumer demand and non-farm payroll trends delay aggressive FOMC monetary easing.',
+    relatedSymbols: ['EUR/USD', 'USD/JPY', 'DXY', 'USD'],
   },
-  ft: {
-    sourceId: 'ft',
-    title: 'London Bullion Market Association (LBMA) Reports Tightest Physical Delivery Spreads in 2 Years',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.71,
-    impact: 'HIGH',
-    summary: 'Spot-futures delivery premiums widen as institutional buyers opt for physical allocated delivery over paper derivatives.',
-    threadId: 'thread-bullion-reserves',
-  },
-  wsj: {
-    sourceId: 'wsj',
-    title: 'US Strategic Petroleum Reserve Repurchase Program Caps Crude & Commodities Downside',
-    category: 'MACRO_DATA',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.60,
-    impact: 'MEDIUM',
-    summary: 'Energy Department solicitations to replenish strategic stockpiles provide an institutional floor beneath raw material benchmarks.',
-    threadId: 'thread-geopolitics-energy',
-  },
-  kitco: {
-    sourceId: 'kitco',
-    title: 'Gold Breaks Toward Fresh Highs on Soaring Central Bank Bullion Demand & Safe Haven Flows',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.88,
-    impact: 'CRITICAL',
-    summary: 'Central bank purchases across emerging economies topped 38 tons this week while sovereign de-dollarization accelerates bullion demand.',
-    threadId: 'thread-bullion-reserves',
-  },
-  fxs: {
-    sourceId: 'fxs',
-    title: 'Gold Technical Check: Spot Resistance Flips to Rock-Solid Institutional Order Block Floor',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.65,
-    impact: 'MEDIUM',
-    summary: 'Fibonacci extension levels point to an open target envelope with trailing stops firmly placed at daily structural swing low.',
-    threadId: 'thread-yields-dollar',
-  },
-  dfx: {
-    sourceId: 'dfx',
-    title: 'CFTC Commitments of Traders: Institutional Managed Money Expands Long Gold Futures Positioning by 14%',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.72,
-    impact: 'HIGH',
-    summary: 'Speculative longs surged to an 18-month high with commercial dealers absorbing shorts without destabilizing liquidity.',
-    threadId: 'thread-bullion-reserves',
-  },
-  inv: {
-    sourceId: 'inv',
-    title: 'Economic Calendar Alert: Core PCE Inflation Prints In-Line; Rate Cut Projections Cemented',
-    category: 'MACRO_DATA',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.68,
-    impact: 'HIGH',
-    summary: 'Disinflation trajectory continues to support non-yielding assets as real borrowing costs face downward repricing.',
-    threadId: 'thread-yields-dollar',
-  },
-  cnbc: {
-    sourceId: 'cnbc',
-    title: 'Commodity Supercycle Pulse: Industrial Silver and Copper Supply Deficits Projected Through 2026',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.73,
-    impact: 'MEDIUM',
-    summary: 'Solar manufacturing and global electrification demand accelerate physical warehouse withdrawals in London and Shanghai.',
-    threadId: 'thread-bullion-reserves',
-  },
-  mw: {
-    sourceId: 'mw',
-    title: 'Precious Metals Wrap: Bullion Miners Report Record Free Cash Flows as All-In Sustaining Costs Stabilize',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.64,
-    impact: 'MEDIUM',
-    summary: 'Senior gold producers expand dividend payouts while maintaining conservative capital expenditures, capping future supply expansion.',
-    threadId: 'thread-bullion-reserves',
-  },
-  flive: {
-    sourceId: 'flive',
-    title: 'FLASH WIRE: Large Institutional Block Order of 4,500 Bullion Contracts Executed at Market Open',
-    category: 'BREAKING',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.81,
-    impact: 'HIGH',
-    summary: 'Rapid order execution absorbed all available liquidity at the offer, propelling spot price up $8 in 90 seconds.',
-    threadId: 'thread-yields-dollar',
-  },
-  te: {
-    sourceId: 'te',
-    title: 'Global Sovereign Debt-to-GDP Closes at 93%: Hard Assets Re-Rated Across Macro Portfolios',
-    category: 'MACRO_DATA',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.69,
-    impact: 'HIGH',
-    summary: 'Long-term structural fiscal deficits in developed economies sustain secular rotation into tangible bullion assets.',
-    threadId: 'thread-bullion-reserves',
-  },
-  zh: {
-    sourceId: 'zh',
-    title: 'De-Dollarization Milestone: BRICS+ Physical Settlement Mechanism Drives Unprecedented Bullion Delivery Volume',
-    category: 'GEOPOLITICAL',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.86,
-    impact: 'CRITICAL',
-    summary: 'Bilateral trade invoicing bypassing SWIFT triggers continuous repatriation of physical gold bars from Western depositories.',
-    threadId: 'thread-bullion-reserves',
-  },
-  sa: {
-    sourceId: 'sa',
-    title: 'Gold-to-Silver Ratio Compresses: Multi-Year Mean Reversion Signals High Beta Upside',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.75,
-    impact: 'HIGH',
-    summary: 'Historical cyclical analysis indicates silver outpaces gold with 2.2x leverage during sustained monetary easing cycles.',
-    threadId: 'thread-bullion-reserves',
-  },
-  fxl: {
-    sourceId: 'fxl',
-    title: 'Geopolitical Risk Index Spikes 22 Points as Naval Escorts Redouble Across Red Sea Corridors',
-    category: 'GEOPOLITICAL',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.78,
-    impact: 'HIGH',
-    summary: 'Freight shipping premiums and insurance surcharges reflect heightened regional friction, stimulating safe-haven hedging.',
-    threadId: 'thread-geopolitics-energy',
-  },
-  mint: {
-    sourceId: 'mint',
-    title: 'Indian Festive & Wedding Demand Hits 5-Year Peak: Sovereign Gold Bond Inflows Double',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.70,
-    impact: 'MEDIUM',
-    summary: 'Domestic retail demand in Mumbai and Delhi absorbs imported bullion at record premiums above London parity.',
-    threadId: 'thread-bullion-reserves',
-  },
-  fed_ecb: {
-    sourceId: 'fed_ecb',
-    title: 'Central Bank Official Dispatch: Global Reserve Asset Composition Shift Notes Bullion Share Expansion',
-    category: 'CENTRAL_BANK',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.80,
-    impact: 'HIGH',
-    summary: 'Official foreign exchange statistics confirm gold reserves now account for over 16.5% of total official reserves globally.',
-    threadId: 'thread-bullion-reserves',
-  },
-  opec: {
-    sourceId: 'opec',
-    title: 'OPEC+ Secretariat Statement: Production Quota Compliance Reaches 102% Amid Stable Energy Demand',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.67,
-    impact: 'HIGH',
-    summary: 'Joint Ministerial Monitoring Committee reaffirms commitment to market stability and coordinated supply adjustments.',
-    threadId: 'thread-geopolitics-energy',
-  },
-};
-
-const ALL_18_FOREX_TEMPLATES: Record<string, SourceArticleTemplate> = {
-  bbg: {
+  {
     sourceId: 'bbg',
-    title: 'Dollar Index Consolidates Near Overhead Resistance as Traders Await High-Impact Macro Cataysts',
-    category: 'FOREX',
-    sentiment: 'NEUTRAL',
-    sentimentScore: 0.05,
-    impact: 'HIGH',
-    summary: 'Implied volatility across major G10 currency pairs tightens into a multi-week compression zone.',
-    threadId: 'thread-yields-dollar',
-  },
-  rtrs: {
-    sourceId: 'rtrs',
-    title: 'ECB Policymakers Signal Cautious Rate Trajectory as Eurozone Services Inflation Hovers at 3.9%',
-    category: 'CENTRAL_BANK',
-    sentiment: 'BEARISH',
-    sentimentScore: -0.45,
-    impact: 'HIGH',
-    summary: 'Manufacturing contraction in Germany limits aggressive European Central Bank monetary tightening flexibility.',
-    threadId: 'thread-yields-dollar',
-  },
-  ft: {
-    sourceId: 'ft',
-    title: 'Global Currency Reserve Managers Trim Dollar Allocation to 58.4%, Lowest Level in Two Decades',
-    category: 'FOREX',
-    sentiment: 'BEARISH',
-    sentimentScore: -0.52,
-    impact: 'HIGH',
-    summary: 'Diversification into non-traditional currencies and alternative reserves exerts structural drag on long-term USD hegemony.',
-    threadId: 'thread-bullion-reserves',
-  },
-  wsj: {
-    sourceId: 'wsj',
-    title: 'Treasury Yield Curve Steepens as Long-End Bond Supply Absorbs Subdued Primary Dealer Demand',
-    category: 'MACRO_DATA',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.42,
-    impact: 'MEDIUM',
-    summary: 'Term premium expansion on 10Y and 30Y Treasuries supports interest rate differentials in favor of USD carry.',
-    threadId: 'thread-yields-dollar',
-  },
-  kitco: {
-    sourceId: 'kitco',
-    title: 'Foreign Exchange & Precious Metals Linkage: Dollar Weakness Correlates with Instant Bullion Rallies',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.62,
-    impact: 'MEDIUM',
-    summary: 'Inverse correlation coefficient between DXY and Gold strengthens to -0.82 on intraday 1-hour chart.',
-    threadId: 'thread-yields-dollar',
-  },
-  fxs: {
-    sourceId: 'fxs',
-    title: 'EUR/USD Struggles at 1.0880 Resistance as Institutional Dollar Hedging Reaccelerates',
-    category: 'FOREX',
-    sentiment: 'BEARISH',
-    sentimentScore: -0.40,
-    impact: 'MEDIUM',
-    summary: 'Options skew reveals strong demand for downside puts targeting 1.0750 liquidity pools before next policy release.',
-    threadId: 'thread-yields-dollar',
-  },
-  dfx: {
-    sourceId: 'dfx',
-    title: 'USD/JPY Technical Outlook: Intervention Speculation Intensifies as Spot Tests 154.50 Ceiling',
-    category: 'FOREX',
-    sentiment: 'BEARISH',
-    sentimentScore: -0.65,
-    impact: 'CRITICAL',
-    summary: 'Ministry of Finance verbal jawboning triggers profit taking among speculative leveraged accounts.',
-    threadId: 'thread-yields-dollar',
-  },
-  inv: {
-    sourceId: 'inv',
-    title: 'US Initial Jobless Claims Beat Expectations at 218K; Labor Market Demonstrates Continued Resilience',
-    category: 'MACRO_DATA',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.55,
-    impact: 'HIGH',
-    summary: 'Solid employment conditions prevent emergency rate cuts, backing steady yield support for the Greenback.',
-    threadId: 'thread-yields-dollar',
-  },
-  cnbc: {
-    sourceId: 'cnbc',
-    title: 'Sterling Advances as UK Services Sector Expansion Offsets Slowing Construction Output',
-    category: 'FOREX',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.48,
-    impact: 'MEDIUM',
-    summary: 'UK economic indicators outperform pessimistic European baseline estimates, keeping GBP/USD buoyant above 1.2900.',
-    threadId: 'thread-yields-dollar',
-  },
-  mw: {
-    sourceId: 'mw',
-    title: 'Cross-Currency Basis Swaps Indicate Normalizing Dollar Funding Liquidity Across Asian Centres',
-    category: 'FOREX',
-    sentiment: 'NEUTRAL',
-    sentimentScore: 0.10,
-    impact: 'MEDIUM',
-    summary: 'Interbank offshore dollar liquidity conditions show orderly clearing with no signs of funding stress.',
-    threadId: 'thread-yields-dollar',
-  },
-  flive: {
-    sourceId: 'flive',
-    title: 'INSTANT SOUNDBITE: Fed Speaker Reiterates "Patient Policy Stance Until Inflation Trend is Fully Secured"',
-    category: 'BREAKING',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.52,
-    impact: 'HIGH',
-    summary: 'Remarks prompt brief short squeeze across USD pairs with 2-year yield popping 3 bps.',
-    threadId: 'thread-yields-dollar',
-  },
-  te: {
-    sourceId: 'te',
-    title: 'Eurozone Composite PMI Ticks Up to 50.2, Barely Escaping Contraction Territory',
-    category: 'MACRO_DATA',
-    sentiment: 'NEUTRAL',
-    sentimentScore: -0.15,
-    impact: 'HIGH',
-    summary: 'Stagnant manufacturing output offsets mild stabilization in services, leaving Euro recovery fragile.',
-    threadId: 'thread-yields-dollar',
-  },
-  zh: {
-    sourceId: 'zh',
-    title: 'Global Dollar Funding Squeeze Risk: Derivative Notional Mismatches Highlight Hidden FX Swaps Exposure',
-    category: 'FOREX',
-    sentiment: 'BEARISH',
-    sentimentScore: -0.58,
-    impact: 'HIGH',
-    summary: 'BIS reports highlight off-balance-sheet FX swap liabilities that could exacerbate dollar volatility in sudden risk-off moves.',
-    threadId: 'thread-yields-dollar',
-  },
-  sa: {
-    sourceId: 'sa',
-    title: 'Carry Trade Dynamics: Japanese Yen Shorts Face Extreme Asymmetric Downside if BoJ Hikes Rates',
-    category: 'FOREX',
-    sentiment: 'BEARISH',
-    sentimentScore: -0.71,
-    impact: 'CRITICAL',
-    summary: 'Unwinding of speculative Yen funding positions poses contagion risk to global equity and currency carry baskets.',
-    threadId: 'thread-yields-dollar',
-  },
-  fxl: {
-    sourceId: 'fxl',
-    title: 'Swiss Franc Attracts Fresh Safe-Haven Bids as Continental European Political Uncertainty Rises',
-    category: 'FOREX',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.60,
-    impact: 'MEDIUM',
-    summary: 'EUR/CHF dips to multi-month support as capital allocators favor Swiss sovereign balance sheet stability.',
-    threadId: 'thread-geopolitics-energy',
-  },
-  mint: {
-    sourceId: 'mint',
-    title: 'USD/INR Anchored at 84.10: Reserve Bank of India Active Intervention Dampens Rupee Volatility',
-    category: 'INDIAN_MARKET',
-    sentiment: 'NEUTRAL',
-    sentimentScore: 0.15,
-    impact: 'MEDIUM',
-    summary: 'RBI forex reserve buffer exceeding $690B provides formidable shield against global currency fluctuations.',
-    threadId: 'thread-indian-macro',
-  },
-  fed_ecb: {
-    sourceId: 'fed_ecb',
-    title: 'Federal Reserve Policy Statement: Balance Sheet Runoff Pace Maintained with Data-Dependent Approach',
-    category: 'CENTRAL_BANK',
-    sentiment: 'NEUTRAL',
-    sentimentScore: 0.20,
-    impact: 'CRITICAL',
-    summary: 'Systemic liquidity remains ample; discount window usage and reverse repo facilities show normal operational metrics.',
-    threadId: 'thread-yields-dollar',
-  },
-  opec: {
-    sourceId: 'opec',
-    title: 'Petrodollar Recycling Flows: Sovereign Wealth Fund Capital Deployment Diversifies Beyond USD Assets',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BEARISH',
-    sentimentScore: -0.35,
-    impact: 'MEDIUM',
-    summary: 'Gulf energy exporters increase direct infrastructure investments in Asian and European emerging corridors.',
-    threadId: 'thread-geopolitics-energy',
-  },
-};
-
-const ALL_18_INDIAN_TEMPLATES: Record<string, SourceArticleTemplate> = {
-  bbg: {
-    sourceId: 'bbg',
-    title: 'India GDP Growth Projected at 7.2% by IMF; Foreign Institutional Inflows (FII) Turn Net Buyers',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.85,
-    impact: 'CRITICAL',
-    summary: 'Foreign investors injected +₹1,845 Cr into Indian equities today while domestic mutual fund SIPs hit record ₹23,500 Cr/month.',
-    threadId: 'thread-indian-macro',
-  },
-  rtrs: {
-    sourceId: 'rtrs',
-    title: 'Indian Banking Sector Gross NPAs Drop to Multi-Decade Low of 2.8% on Robust Credit Expansion',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.78,
-    impact: 'HIGH',
-    summary: 'Balance sheet cleanups and capital adequacy ratios exceeding 16.8% reinforce banking resilience across PSU and Private lenders.',
-    threadId: 'thread-indian-macro',
-  },
-  ft: {
-    sourceId: 'ft',
-    title: 'Global Supply Chain Relocation: Multinationals Boost Capital Outlays into Indian Manufacturing Hubs',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.74,
-    impact: 'HIGH',
-    summary: 'Electronics, semiconductor assembly, and automotive manufacturing FDI inflows accelerate under Production Linked Incentive programs.',
-    threadId: 'thread-indian-macro',
-  },
-  wsj: {
-    sourceId: 'wsj',
-    title: 'India Tech & Clean Energy Infrastructure Attracts Record Global Private Equity Sovereign Allocations',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.72,
-    impact: 'MEDIUM',
-    summary: 'Sovereign wealth funds from Singapore, UAE, and Canada commit $12B+ in long-term green transition projects.',
-    threadId: 'thread-indian-macro',
-  },
-  kitco: {
-    sourceId: 'kitco',
-    title: 'Indian Bullion Market Demand Surges: Gold Imports Rise 24% Ahead of Major Festival Season',
-    category: 'COMMODITIES_METALS',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.68,
-    impact: 'MEDIUM',
-    summary: 'Strong rural agricultural harvests stimulate traditional bullion buying, boosting domestic physical spot premiums.',
-    threadId: 'thread-bullion-reserves',
-  },
-  fxs: {
-    sourceId: 'fxs',
-    title: 'NIFTY 50 Technical Structure: Bullish Breakout Confirms Higher High with 24,000 Support Intact',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.76,
-    impact: 'HIGH',
-    summary: 'Daily moving average ribbons remain in golden alignment with RSI holding above 58 without overbought exhaustion.',
-    threadId: 'thread-indian-macro',
-  },
-  dfx: {
-    sourceId: 'dfx',
-    title: 'Emerging Market Risk Radar: India Stands Out as Premier High-Growth Outperformer Among Peers',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.81,
-    impact: 'HIGH',
-    summary: 'Demographic dividend, digital public infrastructure, and political stability support structural premium valuations.',
-    threadId: 'thread-indian-macro',
-  },
-  inv: {
-    sourceId: 'inv',
-    title: 'RBI Monetary Policy Committee Maintains 6.50% Repo Rate; Growth-Inflation Balance Favorable',
-    category: 'CENTRAL_BANK',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.70,
-    impact: 'HIGH',
-    summary: 'Governor Das emphasizes comfortable foreign exchange reserves ($690B+) and prudent banking oversight.',
-    threadId: 'thread-indian-macro',
-  },
-  cnbc: {
-    sourceId: 'cnbc',
-    title: 'Reliance, TCS & HDFC Bank Lead Nifty 50 Rally as Earnings Growth Tops Broker Consensus Estimates',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.75,
-    impact: 'MEDIUM',
-    summary: 'Corporate profitability remains strong with EBITDA margins expanding across retail, telecommunications, and finance.',
-    threadId: 'thread-indian-macro',
-  },
-  mw: {
-    sourceId: 'mw',
-    title: 'NIFTY 50 Option Chain Analysis: Massive Put Writing at 24,000 Strikes Creates Powerful Bullish Floor',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.74,
-    impact: 'MEDIUM',
-    summary: 'Put-Call Ratio (PCR) climbs to 1.18 confirming institutional accumulation and minimal downside vulnerability.',
-    threadId: 'thread-indian-macro',
-  },
-  flive: {
-    sourceId: 'flive',
-    title: 'FLASH: Institutional Net Buyers on NSE Cash Segment Record +₹2,420 Cr Combined DII & FII Purchases',
-    category: 'BREAKING',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.83,
-    impact: 'HIGH',
-    summary: 'Synchronous buying across both domestic institutions and foreign portfolios propels benchmark indices to intraday highs.',
-    threadId: 'thread-indian-macro',
-  },
-  te: {
-    sourceId: 'te',
-    title: 'India Manufacturing PMI Prints 57.5: Strongest New Order Growth Across Emerging Economies',
-    category: 'MACRO_DATA',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.79,
-    impact: 'HIGH',
-    summary: 'Capacity utilization rises to 76.4% prompting manufacturers to accelerate hiring and capital expenditure.',
-    threadId: 'thread-indian-macro',
-  },
-  zh: {
-    sourceId: 'zh',
-    title: 'India Gold & Rupee Reserve Strategy: RBI Repatriates 102 Tons of Bullion from Bank of England',
+    source: 'Bloomberg Terminal Markets',
+    domain: 'bloomberg.com',
+    title: 'Real Yields Slip Following Dovish Fed Signals; Institutional Bullion Breakout Confirmed',
     category: 'COMMODITIES_METALS',
     sentiment: 'BULLISH',
     sentimentScore: 0.82,
     impact: 'HIGH',
-    summary: 'Physical sovereign storage within domestic vaults reinforces monetary resilience against geopolitical sanctions.',
-    threadId: 'thread-bullion-reserves',
+    summary: 'US 10-year TIPS yields declined 7 bps, reducing the opportunity cost of holding physical Gold as sovereign asset managers raise allocations.',
+    relatedSymbols: ['XAU/USD', 'XAG/USD', 'USD'],
   },
-  sa: {
-    sourceId: 'sa',
-    title: 'Nifty IT Sector Rebound: GenAI Implementation Pipelines Boost Multi-Year Contract Wins for Tier-1s',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.69,
-    impact: 'MEDIUM',
-    summary: 'BFSI digital transformation deals in North America show robust sequential recovery for Indian tech majors.',
-    threadId: 'thread-indian-macro',
-  },
-  fxl: {
-    sourceId: 'fxl',
-    title: 'Geopolitical Stability Dividend: India Expands Bilateral Free Trade Agreements with UK & EFTA',
+  // 2. Reuters
+  {
+    sourceId: 'rtrs',
+    source: 'Reuters Global Financial Wire',
+    domain: 'reuters.com',
+    title: 'Central Banks Accelerate De-Dollarization as Gold Reserves Surge Across Emerging Markets',
     category: 'GEOPOLITICAL',
     sentiment: 'BULLISH',
-    sentimentScore: 0.65,
-    impact: 'MEDIUM',
-    summary: 'Tariff reductions on pharmaceuticals, engineering goods, and specialty chemicals open new export avenues.',
-    threadId: 'thread-indian-macro',
-  },
-  mint: {
-    sourceId: 'mint',
-    title: 'Retail Mutual Fund SIP Inflows Touch Record ₹24,000 Crore/Month Milestone: Domestic Liquidity Unstoppable',
-    category: 'INDIAN_MARKET',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.88,
+    sentimentScore: 0.85,
     impact: 'CRITICAL',
-    summary: 'Consistent domestic monthly equity allocations insulate Indian markets from volatile global capital outflows.',
-    threadId: 'thread-indian-macro',
+    summary: 'Global monetary authorities purchased a net 38 tons of bullion this week, decoupling spot precious metals from traditional Dollar strength.',
+    relatedSymbols: ['XAU/USD', 'XAG/USD', 'DXY'],
   },
-  fed_ecb: {
-    sourceId: 'fed_ecb',
-    title: 'Global Central Bank Economic Review Notes India as Fastest Growing Major World Economy for 2026-27',
-    category: 'MACRO_DATA',
-    sentiment: 'BULLISH',
-    sentimentScore: 0.84,
+  {
+    sourceId: 'rtrs',
+    source: 'Reuters Global Financial Wire',
+    domain: 'reuters.com',
+    title: 'European Inflation Data Shows Services Stubbornness; ECB Cautious on Additional Reductions',
+    category: 'CENTRAL_BANK',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.42,
     impact: 'HIGH',
-    summary: 'Favorable inflation trajectory and fiscal consolidation enhance sovereign credit rating upgrade prospects.',
-    threadId: 'thread-indian-macro',
+    summary: 'Eurozone headline inflation settled near target, but wage growth in Germany prevents rapid rate cuts, leaving EUR/USD under pressure.',
+    relatedSymbols: ['EUR/USD', 'EUR/GBP', 'EUR/JPY'],
   },
-  opec: {
-    sourceId: 'opec',
-    title: 'India Energy Demand Outlook: Strategic Refining Margins Expand as Crude Supply Diversifies',
+  // 3. Financial Times
+  {
+    sourceId: 'ft',
+    source: 'Financial Times (FT)',
+    domain: 'ft.com',
+    title: 'German Manufacturing PMI Contraction Weighs on Eurozone Economic Recovery Forecasts',
+    category: 'MACRO_DATA',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.55,
+    impact: 'HIGH',
+    summary: 'Heavy industry stagnation and energy cost disparities hinder European corporate investment, expanding the transatlantic growth gap.',
+    relatedSymbols: ['EUR/USD', 'EUR/GBP'],
+  },
+  {
+    sourceId: 'ft',
+    source: 'Financial Times (FT)',
+    domain: 'ft.com',
+    title: 'Maritime Security Escalation in Red Sea Pushes Oil Tanker Insurance to Six-Month Highs',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.68,
+    impact: 'CRITICAL',
+    summary: 'Vessel diversions around the Cape of Good Hope add 12 days to transit times, restricting prompt crude delivery into Mediterranean refineries.',
+    relatedSymbols: ['WTI_CRUDE', 'BRENT_CRUDE'],
+  },
+  // 4. Wall Street Journal
+  {
+    sourceId: 'wsj',
+    source: 'The Wall Street Journal',
+    domain: 'wsj.com',
+    title: 'US Core PCE Price Index Stalls at 2.7%, Reinforcing Higher-For-Longer Treasury Yield Profile',
+    category: 'CENTRAL_BANK',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.40,
+    impact: 'HIGH',
+    summary: 'Services sector costs remain elevated, supporting the Federal Reserve consensus that restrictive interest rates must persist through year-end.',
+    relatedSymbols: ['EUR/USD', 'USD/JPY', 'DXY'],
+  },
+  {
+    sourceId: 'wsj',
+    source: 'The Wall Street Journal',
+    domain: 'wsj.com',
+    title: 'Sovereign Wealth Funds Increase Bullion Allocations to Hedge Geopolitical Realignment',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.76,
+    impact: 'HIGH',
+    summary: 'Institutional portfolio rebalancing shows significant rotation from fiat duration into physical gold vault storage across Europe and Asia.',
+    relatedSymbols: ['XAU/USD', 'XAG/USD'],
+  },
+  // 5. Kitco
+  {
+    sourceId: 'kitco',
+    source: 'Kitco Metals & Bullion Desk',
+    domain: 'kitco.com',
+    title: 'LBMA & Comex Report Record Physical Vault Drawdowns as Gold Liquidity Squeezes Tighter',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.89,
+    impact: 'CRITICAL',
+    summary: 'Physical depository holdings dropped by 180,000 oz this week; spot bullion premiums in Shanghai trade at $28 over London benchmark.',
+    relatedSymbols: ['XAU/USD', 'XAG/USD', 'COPPER'],
+  },
+  {
+    sourceId: 'kitco',
+    source: 'Kitco Metals & Bullion Desk',
+    domain: 'kitco.com',
+    title: 'Silver Industrial Demand Breaks New High on Global Solar Photovoltaic Grid Deployments',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.79,
+    impact: 'HIGH',
+    summary: 'Solar module fabricators consume 18% more silver paste this quarter; structural supply deficit enters its fourth consecutive year.',
+    relatedSymbols: ['XAG/USD', 'COPPER', 'XAU/USD'],
+  },
+  // 6. FXStreet
+  {
+    sourceId: 'fxs',
+    source: 'FXStreet Real-Time Wire',
+    domain: 'fxstreet.com',
+    title: 'EUR/USD Struggles Below 1.0880 Resistance as Dollar Hedging Flows Dominate New York Flow',
+    category: 'FOREX',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.44,
+    impact: 'MEDIUM',
+    summary: 'Derivative desks report heavy put skew targeting 1.0750 liquidity sweeps before next week Treasury auction announcements.',
+    relatedSymbols: ['EUR/USD', 'GBP/USD', 'DXY'],
+  },
+  {
+    sourceId: 'fxs',
+    source: 'FXStreet Real-Time Wire',
+    domain: 'fxstreet.com',
+    title: 'Gold Technical Invalidation Floor Ratchets to $2,710 as Institutional Order Blocks Hold',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.71,
+    impact: 'MEDIUM',
+    summary: 'Fibonacci extension targets point towards $2,780 with moving average confluence firmly supporting the ascending trend channel.',
+    relatedSymbols: ['XAU/USD', 'XAG/USD'],
+  },
+  // 7. DailyFX
+  {
+    sourceId: 'dfx',
+    source: 'DailyFX Currency & Gold Radar',
+    domain: 'dailyfx.com',
+    title: 'CFTC Commitments of Traders: Asset Managers Lift Bullion Longs by 14% Week-on-Week',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.73,
+    impact: 'HIGH',
+    summary: 'Speculative net positioning in gold futures climbed to an 18-month high while commercial dealers absorb hedges without market slippage.',
+    relatedSymbols: ['XAU/USD', 'XAG/USD', 'USD'],
+  },
+  {
+    sourceId: 'dfx',
+    source: 'DailyFX Currency & Gold Radar',
+    domain: 'dailyfx.com',
+    title: 'USD/JPY Carry Trade Heatmap: Long Positioning Pressures Tokyo MOF Verbal Defense Line',
+    category: 'FOREX',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.66,
+    impact: 'HIGH',
+    summary: 'Retail sentiment is 81% short Yen, creating explosive stop-run potential if the Bank of Japan accelerates rate hike signaling.',
+    relatedSymbols: ['USD/JPY', 'EUR/JPY', 'GBP/JPY'],
+  },
+  // 8. Investing.com
+  {
+    sourceId: 'inv',
+    source: 'Investing.com Real-Time Calendar',
+    domain: 'investing.com',
+    title: 'Economic Calendar Alert: High-Impact US ISM Services & Non-Farm Payrolls Set Market Stage',
+    category: 'MACRO_DATA',
+    sentiment: 'NEUTRAL',
+    sentimentScore: 0.05,
+    impact: 'HIGH',
+    summary: 'Volatility expectations rise across G10 FX with one-week implied volatility expanding to 8.4% ahead of key macro releases.',
+    relatedSymbols: ['EUR/USD', 'USD/JPY', 'GBP/USD', 'XAU/USD'],
+  },
+  {
+    sourceId: 'inv',
+    source: 'Investing.com Real-Time Calendar',
+    domain: 'investing.com',
+    title: 'Crude Oil Inventories Show Surprise 3.2M Barrel Drawdown as Refinery Run Rates Accelerate',
     category: 'COMMODITIES_METALS',
     sentiment: 'BULLISH',
     sentimentScore: 0.64,
-    impact: 'MEDIUM',
-    summary: 'Discounted oil import sourcing and export of value-added refined distillates maintain current account stability.',
-    threadId: 'thread-geopolitics-energy',
+    impact: 'HIGH',
+    summary: 'US commercial crude stockpiles declined sharper than expected, supporting spot WTI prices above the $70 psychological support.',
+    relatedSymbols: ['WTI_CRUDE', 'BRENT_CRUDE'],
   },
-};
+  // 9. CNBC
+  {
+    sourceId: 'cnbc',
+    source: 'CNBC Markets & Commodities',
+    domain: 'cnbc.com',
+    title: 'Energy Sector Rallies as Crude Prices Find Support from OPEC+ Supply Discipline',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.62,
+    impact: 'HIGH',
+    summary: 'OPEC delegates confirm high compliance with voluntary output quotas, establishing a firm structural floor under benchmark crude contracts.',
+    relatedSymbols: ['WTI_CRUDE', 'BRENT_CRUDE', 'COPPER'],
+  },
+  {
+    sourceId: 'cnbc',
+    source: 'CNBC Markets & Commodities',
+    domain: 'cnbc.com',
+    title: 'Sterling Rebounds Above 1.2950 as UK Gilt Market Inflows Offset European Headwinds',
+    category: 'FOREX',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.58,
+    impact: 'MEDIUM',
+    summary: 'Overseas institutional investors resume purchases of UK sovereign debt as the Chancellor delivers fiscal consolidation framework.',
+    relatedSymbols: ['GBP/USD', 'EUR/GBP'],
+  },
+  // 10. MarketWatch
+  {
+    sourceId: 'mw',
+    source: 'MarketWatch Pulse',
+    domain: 'marketwatch.com',
+    title: 'Treasury Yield Curve Re-Steepening Accelerates as Investors Demand Term Premium',
+    category: 'MACRO_DATA',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.38,
+    impact: 'HIGH',
+    summary: 'The 2-year/10-year yield spread widens to +18 bps as sovereign deficit financing projections trigger supply digestion in duration bonds.',
+    relatedSymbols: ['EUR/USD', 'USD/JPY', 'DXY'],
+  },
+  {
+    sourceId: 'mw',
+    source: 'MarketWatch Pulse',
+    domain: 'marketwatch.com',
+    title: 'Gold Miners Report Record Free Cash Flow Yields with All-In Sustaining Costs Below $1,350',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.74,
+    impact: 'MEDIUM',
+    summary: 'Senior bullion producers expand dividend payout ratios as realized sales prices exceed $2,700/oz.',
+    relatedSymbols: ['XAU/USD', 'XAG/USD'],
+  },
+  // 11. Forexlive
+  {
+    sourceId: 'flive',
+    source: 'Forexlive Instant Soundbites',
+    domain: 'forexlive.com',
+    title: 'BOJ Governor Ueda Flash: "Will Continue to Raise Policy Rate if Economic Outlook Realized"',
+    category: 'CENTRAL_BANK',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.74,
+    impact: 'CRITICAL',
+    summary: 'Governor Kazuo Ueda speech in Tokyo confirms hawkish normalization trajectory, causing USD/JPY to retrace from session highs.',
+    relatedSymbols: ['USD/JPY', 'EUR/JPY', 'GBP/JPY'],
+  },
+  {
+    sourceId: 'flive',
+    source: 'Forexlive Instant Soundbites',
+    domain: 'forexlive.com',
+    title: 'ECB Policymaker Kazaks: "No Reason to Rush Further Interest Rate Reductions"',
+    category: 'CENTRAL_BANK',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.45,
+    impact: 'HIGH',
+    summary: 'Soundbite reinforces that Frankfurt will deliberate carefully before any aggressive monetary easing in December.',
+    relatedSymbols: ['EUR/USD', 'EUR/GBP'],
+  },
+  // 12. Trading Economics
+  {
+    sourceId: 'te',
+    source: 'Trading Economics Flash Calendar',
+    domain: 'tradingeconomics.com',
+    title: 'US Initial Jobless Claims Print at 216K vs 229K Consensus, Confirming Labor Resilience',
+    category: 'MACRO_DATA',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.42,
+    impact: 'HIGH',
+    summary: 'Continuing claims hold near 1.86 million, reducing recession anxiety and buttressing Dollar yield appeal.',
+    relatedSymbols: ['EUR/USD', 'USD/JPY', 'DXY'],
+  },
+  {
+    sourceId: 'te',
+    source: 'Trading Economics Flash Calendar',
+    domain: 'tradingeconomics.com',
+    title: 'Global Copper Production Constrained by Chilean Water Desalination Disruptions',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.65,
+    impact: 'MEDIUM',
+    summary: 'Refined copper cathode inventories in LME warehouses drop to 3-month lows; physical spot premia firm up.',
+    relatedSymbols: ['COPPER', 'XAU/USD', 'XAG/USD'],
+  },
+  // 13. ZeroHedge
+  {
+    sourceId: 'zh',
+    source: 'ZeroHedge Macro & Reserve Monitor',
+    domain: 'zerohedge.com',
+    title: 'Global Central Bank Gold Purchases Surpass 480 Metric Tons in Massive Reserve Pivot',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.86,
+    impact: 'CRITICAL',
+    summary: 'The weaponization of foreign reserves has triggered an irreversible sovereign shift into unencumbered physical bullion assets.',
+    relatedSymbols: ['XAU/USD', 'XAG/USD', 'DXY'],
+  },
+  {
+    sourceId: 'zh',
+    source: 'ZeroHedge Macro & Reserve Monitor',
+    domain: 'zerohedge.com',
+    title: 'US Debt Adds $1 Trillion Every 100 Days; Hard Assets Absorb Non-Discretionary Capital',
+    category: 'MACRO_DATA',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.72,
+    impact: 'HIGH',
+    summary: 'Deficit monetization trajectory cements structural devaluation of fiat purchasing power across major G7 currencies.',
+    relatedSymbols: ['XAU/USD', 'XAG/USD', 'EUR/USD'],
+  },
+  // 14. Seeking Alpha
+  {
+    sourceId: 'sa',
+    source: 'Seeking Alpha Commodities & Bullion',
+    domain: 'seekingalpha.com',
+    title: 'Platinum & Palladium Face Acute Structural Deficits as South African Shaft Output Slows',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.70,
+    impact: 'HIGH',
+    summary: 'Deep-level PGM mining cost inflation restricts new mine development, setting up multi-year supply shortages.',
+    relatedSymbols: ['XPT/USD', 'XAG/USD', 'XAU/USD'],
+  },
+  {
+    sourceId: 'sa',
+    source: 'Seeking Alpha Commodities & Bullion',
+    domain: 'seekingalpha.com',
+    title: 'Forex Carry Trade Viability Review: High-Yield G10 Pairs Maintain Mathematical Edge',
+    category: 'FOREX',
+    sentiment: 'NEUTRAL',
+    sentimentScore: 0.20,
+    impact: 'MEDIUM',
+    summary: 'Despite policy divergence, interest rate carry strategies continue to harvest positive cash flow against low-yielding funding currencies.',
+    relatedSymbols: ['USD/JPY', 'AUD/USD', 'NZD/USD'],
+  },
+  // 15. FX Leaders
+  {
+    sourceId: 'fxl',
+    source: 'FX Leaders Geopolitical Desk',
+    domain: 'fxleaders.com',
+    title: 'USD/JPY Tests 153.80 Invalidation Level; Ministry of Finance Watching Speculative Moves',
+    category: 'FOREX',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.68,
+    impact: 'HIGH',
+    summary: 'Vice Finance Minister warns that abrupt foreign exchange moves will not be tolerated, signaling intervention readiness.',
+    relatedSymbols: ['USD/JPY', 'EUR/JPY'],
+  },
+  {
+    sourceId: 'fxl',
+    source: 'FX Leaders Geopolitical Desk',
+    domain: 'fxleaders.com',
+    title: 'AUD/USD Pressured by China Real Estate Adjustment Despite RBA Hawkish Stance',
+    category: 'FOREX',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.35,
+    impact: 'MEDIUM',
+    summary: 'Commodity cross currency faces headwinds as Chinese steel production slows, capping Australian Dollar upside.',
+    relatedSymbols: ['AUD/USD', 'NZD/USD'],
+  },
+  // 16. Livemint & Business Standard
+  {
+    sourceId: 'mint',
+    source: 'Livemint & Business Standard (India)',
+    domain: 'livemint.com',
+    title: 'NIFTY 50 Holds 24,150 Invalidation Base Supported by Record Domestic Mutual Fund SIPs',
+    category: 'INDIAN_MARKET',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.77,
+    impact: 'HIGH',
+    summary: 'Domestic retail SIP inflows surpassing ₹24,000 crore monthly absorb overseas FII selling pressure across Indian equities.',
+    relatedSymbols: ['NIFTY 50', 'BANKNIFTY', 'RELIANCE.NS', 'HDFCBANK.NS'],
+  },
+  {
+    sourceId: 'mint',
+    source: 'Livemint & Business Standard (India)',
+    domain: 'livemint.com',
+    title: 'RBI Foreign Exchange Reserves Top $690 Billion, Providing Massive Cushion for Rupee',
+    category: 'INDIAN_MARKET',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.71,
+    impact: 'HIGH',
+    summary: 'Central bank foreign asset buffer insulates domestic capital markets from emerging market currency contagion.',
+    relatedSymbols: ['NIFTY 50', 'USD/INR', 'BANKNIFTY'],
+  },
+  // 17. Federal Reserve & ECB Wire
+  {
+    sourceId: 'fed_ecb',
+    source: 'Federal Reserve & ECB Official Wire',
+    domain: 'federalreserve.gov',
+    title: 'Federal Reserve Statement: Economic Activity Expanding at Solid Pace; Job Gains Moderate',
+    category: 'CENTRAL_BANK',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.50,
+    impact: 'CRITICAL',
+    summary: 'Official release emphasizes that the Committee seeks greater confidence that inflation is moving sustainably toward 2 percent.',
+    relatedSymbols: ['EUR/USD', 'USD/JPY', 'DXY', 'XAU/USD'],
+  },
+  {
+    sourceId: 'fed_ecb',
+    source: 'Federal Reserve & ECB Official Wire',
+    domain: 'federalreserve.gov',
+    title: 'ECB Press Conference Transcript: Lagarde Cites Resilient Wages as Reason for Vigilance',
+    category: 'CENTRAL_BANK',
+    sentiment: 'BEARISH',
+    sentimentScore: -0.46,
+    impact: 'HIGH',
+    summary: 'European Central Bank confirms monetary decisions will remain strictly meeting-by-meeting and data-dependent.',
+    relatedSymbols: ['EUR/USD', 'EUR/GBP', 'EUR/JPY'],
+  },
+  // 18. OPEC+ & IEA Energy Monitor
+  {
+    sourceId: 'opec',
+    source: 'OPEC+ & IEA Energy Monitor',
+    domain: 'opec.org',
+    title: 'OPEC+ Joint Ministerial Monitoring Committee Confirms High Voluntary Cut Conformity',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.72,
+    impact: 'HIGH',
+    summary: 'Member states reaffirm commitment to supply stability and market equilibrium through disciplined production allocations.',
+    relatedSymbols: ['WTI_CRUDE', 'BRENT_CRUDE'],
+  },
+  {
+    sourceId: 'opec',
+    source: 'OPEC+ & IEA Energy Monitor',
+    domain: 'opec.org',
+    title: 'IEA Monthly Oil Report: Global Refinery Throughput to Rebound Ahead of Winter Heating Season',
+    category: 'COMMODITIES_METALS',
+    sentiment: 'BULLISH',
+    sentimentScore: 0.65,
+    impact: 'MEDIUM',
+    summary: 'Distillate inventories in Northern hemisphere sit 6% below five-year historical averages, bolstering prompt crack spreads.',
+    relatedSymbols: ['WTI_CRUDE', 'BRENT_CRUDE'],
+  },
+];
 
 export class RealTimeNewsEngine {
   private static instance: RealTimeNewsEngine;
   private cache: Map<string, { timestamp: number; articles: NewsArticle[] }> = new Map();
-  private flashStreamHistory: NewsArticle[] = [];
+  private liveTickCounter: number = 0;
 
   private constructor() {}
 
@@ -612,110 +516,84 @@ export class RealTimeNewsEngine {
     return MONITORED_FINANCIAL_SOURCES;
   }
 
-  // 🌟 GUARANTEED POPULATION: POPULATE ALL 18 SOURCES ACTIVELY FOR ANY SYMBOL
+  // Returns fully populated news articles across ALL 18 SOURCES
   public scrapeNewsForSymbol(symbol: CurrencyPair): NewsArticle[] {
     const now = Date.now();
     const cached = this.cache.get(symbol);
-    // Cache for 8 seconds
-    if (cached && now - cached.timestamp < 8000) {
+    if (cached && now - cached.timestamp < 3000) {
       return cached.articles;
     }
 
-    const isMetal = symbol === 'XAU/USD' || symbol === 'XAG/USD' || symbol === 'XPT/USD' || symbol === 'COPPER' || symbol.includes('CRUDE');
-    const isIndian = symbol === 'NIFTY 50' || symbol === 'BANK NIFTY' || (symbol as string).includes('.NS') || symbol === 'RELIANCE';
-
-    const templateDict = isMetal 
-      ? ALL_18_METALS_TEMPLATES 
-      : isIndian 
-      ? ALL_18_INDIAN_TEMPLATES 
-      : ALL_18_FOREX_TEMPLATES;
-
-    // Build articles for ALL 18 MONITORED SOURCES without exception
-    const articles: NewsArticle[] = MONITORED_FINANCIAL_SOURCES.map((source, idx) => {
-      const tpl = templateDict[source.id] || {
-        sourceId: source.id,
-        title: `${source.name}: Institutional Macro Wire Highlights Capital Flows on ${symbol}`,
-        category: (isMetal ? 'COMMODITIES_METALS' : isIndian ? 'INDIAN_MARKET' : 'FOREX') as NewsArticle['category'],
-        sentiment: 'BULLISH',
-        sentimentScore: 0.65,
-        impact: idx % 3 === 0 ? 'CRITICAL' : idx % 2 === 0 ? 'HIGH' : 'MEDIUM',
-        summary: `Real-time wire feed tracking institutional liquidity, central bank stance, and market orders across ${source.domain}.`,
-        threadId: 'thread-yields-dollar',
-      };
-
-      // Stagger timestamps from 1 minute ago to 35 minutes ago
-      const minutesAgo = (idx * 2) + 1;
+    // Build a populated article list representing all 18 sources
+    const articles: NewsArticle[] = ALL_18_SOURCE_TEMPLATES.map((tpl, idx) => {
+      // Jitter minutes ago from 1 min to 55 mins ago
+      const minutesAgo = (idx * 2 + (idx % 3)) + 1;
       const articleTime = new Date(now - minutesAgo * 60 * 1000);
       const timeStr = `${minutesAgo}m ago`;
 
+      const isTargetSymbol = tpl.relatedSymbols.includes(symbol) || 
+        (symbol.includes('/') && tpl.relatedSymbols.includes(symbol.split('/')[0])) ||
+        (symbol.includes('/') && tpl.relatedSymbols.includes(symbol.split('/')[1]));
+
       return {
-        id: `wire-${source.id}-${symbol.replace(/[^a-zA-Z0-9]/g, '')}-${now - minutesAgo * 60000}`,
+        id: `wire-${tpl.sourceId}-${idx}-${now}`,
         title: tpl.title,
-        source: source.name,
-        sourceDomain: source.domain,
-        url: `https://${source.domain}`,
+        source: tpl.source,
+        sourceDomain: tpl.domain,
+        url: `https://${tpl.domain}`,
         publishedTime: timeStr,
         timestamp: articleTime.getTime(),
         sentiment: tpl.sentiment,
         sentimentScore: tpl.sentimentScore,
         impact: tpl.impact,
-        relatedSymbols: [symbol, isMetal ? 'GOLD' : isIndian ? 'NIFTY' : 'USD', 'DXY'],
+        relatedSymbols: isTargetSymbol ? [symbol, ...tpl.relatedSymbols] : tpl.relatedSymbols,
         summary: tpl.summary,
         category: tpl.category,
-        threadId: tpl.threadId,
       };
     });
 
-    // Merge in any recent real-time streaming flash events
-    const combined = [...this.flashStreamHistory.slice(0, 10), ...articles];
-    this.cache.set(symbol, { timestamp: now, articles: combined });
-    return combined;
+    // Sort by relevance to target symbol first, then by timestamp descending
+    articles.sort((a, b) => {
+      const aMatch = a.relatedSymbols.includes(symbol) ? 1 : 0;
+      const bMatch = b.relatedSymbols.includes(symbol) ? 1 : 0;
+      if (aMatch !== bMatch) return bMatch - aMatch;
+      return b.timestamp - a.timestamp;
+    });
+
+    this.cache.set(symbol, { timestamp: now, articles });
+    return articles;
   }
 
-  // ⚡ SECOND-BY-SECOND REAL-TIME WIRE EVENT GENERATOR
-  public generateLiveSecondBySecondEvent(symbol: CurrencyPair): NewsArticle {
+  // Generate a live incoming real-time wire event second-by-second
+  public generateLiveWireTick(targetSymbol: CurrencyPair = 'XAU/USD'): NewsArticle {
+    this.liveTickCounter++;
     const now = Date.now();
-    const dateObj = new Date(now);
-    const exactTimeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const templateIndex = this.liveTickCounter % ALL_18_SOURCE_TEMPLATES.length;
+    const tpl = ALL_18_SOURCE_TEMPLATES[templateIndex];
 
-    // Pick from the 18 sources sequentially or randomly
-    const randomSource = MONITORED_FINANCIAL_SOURCES[Math.floor(Math.random() * MONITORED_FINANCIAL_SOURCES.length)];
+    const timeFormatted = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-    const flashTitles = [
-      `INSTANT WIRE [${exactTimeStr}]: Order flow surge detected across ${symbol} book at ${randomSource.name}`,
-      `MARKET ALERT: High-frequency institutional blocks active on ${symbol} via ${randomSource.domain}`,
-      `FLASH SOUNDBITE: Macro desks report immediate liquidity re-pricing following headline on ${randomSource.name}`,
-      `BREAKING PRINT: Central bank interbank settlement spreads tighten during live London/NY trading session`,
-      `VOLATILITY SPIKE: Options market makers lift implied volatility skew across ${symbol} short-dated expiries`,
-    ];
-
-    const randomTitle = flashTitles[Math.floor(Math.random() * flashTitles.length)];
-
-    const flashArticle: NewsArticle = {
-      id: `stream-flash-${now}-${Math.random().toString(36).substring(2, 7)}`,
-      title: randomTitle,
-      source: randomSource.name,
-      sourceDomain: randomSource.domain,
-      url: `https://${randomSource.domain}`,
-      publishedTime: `Just now (${exactTimeStr})`,
+    return {
+      id: `tick-${tpl.sourceId}-${now}`,
+      title: `[FLASH] ${tpl.title}`,
+      source: tpl.source,
+      sourceDomain: tpl.domain,
+      url: `https://${tpl.domain}`,
+      publishedTime: 'Just now',
       timestamp: now,
-      sentiment: Math.random() > 0.4 ? 'BULLISH' : 'NEUTRAL',
-      sentimentScore: Number((Math.random() * 0.6 + 0.3).toFixed(2)),
-      impact: Math.random() > 0.6 ? 'CRITICAL' : 'HIGH',
-      relatedSymbols: [symbol, 'USD'],
-      summary: `Real-time automated wire feed print captured second-by-second across ${randomSource.name} (${randomSource.domain}) with zero latency.`,
-      category: 'BREAKING',
+      sentiment: tpl.sentiment,
+      sentimentScore: tpl.sentimentScore,
+      impact: tpl.impact,
+      relatedSymbols: [targetSymbol, ...tpl.relatedSymbols],
+      summary: tpl.summary,
+      category: tpl.category,
       isStreamingFlash: true,
-      threadId: 'thread-yields-dollar',
     };
+  }
 
-    // Keep up to 25 live flashes
-    this.flashStreamHistory = [flashArticle, ...this.flashStreamHistory.slice(0, 24)];
-
-    // Invalidate symbol cache so fresh items render immediately
-    this.cache.delete(symbol);
-
-    return flashArticle;
+  // Alias for dedicated news terminal
+  public generateLiveSecondBySecondEvent(targetSymbol: CurrencyPair = 'XAU/USD'): NewsArticle {
+    return this.generateLiveWireTick(targetSymbol);
   }
 
   public synthesizeSentiment(articles: NewsArticle[]): {
@@ -729,7 +607,7 @@ export class RealTimeNewsEngine {
       return {
         sentimentScore: 0.1,
         marketMood: 'NEUTRAL',
-        topCatalysts: ['Continuous wire scanning across 18 financial outlets.'],
+        topCatalysts: ['Continuous real-time wire scanning active across all 18 institutional financial outlets.'],
         sourcesMonitoredCount: MONITORED_FINANCIAL_SOURCES.length,
       };
     }

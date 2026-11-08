@@ -33,7 +33,6 @@ export interface LeftNavigationDrawerProps {
   onOpenJournal: () => void;
   onOpenMonteCarlo: () => void;
   onOpenNewsWire: () => void;
-  onOpenNewsTerminal?: () => void;
   onOpenFirebase: () => void;
   onOpenKnowledge: () => void;
   onOpenScanner: () => void;
@@ -56,7 +55,6 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
   onOpenJournal,
   onOpenMonteCarlo,
   onOpenNewsWire,
-  onOpenNewsTerminal,
   onOpenFirebase,
   onOpenKnowledge,
   onOpenScanner,
@@ -226,8 +224,8 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     {
       id: 'wire',
       number: '08',
-      label: 'Wire & Terminal',
-      description: '18 Live Outlets, Memory Engine & Insights',
+      label: 'Wire',
+      description: '18 Live Financial Outlets & Scrapers',
       icon: Radio,
       color: 'text-red-400',
       activeBg: 'bg-red-500/15 border-red-500/40 text-red-300 font-semibold',
@@ -236,11 +234,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       badgeColor: 'bg-red-500/20 text-red-400 border-red-500/30',
       action: () => {
         onClose();
-        if (onOpenNewsTerminal) {
-          onOpenNewsTerminal();
-        } else {
-          onOpenNewsWire();
-        }
+        onOpenNewsWire();
       },
     },
     {
