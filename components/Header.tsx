@@ -49,6 +49,7 @@ export interface HeaderProps {
   isMarketFrozen?: boolean;
   sessionInfo?: MarketSessionInfo | null;
   onToggleFreeze?: () => void;
+  cycleNumber?: number;
 }
 
 const TIMEFRAMES: TimeFrame[] = ['1m', '5m', '15m', '1h', '4h', '1d'];
@@ -71,6 +72,7 @@ export const Header: React.FC<HeaderProps> = ({
   isMarketFrozen = false,
   sessionInfo = null,
   onToggleFreeze,
+  cycleNumber,
 }) => {
   const pairs = marketSegment === 'INDIAN_MARKET' 
     ? INDIAN_MARKET_ASSETS 
@@ -140,6 +142,10 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
                 <span className="text-sky-400/90 font-medium hidden sm:inline">• 38 NEWS WIRES</span>
                 <span className="text-cyan-400/80 hidden md:inline font-medium">• 1,050+ RULES</span>
+                <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-cyan-300 border border-indigo-500/40 text-[10px] font-mono font-bold hidden lg:flex items-center gap-1">
+                  <Zap className="w-2.5 h-2.5 text-cyan-400 animate-pulse" />
+                  <span>24/7 AUTONOMOUS SWARM</span>
+                </span>
               </div>
             </div>
           </div>
@@ -203,12 +209,18 @@ export const Header: React.FC<HeaderProps> = ({
               className={`px-2.5 sm:px-3.5 py-1.5 rounded-lg font-mono text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all shadow-md ${
                 isAnalyzing
                   ? 'bg-terminal-700 text-slate-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-cyan-500/20 active:scale-95'
+                  : 'bg-gradient-to-r from-cyan-600 via-indigo-600 to-cyan-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-cyan-500/20 active:scale-95'
               }`}
+              title="24/7 Autonomous Multi-Agent Swarm continuously looping second-by-second across 5 desks. Click to force-pulse now."
             >
-              <Zap className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : ''}`} />
-              <span className="hidden xs:inline">{isAnalyzing ? 'SYNCHRONIZING...' : 'RUN SWARM'}</span>
-              <span className="xs:hidden">{isAnalyzing ? '...' : 'RUN'}</span>
+              <Zap className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : 'text-cyan-300 animate-pulse'}`} />
+              <span className="hidden sm:inline">
+                {isAnalyzing ? 'PULSING SWARM...' : `24/7 SWARM ACTIVE${cycleNumber ? ` (#${cycleNumber})` : ''}`}
+              </span>
+              <span className="sm:hidden xs:inline">
+                {isAnalyzing ? '...' : `24/7 AUTO${cycleNumber ? ` #${cycleNumber}` : ''}`}
+              </span>
+              <span className="xs:hidden">{isAnalyzing ? '...' : '24/7'}</span>
             </button>
 
             {onToggleFreeze && (

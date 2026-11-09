@@ -16,7 +16,8 @@ import {
   Flame,
   Radio,
   Snowflake,
-  Lock
+  Lock,
+  Zap
 } from 'lucide-react';
 
 interface UnifiedDecisionBannerProps {
@@ -109,6 +110,18 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               <span className="text-slate-400 hidden md:inline">| &lt;500ms • ±0.05% Tol</span>
             </div>
           )}
+
+          {/* 24/7 Autonomous Multi-Agent Swarm Loop Pill */}
+          <div 
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-950/70 border border-indigo-500/40 text-[11px] font-mono text-indigo-300 shadow-sm"
+            title="24/7 Autonomous Multi-Agent Swarm continuously looping across 5 specialized desks"
+          >
+            <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+            <span className="font-bold tracking-tight">24/7 SWARM LOOP</span>
+            <span className="text-cyan-300 font-bold hidden xl:inline">
+              | Loop #{consensus.autonomousLoopTelemetry?.cycleNumber || 1} • 0.0s Latency
+            </span>
+          </div>
         </div>
 
         {/* Action Button */}

@@ -7,7 +7,8 @@ import {
   NewsAnalysis, 
   RiskAssessment, 
   SignalDirection, 
-  TechnicalAnalysis 
+  TechnicalAnalysis,
+  SwarmConsensusResult
 } from '@/lib/types';
 import { 
   BarChart3, 
@@ -25,7 +26,9 @@ import {
   Sparkles,
   Newspaper,
   Radio,
-  ExternalLink
+  ExternalLink,
+  Zap,
+  Activity
 } from 'lucide-react';
 
 interface AgentSwarmPanelProps {
@@ -37,6 +40,7 @@ interface AgentSwarmPanelProps {
   onExecuteTrade?: () => void;
   onOpenMonteCarlo?: () => void;
   onOpenNewsWire?: () => void;
+  telemetry?: SwarmConsensusResult['autonomousLoopTelemetry'];
 }
 
 export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
@@ -48,6 +52,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
   onExecuteTrade,
   onOpenMonteCarlo,
   onOpenNewsWire,
+  telemetry,
 }) => {
   const getBiasBadge = (bias: SignalDirection) => {
     if (bias.includes('BUY')) {
@@ -100,7 +105,32 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="space-y-3">
+      {/* 24/7 Autonomous Multi-Agent Swarm Status Strip */}
+      <div className="p-3 bg-terminal-950 border border-terminal-border/80 rounded-xl flex flex-wrap items-center justify-between gap-3 text-xs font-mono shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
+          </span>
+          <span className="font-bold text-white tracking-wide">
+            24/7 AUTONOMOUS SWARM // 5 SPECIALIZED DESKS RUNNING SIMULTANEOUS ASYNCHRONOUS PROCESSES
+          </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-slate-400 text-[11px]">
+          <span className="text-emerald-400 font-bold flex items-center gap-1">
+            <Activity className="w-3.5 h-3.5" />
+            Continuous Loop Active {telemetry?.cycleNumber ? `(Cycle #${telemetry.cycleNumber})` : ''}
+          </span>
+          <span>• 525 Technical + 525 Macro Strategies</span>
+          <span>• 38 Wires Streamed</span>
+          <span className="text-cyan-400 font-bold">
+            {telemetry?.latencyMs ? `${telemetry.latencyMs}ms Latency` : 'Zero Human Latency'}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {/* 1. TECHNICAL ANALYST CARD */}
       <div className="bg-terminal-900 border border-terminal-border rounded-xl p-4 sm:p-5 flex flex-col justify-between hover:border-cyan-500/40 transition-colors shadow-md">
         <div>
@@ -545,5 +575,6 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
         )}
       </div>
     </div>
-  );
+  </div>
+);
 };

@@ -43,6 +43,7 @@ import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 import { MarketSessionInfo } from '@/lib/types';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
 import { MarketCloseFreezeBanner } from '@/components/MarketCloseFreezeBanner';
+import { AutonomousSwarmEngine, AutonomousSwarmTelemetry } from '@/lib/autonomousSwarmEngine';
 
 export default function Home() {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>('XAU/USD');
@@ -60,6 +61,7 @@ export default function Home() {
 
   // Swarm State (5 Specialized Roles)
   const [consensus, setConsensus] = useState<SwarmConsensusResult | null>(null);
+  const [swarmTelemetry, setSwarmTelemetry] = useState<AutonomousSwarmTelemetry | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [isDebating, setIsDebating] = useState<boolean>(false);
 
@@ -237,6 +239,78 @@ export default function Home() {
     }
   }, []);
 
+  // Autopilot Execution Check (Zero Human Latency)
+  const executeAutopilotOrder = useCallback((calibratedResult: SwarmConsensusResult) => {
+    if (executionModeRef.current !== 'FULL_AUTOPILOT') return;
+    if (!calibratedResult.executionSignal.authorized) return;
+    if (MarketSessionManager.isMarketFrozen(calibratedResult.pair)) return;
+
+    const currentPositions = portfolioRef.current.positions;
+    const alreadyOpen = currentPositions.some(p => p.symbol === calibratedResult.pair);
+    if (alreadyOpen) return;
+
+    const signal = calibratedResult.executionSignal;
+    const livePrice = LiveMarketFeedManager.getCanonicalPrice(calibratedResult.pair);
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    // Strict Single Source of Truth for Auto-Execution
+    const isSellTrade = signal.orderType === 'SELL_MARKET' || calibratedResult.unifiedDecision.direction === 'SELL';
+    const autoTradeType: 'BUY' | 'SELL' = isSellTrade ? 'SELL' : 'BUY';
+
+    let autoStopLoss = signal.stopLoss;
+    let autoTakeProfit = signal.takeProfit;
+    if (autoTradeType === 'SELL') {
+      if (autoStopLoss <= livePrice) {
+        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (livePrice * 0.004);
+        autoStopLoss = Number((livePrice + stopDist).toFixed(5));
+      }
+      if (autoTakeProfit >= livePrice) {
+        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (livePrice * 0.008);
+        autoTakeProfit = Number((livePrice - targetDist).toFixed(5));
+      }
+    } else {
+      if (autoStopLoss >= livePrice) {
+        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (livePrice * 0.004);
+        autoStopLoss = Number((livePrice - stopDist).toFixed(5));
+      }
+      if (autoTakeProfit <= livePrice) {
+        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (livePrice * 0.008);
+        autoTakeProfit = Number((livePrice + targetDist).toFixed(5));
+      }
+    }
+
+    const autoPos: Position = {
+      id: `pos-${Date.now()}`,
+      symbol: signal.symbol,
+      type: autoTradeType,
+      lots: signal.lots,
+      entryPrice: livePrice,
+      currentPrice: livePrice,
+      stopLoss: autoStopLoss,
+      takeProfit: autoTakeProfit,
+      openTime: timeStr,
+      pnl: 0,
+      pnlPercent: 0,
+      riskReward: signal.riskReward,
+    };
+
+    const marginNeeded = (signal.lots * 100000) / 30;
+    setPortfolio(prev => {
+      const updated = {
+        ...prev,
+        positions: [autoPos, ...prev.positions],
+        marginUsed: prev.marginUsed + marginNeeded,
+        freeMargin: Math.max(0, prev.balance - (prev.marginUsed + marginNeeded)),
+      };
+      BrowserStorageManager.savePortfolio(updated);
+      return updated;
+    });
+
+    JournalStorageManager.recordTradeOpen(autoPos, calibratedResult, 'FULL_AUTOPILOT');
+    showNotification(`⚡ AUTOPILOT EXECUTED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} @ ${livePrice} (Confluence: ${calibratedResult.confluenceGrade})`);
+  }, []);
+
   // 4. Trigger 5-Agent Swarm (calibrating strictly against Canonical Chart Feed)
   const triggerSwarm = useCallback(async (pair: CurrencyPair, tf: TimeFrame, currentCandles?: Candle[]) => {
     setIsAnalyzing(true);
@@ -245,112 +319,41 @@ export default function Home() {
         ? currentCandles 
         : LiveMarketFeedManager.getCanonicalCandles(pair, tf);
 
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          pair,
-          timeframe: tf,
-          riskConfig: riskConfigRef.current,
-          candles: chartCandles.length > 0 ? chartCandles : undefined,
-        }),
-      });
-      const json = await res.json();
-      if (json.success && json.data) {
-        const livePrice = LiveMarketFeedManager.getCanonicalPrice(pair);
-        const calibratedResult = LiveMarketFeedManager.calibrateSwarmConsensus(json.data, livePrice);
-        setConsensus(calibratedResult);
-        BrowserStorageManager.saveConsensusResult(calibratedResult);
-
-        // Autopilot Execution Check
-        if (executionModeRef.current === 'FULL_AUTOPILOT' && calibratedResult.executionSignal.authorized) {
-          const currentPositions = portfolioRef.current.positions;
-          const alreadyOpen = currentPositions.some(p => p.symbol === calibratedResult.pair);
-          
-          if (!alreadyOpen) {
-            const signal = calibratedResult.executionSignal;
-            const now = new Date();
-            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-            
-            // Strict Single Source of Truth for Auto-Execution
-            const isSellTrade = signal.orderType === 'SELL_MARKET' || calibratedResult.unifiedDecision.direction === 'SELL';
-            const autoTradeType: 'BUY' | 'SELL' = isSellTrade ? 'SELL' : 'BUY';
-
-            let autoStopLoss = signal.stopLoss;
-            let autoTakeProfit = signal.takeProfit;
-            if (autoTradeType === 'SELL') {
-              if (autoStopLoss <= livePrice) {
-                const stopDist = Math.abs(signal.entry - signal.stopLoss) || (livePrice * 0.004);
-                autoStopLoss = Number((livePrice + stopDist).toFixed(5));
-              }
-              if (autoTakeProfit >= livePrice) {
-                const targetDist = Math.abs(signal.takeProfit - signal.entry) || (livePrice * 0.008);
-                autoTakeProfit = Number((livePrice - targetDist).toFixed(5));
-              }
-            } else {
-              if (autoStopLoss >= livePrice) {
-                const stopDist = Math.abs(signal.entry - signal.stopLoss) || (livePrice * 0.004);
-                autoStopLoss = Number((livePrice - stopDist).toFixed(5));
-              }
-              if (autoTakeProfit <= livePrice) {
-                const targetDist = Math.abs(signal.takeProfit - signal.entry) || (livePrice * 0.008);
-                autoTakeProfit = Number((livePrice + targetDist).toFixed(5));
-              }
-            }
-
-            const autoPos: Position = {
-              id: `pos-${Date.now()}`,
-              symbol: signal.symbol,
-              type: autoTradeType,
-              lots: signal.lots,
-              entryPrice: livePrice,
-              currentPrice: livePrice,
-              stopLoss: autoStopLoss,
-              takeProfit: autoTakeProfit,
-              openTime: timeStr,
-              pnl: 0,
-              pnlPercent: 0,
-              riskReward: signal.riskReward,
-            };
-
-            const marginNeeded = (signal.lots * 100000) / 30;
-            setPortfolio(prev => {
-              const updated = {
-                ...prev,
-                positions: [autoPos, ...prev.positions],
-                marginUsed: prev.marginUsed + marginNeeded,
-                freeMargin: Math.max(0, prev.balance - (prev.marginUsed + marginNeeded)),
-              };
-              BrowserStorageManager.savePortfolio(updated);
-              return updated;
-            });
-
-            showNotification(`AUTOPILOT TRIGGERED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} @ ${livePrice} (Confluence: ${calibratedResult.confluenceGrade})`);
-          }
-        }
+      const result = await AutonomousSwarmEngine.executeAutonomousCycle(chartCandles.length > 0 ? chartCandles : undefined);
+      if (result) {
+        setConsensus(result);
+        BrowserStorageManager.saveConsensusResult(result);
+        executeAutopilotOrder(result);
       }
     } catch (e) {
       console.error('Swarm analysis error:', e);
     } finally {
       setIsAnalyzing(false);
     }
-  }, []);
+  }, [executeAutopilotOrder]);
 
-  // 5. Initial load and target symbol switch listener
+  // 5. 24/7 Continuous Autonomous Multi-Agent Swarm Loop (Second-by-Second)
   useEffect(() => {
-    let isCancelled = false;
-    const load = async () => {
-      await fetchMarketData(selectedPair, timeframe);
-      if (!isCancelled) {
-        await triggerSwarm(selectedPair, timeframe);
-      }
-    };
-    load();
+    fetchMarketData(selectedPair, timeframe);
     fetchOpportunities();
+
+    // Start 24/7 autonomous loop at 2.0s cadence
+    const stopLoop = AutonomousSwarmEngine.startAutonomousLoop(selectedPair, timeframe, 2000);
+
+    const unsubscribe = AutonomousSwarmEngine.subscribe((result, telemetry) => {
+      setConsensus(result);
+      setSwarmTelemetry(telemetry);
+      BrowserStorageManager.saveConsensusResult(result);
+
+      // Autopilot Execution Check (0ms Human Latency)
+      executeAutopilotOrder(result);
+    });
+
     return () => {
-      isCancelled = true;
+      unsubscribe();
+      stopLoop();
     };
-  }, [selectedPair, timeframe, fetchMarketData, triggerSwarm, fetchOpportunities]);
+  }, [selectedPair, timeframe, fetchMarketData, fetchOpportunities, executeAutopilotOrder]);
 
   // 6. Unidirectional Live Market Data Feed Engine (Single Source of Truth)
   useEffect(() => {
@@ -755,6 +758,7 @@ export default function Home() {
           setIsMarketFrozen(next);
           showNotification(next ? '❄️ Global State Freeze activated.' : '🟢 Trading resumed. Global State Unfrozen.');
         }}
+        cycleNumber={consensus?.autonomousLoopTelemetry?.cycleNumber || swarmTelemetry?.cycleCount}
       />
 
       {/* Live Ticker Bar (Forex, Metals & Commodities, or Indian Markets) */}
@@ -823,6 +827,7 @@ export default function Home() {
                 onExecuteTrade={handleExecuteTrade}
                 onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
                 onOpenNewsWire={() => setIsNewsWireOpen(true)}
+                telemetry={consensus.autonomousLoopTelemetry}
               />
             )}
 

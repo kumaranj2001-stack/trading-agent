@@ -617,6 +617,15 @@ export interface SwarmConsensusResult {
     riskAmountUsd: number;
     status: 'READY' | 'EXECUTED' | 'VETOED';
   };
+  autonomousLoopTelemetry?: {
+    cycleNumber: number;
+    timestamp: string;
+    latencyMs: number;
+    activeDesksCount: number;
+    autonomousCadenceSeconds: number;
+    executionReadiness: boolean;
+    isAutonomousLooping: boolean;
+  };
 }
 
 export interface MarketScannerOpportunity {
