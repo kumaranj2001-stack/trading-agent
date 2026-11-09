@@ -143,7 +143,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               className="px-3 py-2 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-sky-300 font-mono text-xs flex items-center gap-1.5 transition-colors"
             >
               <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-              <span>18 Sources Wire</span>
+              <span>38 Sources Wire</span>
             </button>
           )}
         </div>
@@ -199,7 +199,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               <div className="flex items-center justify-between mb-2 text-sky-400 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
                   <Newspaper className="w-4 h-4" />
-                  2. 18-Source News Wire
+                  2. 38-Source News Wire
                 </span>
                 <span className="text-xs px-2 py-0.5 rounded font-bold bg-sky-950/60 border border-sky-800">
                   {agents.news.bias}

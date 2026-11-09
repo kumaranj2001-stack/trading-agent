@@ -15,7 +15,7 @@ export async function GET() {
       'news_analyst',
       'risk_manager'
     ],
-    monitoredFinancialSources: 18,
+    monitoredFinancialSources: 38,
     coverage: [
       'Forex Majors & Crosses',
       'Precious Metals (Gold, Silver, Platinum)',

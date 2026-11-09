@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { realTimeNewsEngine, MONITORED_FINANCIAL_SOURCES } from '@/lib/newsEngine';
+import { realTimeNewsEngine } from '@/lib/newsEngine';
 import { CurrencyPair } from '@/lib/types';
 import { BASE_PRICES } from '@/lib/marketData';
 
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
     const headlines = realTimeNewsEngine.scrapeNewsForSymbol(symbol);
     const synthesis = realTimeNewsEngine.synthesizeSentiment(headlines);
-    const sources = MONITORED_FINANCIAL_SOURCES;
+    const sources = realTimeNewsEngine.getMonitoredSources();
 
     return NextResponse.json({
       success: true,
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: 'News wire scrape failed' },
+      { success: false, error: 'News wire scrape failed: ' + (error?.message || 'unknown error') },
       { status: 500 }
     );
   }

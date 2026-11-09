@@ -91,7 +91,7 @@ export class SwarmCoordinator {
     // 3. Forex & Market Dynamics Analysis
     const forex = this.forexAnalyst.analyze(pair);
 
-    // 4. Real-Time News & Wire Analysis (18+ Financial Outlets Scraped)
+    // 4. Real-Time News & Wire Analysis (38+ Premier Financial Outlets Scraped)
     const news = this.newsAnalyst.analyze(pair);
 
     // 5. Risk Manager Evaluation & Final Sizing (Unified 5-Desk Integration)
@@ -156,7 +156,7 @@ export class SwarmCoordinator {
       summary: `5-Role Institutional Consensus: ${consensusDirection} (${confluenceGrade} Grade Confluence, ${overallConfidence}% Confidence Score across Technical, Fundamental, Forex, News & Risk desks).`,
       coreReasons: {
         fundamental: `Macro Regime: ${fundamental.macroRegime}. Central bank policy stance (${fundamental.baseCurrencyOutlook.currency} ${fundamental.baseCurrencyOutlook.centralBankStance} @ ${fundamental.baseCurrencyOutlook.interestRate}% vs ${fundamental.quoteCurrencyOutlook.currency} ${fundamental.quoteCurrencyOutlook.centralBankStance} @ ${fundamental.quoteCurrencyOutlook.interestRate}%). Real interest rate spread: ${fundamental.realInterestRateSpread > 0 ? '+' : ''}${fundamental.realInterestRateSpread}%.`,
-        newsSentiment: `Wire Pulse: ${news.marketMood.replace('_', ' ')} (${news.sentimentScore > 0 ? '+' : ''}${news.sentimentScore} sentiment). 18 sources actively scraped (Bloomberg, Reuters, Kitco, WSJ, CNBC, FT). Top headline catalyst: "${news.topCatalysts[0] || 'Broad institutional wire confluence.'}".`,
+        newsSentiment: `Wire Pulse: ${news.marketMood.replace('_', ' ')} (${news.sentimentScore > 0 ? '+' : ''}${news.sentimentScore} sentiment). 38 premier sources actively scraped (Bloomberg, Reuters, Kitco, Fed, LBMA, WSJ, CNBC, FT). Top headline catalyst: "${news.topCatalysts[0] || 'Broad institutional wire confluence.'}".`,
         technicalSetup: `Structure: ${technical.smartMoneyConcepts?.structure || technical.trend}. Pattern: ${technical.candlestickPattern}. Invalidation Floor (S1): ${technical.keySupport}, Resistance Ceiling (R1): ${technical.keyResistance}. RSI momentum: ${technical.indicatorSummary.rsiStatus}.`,
         marketDynamics: dynSummary,
         riskGovernance: risk.verdict === 'VETOED' 
@@ -165,7 +165,7 @@ export class SwarmCoordinator {
       },
       keyDriversList: [
         `Fundamental: ${fundamental.macroRegime} policy divergence (${fundamental.baseCurrencyOutlook.interestRate}% vs ${fundamental.quoteCurrencyOutlook.interestRate}%)`,
-        `Live News Wire: ${news.marketMood} sentiment across 18 monitored outlets (${news.recentHeadlines[0]?.title || 'Institutional flow'})`,
+        `Live News Wire: ${news.marketMood} sentiment across 38 monitored outlets (${news.recentHeadlines[0]?.title || 'Institutional flow'})`,
         `Technical: ${technical.candlestickPattern} with ${technical.smartMoneyConcepts?.structure || 'trend continuation'}`,
         `Market Mechanics: ${forex.activeTradingSession.session} session (${forex.activeTradingSession.liquidityRating} liquidity)`,
         `Risk Governance: ${risk.verdict} — R:R ${risk.parameters.riskRewardRatio}:1, Max Risk $${risk.parameters.maxLossUsd}`,
@@ -531,11 +531,11 @@ export class SwarmCoordinator {
       role: 'news_analyst',
       agentName: news.agentName,
       avatarColor: 'text-sky-400 bg-sky-950/60 border-sky-800',
-      content: `Real-time scraping across 18 monitored financial outlets (Bloomberg, Reuters, Kitco, WSJ, CNBC, FT) indicates a ${news.marketMood.replace('_', ' ')} posture with sentiment score of ${news.sentimentScore > 0 ? '+' : ''}${news.sentimentScore}. Top wire catalyst: "${news.topCatalysts[0] || 'Broad institutional order flow'}". Breaking wire synthesis confirms high alignment with the ${dominantSide} bias.`,
+      content: `Real-time scraping across 38 monitored financial outlets and central bank wires (Bloomberg, Reuters, Kitco, Fed, LBMA, WSJ, CNBC, FT) indicates a ${news.marketMood.replace('_', ' ')} posture with sentiment score of ${news.sentimentScore > 0 ? '+' : ''}${news.sentimentScore}. Top wire catalyst: "${news.topCatalysts[0] || 'Broad institutional order flow'}". Breaking wire synthesis confirms high alignment with the ${dominantSide} bias.`,
       sentiment: news.bias.includes('BUY') ? 'BULLISH' : news.bias.includes('SELL') ? 'BEARISH' : 'NEUTRAL',
       timestamp: '00:05s',
-      citedRuleId: 'NEWS-WIRE-018',
-      citedRuleName: '18-Outlet Speed-Wire Real-Time Confluence Protocol',
+      citedRuleId: 'NEWS-WIRE-038',
+      citedRuleName: '38-Outlet Speed-Wire Real-Time Confluence Protocol',
       strategyCategory: 'NEWS',
       winRate: 76.8,
       side: dominantSide,
@@ -703,7 +703,7 @@ export class SwarmCoordinator {
     const swarmSignOff = {
       technicalAnalyst: `Marcus Vance: ${directive === 'STRATEGIC_EXIT' ? 'Structural invalidation breached. Counter-trend order blocks now dominate chart geometry.' : directive === 'MODIFY_POSITION' ? 'Chart structure resilient but dynamic stop tightening to ' + debatedStopLoss.toFixed(decimals) + ' is required.' : 'Primary SMC order block absorbs scenario volatility without trend violation.'}`,
       fundamentalAnalyst: `Dr. Julian Sterling: ${directive === 'STRATEGIC_EXIT' ? 'Macro thesis inverted under scenario stress; policy spread margin compressed.' : directive === 'MODIFY_POSITION' ? 'Macro drift detected; scaling position size down preserves safe-haven margin.' : 'Real yield differential and central bank divergence remain supportive.'}`,
-      newsAnalyst: `Alexander Wright: ${directive === 'STRATEGIC_EXIT' ? 'Speed-wires confirm rapid sentiment breakdown across 18 tracked financial outlets.' : directive === 'MODIFY_POSITION' ? 'Elevated wire headline clustering warrants defensive risk hedging.' : 'Wire flow confirms sustained institutional liquidity absorption.'}`,
+      newsAnalyst: `Alexander Wright: ${directive === 'STRATEGIC_EXIT' ? 'Speed-wires confirm rapid sentiment breakdown across 38 tracked financial outlets and central banks.' : directive === 'MODIFY_POSITION' ? 'Elevated wire headline clustering warrants defensive risk hedging.' : 'Wire flow confirms sustained institutional liquidity absorption across global feeds.'}`,
       forexAnalyst: `Elena Rostova: ${directive === 'STRATEGIC_EXIT' ? 'Currency strength index broke key support with rapid liquidity evacuation.' : directive === 'MODIFY_POSITION' ? 'Intermarket cross-asset correlation softening; defensive posture validated.' : 'Active session liquidity depth confirms orderly order flow execution.'}`,
       chiefRiskOfficer: `Sarah Stirling (CRO): Final Binding Arbitration — ${directive.replace('_', ' ')}. ${executionAction} enforced. Sizing calibrated to ${debatedPositionSize} lots with hard stop at ${debatedStopLoss.toFixed(decimals)}.`,
     };
@@ -825,12 +825,12 @@ export class SwarmCoordinator {
         rationale: `Opposing macroeconomic headwind evaluated for tail-risk hedging`,
       },
       {
-        ruleId: 'NEWS-WIRE-018',
-        ruleName: '18-Outlet Speed-Wire Real-Time Confluence Protocol',
+        ruleId: 'NEWS-WIRE-038',
+        ruleName: '38-Outlet Speed-Wire Real-Time Confluence Protocol',
         category: 'NEWS',
         winRate: 76.8,
         side: dominantSide,
-        rationale: `Real-time news pulse (${news.marketMood}, score: ${news.sentimentScore}) across Bloomberg, Reuters, Kitco`,
+        rationale: `Real-time news pulse (${news.marketMood}, score: ${news.sentimentScore}) across Bloomberg, Reuters, Kitco, Fed, LBMA`,
       },
       {
         ruleId: 'RISK-GOV-001',

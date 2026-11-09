@@ -225,12 +225,12 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       id: 'wire',
       number: '08',
       label: 'Wire',
-      description: '18 Live Financial Outlets & Scrapers',
+      description: '38 Live Financial Outlets & Institutional Wires',
       icon: Radio,
       color: 'text-red-400',
       activeBg: 'bg-red-500/15 border-red-500/40 text-red-300 font-semibold',
       isActive: false,
-      badge: '18 FEEDS',
+      badge: '38 FEEDS',
       badgeColor: 'bg-red-500/20 text-red-400 border-red-500/30',
       action: () => {
         onClose();

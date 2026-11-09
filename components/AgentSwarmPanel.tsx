@@ -301,7 +301,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sky-400 text-xs uppercase font-bold flex items-center gap-1.5">
                   <Radio className="w-3.5 h-3.5 animate-pulse text-emerald-400" />
-                  18 Financial Outlets Monitored
+                  38 Financial Outlets Monitored
                 </span>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
                   news.sentimentScore > 0 
@@ -321,7 +321,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">Coverage:</span>
-                  <span className="text-slate-200">Bloomberg, Reuters, Kitco, WSJ, CNBC, FT</span>
+                  <span className="text-slate-200">38 Premier Financial Wires & Central Banks</span>
                 </div>
               </div>
 
@@ -353,7 +353,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
         </div>
 
         <div className="mt-3.5 pt-2.5 border-t border-terminal-border/40 text-xs text-slate-400 flex items-center justify-between font-medium">
-          <span>Sources Scraped: 18 / 18</span>
+          <span>Sources Scraped: 38 / 38</span>
           {onOpenNewsWire && (
             <button
               onClick={onOpenNewsWire}

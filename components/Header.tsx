@@ -138,7 +138,7 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}>
                   {isMarketFrozen ? `❄️ STATE FROZEN (${sessionInfo?.statusLabel || activeSession})` : activeSession}
                 </span>
-                <span className="text-sky-400/90 font-medium hidden sm:inline">• 18 NEWS WIRES</span>
+                <span className="text-sky-400/90 font-medium hidden sm:inline">• 38 NEWS WIRES</span>
                 <span className="text-cyan-400/80 hidden md:inline font-medium">• 1,050+ RULES</span>
               </div>
             </div>

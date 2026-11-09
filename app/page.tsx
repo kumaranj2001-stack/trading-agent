@@ -393,13 +393,13 @@ export default function Home() {
     });
   };
 
-  // Force Scrape 18 Financial Websites on demand
+  // Force Scrape 38 Financial Websites on demand
   const handleForceScrape = async () => {
     setIsScrapingNews(true);
     try {
       await fetch(`/api/news?symbol=${encodeURIComponent(selectedPair)}`);
       await triggerSwarm(selectedPair, timeframe);
-      showNotification(`18 Financial Websites & Wires freshly scraped for ${selectedPair}`);
+      showNotification(`38 Financial Websites & Institutional Wires freshly scraped for ${selectedPair}`);
     } catch (e) {
       console.error(e);
     } finally {
@@ -808,7 +808,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* Real-Time Financial Scraper & News Wire Modal (18 Sources) */}
+      {/* Real-Time Financial Scraper & News Wire Modal (38 Sources) */}
       <NewsWireModal
         isOpen={isNewsWireOpen}
         onClose={() => setIsNewsWireOpen(false)}

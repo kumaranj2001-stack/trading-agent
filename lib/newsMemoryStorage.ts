@@ -278,12 +278,23 @@ export class NewsMemoryStorageManager {
     return INITIAL_NARRATIVE_THREADS;
   }
 
-  // Save new memory entry and link to narrative thread
+  // Save new memory entry and link to narrative thread (with deduplication & failover)
   public static captureMemory(article: NewsArticle): NewsMemoryEntry {
     const memories = this.getMemories();
     const threads = this.getNarrativeThreads();
     const now = Date.now();
     const timeFormatted = new Date(now).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    // Deduplication Engine: prevent duplicate event logging
+    const normalizedTitle = article.title.trim().toLowerCase();
+    const isExactDup = memories.some(m => 
+      m.title.trim().toLowerCase() === normalizedTitle &&
+      Math.abs(m.timestamp - (article.timestamp || now)) < 120000 // 2 minutes window
+    );
+    if (isExactDup) {
+      const existing = memories.find(m => m.title.trim().toLowerCase() === normalizedTitle);
+      if (existing) return existing;
+    }
 
     // Determine best matching narrative thread
     let matchedThread = threads.find(t => 

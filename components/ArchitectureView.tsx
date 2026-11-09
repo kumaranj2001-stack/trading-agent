@@ -25,7 +25,7 @@ export const ArchitectureView: React.FC = () => {
             <span>5-Agent Institutional Swarm Architecture & Roles</span>
           </h2>
           <span className="px-2.5 py-0.5 rounded text-[11px] font-mono bg-sky-500/20 text-sky-400 border border-sky-500/40">
-            5 ROLES + 18 NEWS WIRES
+            5 ROLES + 38 NEWS WIRES
           </span>
         </div>
         <p className="text-xs text-slate-400 font-mono mt-1">
@@ -81,11 +81,11 @@ export const ArchitectureView: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold text-white text-sm">Role 3: Real-Time News Analyst</h3>
-              <span className="text-[11px] font-mono text-sky-400">18 Financial Websites & Wire Scraper</span>
+              <span className="text-[11px] font-mono text-sky-400">38 Premier Financial Websites & Institutional Wire Scraper</span>
             </div>
           </div>
           <ul className="text-xs text-slate-300 font-sans space-y-1.5 list-disc pl-4">
-            <li><strong>18 Monitored Outlets:</strong> Continuous scraping of Bloomberg, Reuters, Kitco, WSJ, CNBC, FT, DailyFX, FXStreet, and Forexlive.</li>
+            <li><strong>38 Monitored Outlets:</strong> Continuous scraping of Bloomberg, Reuters, Kitco, Fed, ECB, BoJ, LBMA, CME, WSJ, CNBC, FT, DailyFX, FXStreet, and Forexlive.</li>
             <li><strong>Precious Metals Wire:</strong> Tracks central bank bullion accumulations, Comex vault drawdowns, and LBMA delivery spreads.</li>
             <li><strong>Breaking Wire Alerts:</strong> Instant detection of geopolitical tensions, OPEC+ emergency quotes, and flash macro prints.</li>
             <li><strong>Sentiment Scoring:</strong> Generates a continuous -1.0 to +1.0 sentiment score and Market Mood gauge (Risk-On / Risk-Off).</li>
@@ -151,9 +151,9 @@ export const ArchitectureView: React.FC = () => {
             </p>
           </div>
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">
-            <span className="text-sky-400 font-bold block mb-1">3. 18-Source News Wire Scraper</span>
+            <span className="text-sky-400 font-bold block mb-1">3. 38-Source News Wire Scraper</span>
             <p className="text-slate-400 text-[11px] font-sans">
-              Client-side and serverless scraping pipelines continuously ingest real-time headlines across Bloomberg, Reuters, Kitco, WSJ, CNBC, and FT with instant sentiment classification.
+              Client-side and serverless scraping pipelines continuously ingest real-time headlines across 38 premier sources including Bloomberg, Reuters, Kitco, Fed, ECB, BoJ, LBMA, CME, WSJ, CNBC, and FT with instant sentiment classification.
             </p>
           </div>
           <div className="p-3 bg-terminal-900 rounded-lg border border-terminal-border">

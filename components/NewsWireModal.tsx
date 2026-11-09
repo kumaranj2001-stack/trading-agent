@@ -12,21 +12,21 @@ import {
   Flame, 
   ShieldCheck, 
   TrendingUp, 
-  TrendingDown,
+  TrendingDown, 
   Layers, 
   BookOpen, 
   Clock, 
   Download, 
-  Pause, 
-  Play, 
   Search, 
   GitCommit, 
   Lightbulb, 
   Compass, 
   Cpu, 
-  Database,
-  ArrowRight,
-  Filter
+  Database, 
+  ArrowRight, 
+  Filter,
+  CheckCircle,
+  Activity
 } from 'lucide-react';
 
 export interface NewsWireModalProps {
@@ -53,11 +53,11 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
   // Navigation Tabs in News Terminal
   const [activeTab, setActiveTab] = useState<'STREAM' | 'NARRATIVES' | 'MEMORIES' | 'SOURCES'>('STREAM');
   
-  // Real-time second-by-second live feed state
+  // Real-time second-by-second live feed state (Uninterrupted 24/7 mission-critical feed)
   const [liveArticles, setLiveArticles] = useState<NewsArticle[]>([]);
-  const [isLiveStreaming, setIsLiveStreaming] = useState<boolean>(true);
-  const [streamTickInterval, setStreamTickInterval] = useState<number>(1500); // 1.5 second tick
+  const [streamTickInterval] = useState<number>(1500); // 1.5 second tick
   const [newFlashAlert, setNewFlashAlert] = useState<string | null>(null);
+  const [sourcesList, setSourcesList] = useState<FinancialSource[]>(MONITORED_FINANCIAL_SOURCES);
 
   // Filters
   const [selectedSourceFilter, setSelectedSourceFilter] = useState<string>('ALL');
@@ -83,23 +83,28 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
     }
   }, [isOpen]);
 
-  // 2. Initialize news data from all 18 sources and persistent memories
+  // 2. Initialize news data from all 38 premier sources and persistent memories
   useEffect(() => {
     if (isOpen) {
-      // Scrape news across all 18 sources via API with fallback
+      // Scrape news across all 38 sources via API with fallback
       fetch(`/api/news?symbol=${encodeURIComponent(symbol)}`)
         .then(res => res.json())
         .then(json => {
           if (json.success && Array.isArray(json.data?.headlines) && json.data.headlines.length > 0) {
             setLiveArticles(json.data.headlines);
+            if (Array.isArray(json.data?.sources)) {
+              setSourcesList(json.data.sources);
+            }
           } else {
             const allSourcesArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol as CurrencyPair);
             setLiveArticles(allSourcesArticles);
+            setSourcesList(realTimeNewsEngine.getMonitoredSources());
           }
         })
         .catch(() => {
           const allSourcesArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol as CurrencyPair);
           setLiveArticles(allSourcesArticles);
+          setSourcesList(realTimeNewsEngine.getMonitoredSources());
         });
 
       // Load persistent memories & narrative threads
@@ -113,21 +118,23 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
     }
   }, [isOpen, symbol]);
 
-  // 3. Second-by-Second Real-Time Live Wire Stream Engine
+  // 3. Second-by-Second Real-Time Live Wire Stream Engine (Uninterrupted 24/7 Stream)
+  // Mission-critical institutional engine: Pause button and stream-halting states permanently removed
   useEffect(() => {
-    if (!isOpen || !isLiveStreaming) return;
+    if (!isOpen) return;
 
     const timer = setInterval(() => {
-      // Generate real-time wire event second-by-second
+      // Generate real-time wire event second-by-second across 38 premier sources
       const tick = realTimeNewsEngine.generateLiveWireTick(symbol as CurrencyPair);
       
-      // Capture into persistent daily memory
+      // Capture into persistent daily memory with deduplication protection
       NewsMemoryStorageManager.captureMemory(tick);
 
-      // Update state
+      // Update state in real-time
       setLiveArticles(prev => [tick, ...prev.slice(0, 150)]);
       setMemories(NewsMemoryStorageManager.getMemories());
       setNarrativeThreads(NewsMemoryStorageManager.getNarrativeThreads());
+      setSourcesList(realTimeNewsEngine.getMonitoredSources());
 
       if (tick.impact === 'CRITICAL') {
         setNewFlashAlert(`[${tick.source}]: ${tick.title}`);
@@ -136,7 +143,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
     }, streamTickInterval);
 
     return () => clearInterval(timer);
-  }, [isOpen, isLiveStreaming, streamTickInterval, symbol]);
+  }, [isOpen, streamTickInterval, symbol]);
 
   if (!isOpen) return null;
 
@@ -193,11 +200,11 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-white text-sm sm:text-base tracking-wide truncate">
-                  QRI TRADER // REAL-TIME NEWS TERMINAL & MEMORY ENGINE
+                  QRI TRADER // REAL-TIME 38-SOURCE NEWS WIRE & MEMORY ENGINE
                 </h3>
                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0 font-bold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                  18 SOURCES LIVE
+                  38 SOURCES LIVE
                 </span>
               </div>
               <p className="text-xs text-slate-400 font-mono truncate">
@@ -207,28 +214,18 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Live Streaming Toggle */}
-            <button
-              onClick={() => setIsLiveStreaming(!isLiveStreaming)}
-              className={`px-3 py-1.5 rounded-lg border font-mono text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm ${
-                isLiveStreaming
-                  ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/50 hover:bg-emerald-600/30'
-                  : 'bg-amber-600/20 text-amber-300 border-amber-500/50 hover:bg-amber-600/30'
-              }`}
-              title={isLiveStreaming ? 'Pause Real-Time Second-by-Second Stream' : 'Resume Live Wire Stream'}
+            {/* Permanent 24/7 Uninterrupted Stream Badge (Mission-Critical: Pause button permanently removed) */}
+            <div 
+              className="px-3 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5 shadow-sm select-none"
+              title="Mission-critical 24/7 live uninterrupted institutional stream. Pause functionality permanently disabled."
             >
-              {isLiveStreaming ? (
-                <>
-                  <Pause className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="hidden xs:inline">STREAMING 1.5s</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="hidden xs:inline">STREAM PAUSED</span>
-                </>
-              )}
-            </button>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span className="hidden xs:inline">24/7 UNINTERRUPTED LIVE</span>
+              <span className="text-[10px] text-cyan-300 px-1 py-0.2 bg-cyan-950 border border-cyan-800 rounded font-semibold">1.5s</span>
+            </div>
 
             {onRefreshScrape && (
               <button
@@ -237,7 +234,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
                 className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 shadow-sm"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isScraping ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">REFRESH 18</span>
+                <span className="hidden sm:inline">REFRESH 38</span>
               </button>
             )}
 
@@ -293,7 +290,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
 
           <div className="p-2 bg-terminal-900 rounded-lg border border-terminal-border/70">
             <span className="text-[10px] text-slate-400 block uppercase">Monitored Outlets</span>
-            <span className="text-cyan-400 font-bold text-sm">18 / 18 Streaming Live</span>
+            <span className="text-cyan-400 font-bold text-sm">38 / 38 Streaming Live</span>
           </div>
 
           <div className="p-2 bg-terminal-900 rounded-lg border border-terminal-border/70">
@@ -350,7 +347,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
               }`}
             >
               <Cpu className="w-3.5 h-3.5 text-purple-300" />
-              <span>18 OUTLETS MATRIX</span>
+              <span>38 OUTLETS MATRIX</span>
             </button>
           </div>
 
@@ -360,7 +357,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           </div>
         </div>
 
-        {/* 18 Financial Sources Active Filter Pills (Shown on STREAM tab) */}
+        {/* 38 Financial Sources Active Filter Pills (Shown on STREAM tab) */}
         {activeTab === 'STREAM' && (
           <div className="p-2 sm:p-2.5 bg-terminal-950/40 border-b border-terminal-border flex items-center justify-between gap-2 overflow-x-auto scrollbar-none font-mono text-xs whitespace-nowrap shrink-0">
             <div className="flex items-center gap-1.5 min-w-0">
@@ -372,10 +369,10 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
                     : 'text-slate-400 hover:text-white bg-terminal-900 border border-terminal-border'
                 }`}
               >
-                All Sources (18)
+                All Sources (38)
               </button>
 
-              {MONITORED_FINANCIAL_SOURCES.map(source => {
+              {sourcesList.map(source => {
                 const isSelected = selectedSourceFilter.toLowerCase() === source.domain.toLowerCase();
                 const sourceArticleCount = liveArticles.filter(a => a.sourceDomain.includes(source.domain)).length;
                 return (
@@ -398,96 +395,139 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
               })}
             </div>
 
-            {/* Quick Search Input */}
-            <div className="relative shrink-0 hidden sm:block">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
-              <input
-                type="text"
-                placeholder="Search 18 outlets..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 pr-2.5 py-1 bg-terminal-950 border border-terminal-border rounded-lg text-xs text-white placeholder-slate-500 w-36 focus:w-48 transition-all focus:outline-none focus:border-sky-500"
-              />
+            {/* Impact Filter & Search Input */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search 38 outlets..."
+                  className="bg-terminal-900 border border-terminal-border rounded-lg pl-7 pr-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 w-32 sm:w-44 font-sans"
+                />
+                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2 top-2" />
+              </div>
+
+              <div className="flex items-center bg-terminal-900 border border-terminal-border rounded-lg p-0.5">
+                {(['ALL', 'CRITICAL', 'HIGH'] as const).map(impact => (
+                  <button
+                    key={impact}
+                    onClick={() => setSelectedImpactFilter(impact)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                      selectedImpactFilter === impact
+                        ? 'bg-sky-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {impact}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* Tab 1: Live Wire Stream (Second-by-Second with INDEPENDENT SCROLLING CONTAINER) */}
+        {/* Tab 1: Live Wire Stream (Independent Scrolling Container) */}
         {activeTab === 'STREAM' && (
           <div 
             ref={scrollContainerRef}
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
-            className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-3 font-mono text-xs scrollbar-thin select-text"
+            className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 space-y-2.5 font-mono text-xs select-text scrollbar-thin"
           >
             {filteredArticles.length === 0 ? (
-              <div className="text-center p-8 text-slate-400 font-sans">
-                No wire articles match the selected source filter. Click "All Sources (18)" to display live updates across all outlets.
+              <div className="p-12 text-center text-slate-500 space-y-2">
+                <Radio className="w-8 h-8 text-slate-600 mx-auto animate-pulse" />
+                <p className="font-sans text-sm">
+                  No wire articles match the selected source filter. Click "All Sources (38)" to display live updates across all outlets.
+                </p>
               </div>
             ) : (
-              filteredArticles.map((article, idx) => {
+              filteredArticles.map(article => {
                 const isBullish = article.sentiment === 'BULLISH';
                 const isBearish = article.sentiment === 'BEARISH';
                 const isCritical = article.impact === 'CRITICAL';
 
                 return (
-                  <div
-                    key={article.id}
-                    className={`p-3.5 sm:p-4 rounded-xl border transition-all ${
-                      isCritical
-                        ? 'bg-sky-950/40 border-sky-600/70 shadow-md shadow-sky-500/10'
-                        : 'bg-terminal-950/70 border-terminal-border hover:border-slate-600'
+                  <div 
+                    key={article.id} 
+                    className={`p-3 sm:p-3.5 rounded-xl border transition-all hover:border-sky-500/60 shadow-sm ${
+                      article.isStreamingFlash 
+                        ? 'bg-sky-950/30 border-sky-600/60' 
+                        : 'bg-terminal-950/80 border-terminal-border/80'
                     }`}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-bold text-sky-400 bg-sky-950/80 px-2 py-0.5 rounded border border-sky-800 text-[11px]">
+                    <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-950 border border-sky-700/80 text-sky-300">
                           {article.source}
                         </span>
-                        <span className="text-[10px] text-slate-400">({article.sourceDomain})</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          isBullish
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                            : isBearish
-                            ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-                            : 'bg-slate-500/10 text-slate-400 border border-slate-500/30'
-                        }`}>
-                          {article.sentiment} ({article.sentimentScore > 0 ? '+' : ''}{article.sentimentScore})
+                        <span className="text-slate-400 text-[11px] truncate">
+                          {article.sourceDomain}
                         </span>
-                        {isCritical && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-1 animate-pulse">
-                            <Flame className="w-3 h-3 text-amber-400" />
-                            CRITICAL IMPACT
+                        {article.isStreamingFlash && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 animate-pulse">
+                            REAL-TIME FLASH
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-500" />
-                        {article.publishedTime}
-                      </span>
+
+                      <div className="flex items-center gap-2 text-[11px]">
+                        <span className="text-slate-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-500" />
+                          {article.publishedTime}
+                        </span>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                          isCritical
+                            ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                            : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                        }`}>
+                          {article.impact}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                          isBullish 
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+                            : isBearish 
+                            ? 'bg-rose-500/20 text-rose-400 border-rose-500/40' 
+                            : 'bg-slate-500/20 text-slate-400 border-slate-500/40'
+                        }`}>
+                          {article.sentiment} ({article.sentimentScore > 0 ? '+' : ''}{article.sentimentScore})
+                        </span>
+                      </div>
                     </div>
 
-                    <h4 className="text-white font-bold text-sm font-sans mb-1.5 leading-snug">
+                    <h4 className="text-white font-bold text-sm sm:text-base leading-snug mb-1 font-sans">
                       {article.title}
                     </h4>
 
-                    <p className="text-slate-300 text-xs font-sans leading-relaxed mb-2.5">
+                    <p className="text-slate-300 text-xs sm:text-sm font-sans leading-relaxed mb-2">
                       {article.summary}
                     </p>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-terminal-border/50 text-[10px] text-slate-400">
-                      <div className="flex items-center gap-2">
-                        <span>Category: <strong className="text-slate-200">{article.category.replace('_', ' ')}</strong></span>
-                        <span>•</span>
-                        <span>Related: <strong className="text-cyan-400">{article.relatedSymbols.join(', ')}</strong></span>
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-terminal-border/60">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-slate-500 uppercase text-[10px]">Impacted:</span>
+                        {article.relatedSymbols.map(sym => (
+                          <span 
+                            key={sym} 
+                            className={`px-1.5 py-0.2 rounded font-bold ${
+                              sym === symbol 
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' 
+                                : 'bg-terminal-900 text-slate-300'
+                            }`}
+                          >
+                            {sym}
+                          </span>
+                        ))}
                       </div>
-                      <a
-                        href={article.url}
-                        target="_blank"
+
+                      <a 
+                        href={article.url} 
+                        target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-sky-400 hover:text-sky-300 flex items-center gap-1 underline"
+                        className="text-sky-400 hover:text-white flex items-center gap-1 transition-colors"
                       >
-                        <span>Wire Source</span>
+                        <span>Official Wire</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
                     </div>
@@ -498,115 +538,124 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           </div>
         )}
 
-        {/* Tab 2: Chronological Story Links & Synthesized Reflections */}
+        {/* Tab 2: Chronological Story Threads & Reflections */}
         {activeTab === 'NARRATIVES' && (
           <div 
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
-            className="flex-1 overflow-hidden flex flex-col md:flex-row overscroll-contain"
+            className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-5 font-mono text-xs select-text space-y-4"
           >
-            {/* Sidebar of Developing Narrative Threads */}
-            <div className="w-full md:w-80 border-r border-terminal-border bg-terminal-950/70 p-3 overflow-y-auto space-y-2 shrink-0">
-              <span className="text-[10px] font-mono text-slate-400 uppercase font-bold tracking-wider block mb-1">
-                Active Daily Narrative Threads ({narrativeThreads.length})
-              </span>
+            {/* Thread Selector Pills */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
               {narrativeThreads.map(thread => (
                 <button
                   key={thread.id}
                   onClick={() => setSelectedThreadId(thread.id)}
-                  className={`w-full text-left p-3 rounded-xl border transition-all ${
+                  className={`px-3 py-1.5 rounded-lg border text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                     activeThread?.id === thread.id
-                      ? 'bg-indigo-950/60 border-indigo-500/70 text-white shadow-md'
-                      : 'bg-terminal-900 border-terminal-border/70 text-slate-300 hover:border-slate-600'
+                      ? 'bg-indigo-600 text-white border-indigo-400 shadow-md'
+                      : 'bg-terminal-950 text-slate-400 hover:text-white border-terminal-border'
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-terminal-950 text-indigo-400 border border-indigo-500/30 font-semibold">
-                      {thread.category.replace('_', ' ')}
-                    </span>
-                    <span className="text-[10px] font-mono text-slate-400">{thread.lastUpdatedTime}</span>
-                  </div>
-                  <h5 className="font-sans font-bold text-xs sm:text-sm text-white line-clamp-2 leading-snug">
-                    {thread.title}
-                  </h5>
-                  <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mt-2 pt-1.5 border-t border-terminal-border/50">
-                    <span>{thread.events.length} Linked Events</span>
-                    <span className={`font-bold ${
-                      thread.sentimentBias === 'BULLISH' ? 'text-emerald-400' : 'text-rose-400'
-                    }`}>
-                      {thread.sentimentBias}
-                    </span>
-                  </div>
+                  <GitCommit className="w-3 h-3 text-indigo-300" />
+                  <span>{thread.title}</span>
+                  <span className="text-[10px] px-1 rounded bg-black/40 text-slate-300">
+                    {thread.events.length}
+                  </span>
                 </button>
               ))}
             </div>
 
-            {/* Selected Narrative Thread Chronological Event Chain & Reflections */}
+            {/* Active Thread Detail View */}
             {activeThread && (
-              <div className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4 select-text">
-                <div className="p-4 rounded-xl bg-terminal-950 border border-indigo-500/40 space-y-2.5">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-bold uppercase">
-                      {activeThread.category.replace('_', ' ')} STORY THREAD
-                    </span>
-                    <span className="text-xs font-mono text-slate-400">
+              <div className="p-4 sm:p-5 rounded-2xl bg-terminal-950 border border-indigo-500/30 space-y-4">
+                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-terminal-border pb-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-white font-bold text-base sm:text-lg font-sans">
+                        {activeThread.title}
+                      </h4>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                        {activeThread.status}
+                      </span>
+                    </div>
+                    <span className="text-slate-400 text-xs">
                       Started: {activeThread.startTime} • Updated: {activeThread.lastUpdatedTime}
                     </span>
                   </div>
 
-                  <h3 className="text-base sm:text-lg font-bold text-white font-sans leading-snug">
-                    {activeThread.title}
-                  </h3>
-
-                  {/* Synthesized Reflections & Execution Insights */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                    <div className="p-3 rounded-lg bg-indigo-950/40 border border-indigo-600/40 text-xs">
-                      <div className="flex items-center gap-1.5 font-bold text-indigo-300 mb-1 font-mono">
-                        <Compass className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>SYNTHESIZED NARRATIVE EVOLUTION</span>
-                      </div>
-                      <p className="text-slate-200 font-sans leading-relaxed">
-                        {activeThread.synthesizedEvolution}
-                      </p>
-                    </div>
-
-                    <div className="p-3 rounded-lg bg-emerald-950/40 border border-emerald-600/40 text-xs">
-                      <div className="flex items-center gap-1.5 font-bold text-emerald-300 mb-1 font-mono">
-                        <Lightbulb className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>ACTIONABLE EXECUTION INSIGHT</span>
-                      </div>
-                      <p className="text-emerald-100 font-sans leading-relaxed">
-                        {activeThread.executionInsight}
-                      </p>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2.5 py-1 rounded font-bold text-xs border ${
+                      activeThread.sentimentBias === 'BULLISH'
+                        ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                        : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                    }`}>
+                      {activeThread.sentimentBias} BIAS
+                    </span>
                   </div>
                 </div>
 
-                {/* Chronological Timeline of Linked Events */}
+                {/* Chronological Event Progression */}
                 <div className="space-y-3">
-                  <h4 className="font-mono text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <GitCommit className="w-4 h-4 text-cyan-400" />
-                    <span>CHRONOLOGICAL STORY TIMELINE ({activeThread.events.length} LINKED HEADLINES)</span>
-                  </h4>
-
-                  <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-terminal-border">
+                  <span className="text-slate-400 text-[11px] uppercase tracking-wider font-bold block">
+                    Chronological Evolution of Story Throughout Today
+                  </span>
+                  
+                  <div className="space-y-2 border-l-2 border-indigo-500/40 pl-3 sm:pl-4 ml-1">
                     {activeThread.events.map((evt, idx) => (
                       <div key={evt.id} className="relative group">
-                        <div className="absolute -left-6 top-1 w-3 h-3 rounded-full bg-cyan-400 border-2 border-terminal-950 group-hover:scale-125 transition-transform" />
-                        <div className="p-3 rounded-xl bg-terminal-950/80 border border-terminal-border hover:border-slate-600 transition-colors">
-                          <div className="flex items-center justify-between text-xs font-mono mb-1">
-                            <span className="font-bold text-cyan-400">{evt.timeStr}</span>
-                            <span className="text-[10px] text-slate-400">{evt.source}</span>
+                        <div className="absolute -left-[19px] sm:-left-[23px] top-1.5 w-2.5 h-2.5 rounded-full bg-indigo-500 border-2 border-terminal-950"></div>
+                        <div className="p-2.5 rounded-lg bg-terminal-900 border border-terminal-border/80 hover:border-indigo-400/50 transition-all space-y-1">
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span className="font-bold text-cyan-400">{evt.timeStr} • {evt.source}</span>
+                            <span className={`px-1 rounded text-[9px] font-bold ${
+                              evt.impact === 'CRITICAL' ? 'bg-rose-500/20 text-rose-300' : 'bg-amber-500/20 text-amber-300'
+                            }`}>
+                              {evt.impact}
+                            </span>
                           </div>
-                          <p className="text-white font-sans text-xs font-bold mb-1">
+                          <p className="text-white font-medium text-xs sm:text-sm font-sans">
                             {evt.headline}
                           </p>
-                          <p className="text-[11px] font-sans text-slate-300 italic border-l-2 border-indigo-500 pl-2">
-                            Linkage: {evt.linkageNote}
+                          <p className="text-indigo-300/90 text-xs font-sans">
+                            ↳ <em>Market Linkage:</em> {evt.linkageNote}
                           </p>
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+
+                {/* Synthesized Reflections & Execution Insights */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                  <div className="p-3 rounded-xl bg-terminal-900 border border-terminal-border/80 space-y-1">
+                    <span className="text-[10px] text-indigo-400 font-bold uppercase flex items-center gap-1">
+                      <Compass className="w-3.5 h-3.5" />
+                      Synthesized Evolution
+                    </span>
+                    <p className="text-slate-200 text-xs font-sans leading-relaxed">
+                      {activeThread.synthesizedEvolution}
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-terminal-900 border border-terminal-border/80 space-y-1">
+                    <span className="text-[10px] text-cyan-400 font-bold uppercase flex items-center gap-1">
+                      <Lightbulb className="w-3.5 h-3.5" />
+                      Macro Reflection
+                    </span>
+                    <p className="text-slate-200 text-xs font-sans leading-relaxed">
+                      {activeThread.macroReflection}
+                    </p>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-emerald-950/30 border border-emerald-700/50 space-y-1">
+                    <span className="text-[10px] text-emerald-400 font-bold uppercase flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Execution Insight
+                    </span>
+                    <p className="text-emerald-200 text-xs font-sans leading-relaxed">
+                      {activeThread.executionInsight}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -614,39 +663,33 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           </div>
         )}
 
-        {/* Tab 3: Daily News Memory Bank */}
+        {/* Tab 3: Daily Memories Bank */}
         {activeTab === 'MEMORIES' && (
           <div 
             onWheel={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
-            className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 space-y-4 font-mono text-xs select-text"
+            className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-5 font-mono text-xs select-text space-y-4"
           >
-            {/* Daily Synthesis Summary Banner */}
             {dailySummary && (
-              <div className="p-4 rounded-xl bg-terminal-950 border border-emerald-500/40 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-emerald-400 flex items-center gap-1.5">
-                    <Database className="w-4 h-4 text-emerald-400" />
-                    DAILY NEWS MEMORY SUMMARY • {dailySummary.date}
-                  </span>
-                  <span className="text-slate-400 text-[10px]">
-                    {dailySummary.totalMemories} events persistently archived
-                  </span>
+              <div className="p-4 rounded-xl bg-terminal-950 border border-terminal-border flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-white font-bold text-sm">
+                    DAILY NEWS MEMORY SUMMARY ({dailySummary.date})
+                  </h4>
+                  <p className="text-slate-400 text-xs font-sans">
+                    {dailySummary.synthesizedKeyTakeaway}
+                  </p>
                 </div>
 
-                <p className="text-slate-200 font-sans text-xs sm:text-sm leading-relaxed">
-                  {dailySummary.synthesizedKeyTakeaway}
-                </p>
-
-                <div className="pt-2 border-t border-terminal-border/60">
-                  <span className="text-[10px] text-slate-400 uppercase font-bold block mb-1.5">
-                    Swarm Synthesis Directives For Today:
-                  </span>
-                  <ul className="space-y-1 text-slate-300 font-sans text-xs list-disc list-inside">
-                    {dailySummary.executionDirectives.map((d, i) => (
-                      <li key={i}>{d}</li>
-                    ))}
-                  </ul>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 block uppercase">Total Memories</span>
+                    <span className="text-cyan-400 font-bold text-base">{dailySummary.totalMemories}</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] text-slate-400 block uppercase">Dominant Stance</span>
+                    <span className="text-emerald-400 font-bold text-base">{dailySummary.dominantSentiment}</span>
+                  </div>
                 </div>
               </div>
             )}
@@ -702,7 +745,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           </div>
         )}
 
-        {/* Tab 4: 18 Monitored Outlets Status Matrix */}
+        {/* Tab 4: 38 Monitored Outlets Status Matrix */}
         {activeTab === 'SOURCES' && (
           <div 
             onWheel={(e) => e.stopPropagation()}
@@ -710,12 +753,12 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
             className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5 font-mono text-xs select-text"
           >
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {MONITORED_FINANCIAL_SOURCES.map((source, index) => {
+              {sourcesList.map((source, index) => {
                 const sourceArticles = liveArticles.filter(a => a.sourceDomain.includes(source.domain));
                 return (
                   <div 
                     key={source.id} 
-                    className="p-3.5 rounded-xl bg-terminal-950 border border-terminal-border/80 space-y-2 hover:border-sky-500/50 transition-all"
+                    className="p-3.5 rounded-xl bg-terminal-950 border border-terminal-border/80 space-y-2 hover:border-sky-500/50 transition-all shadow-sm"
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-slate-400 text-[10px] font-bold">
@@ -734,7 +777,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
                     <div className="text-[11px] text-slate-400 space-y-0.5">
                       <div>Domain: <strong className="text-cyan-400">{source.domain}</strong></div>
                       <div>Specialization: <strong className="text-slate-300">{source.specialization.replace(/_/g, ' ')}</strong></div>
-                      <div>Ping Interval: <strong className="text-white">{source.refreshRateSeconds}s</strong></div>
+                      <div>Latency: <strong className="text-emerald-400">{source.latencyMs}ms</strong> • Ping: <strong className="text-white">{source.refreshRateSeconds}s</strong></div>
                       <div>Active Headlines: <strong className="text-emerald-400">{sourceArticles.length || 2} loaded</strong></div>
                     </div>
 
@@ -755,14 +798,14 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           </div>
         )}
 
-        {/* Terminal Footer */}
-        <div className="p-3 bg-terminal-950 border-t border-terminal-border flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-slate-400 shrink-0">
+        {/* Terminal Footer Bar */}
+        <div className="p-3 bg-terminal-950 border-t border-terminal-border flex flex-wrap items-center justify-between text-xs font-mono text-slate-400 shrink-0">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>REAL-TIME ENGINE: 18 OUTLETS CONNECTED • DUAL PERSISTENCE ACTIVE</span>
+            <span>REAL-TIME ENGINE: 38 OUTLETS CONNECTED • DUAL PERSISTENCE ACTIVE</span>
           </div>
-          <div>
-            <span>Qri Trader News Terminal v1.0.0 Institutional</span>
+          <div className="text-right">
+            <span>Second-by-Second Streaming • Instant Failover Guaranteed</span>
           </div>
         </div>
       </div>

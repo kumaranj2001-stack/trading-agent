@@ -282,7 +282,7 @@ export interface NewsArticle {
   impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
   relatedSymbols: string[];
   summary: string;
-  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'BREAKING';
+  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'BREAKING';
   isStreamingFlash?: boolean;
 }
 
@@ -292,7 +292,7 @@ export interface NewsAnalysis {
   bias: SignalDirection;
   confidenceScore: number;
   sentimentScore: number; // -1.0 to +1.0
-  sourcesMonitoredCount: number; // e.g. 18 financial websites
+  sourcesMonitoredCount: number; // e.g. 38 financial websites & wires
   breakingAlert?: string;
   recentHeadlines: NewsArticle[];
   topCatalysts: string[];
@@ -318,7 +318,7 @@ export interface NewsMemoryEntry {
   impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
   relatedSymbols: string[];
   summary: string;
-  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'BREAKING';
+  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'BREAKING';
   narrativeThreadId: string;
   narrativeThreadTitle: string;
   isFlashWire?: boolean;
