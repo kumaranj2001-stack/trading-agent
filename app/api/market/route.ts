@@ -11,7 +11,7 @@ const VALID_TIMEFRAMES: TimeFrame[] = ['1m', '5m', '15m', '1h', '4h', '1d'];
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const rawPair = searchParams.get('pair') || 'EUR/USD';
+    const rawPair = searchParams.get('pair') || searchParams.get('symbol') || 'EUR/USD';
     const rawTimeframe = searchParams.get('timeframe') || '1h';
     const rawCount = searchParams.get('count') || '60';
 
@@ -44,6 +44,9 @@ export async function GET(req: NextRequest) {
       success: true,
       data: {
         selectedPair: pair,
+        symbol: pair,
+        currentPrice: livePrice,
+        verifiedPrice: livePrice,
         timeframe,
         candles,
         rates,

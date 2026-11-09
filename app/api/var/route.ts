@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const rawPair = searchParams.get('pair') || 'EUR/USD';
+    const rawPair = searchParams.get('pair') || searchParams.get('symbol') || 'EUR/USD';
     const rawBalance = searchParams.get('balance');
     const rawRisk = searchParams.get('risk');
 
