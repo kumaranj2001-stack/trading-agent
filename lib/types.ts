@@ -277,17 +277,12 @@ export interface NewsArticle {
   url: string;
   publishedTime: string;
   timestamp: number;
-  originalPubDate?: string;
-  isoDate?: string;
   sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   sentimentScore: number; // -1.0 to 1.0
-  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  impactLevel?: 1 | 2 | 3 | 4; // 1 = Low, 2 = Medium, 3 = High, 4 = Critical
-  isVerifiedOfficial?: boolean;
-  sourceAuthority?: string;
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
   relatedSymbols: string[];
   summary: string;
-  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'ENERGY' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'BREAKING';
+  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'BREAKING';
   isStreamingFlash?: boolean;
 }
 
@@ -318,15 +313,12 @@ export interface NewsMemoryEntry {
   publishedTime: string;
   timestamp: number;
   timeFormatted: string; // e.g. "17:54:12"
-  originalPubDate?: string;
   sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   sentimentScore: number;
-  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
-  impactLevel?: 1 | 2 | 3 | 4;
-  isVerifiedOfficial?: boolean;
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
   relatedSymbols: string[];
   summary: string;
-  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'ENERGY' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'BREAKING';
+  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'BREAKING';
   narrativeThreadId: string;
   narrativeThreadTitle: string;
   isFlashWire?: boolean;
@@ -338,7 +330,7 @@ export interface ChronologicalStoryEvent {
   timestamp: number;
   headline: string;
   source: string;
-  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
   sentimentScore: number;
   linkageNote: string;
 }
