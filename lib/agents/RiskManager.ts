@@ -52,7 +52,8 @@ export class RiskManagerAgent extends BaseAgent {
     technical: TechnicalAnalysis,
     fundamental: FundamentalAnalysis,
     forex: ForexAnalysis,
-    news?: NewsAnalysis
+    news?: NewsAnalysis,
+    swarmConsensusDirection?: 'BUY' | 'SELL' | 'HOLD'
   ): RiskAssessment {
     const vetoReasons: string[] = [];
     const adjustmentsMade: string[] = [];
@@ -65,6 +66,7 @@ export class RiskManagerAgent extends BaseAgent {
     }
 
     // 2. Multi-Agent Directional Confluence (5-Desk Integration)
+    // The Swarm Consensus Report is the IMMUTABLE SINGLE SOURCE OF TRUTH.
     const biases = [technical.bias, fundamental.bias, forex.bias];
     if (news) {
       biases.push(news.bias);
@@ -73,28 +75,61 @@ export class RiskManagerAgent extends BaseAgent {
     const sellVotes = biases.filter(b => b.includes('SELL')).length;
 
     let proposedAction: 'BUY' | 'SELL' | 'NO_TRADE' = 'NO_TRADE';
-    if (buyVotes >= 3 && sellVotes === 0) {
-      proposedAction = 'BUY';
-    } else if (sellVotes >= 3 && buyVotes === 0) {
-      proposedAction = 'SELL';
-    } else if (buyVotes >= 2 && sellVotes === 0) {
-      proposedAction = 'BUY';
-    } else if (sellVotes >= 2 && buyVotes === 0) {
-      proposedAction = 'SELL';
-    } else if (buyVotes >= 2 && sellVotes >= 1) {
-      adjustmentsMade.push(
-        'Analyst divergence detected: Fundamental, Technical or News analyst dissent recorded. Position sizing cut by 50% to hedge conflict.'
-      );
-      proposedAction = 'BUY';
-    } else if (sellVotes >= 2 && buyVotes >= 1) {
-      adjustmentsMade.push(
-        'Analyst divergence detected: Fundamental, Technical or News analyst dissent recorded. Position sizing cut by 50% to hedge conflict.'
-      );
-      proposedAction = 'SELL';
+
+    if (swarmConsensusDirection) {
+      // Strictly bound proposedAction to the validated Swarm Consensus Direction
+      if (swarmConsensusDirection === 'SELL') {
+        proposedAction = 'SELL';
+        if (buyVotes >= 1) {
+          adjustmentsMade.push(
+            'Analyst divergence detected: Long dissent recorded against dominant short consensus. Position sizing cut by 50% to hedge conflict.'
+          );
+        }
+      } else if (swarmConsensusDirection === 'BUY') {
+        proposedAction = 'BUY';
+        if (sellVotes >= 1) {
+          adjustmentsMade.push(
+            'Analyst divergence detected: Short dissent recorded against dominant long consensus. Position sizing cut by 50% to hedge conflict.'
+          );
+        }
+      } else {
+        proposedAction = 'NO_TRADE';
+        vetoReasons.push(
+          'Swarm consensus deadlocked in neutral/hold state. Capital preservation mandates passing.'
+        );
+      }
     } else {
-      vetoReasons.push(
-        'Insufficient consensus across analyst team: signals are deadlocked or predominantly neutral. Capital preservation mandates passing.'
-      );
+      // Fallback: Weighted confluence scoring (prevents arbitrary vote count override)
+      const buyScore = (technical.bias.includes('BUY') ? technical.confidenceScore : 0) +
+                       (fundamental.bias.includes('BUY') ? fundamental.confidenceScore : 0) +
+                       (forex.bias.includes('BUY') ? forex.confidenceScore : 0) +
+                       ((news?.bias.includes('BUY')) ? news.confidenceScore : 0);
+
+      const sellScore = (technical.bias.includes('SELL') ? technical.confidenceScore : 0) +
+                        (fundamental.bias.includes('SELL') ? fundamental.confidenceScore : 0) +
+                        (forex.bias.includes('SELL') ? forex.confidenceScore : 0) +
+                        ((news?.bias.includes('SELL')) ? news.confidenceScore : 0);
+
+      if (sellScore > buyScore && sellScore > 130) {
+        proposedAction = 'SELL';
+        if (buyVotes >= 1) {
+          adjustmentsMade.push(
+            'Analyst divergence detected: Long dissent recorded against dominant short consensus. Position sizing cut by 50% to hedge conflict.'
+          );
+        }
+      } else if (buyScore > sellScore && buyScore > 130) {
+        proposedAction = 'BUY';
+        if (sellVotes >= 1) {
+          adjustmentsMade.push(
+            'Analyst divergence detected: Short dissent recorded against dominant long consensus. Position sizing cut by 50% to hedge conflict.'
+          );
+        }
+      } else {
+        proposedAction = 'NO_TRADE';
+        vetoReasons.push(
+          'Insufficient consensus across analyst team: signals are deadlocked or predominantly neutral. Capital preservation mandates passing.'
+        );
+      }
     }
 
     // 2b. Breaking News Risk Filter
@@ -138,17 +173,48 @@ export class RiskManagerAgent extends BaseAgent {
       );
     }
 
-    const calculatedStopLoss = proposedAction === 'BUY'
-      ? Number((currentPrice - stopDistance).toFixed(decimals))
-      : Number((currentPrice + stopDistance).toFixed(decimals));
-
     const targetDistance = stopDistance * 2.2;
-    const calculatedTakeProfit1 = proposedAction === 'BUY'
-      ? Number((currentPrice + targetDistance).toFixed(decimals))
-      : Number((currentPrice - targetDistance).toFixed(decimals));
-    const calculatedTakeProfit2 = proposedAction === 'BUY'
-      ? Number((currentPrice + targetDistance * 1.5).toFixed(decimals))
-      : Number((currentPrice - targetDistance * 1.5).toFixed(decimals));
+    let calculatedStopLoss: number;
+    let calculatedTakeProfit1: number;
+    let calculatedTakeProfit2: number;
+
+    if (proposedAction === 'SELL') {
+      // 🎯 FOR SHORT / SELL: Stop Loss MUST be strictly ABOVE entry, Target MUST be strictly BELOW entry
+      calculatedStopLoss = Number((currentPrice + stopDistance).toFixed(decimals));
+      calculatedTakeProfit1 = Number((currentPrice - targetDistance).toFixed(decimals));
+      calculatedTakeProfit2 = Number((currentPrice - targetDistance * 1.5).toFixed(decimals));
+
+      // Strict Mathematical Invariant Assertion: Stop Loss > entryPrice && Take Profit < entryPrice
+      if (calculatedStopLoss <= currentPrice) {
+        calculatedStopLoss = Number((currentPrice + Math.abs(stopDistance)).toFixed(decimals));
+      }
+      if (calculatedTakeProfit1 >= currentPrice) {
+        calculatedTakeProfit1 = Number((currentPrice - Math.abs(targetDistance)).toFixed(decimals));
+      }
+      if (calculatedTakeProfit2 >= currentPrice) {
+        calculatedTakeProfit2 = Number((currentPrice - Math.abs(targetDistance * 1.5)).toFixed(decimals));
+      }
+    } else if (proposedAction === 'BUY') {
+      // 🎯 FOR LONG / BUY: Stop Loss MUST be strictly BELOW entry, Target MUST be strictly ABOVE entry
+      calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
+      calculatedTakeProfit1 = Number((currentPrice + targetDistance).toFixed(decimals));
+      calculatedTakeProfit2 = Number((currentPrice + targetDistance * 1.5).toFixed(decimals));
+
+      // Strict Mathematical Invariant Assertion: Stop Loss < entryPrice && Take Profit > entryPrice
+      if (calculatedStopLoss >= currentPrice) {
+        calculatedStopLoss = Number((currentPrice - Math.abs(stopDistance)).toFixed(decimals));
+      }
+      if (calculatedTakeProfit1 <= currentPrice) {
+        calculatedTakeProfit1 = Number((currentPrice + Math.abs(targetDistance)).toFixed(decimals));
+      }
+      if (calculatedTakeProfit2 <= currentPrice) {
+        calculatedTakeProfit2 = Number((currentPrice + Math.abs(targetDistance * 1.5)).toFixed(decimals));
+      }
+    } else {
+      calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
+      calculatedTakeProfit1 = Number((currentPrice + targetDistance).toFixed(decimals));
+      calculatedTakeProfit2 = Number((currentPrice + targetDistance * 1.5).toFixed(decimals));
+    }
 
     const riskRewardRatio = Number((targetDistance / stopDistance).toFixed(2));
 
@@ -210,8 +276,8 @@ export class RiskManagerAgent extends BaseAgent {
     const reasoning = verdict === 'VETOED'
       ? `PROPOSAL REJECTED: Risk parameters violated. Deficiencies: ${vetoReasons.join('; ')}`
       : verdict === 'MODIFIED'
-      ? `PROPOSAL APPROVED WITH RESTRICTIONS: Setup validated with risk curtailment. Modifications: ${adjustmentsMade.join('; ')}. Maximum downside capped at $${dollarRisk.toFixed(2)} (${riskPercent.toFixed(2)}% equity).`
-      : `PROPOSAL FULLY APPROVED: Solid 3-agent confluence, verified liquidity session, and strict ${riskRewardRatio}:1 Risk/Reward profile. Allocated ${lotSize} lots with hard stop at ${calculatedStopLoss}.`;
+      ? `PROPOSAL APPROVED WITH RESTRICTIONS: Setup validated with risk curtailment. Modifications: ${adjustmentsMade.join('; ')}. Maximum downside capped at $${dollarRisk.toFixed(2)} (${riskPercent.toFixed(2)}% equity). Hard stop at ${calculatedStopLoss} (${proposedAction === 'SELL' ? 'above entry' : 'below entry'}), targeting ${calculatedTakeProfit1} (${proposedAction === 'SELL' ? 'below entry' : 'above entry'}).`
+      : `PROPOSAL FULLY APPROVED: Solid 5-agent confluence, verified liquidity session, and strict ${riskRewardRatio}:1 Risk/Reward profile. Allocated ${lotSize} lots with hard stop at ${calculatedStopLoss} (${proposedAction === 'SELL' ? 'above entry' : 'below entry'}) targeting ${calculatedTakeProfit1} (${proposedAction === 'SELL' ? 'below entry' : 'above entry'}).`;
 
     return {
       role: 'risk_manager',

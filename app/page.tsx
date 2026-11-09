@@ -271,15 +271,42 @@ export default function Home() {
             const signal = calibratedResult.executionSignal;
             const now = new Date();
             const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            
+            // Strict Single Source of Truth for Auto-Execution
+            const isSellTrade = signal.orderType === 'SELL_MARKET' || calibratedResult.unifiedDecision.direction === 'SELL';
+            const autoTradeType: 'BUY' | 'SELL' = isSellTrade ? 'SELL' : 'BUY';
+
+            let autoStopLoss = signal.stopLoss;
+            let autoTakeProfit = signal.takeProfit;
+            if (autoTradeType === 'SELL') {
+              if (autoStopLoss <= livePrice) {
+                const stopDist = Math.abs(signal.entry - signal.stopLoss) || (livePrice * 0.004);
+                autoStopLoss = Number((livePrice + stopDist).toFixed(5));
+              }
+              if (autoTakeProfit >= livePrice) {
+                const targetDist = Math.abs(signal.takeProfit - signal.entry) || (livePrice * 0.008);
+                autoTakeProfit = Number((livePrice - targetDist).toFixed(5));
+              }
+            } else {
+              if (autoStopLoss >= livePrice) {
+                const stopDist = Math.abs(signal.entry - signal.stopLoss) || (livePrice * 0.004);
+                autoStopLoss = Number((livePrice - stopDist).toFixed(5));
+              }
+              if (autoTakeProfit <= livePrice) {
+                const targetDist = Math.abs(signal.takeProfit - signal.entry) || (livePrice * 0.008);
+                autoTakeProfit = Number((livePrice + targetDist).toFixed(5));
+              }
+            }
+
             const autoPos: Position = {
               id: `pos-${Date.now()}`,
               symbol: signal.symbol,
-              type: signal.orderType === 'BUY_MARKET' ? 'BUY' : 'SELL',
+              type: autoTradeType,
               lots: signal.lots,
               entryPrice: livePrice,
               currentPrice: livePrice,
-              stopLoss: signal.stopLoss,
-              takeProfit: signal.takeProfit,
+              stopLoss: autoStopLoss,
+              takeProfit: autoTakeProfit,
               openTime: timeStr,
               pnl: 0,
               pnlPercent: 0,
@@ -558,15 +585,43 @@ export default function Home() {
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
+    // Immutable Single Source of Truth for Trade Execution: Bound strictly to consensus direction
+    const isSell = signal.orderType === 'SELL_MARKET' || consensus.unifiedDecision.direction === 'SELL';
+    const tradeType: 'BUY' | 'SELL' = isSell ? 'SELL' : 'BUY';
+
+    // Strict Mathematical Invariant: Guarantee Stop Loss & Target orientation relative to entry
+    let executionStopLoss = signal.stopLoss;
+    let executionTakeProfit = signal.takeProfit;
+
+    if (tradeType === 'SELL') {
+      if (executionStopLoss <= liveEntryPrice) {
+        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (liveEntryPrice * 0.004);
+        executionStopLoss = Number((liveEntryPrice + stopDist).toFixed(5));
+      }
+      if (executionTakeProfit >= liveEntryPrice) {
+        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (liveEntryPrice * 0.008);
+        executionTakeProfit = Number((liveEntryPrice - targetDist).toFixed(5));
+      }
+    } else {
+      if (executionStopLoss >= liveEntryPrice) {
+        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (liveEntryPrice * 0.004);
+        executionStopLoss = Number((liveEntryPrice - stopDist).toFixed(5));
+      }
+      if (executionTakeProfit <= liveEntryPrice) {
+        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (liveEntryPrice * 0.008);
+        executionTakeProfit = Number((liveEntryPrice + targetDist).toFixed(5));
+      }
+    }
+
     const newPosition: Position = {
       id: `pos-${Date.now()}`,
       symbol: signal.symbol,
-      type: signal.orderType === 'BUY_MARKET' ? 'BUY' : 'SELL',
+      type: tradeType,
       lots: signal.lots,
       entryPrice: liveEntryPrice,
       currentPrice: liveEntryPrice,
-      stopLoss: signal.stopLoss,
-      takeProfit: signal.takeProfit,
+      stopLoss: executionStopLoss,
+      takeProfit: executionTakeProfit,
       openTime: timeStr,
       pnl: 0,
       pnlPercent: 0,

@@ -131,7 +131,11 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                     : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
                 }`}
               >
-                <span>EXECUTE {executionSignal.orderType.replace('_', ' ')} ({executionSignal.lots} LOTS)</span>
+                <span>
+                  {isSell
+                    ? `EXECUTE SELL MARKET (${executionSignal.lots} LOTS)`
+                    : `EXECUTE BUY MARKET (${executionSignal.lots} LOTS)`}
+                </span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             )
@@ -156,8 +160,8 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
           <span className="font-semibold text-white">{unifiedDecision.recommendedAction}</span>
         </div>
         <div className="text-[11px] text-slate-400 flex items-center gap-3">
-          <span>Stop Loss: <strong className="text-rose-400">{executionSignal.stopLoss}</strong></span>
-          <span>Target: <strong className="text-emerald-400">{executionSignal.takeProfit}</strong></span>
+          <span>Stop Loss: <strong className="text-rose-400">{executionSignal.stopLoss}</strong> {isSell ? '(Above)' : '(Below)'}</span>
+          <span>Target: <strong className="text-emerald-400">{executionSignal.takeProfit}</strong> {isSell ? '(Below)' : '(Above)'}</span>
           <span>R:R: <strong className="text-cyan-400">{executionSignal.riskReward}:1</strong></span>
         </div>
       </div>

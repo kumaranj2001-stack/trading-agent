@@ -534,7 +534,11 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
                   : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
               }`}
             >
-              <span>EXECUTE APPROVED {risk.action} ORDER ({risk.parameters.positionSizeLots} LOTS)</span>
+              <span>
+                {risk.action === 'SELL'
+                  ? `EXECUTE SELL MARKET (${risk.parameters.positionSizeLots} LOTS)`
+                  : `EXECUTE BUY MARKET (${risk.parameters.positionSizeLots} LOTS)`}
+              </span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>

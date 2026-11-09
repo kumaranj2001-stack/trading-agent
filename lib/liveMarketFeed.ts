@@ -325,8 +325,10 @@ export class LiveMarketFeedManager {
     else if (isCopper) decimals = 4;
 
     const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
-    const isBuy = consensus.executionSignal.orderType === 'BUY_MARKET' || 
-                  consensus.unifiedDecision.direction === 'BUY';
+
+    // Strict Single Source of Truth: Direction is derived from consensus unifiedDecision.direction
+    const isSell = consensus.unifiedDecision.direction === 'SELL';
+    const isBuy = consensus.unifiedDecision.direction === 'BUY';
 
     // Preserve mathematical stop and take-profit distance in pips
     const rawStopDistance = Math.abs(consensus.executionSignal.entry - consensus.executionSignal.stopLoss);
@@ -334,17 +336,20 @@ export class LiveMarketFeedManager {
     const rr = consensus.executionSignal.riskReward || 2.2;
     const targetDistance = stopDistance * rr;
 
-    const calibratedStopLoss = isBuy
-      ? Number((livePrice - stopDistance).toFixed(decimals))
-      : Number((livePrice + stopDistance).toFixed(decimals));
+    const calibratedStopLoss = isSell
+      ? Number((livePrice + stopDistance).toFixed(decimals))
+      : Number((livePrice - stopDistance).toFixed(decimals));
 
-    const calibratedTakeProfit = isBuy
-      ? Number((livePrice + targetDistance).toFixed(decimals))
-      : Number((livePrice - targetDistance).toFixed(decimals));
+    const calibratedTakeProfit = isSell
+      ? Number((livePrice - targetDistance).toFixed(decimals))
+      : Number((livePrice + targetDistance).toFixed(decimals));
 
-    // Update execution signal
+    const targetOrderType = isSell ? 'SELL_MARKET' : isBuy ? 'BUY_MARKET' : 'NONE';
+
+    // Update execution signal with guaranteed mathematical consistency
     const updatedExecutionSignal = {
       ...consensus.executionSignal,
+      orderType: consensus.executionSignal.authorized ? targetOrderType : consensus.executionSignal.orderType,
       entry: livePrice,
       stopLoss: calibratedStopLoss,
       takeProfit: calibratedTakeProfit,
@@ -361,6 +366,7 @@ export class LiveMarketFeedManager {
     // Update risk manager parameters
     const updatedRisk = {
       ...consensus.agents.risk,
+      action: isSell ? ('SELL' as const) : isBuy ? ('BUY' as const) : ('NO_TRADE' as const),
       parameters: {
         ...consensus.agents.risk.parameters,
         entryPrice: livePrice,
@@ -385,15 +391,31 @@ export class LiveMarketFeedManager {
         ...consensus.unifiedDecision.coreReasons,
         riskGovernance: consensus.agents.risk.verdict === 'VETOED'
           ? `VETO ENFORCED: ${consensus.agents.risk.vetoReasons?.[0] || 'Circuit breaker active.'}`
-          : `RISK APPROVED: ${rr}:1 Risk-to-Reward ratio, stop anchored at ${calibratedStopLoss}, targeting ${calibratedTakeProfit} with $${consensus.agents.risk.parameters.maxLossUsd} downside cap (${consensus.agents.risk.parameters.accountRiskPercent}% equity).`,
+          : `RISK APPROVED: ${rr}:1 Risk-to-Reward ratio, stop anchored at ${calibratedStopLoss} (${isSell ? 'above entry' : 'below entry'}), targeting ${calibratedTakeProfit} (${isSell ? 'below entry' : 'above entry'}) with $${consensus.agents.risk.parameters.maxLossUsd} downside cap (${consensus.agents.risk.parameters.accountRiskPercent}% equity).`,
       },
     };
+
+    // Synchronize debate synthesis price thresholds if present
+    let updatedDebateSynthesis = consensus.debateSynthesis;
+    if (updatedDebateSynthesis && updatedDebateSynthesis.priceThresholds) {
+      updatedDebateSynthesis = {
+        ...updatedDebateSynthesis,
+        priceThresholds: {
+          ...updatedDebateSynthesis.priceThresholds,
+          entryPrice: livePrice,
+          stopLoss: calibratedStopLoss,
+          takeProfit: calibratedTakeProfit,
+          projectedPriceMove: Number((calibratedTakeProfit - livePrice).toFixed(decimals)),
+        },
+      };
+    }
 
     return {
       ...consensus,
       currentPrice: livePrice,
       executionSignal: updatedExecutionSignal,
       unifiedDecision: updatedUnifiedDecision,
+      debateSynthesis: updatedDebateSynthesis,
       agents: {
         ...consensus.agents,
         technical: updatedTechnical,

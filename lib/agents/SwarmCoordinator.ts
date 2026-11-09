@@ -94,10 +94,7 @@ export class SwarmCoordinator {
     // 4. Real-Time News & Wire Analysis (38+ Premier Financial Outlets Scraped)
     const news = this.newsAnalyst.analyze(pair);
 
-    // 5. Risk Manager Evaluation & Final Sizing (Unified 5-Desk Integration)
-    const risk = this.riskManager.evaluateTrade(pair, currentPrice, technical, fundamental, forex, news);
-
-    // 5-Agent Confluence Scoring
+    // 5-Agent Confluence Scoring — Established as the IMMUTABLE Single Source of Truth
     const buyScore = (technical.bias.includes('BUY') ? technical.confidenceScore : 0) +
                      (fundamental.bias.includes('BUY') ? fundamental.confidenceScore : 0) +
                      (forex.bias.includes('BUY') ? forex.confidenceScore : 0) +
@@ -121,6 +118,17 @@ export class SwarmCoordinator {
       consensusDirection = 'HOLD';
       overallConfidence = 45;
     }
+
+    // 5. Risk Manager Evaluation & Final Sizing — Strictly Driven by Consensus Direction
+    const risk = this.riskManager.evaluateTrade(
+      pair, 
+      currentPrice, 
+      technical, 
+      fundamental, 
+      forex, 
+      news, 
+      consensusDirection
+    );
 
     let confluenceGrade: SwarmConsensusResult['confluenceGrade'] = 'C';
     if (risk.verdict === 'APPROVED' && overallConfidence >= 82) confluenceGrade = 'A+';
@@ -161,7 +169,7 @@ export class SwarmCoordinator {
         marketDynamics: dynSummary,
         riskGovernance: risk.verdict === 'VETOED' 
           ? `VETO ENFORCED: ${risk.vetoReasons?.[0] || 'Circuit breaker active.'}`
-          : `RISK APPROVED: ${risk.parameters.riskRewardRatio}:1 Risk-to-Reward ratio, stop anchored at ${risk.parameters.stopLoss}, targeting ${risk.parameters.takeProfit1} with $${risk.parameters.maxLossUsd} downside cap (${risk.parameters.accountRiskPercent}% equity).`,
+          : `RISK APPROVED: ${risk.parameters.riskRewardRatio}:1 Risk-to-Reward ratio, stop anchored at ${risk.parameters.stopLoss} (${consensusDirection === 'SELL' ? 'above entry' : 'below entry'}), targeting ${risk.parameters.takeProfit1} (${consensusDirection === 'SELL' ? 'below entry' : 'above entry'}) with $${risk.parameters.maxLossUsd} downside cap (${risk.parameters.accountRiskPercent}% equity).`,
       },
       keyDriversList: [
         `Fundamental: ${fundamental.macroRegime} policy divergence (${fundamental.baseCurrencyOutlook.interestRate}% vs ${fundamental.quoteCurrencyOutlook.interestRate}%)`,
@@ -205,10 +213,46 @@ export class SwarmCoordinator {
     const terminalDirective = debateOutcome.synthesis.terminalNode?.directive ?? 'MAINTAIN_POSITION';
     const isExitDirective = terminalDirective === 'STRATEGIC_EXIT';
     const finalLots = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedLotSize ?? risk.parameters.positionSizeLots;
-    const finalStopLoss = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedStopLoss ?? risk.parameters.stopLoss;
-    const finalTakeProfit = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedTakeProfit ?? risk.parameters.takeProfit1;
+    let finalStopLoss = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedStopLoss ?? risk.parameters.stopLoss;
+    let finalTakeProfit = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedTakeProfit ?? risk.parameters.takeProfit1;
     const finalRiskReward = debateOutcome.synthesis.terminalNode?.updatedThresholds.riskRewardRatio ?? risk.parameters.riskRewardRatio;
     const finalMaxRisk = debateOutcome.synthesis.terminalNode?.updatedThresholds.maxLossUsd ?? risk.parameters.maxLossUsd;
+
+    // Strict Mathematical Invariant Safeguard: Bound execution parameters strictly to consensus direction
+    const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY' || 
+                     pair === 'RELIANCE' || pair === 'TCS' || 
+                     pair === 'HDFC BANK' || pair === 'INFY';
+    const isGold = pair === 'XAU/USD';
+    const isSilver = pair === 'XAG/USD';
+    const isPlatinum = pair === 'XPT/USD';
+    const isCopper = pair === 'COPPER';
+    const isJpy = pair.includes('JPY');
+    const isRupee = pair.includes('/INR');
+
+    let decimals = 5;
+    if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
+    else if (isSilver || isJpy || isRupee) decimals = 3;
+    else if (isCopper) decimals = 4;
+
+    if (consensusDirection === 'SELL') {
+      if (finalStopLoss <= currentPrice) {
+        finalStopLoss = Number((currentPrice + Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
+      }
+      if (finalTakeProfit >= currentPrice) {
+        finalTakeProfit = Number((currentPrice - Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
+      }
+    } else if (consensusDirection === 'BUY') {
+      if (finalStopLoss >= currentPrice) {
+        finalStopLoss = Number((currentPrice - Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
+      }
+      if (finalTakeProfit <= currentPrice) {
+        finalTakeProfit = Number((currentPrice + Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
+      }
+    }
+
+    const orderType = isExitDirective || risk.verdict === 'VETOED' || risk.action === 'NO_TRADE' || consensusDirection === 'HOLD'
+      ? 'NONE'
+      : consensusDirection === 'SELL' ? 'SELL_MARKET' : 'BUY_MARKET';
 
     return {
       pair,
@@ -239,9 +283,7 @@ export class SwarmCoordinator {
       debateSynthesis: debateOutcome.synthesis,
       executionSignal: {
         authorized: !isExitDirective && risk.verdict !== 'VETOED' && risk.action !== 'NO_TRADE' && consensusDirection !== 'HOLD',
-        orderType: isExitDirective
-          ? 'NONE'
-          : risk.action === 'BUY' ? 'BUY_MARKET' : risk.action === 'SELL' ? 'SELL_MARKET' : 'NONE',
+        orderType,
         symbol: pair,
         lots: finalLots,
         entry: risk.parameters.entryPrice,
@@ -282,7 +324,7 @@ export class SwarmCoordinator {
         pair,
         segment: result.marketSegment,
         price: result.currentPrice,
-        bias: tech.bias,
+        bias: result.consensusDirection === 'SELL' ? 'SELL' : result.consensusDirection === 'BUY' ? 'BUY' : 'NEUTRAL',
         technicalScore: tech.confidenceScore,
         fundamentalScore: fund.confidenceScore,
         forexScore: fx.confidenceScore,
@@ -358,7 +400,7 @@ export class SwarmCoordinator {
         debatedDirection = debatedConfidence < 52 ? 'HOLD' : consensusDirection;
         const currentStopDist = Math.abs(price - risk.parameters.stopLoss);
         const tightenedStopDist = Math.max(currentStopDist * 0.65, 12 * pipMultiplier);
-        debatedStopLoss = consensusDirection === 'BUY'
+        debatedStopLoss = dominantSide === 'BUY'
           ? Number((price - tightenedStopDist).toFixed(decimals))
           : Number((price + tightenedStopDist).toFixed(decimals));
         debatedPositionSize = Number((risk.parameters.positionSizeLots * 0.6).toFixed(2));
@@ -371,13 +413,34 @@ export class SwarmCoordinator {
         debatedConfidence = Math.max(35, overallConfidence - 22);
         debatedPositionSize = Number((risk.parameters.positionSizeLots * 0.5).toFixed(2));
         const shockStopDist = Math.abs(price - risk.parameters.stopLoss) * 0.75;
-        debatedStopLoss = consensusDirection === 'BUY'
+        debatedStopLoss = dominantSide === 'BUY'
           ? Number((price - shockStopDist).toFixed(decimals))
           : Number((price + shockStopDist).toFixed(decimals));
         debatedRiskReward = Number((risk.parameters.riskRewardRatio * 0.82).toFixed(2));
       } else {
         debatedConfidence = Math.max(40, overallConfidence - 12);
         debatedPositionSize = Number((risk.parameters.positionSizeLots * 0.75).toFixed(2));
+      }
+    }
+
+    // Strict Mathematical Invariant: Ensure Stop Loss and Target are on the correct side of price
+    if (dominantSide === 'SELL') {
+      if (debatedStopLoss <= price) {
+        const dist = Math.abs(price - debatedStopLoss) || (22 * pipMultiplier);
+        debatedStopLoss = Number((price + dist).toFixed(decimals));
+      }
+      if (debatedTakeProfit >= price) {
+        const dist = Math.abs(debatedTakeProfit - price) || (22 * pipMultiplier * 2.2);
+        debatedTakeProfit = Number((price - dist).toFixed(decimals));
+      }
+    } else if (dominantSide === 'BUY') {
+      if (debatedStopLoss >= price) {
+        const dist = Math.abs(price - debatedStopLoss) || (22 * pipMultiplier);
+        debatedStopLoss = Number((price - dist).toFixed(decimals));
+      }
+      if (debatedTakeProfit <= price) {
+        const dist = Math.abs(debatedTakeProfit - price) || (22 * pipMultiplier * 2.2);
+        debatedTakeProfit = Number((price + dist).toFixed(decimals));
       }
     }
 
@@ -637,7 +700,7 @@ export class SwarmCoordinator {
       role: 'technical_analyst',
       agentName: tech.agentName,
       avatarColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800',
-      content: `Technical defense confirmed: Dominant rule ${techSupportRule.id} holds priority. By placing our hard stop-loss at ${risk.parameters.stopLoss.toFixed(decimals)} (1.5x ATR dynamic buffer beyond structural pivot ${dominantSide === 'BUY' ? tech.keySupport : tech.keyResistance}), we mathematically insulate the position from headline liquidity sweeps while locking in a ${risk.parameters.riskRewardRatio}:1 Risk-to-Reward ratio.`,
+      content: `Technical defense confirmed: Dominant rule ${techSupportRule.id} holds priority. By placing our hard stop-loss at ${risk.parameters.stopLoss.toFixed(decimals)} (${dominantSide === 'SELL' ? 'above entry' : 'below entry'}, 1.5x ATR dynamic buffer beyond structural pivot ${dominantSide === 'BUY' ? tech.keySupport : tech.keyResistance}), we mathematically insulate the position from headline liquidity sweeps while locking in a ${risk.parameters.riskRewardRatio}:1 Risk-to-Reward ratio.`,
       sentiment: dominantSide === 'BUY' ? 'BULLISH' : 'BEARISH',
       timestamp: '00:18s',
       citedRuleId: techSupportRule.id,
@@ -665,17 +728,19 @@ export class SwarmCoordinator {
         ? `CHIEF RISK OFFICER BINDING VERDICT: Scenario cross-examination concluded. Opposing risk ${techOpposeRule.id} arbitrated with dynamic risk mitigation. SETUP APPROVED WITH RISK-ADJUSTED PARAMETERS:
 • Definitive Bias: ${dominantSide} (${confluenceGrade} Grade, ${debatedConfidence}% Confidence)
 • Entry Level: ${price.toFixed(decimals)}
-• Adjusted Profit Target (TP): ${debatedTakeProfit.toFixed(decimals)} (+${tpDiff.toFixed(decimals)})
-• Tightened Stop-Loss (SL): ${debatedStopLoss.toFixed(decimals)} (-${slDiff.toFixed(decimals)})
+• Adjusted Profit Target (TP): ${debatedTakeProfit.toFixed(decimals)} (${dominantSide === 'BUY' ? '+' : '-'}${tpDiff.toFixed(decimals)})
+• Tightened Stop-Loss (SL): ${debatedStopLoss.toFixed(decimals)} (${dominantSide === 'BUY' ? '-' : '+'}${slDiff.toFixed(decimals)})
 • Risk-Adjusted Sizing: ${debatedPositionSize} Standard Lots (reduced from ${baselinePositionSize} lots, R:R ${debatedRiskReward}:1)
-• Hard Invalidation: ${timeframe} candle close beyond ${debatedStopLoss.toFixed(decimals)}.`
+• Hard Invalidation: ${timeframe} candle close beyond ${debatedStopLoss.toFixed(decimals)}.
+• Spatial Orientation: Stop Loss positioned ${dominantSide === 'SELL' ? 'ABOVE' : 'BELOW'} entry; Target positioned ${dominantSide === 'SELL' ? 'BELOW' : 'ABOVE'} entry.`
         : `CHIEF RISK OFFICER BINDING VERDICT: FULL CONFLUENCE AUTHORIZATION across all 5 desks. Opposing thesis ${techOpposeRule.id} safely absorbed by structural buffers. Trade cleared for execution:
 • Definitive Bias: ${dominantSide} (${confluenceGrade} Grade, ${debatedConfidence}% Confidence)
 • Entry Level: ${price.toFixed(decimals)}
-• Profit Target (TP): ${debatedTakeProfit.toFixed(decimals)} (+${tpDiff.toFixed(decimals)})
-• Hard Stop-Loss (SL): ${debatedStopLoss.toFixed(decimals)} (-${slDiff.toFixed(decimals)})
+• Profit Target (TP): ${debatedTakeProfit.toFixed(decimals)} (${dominantSide === 'BUY' ? '+' : '-'}${tpDiff.toFixed(decimals)})
+• Hard Stop-Loss (SL): ${debatedStopLoss.toFixed(decimals)} (${dominantSide === 'BUY' ? '-' : '+'}${slDiff.toFixed(decimals)})
 • Mathematical Edge: ${debatedRiskReward}:1 R:R, ${debatedPositionSize} Standard Lots
-• Hard Invalidation: ${timeframe} bar close beyond ${debatedStopLoss.toFixed(decimals)}. Order authorized.`,
+• Hard Invalidation: ${timeframe} bar close beyond ${debatedStopLoss.toFixed(decimals)}. Order authorized.
+• Spatial Orientation: Stop Loss positioned ${dominantSide === 'SELL' ? 'ABOVE' : 'BELOW'} entry; Target positioned ${dominantSide === 'SELL' ? 'BELOW' : 'ABOVE'} entry.`,
       sentiment: directive === 'STRATEGIC_EXIT' ? 'CAUTION' : (dominantSide === 'BUY' ? 'BULLISH' : 'BEARISH'),
       timestamp: '00:20s',
       citedRuleId: 'RISK-GOV-001',

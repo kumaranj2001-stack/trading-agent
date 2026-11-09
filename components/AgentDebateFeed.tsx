@@ -127,23 +127,31 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
     }
   };
 
-  // Safe fallback thresholds
+  // Safe fallback thresholds (Strictly bound to definitive bias)
   const thresholds: DebatePriceThresholds = useMemo(() => {
     if (synthesis?.priceThresholds) {
       return synthesis.priceThresholds;
     }
     const currentPrice = candles.length > 0 ? candles[candles.length - 1].close : 1.0850;
+    const isSellBias = (synthesis?.definitiveBias || '').includes('SELL');
+
     return {
       entryPrice: currentPrice,
-      takeProfit: Number((currentPrice * 1.008).toFixed(5)),
-      stopLoss: Number((currentPrice * 0.996).toFixed(5)),
+      takeProfit: isSellBias 
+        ? Number((currentPrice * 0.992).toFixed(5)) 
+        : Number((currentPrice * 1.008).toFixed(5)),
+      stopLoss: isSellBias 
+        ? Number((currentPrice * 1.004).toFixed(5)) 
+        : Number((currentPrice * 0.996).toFixed(5)),
       riskRewardRatio: 2.2,
-      positionSizeLots: 0.25,
+      positionSizeLots: 0.11,
       maxLossUsd: 150,
       projectedGainUsd: 330,
       invalidationCriteria: `${timeframe} candle close beyond stop loss`,
       trajectoryHorizonBars: 16,
-      projectedPriceMove: Number((currentPrice * 0.008).toFixed(5)),
+      projectedPriceMove: isSellBias 
+        ? Number((currentPrice * -0.008).toFixed(5)) 
+        : Number((currentPrice * 0.008).toFixed(5)),
     };
   }, [synthesis, candles, timeframe]);
 
@@ -768,7 +776,12 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
 
             {/* 2. Profit Target */}
             <div className="p-2.5 rounded-lg bg-terminal-900 border border-emerald-500/30">
-              <span className="text-[10px] text-emerald-400 block mb-0.5">2. TARGET (TP)</span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-emerald-400 block mb-0.5">2. TARGET (TP)</span>
+                <span className="text-[9px] font-mono text-emerald-400/80">
+                  {isSell ? 'BELOW ENTRY' : 'ABOVE ENTRY'}
+                </span>
+              </div>
               <div className="font-bold text-emerald-400 text-sm">{formatPrice(thresholds.takeProfit)}</div>
               <span className="text-[9px] text-emerald-500/90 block truncate">
                 +${thresholds.projectedGainUsd} USD projected
@@ -781,9 +794,9 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
             }`}>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-rose-400 block mb-0.5">3. STOP-LOSS (SL)</span>
-                {isModifyPosition && (
-                  <span className="text-[9px] font-bold text-amber-400">TIGHTENED</span>
-                )}
+                <span className="text-[9px] font-bold text-rose-400">
+                  {isModifyPosition ? 'TIGHTENED' : isSell ? 'ABOVE ENTRY' : 'BELOW ENTRY'}
+                </span>
               </div>
               <div className="font-bold text-rose-400 text-sm">{formatPrice(thresholds.stopLoss)}</div>
               <span className="text-[9px] text-rose-500/90 block truncate">
@@ -806,7 +819,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons: Driven by Actionable Directive */}
+          {/* Action Buttons: Driven by Actionable Directive & Definitive Bias */}
           <div className="space-y-2 pt-1">
             {isStrategicExit ? (
               <button
@@ -828,10 +841,18 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <button
                 onClick={onExecuteTrade}
                 disabled={definitiveBias === 'NEUTRAL'}
-                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg flex items-center justify-center gap-2 font-mono text-xs font-bold transition-all shadow-md shadow-emerald-950/40 hover:shadow-emerald-500/20"
+                className={`w-full py-2.5 px-4 disabled:opacity-50 text-white rounded-lg flex items-center justify-center gap-2 font-mono text-xs font-bold transition-all shadow-md ${
+                  isSell
+                    ? 'bg-rose-600 hover:bg-rose-500 shadow-rose-950/40 hover:shadow-rose-500/20'
+                    : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-950/40 hover:shadow-emerald-500/20'
+                }`}
               >
                 <Target className="w-4 h-4" />
-                <span>AUTHORIZE & EXECUTE DEBATE ORDER ({thresholds.positionSizeLots} LOTS)</span>
+                <span>
+                  {isSell
+                    ? `EXECUTE SELL MARKET (${thresholds.positionSizeLots} LOTS)`
+                    : `EXECUTE BUY MARKET (${thresholds.positionSizeLots} LOTS)`}
+                </span>
               </button>
             )}
           </div>
