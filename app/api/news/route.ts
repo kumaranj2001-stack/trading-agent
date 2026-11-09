@@ -11,7 +11,8 @@ export async function GET(req: NextRequest) {
     const rawSymbol = searchParams.get('symbol') || 'XAU/USD';
     const symbol: CurrencyPair = (rawSymbol in BASE_PRICES) ? (rawSymbol as CurrencyPair) : 'XAU/USD';
 
-    const headlines = realTimeNewsEngine.scrapeNewsForSymbol(symbol);
+    // Ingest authentic live verified articles with strict timestamp validation
+    const headlines = await realTimeNewsEngine.fetchLiveVerifiedNews(symbol);
     const synthesis = realTimeNewsEngine.synthesizeSentiment(headlines);
     const sources = realTimeNewsEngine.getMonitoredSources();
 
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest) {
         breakingAlert: synthesis.breakingAlert,
         topCatalysts: synthesis.topCatalysts,
         scrapedAt: new Date().toISOString(),
+        verifiedCount: headlines.length,
       },
     });
   } catch (error: any) {

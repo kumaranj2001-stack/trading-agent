@@ -282,8 +282,10 @@ export interface NewsArticle {
   impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
   relatedSymbols: string[];
   summary: string;
-  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'BREAKING';
+  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'BREAKING' | 'GLOBAL_WIRE' | 'MACRO_CENTRAL_BANK' | 'METALS_COMMODITIES';
   isStreamingFlash?: boolean;
+  isVerified?: boolean;
+  originalPublishedIso?: string;
 }
 
 export interface NewsAnalysis {
@@ -318,7 +320,7 @@ export interface NewsMemoryEntry {
   impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
   relatedSymbols: string[];
   summary: string;
-  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'BREAKING';
+  category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'BREAKING' | 'GLOBAL_WIRE' | 'MACRO_CENTRAL_BANK' | 'METALS_COMMODITIES';
   narrativeThreadId: string;
   narrativeThreadTitle: string;
   isFlashWire?: boolean;
