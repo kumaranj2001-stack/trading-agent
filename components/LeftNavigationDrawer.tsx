@@ -93,9 +93,9 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
 
   if (!isOpen) return null;
 
-  // The 12 items strictly requested in verbatim vertical sequence:
-  // 1. Terminal, 2. Agent, 3. Backtest, 4. Journals, 5. VAR, 
-  // 6. Five-Agent Debate, 7. Roles, 8. Wire, 9. Firebase, 10. Knowledge, 11. Scanner, 12. Calendar
+  // The 12 sidebar navigation modules strictly in required top-to-bottom sequence:
+  // 1. Terminal, 2. Knowledge, 3. Agent, 4. Five-Agent Debate, 5. Role, 6. Journals, 
+  // 7. Wire with the thirty-eight feeds, 8. Macro Calendar, 9. Scanner, 10. VAR, 11. Journals, 12. Firebase
   const navItems = [
     {
       id: 'terminal',
@@ -115,8 +115,25 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'agent',
+      id: 'knowledge',
       number: '02',
+      label: 'Knowledge',
+      description: '1,050+ Quant Rules & Institutional Heuristics',
+      icon: Database,
+      color: 'text-teal-400',
+      activeBg: 'bg-teal-500/15 border-teal-500/40 text-teal-300 font-semibold',
+      isActive: activeTab === 'knowledge',
+      badge: '1,050+',
+      badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+      action: () => {
+        setActiveTab('knowledge');
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
+    {
+      id: 'agent',
+      number: '03',
       label: 'Agent',
       description: '5-Role Multi-Agent Swarm Intelligence',
       icon: Bot,
@@ -132,59 +149,8 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'backtest',
-      number: '03',
-      label: 'Backtest',
-      description: 'Monte Carlo Walk-Forward Backtester',
-      icon: History,
-      color: 'text-purple-400',
-      activeBg: 'bg-purple-500/15 border-purple-500/40 text-purple-300 font-semibold',
-      isActive: activeTab === 'backtest',
-      badge: 'HISTORIC',
-      badgeColor: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-      action: () => {
-        setActiveTab('backtest');
-        onClose();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      },
-    },
-    {
-      id: 'journals',
-      number: '04',
-      label: 'Journals',
-      description: 'Persistent Trade Journal & Loss Review',
-      icon: BookOpen,
-      color: 'text-emerald-400',
-      activeBg: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-semibold',
-      isActive: activeTab === 'journals',
-      badge: `${journalCount} LOGS`,
-      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      action: () => {
-        setActiveTab('journals');
-        onClose();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      },
-    },
-    {
-      id: 'var',
-      number: '05',
-      label: 'VAR',
-      description: '1,000-Path Monte Carlo Value-at-Risk',
-      icon: Shield,
-      color: 'text-amber-400',
-      activeBg: 'bg-amber-500/15 border-amber-500/40 text-amber-300 font-semibold',
-      isActive: activeTab === 'var',
-      badge: '95% / 99%',
-      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-      action: () => {
-        setActiveTab('var');
-        onClose();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      },
-    },
-    {
       id: 'five-agent-debate',
-      number: '06',
+      number: '04',
       label: 'Five-Agent Debate',
       description: 'Interactive Multi-Role Consensus Stream',
       icon: MessageSquare,
@@ -201,8 +167,8 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'roles',
-      number: '07',
-      label: 'Roles',
+      number: '05',
+      label: 'Role',
       description: '5-Role Governance & Architecture',
       icon: Layers,
       color: 'text-rose-400',
@@ -217,10 +183,27 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
+      id: 'journals',
+      number: '06',
+      label: 'Journals',
+      description: 'Persistent Trade Journal & Loss Review',
+      icon: BookOpen,
+      color: 'text-emerald-400',
+      activeBg: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-semibold',
+      isActive: activeTab === 'journals',
+      badge: `${journalCount} LOGS`,
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      action: () => {
+        setActiveTab('journals');
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
+    {
       id: 'wire',
-      number: '08',
+      number: '07',
       label: 'Wire',
-      description: '38 Live Financial Outlets & Institutional Wires',
+      description: 'Wire with 38 Live Financial Outlets & Institutional Feeds',
       icon: Radio,
       color: 'text-red-400',
       activeBg: 'bg-red-500/15 border-red-500/40 text-red-300 font-semibold',
@@ -234,42 +217,25 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'firebase',
-      number: '09',
-      label: 'Firebase',
-      description: 'Firestore Cloud Realtime State Sync',
-      icon: Cloud,
-      color: 'text-yellow-400',
-      activeBg: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300 font-semibold',
-      isActive: activeTab === 'firebase',
-      badge: 'ONLINE',
-      badgeColor: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+      id: 'calendar',
+      number: '08',
+      label: 'Macro Calendar',
+      description: 'Institutional Macro Economic Release Pulse',
+      icon: Calendar,
+      color: 'text-orange-400',
+      activeBg: 'bg-orange-500/15 border-orange-500/40 text-orange-300 font-semibold',
+      isActive: activeTab === 'calendar',
+      badge: 'MACRO',
+      badgeColor: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
       action: () => {
-        setActiveTab('firebase');
-        onClose();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      },
-    },
-    {
-      id: 'knowledge',
-      number: '10',
-      label: 'Knowledge',
-      description: '1,050+ Quant Rules & Institutional Heuristics',
-      icon: Database,
-      color: 'text-teal-400',
-      activeBg: 'bg-teal-500/15 border-teal-500/40 text-teal-300 font-semibold',
-      isActive: activeTab === 'knowledge',
-      badge: '1,050+',
-      badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
-      action: () => {
-        setActiveTab('knowledge');
+        setActiveTab('calendar');
         onClose();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     },
     {
       id: 'scanner',
-      number: '11',
+      number: '09',
       label: 'Scanner',
       description: 'Multi-Asset Screener & Confluence Hunter',
       icon: Radar,
@@ -285,18 +251,52 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'calendar',
-      number: '12',
-      label: 'Calendar',
-      description: 'Institutional Macro Economic Release Pulse',
-      icon: Calendar,
-      color: 'text-orange-400',
-      activeBg: 'bg-orange-500/15 border-orange-500/40 text-orange-300 font-semibold',
-      isActive: activeTab === 'calendar',
-      badge: 'MACRO',
-      badgeColor: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+      id: 'var',
+      number: '10',
+      label: 'VAR',
+      description: '1,000-Path Monte Carlo Value-at-Risk',
+      icon: Shield,
+      color: 'text-amber-400',
+      activeBg: 'bg-amber-500/15 border-amber-500/40 text-amber-300 font-semibold',
+      isActive: activeTab === 'var',
+      badge: '95% / 99%',
+      badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
       action: () => {
-        setActiveTab('calendar');
+        setActiveTab('var');
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
+    {
+      id: 'journals-history',
+      number: '11',
+      label: 'Journals',
+      description: 'Historical Execution Logs & Loss Attribution',
+      icon: BookOpen,
+      color: 'text-teal-400',
+      activeBg: 'bg-teal-500/15 border-teal-500/40 text-teal-300 font-semibold',
+      isActive: activeTab === 'journals',
+      badge: 'LOGS',
+      badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+      action: () => {
+        setActiveTab('journals');
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
+    {
+      id: 'firebase',
+      number: '12',
+      label: 'Firebase',
+      description: 'Firestore Cloud Realtime State Sync',
+      icon: Cloud,
+      color: 'text-yellow-400',
+      activeBg: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300 font-semibold',
+      isActive: activeTab === 'firebase',
+      badge: 'ONLINE',
+      badgeColor: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+      action: () => {
+        setActiveTab('firebase');
         onClose();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
@@ -436,6 +436,23 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
               <span className="font-mono text-[10px] text-slate-400">CONFIG</span>
             </button>
           )}
+
+          {/* Quick Backtest Walk-Forward Engine Access */}
+          <button
+            onClick={() => {
+              setActiveTab('backtest');
+              onClose();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="w-full py-2 px-3 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-200 hover:text-white flex items-center justify-between text-xs font-semibold transition-colors shadow-sm"
+            title="Launch Walk-Forward Algorithmic Backtester"
+          >
+            <div className="flex items-center gap-2">
+              <History className="w-4 h-4 text-purple-400" />
+              <span>Backtest Engine</span>
+            </div>
+            <span className="font-mono text-[10px] text-purple-300 px-1.5 py-0.5 rounded bg-purple-500/20 border border-purple-500/30">RUN</span>
+          </button>
 
           {onToggleTheme && (
             <button
