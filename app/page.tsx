@@ -13,8 +13,10 @@ import {
   MarketSegment,
   KnowledgeRule,
   DebateScenarioContext,
-  DebatePriceThresholds 
+  DebatePriceThresholds,
+  NavigationTab
 } from '@/lib/types';
+import { ArrowLeft, Bot } from 'lucide-react';
 import { INITIAL_PORTFOLIO, PortfolioState } from '@/lib/store';
 import { DEFAULT_RISK_CONFIG, RiskManagerConfig } from '@/lib/agents/RiskManager';
 import { BrowserStorageManager } from '@/lib/browserStorage';
@@ -51,7 +53,7 @@ export default function Home() {
   const [timeframe, setTimeframe] = useState<TimeFrame>('1h');
   const [sessionInfo, setSessionInfo] = useState<MarketSessionInfo | null>(null);
   const [isMarketFrozen, setIsMarketFrozen] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'terminal' | 'debate' | 'backtest' | 'architecture'>('terminal');
+  const [activeTab, setActiveTab] = useState<NavigationTab>('terminal');
   
   // Market Data state
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -65,16 +67,9 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [isDebating, setIsDebating] = useState<boolean>(false);
 
-  // Modals & Tools
+  // Navigation & Execution Mode
   const [executionMode, setExecutionMode] = useState<ExecutionMode>('MANUAL');
   const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState<boolean>(false);
-  const [isJournalOpen, setIsJournalOpen] = useState<boolean>(false);
-  const [isScannerOpen, setIsScannerOpen] = useState<boolean>(false);
-  const [isCalendarOpen, setIsCalendarOpen] = useState<boolean>(false);
-  const [isMonteCarloOpen, setIsMonteCarloOpen] = useState<boolean>(false);
-  const [isKnowledgeOpen, setIsKnowledgeOpen] = useState<boolean>(false);
-  const [isNewsWireOpen, setIsNewsWireOpen] = useState<boolean>(false);
-  const [isFirebaseModalOpen, setIsFirebaseModalOpen] = useState<boolean>(false);
   const [isScrapingNews, setIsScrapingNews] = useState<boolean>(false);
   const [opportunities, setOpportunities] = useState<MarketScannerOpportunity[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
@@ -736,13 +731,13 @@ export default function Home() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenScanner={() => setIsScannerOpen(true)}
-        onOpenCalendar={() => setIsCalendarOpen(true)}
-        onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
-        onOpenKnowledge={() => setIsKnowledgeOpen(true)}
-        onOpenNewsWire={() => setIsNewsWireOpen(true)}
-        onOpenFirebase={() => setIsFirebaseModalOpen(true)}
-        onOpenJournal={() => setIsJournalOpen(true)}
+        onOpenScanner={() => setActiveTab('scanner')}
+        onOpenCalendar={() => setActiveTab('calendar')}
+        onOpenMonteCarlo={() => setActiveTab('var')}
+        onOpenKnowledge={() => setActiveTab('knowledge')}
+        onOpenNewsWire={() => setActiveTab('wire')}
+        onOpenFirebase={() => setActiveTab('firebase')}
+        onOpenJournal={() => setActiveTab('journals')}
         onOpenLeftDrawer={() => setIsLeftDrawerOpen(true)}
         isAnalyzing={isAnalyzing}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
@@ -791,8 +786,8 @@ export default function Home() {
               <UnifiedDecisionBanner
                 consensus={consensus}
                 onExecuteTrade={handleExecuteTrade}
-                onOpenNewsWire={() => setIsNewsWireOpen(true)}
-                onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
+                onOpenNewsWire={() => setActiveTab('wire')}
+                onOpenMonteCarlo={() => setActiveTab('var')}
                 isMarketFrozen={isMarketFrozen}
                 sessionInfo={sessionInfo}
               />
@@ -812,7 +807,7 @@ export default function Home() {
             {/* 📓 Active Pre-Trade Historical Journal Loss Review & Guardrails Desk */}
             <HistoricalJournalDesk
               selectedPair={selectedPair}
-              onOpenJournalModal={() => setIsJournalOpen(true)}
+              onOpenJournalModal={() => setActiveTab('journals')}
               journalAnalysis={consensus?.journalAnalysis}
             />
 
@@ -825,8 +820,8 @@ export default function Home() {
                 news={consensus.agents.news}
                 risk={consensus.agents.risk}
                 onExecuteTrade={handleExecuteTrade}
-                onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
-                onOpenNewsWire={() => setIsNewsWireOpen(true)}
+                onOpenMonteCarlo={() => setActiveTab('var')}
+                onOpenNewsWire={() => setActiveTab('wire')}
                 telemetry={consensus.autonomousLoopTelemetry}
               />
             )}
@@ -839,8 +834,90 @@ export default function Home() {
           </div>
         )}
 
-        {/* Tab 2: Autonomous 5-Agent Debate Feed */}
-        {activeTab === 'debate' && (
+        {/* Tab 2: Dedicated 5-Desk Agent Swarm Command Desk */}
+        {activeTab === 'agent' && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-terminal-950 border border-terminal-border rounded-xl text-xs font-mono shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400">
+                  <Bot className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-white text-sm sm:text-base">
+                      02 // 24/7 AUTONOMOUS MULTI-AGENT SWARM INTELLIGENCE COMMAND DESK
+                    </span>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      5 SPECIALIZED DESKS
+                    </span>
+                  </div>
+                  <p className="text-slate-400 text-xs">
+                    Simultaneous asynchronous processes: Technical (525), Fundamental (525), 38 News Wires, Forex Relativity & CRO Risk Gatekeeper
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('terminal')}
+                className="px-3 py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors flex items-center gap-1.5 font-semibold text-xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+                <span>RETURN TO TERMINAL</span>
+              </button>
+            </div>
+
+            {consensus && (
+              <UnifiedDecisionBanner
+                consensus={consensus}
+                onExecuteTrade={handleExecuteTrade}
+                onOpenNewsWire={() => setActiveTab('wire')}
+                onOpenMonteCarlo={() => setActiveTab('var')}
+                isMarketFrozen={isMarketFrozen}
+                sessionInfo={sessionInfo}
+              />
+            )}
+
+            {consensus && (
+              <AgentSwarmPanel
+                technical={consensus.agents.technical}
+                fundamental={consensus.agents.fundamental}
+                forex={consensus.agents.forex}
+                news={consensus.agents.news}
+                risk={consensus.agents.risk}
+                onExecuteTrade={handleExecuteTrade}
+                onOpenMonteCarlo={() => setActiveTab('var')}
+                onOpenNewsWire={() => setActiveTab('wire')}
+                telemetry={consensus.autonomousLoopTelemetry}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Tab 3: Historical Backtest */}
+        {activeTab === 'backtest' && (
+          <BacktestView onBackToTerminal={() => setActiveTab('terminal')} />
+        )}
+
+        {/* Tab 4: Persistent Trade Journals & Loss Attribution */}
+        {activeTab === 'journals' && (
+          <JournalModal
+            isFullPage={true}
+            onClose={() => setActiveTab('terminal')}
+            selectedPair={selectedPair}
+          />
+        )}
+
+        {/* Tab 5: 1,000-Path Monte Carlo Value-at-Risk Desk */}
+        {activeTab === 'var' && (
+          <MonteCarloModal
+            isFullPage={true}
+            onClose={() => setActiveTab('terminal')}
+            monteCarlo={consensus?.agents.risk.monteCarlo}
+            pair={selectedPair}
+          />
+        )}
+
+        {/* Tab 6: Autonomous 5-Agent Debate Feed */}
+        {(activeTab === 'debate' || (activeTab as string) === 'five-agent-debate') && (
           <AgentDebateFeed
             messages={consensus?.debateTranscript || []}
             candles={candles}
@@ -854,63 +931,70 @@ export default function Home() {
             onSendCustomPrompt={handleCustomDebatePrompt}
             onClearScenario={handleClearDebateScenario}
             isDebating={isDebating}
+            onBackToTerminal={() => setActiveTab('terminal')}
           />
         )}
 
-        {/* Tab 3: Historical Backtest */}
-        {activeTab === 'backtest' && (
-          <BacktestView />
+        {/* Tab 7: 5-Role Institutional Architecture & System Governance */}
+        {(activeTab === 'roles' || activeTab === 'architecture') && (
+          <ArchitectureView onBackToTerminal={() => setActiveTab('terminal')} />
         )}
 
-        {/* Tab 4: 5-Role Architecture & Local Storage */}
-        {activeTab === 'architecture' && (
-          <ArchitectureView />
+        {/* Tab 8: 38-Source Real-Time Financial Wire & Memory Stream */}
+        {activeTab === 'wire' && (
+          <NewsWireModal
+            isFullPage={true}
+            onClose={() => setActiveTab('terminal')}
+            articles={consensus?.agents.news.recentHeadlines || []}
+            sentimentScore={consensus?.agents.news.sentimentScore || 0}
+            marketMood={consensus?.agents.news.marketMood || 'NEUTRAL'}
+            symbol={selectedPair}
+            onRefreshScrape={handleForceScrape}
+            isScraping={isScrapingNews}
+          />
+        )}
+
+        {/* Tab 9: Firebase Cloud Firestore Realtime State Sync & Diagnostics */}
+        {activeTab === 'firebase' && (
+          <FirebaseStatusModal
+            isFullPage={true}
+            onClose={() => setActiveTab('terminal')}
+          />
+        )}
+
+        {/* Tab 10: Institutional Knowledge Base (1,050+ Rules) */}
+        {activeTab === 'knowledge' && (
+          <KnowledgeBaseModal
+            isFullPage={true}
+            onClose={() => setActiveTab('terminal')}
+            activeTriggeredRules={triggeredRules}
+          />
+        )}
+
+        {/* Tab 11: Multi-Asset Screener & Opportunity Scanner */}
+        {activeTab === 'scanner' && (
+          <OpportunityScannerModal
+            isFullPage={true}
+            onClose={() => setActiveTab('terminal')}
+            opportunities={opportunities}
+            onSelectPair={(pair) => {
+              handleSelectPair(pair);
+              setActiveTab('terminal');
+            }}
+            isScanning={isScanning}
+            onRefreshScan={fetchOpportunities}
+          />
+        )}
+
+        {/* Tab 12: Institutional Macroeconomic Calendar */}
+        {activeTab === 'calendar' && (
+          <EconomicCalendarModal
+            isFullPage={true}
+            onClose={() => setActiveTab('terminal')}
+            calendar={calendar}
+          />
         )}
       </main>
-
-      {/* Real-Time Financial Scraper & News Wire Modal (38 Sources) */}
-      <NewsWireModal
-        isOpen={isNewsWireOpen}
-        onClose={() => setIsNewsWireOpen(false)}
-        articles={consensus?.agents.news.recentHeadlines || []}
-        sentimentScore={consensus?.agents.news.sentimentScore || 0}
-        marketMood={consensus?.agents.news.marketMood || 'NEUTRAL'}
-        symbol={selectedPair}
-        onRefreshScrape={handleForceScrape}
-        isScraping={isScrapingNews}
-      />
-
-      {/* Institutional Knowledge Base Explorer Modal */}
-      <KnowledgeBaseModal
-        isOpen={isKnowledgeOpen}
-        onClose={() => setIsKnowledgeOpen(false)}
-        activeTriggeredRules={triggeredRules}
-      />
-
-      {/* Opportunity Scanner Modal */}
-      <OpportunityScannerModal
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        opportunities={opportunities}
-        onSelectPair={handleSelectPair}
-        isScanning={isScanning}
-        onRefreshScan={fetchOpportunities}
-      />
-
-      {/* High-Impact Economic Calendar Modal */}
-      <EconomicCalendarModal
-        isOpen={isCalendarOpen}
-        onClose={() => setIsCalendarOpen(false)}
-        calendar={calendar}
-      />
-
-      {/* Monte Carlo VaR Simulation Modal */}
-      <MonteCarloModal
-        isOpen={isMonteCarloOpen}
-        onClose={() => setIsMonteCarloOpen(false)}
-        monteCarlo={consensus?.agents.risk.monteCarlo}
-        pair={selectedPair}
-      />
 
       {/* Settings Modal (Persisted in Local Browser Storage & Firebase) */}
       <SettingsModal
@@ -929,38 +1013,25 @@ export default function Home() {
         }}
       />
 
-      {/* Firebase Cloud Firestore Diagnostic Modal */}
-      <FirebaseStatusModal
-        isOpen={isFirebaseModalOpen}
-        onClose={() => setIsFirebaseModalOpen(false)}
-      />
-
       {/* 🧭 Collapsible Left-Hand Hamburger Navigation Drawer (12 Items) */}
       <LeftNavigationDrawer
         isOpen={isLeftDrawerOpen}
         onClose={() => setIsLeftDrawerOpen(false)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenJournal={() => setIsJournalOpen(true)}
-        onOpenMonteCarlo={() => setIsMonteCarloOpen(true)}
-        onOpenNewsWire={() => setIsNewsWireOpen(true)}
-        onOpenFirebase={() => setIsFirebaseModalOpen(true)}
-        onOpenKnowledge={() => setIsKnowledgeOpen(true)}
-        onOpenScanner={() => setIsScannerOpen(true)}
-        onOpenCalendar={() => setIsCalendarOpen(true)}
+        onOpenJournal={() => setActiveTab('journals')}
+        onOpenMonteCarlo={() => setActiveTab('var')}
+        onOpenNewsWire={() => setActiveTab('wire')}
+        onOpenFirebase={() => setActiveTab('firebase')}
+        onOpenKnowledge={() => setActiveTab('knowledge')}
+        onOpenScanner={() => setActiveTab('scanner')}
+        onOpenCalendar={() => setActiveTab('calendar')}
         onOpenSettings={() => setIsSettingsOpen(true)}
         executionMode={executionMode}
         onToggleExecutionMode={handleToggleExecutionMode}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
-        selectedPair={selectedPair}
-      />
-
-      {/* 📓 Persistent Trading Journal & Loss Attribution Modal */}
-      <JournalModal
-        isOpen={isJournalOpen}
-        onClose={() => setIsJournalOpen(false)}
         selectedPair={selectedPair}
       />
     </div>

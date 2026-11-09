@@ -20,20 +20,23 @@ import {
   Download,
   ShieldAlert,
   Info,
+  ArrowLeft,
 } from 'lucide-react';
 import { JournalEntry, JournalLossCategory, CurrencyPair, MarketSegment } from '@/lib/types';
 import { JournalStorageManager } from '@/lib/journalStorage';
 
 export interface JournalModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   selectedPair?: CurrencyPair;
+  isFullPage?: boolean;
 }
 
 export const JournalModal: React.FC<JournalModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   selectedPair,
+  isFullPage = false,
 }) => {
   const [journals, setJournals] = useState<JournalEntry[]>([]);
   const [filterOutcome, setFilterOutcome] = useState<'ALL' | 'WIN' | 'LOSS' | 'OPEN'>('ALL');
@@ -180,45 +183,56 @@ export const JournalModal: React.FC<JournalModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true">
-      <div className="relative w-full max-w-5xl bg-terminal-900 border border-terminal-border rounded-xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden">
-        {/* Modal Header */}
-        <div className="p-4 border-b border-terminal-border bg-terminal-950 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-              <BookOpen className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
-                  QRI TRADING JOURNAL // AUDIT & HISTORICAL LOSS REVIEW
-                </h2>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  PERSISTENT BACKEND
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">
-                Institutional trade credentials, stop-loss ratios, loss attribution, and pre-trade guardrails
-              </p>
-            </div>
-          </div>
+  if (!isOpen && !isFullPage) return null;
 
-          <div className="flex items-center gap-2">
+  const content = (
+    <div className={`relative w-full ${isFullPage ? 'bg-terminal-900 border border-terminal-border rounded-xl shadow-xl flex flex-col' : 'max-w-5xl bg-terminal-900 border border-terminal-border rounded-xl shadow-2xl flex flex-col max-h-[92vh] overflow-hidden'}`}>
+      {/* Modal / Page Header */}
+      <div className="p-4 border-b border-terminal-border bg-terminal-950 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-bold text-white tracking-wide">
+                04 // QRI TRADING JOURNAL & HISTORICAL LOSS REVIEW
+              </h2>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                PERSISTENT BACKEND
+              </span>
+            </div>
+            <p className="text-xs text-slate-400">
+              Institutional trade credentials, stop-loss ratios, loss attribution, and pre-trade guardrails
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsCreating(!isCreating)}
+            className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-cyan-600/20"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>{isCreating ? 'CANCEL' : 'NEW ENTRY'}</span>
+          </button>
+          <button
+            onClick={handleExport}
+            className="p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors"
+            title="Export Journals as JSON"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+          {isFullPage ? (
             <button
-              onClick={() => setIsCreating(!isCreating)}
-              className="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-cyan-600/20"
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors flex items-center gap-1.5 text-xs font-semibold"
+              title="Return to Terminal"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{isCreating ? 'CANCEL' : 'NEW ENTRY'}</span>
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+              <span>RETURN TO TERMINAL</span>
             </button>
-            <button
-              onClick={handleExport}
-              className="p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors"
-              title="Export Journals as JSON"
-            >
-              <Download className="w-4 h-4" />
-            </button>
+          ) : (
             <button
               onClick={onClose}
               className="p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-400 hover:text-white border border-terminal-border transition-colors"
@@ -226,8 +240,9 @@ export const JournalModal: React.FC<JournalModalProps> = ({
             >
               <X className="w-4 h-4" />
             </button>
-          </div>
+          )}
         </div>
+      </div>
 
         {/* Aggregate Performance Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 p-3 bg-terminal-950/60 border-b border-terminal-border text-xs">
@@ -589,7 +604,7 @@ export const JournalModal: React.FC<JournalModalProps> = ({
           </div>
         </div>
 
-        {/* Modal Footer */}
+        {/* Modal / Page Footer */}
         <div className="p-3 border-t border-terminal-border bg-terminal-950 flex flex-wrap items-center justify-between text-xs font-mono text-slate-400">
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
@@ -600,6 +615,15 @@ export const JournalModal: React.FC<JournalModalProps> = ({
           </span>
         </div>
       </div>
+  );
+
+  if (isFullPage) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5" role="dialog" aria-modal="true">
+      {content}
     </div>
   );
 };

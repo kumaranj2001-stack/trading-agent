@@ -2,24 +2,26 @@
 
 import React, { useState } from 'react';
 import { MarketScannerOpportunity, CurrencyPair, MarketSegment } from '@/lib/types';
-import { Radar, ArrowRight, X } from 'lucide-react';
+import { Radar, ArrowRight, X, ArrowLeft } from 'lucide-react';
 
 interface OpportunityScannerModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   opportunities: MarketScannerOpportunity[];
   onSelectPair: (pair: CurrencyPair) => void;
   isScanning: boolean;
   onRefreshScan: () => void;
+  isFullPage?: boolean;
 }
 
 export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   opportunities,
   onSelectPair,
   isScanning,
   onRefreshScan,
+  isFullPage = false,
 }) => {
   const [filterSegment, setFilterSegment] = useState<'ALL' | MarketSegment>('ALL');
   const [localOpps, setLocalOpps] = useState<MarketScannerOpportunity[]>(opportunities);
@@ -49,7 +51,7 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
 
   const activeOpps = localOpps.length > 0 ? localOpps : opportunities;
 
-  if (!isOpen) return null;
+  if (!isOpen && !isFullPage) return null;
 
   const filteredOpps = activeOpps.filter(o => {
     if (filterSegment === 'ALL') return true;
@@ -71,34 +73,45 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-terminal-900 border border-terminal-border rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        {/* Modal Header */}
-        <div className="p-3 sm:p-4 bg-terminal-950 border-b border-terminal-border flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-800 flex items-center justify-center text-cyan-400 shrink-0">
-              <Radar className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <h3 className="font-bold text-white text-sm sm:text-base truncate">Multi-Market Opportunity Scanner</h3>
-              <p className="text-[11px] text-slate-400 font-mono truncate">
-                Continuous scanning across Forex, Precious Metals, Energy & Indian Markets
-              </p>
-            </div>
+  const content = (
+    <div className={`bg-terminal-900 border border-terminal-border rounded-xl w-full ${isFullPage ? 'shadow-xl' : 'max-w-4xl max-h-[90vh] shadow-2xl'} flex flex-col overflow-hidden`}>
+      {/* Modal / Page Header */}
+      <div className="p-3 sm:p-4 bg-terminal-950 border-b border-terminal-border flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-800 flex items-center justify-center text-cyan-400 shrink-0">
+            <Radar className="w-4 h-4" />
           </div>
+          <div className="min-w-0">
+            <h3 className="font-bold text-white text-sm sm:text-base truncate">
+              11 // MULTI-ASSET OPPORTUNITY SCANNER & CONFLUENCE HUNTER
+            </h3>
+            <p className="text-[11px] text-slate-400 font-mono truncate">
+              Continuous scanning across Forex, Precious Metals, Energy & Indian Markets
+            </p>
+          </div>
+        </div>
 
-          <div className="flex items-center gap-2 font-mono text-xs">
+        <div className="flex items-center gap-2 font-mono text-xs">
+          <button
+            onClick={() => {
+              fetchScanFromApi(filterSegment);
+              onRefreshScan();
+            }}
+            disabled={isScanning || isApiLoading}
+            className="px-2.5 sm:px-3 py-1.5 rounded bg-terminal-800 hover:bg-terminal-700 text-cyan-400 border border-terminal-border transition-colors disabled:opacity-50"
+          >
+            {isScanning || isApiLoading ? 'SCANNING API...' : 'REFRESH'}
+          </button>
+          {isFullPage ? (
             <button
-              onClick={() => {
-                fetchScanFromApi(filterSegment);
-                onRefreshScan();
-              }}
-              disabled={isScanning || isApiLoading}
-              className="px-2.5 sm:px-3 py-1.5 rounded bg-terminal-800 hover:bg-terminal-700 text-cyan-400 border border-terminal-border transition-colors disabled:opacity-50"
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5 font-semibold"
+              title="Return to Terminal"
             >
-              {isScanning || isApiLoading ? 'SCANNING API...' : 'REFRESH'}
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+              <span>RETURN TO TERMINAL</span>
             </button>
+          ) : (
             <button
               onClick={onClose}
               className="p-1.5 sm:px-3 sm:py-1.5 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 transition-colors shrink-0"
@@ -107,8 +120,9 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
               <span className="hidden sm:inline">Close</span>
               <X className="w-4 h-4 sm:hidden" />
             </button>
-          </div>
+          )}
         </div>
+      </div>
 
         {/* Filter Segment Tabs */}
         <div className="p-2 sm:p-3 bg-terminal-950/60 border-b border-terminal-border flex items-center gap-1.5 font-mono text-xs overflow-x-auto scrollbar-none whitespace-nowrap">
@@ -193,6 +207,15 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
           })}
         </div>
       </div>
+  );
+
+  if (isFullPage) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+      {content}
     </div>
   );
 };

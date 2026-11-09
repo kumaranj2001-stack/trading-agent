@@ -1,21 +1,23 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Database, CheckCircle, X } from 'lucide-react';
+import { Search, Database, CheckCircle, X, ArrowLeft } from 'lucide-react';
 import { KnowledgeRule } from '@/lib/types';
 import { TECHNICAL_KNOWLEDGE_BASE } from '@/lib/knowledge/technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from '@/lib/knowledge/fundamentalKnowledge';
 
 interface KnowledgeBaseModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   activeTriggeredRules?: KnowledgeRule[];
+  isFullPage?: boolean;
 }
 
 export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   activeTriggeredRules = [],
+  isFullPage = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState<'ALL' | 'TECHNICAL' | 'FUNDAMENTAL' | 'INDIAN_MARKET' | 'TRIGGERED'>('ALL');
@@ -79,33 +81,44 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
     });
   }, [allRules, activeTab, searchTerm, activeTriggeredRules, apiRules]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isFullPage) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-terminal-900 border border-terminal-border rounded-xl w-full max-w-5xl h-[92vh] sm:h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="p-3 sm:p-4 bg-terminal-950 border-b border-terminal-border flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-950 border border-indigo-700 flex items-center justify-center text-indigo-400 shrink-0">
-              <Database className="w-4 h-4 sm:w-5 sm:h-5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-white text-sm sm:text-base truncate">Institutional Knowledge Base</h3>
-                <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                  {allRules.length} VERIFIED RULES
-                </span>
-                <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                  {isLoadingApi ? 'SYNCING API...' : 'REST API INTEGRATED'}
-                </span>
-              </div>
-              <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">
-                525 Technical (SMC / Confluence) • 525 Fundamental (Central Banks / Indian Markets)
-              </p>
-            </div>
+  const content = (
+    <div className={`bg-terminal-900 border border-terminal-border rounded-xl w-full ${isFullPage ? 'shadow-xl' : 'max-w-5xl h-[92vh] sm:h-[85vh] shadow-2xl'} flex flex-col overflow-hidden`}>
+      {/* Header */}
+      <div className="p-3 sm:p-4 bg-terminal-950 border-b border-terminal-border flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-indigo-950 border border-indigo-700 flex items-center justify-center text-indigo-400 shrink-0">
+            <Database className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-white text-sm sm:text-base truncate">
+                10 // INSTITUTIONAL KNOWLEDGE BASE (1,050+ STRATEGIES & HEURISTICS)
+              </h3>
+              <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                {allRules.length} VERIFIED RULES
+              </span>
+              <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                {isLoadingApi ? 'SYNCING API...' : 'REST API INTEGRATED'}
+              </span>
+            </div>
+            <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">
+              525 Technical (SMC / Confluence) • 525 Fundamental (Central Banks / Indian Markets)
+            </p>
+          </div>
+        </div>
 
+        {isFullPage ? (
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5 font-semibold"
+            title="Return to Terminal"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+            <span>RETURN TO TERMINAL</span>
+          </button>
+        ) : (
           <button
             onClick={onClose}
             className="p-1.5 sm:px-3 sm:py-1.5 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 font-mono text-xs transition-colors shrink-0"
@@ -114,7 +127,8 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
             <span className="hidden sm:inline">Close Explorer</span>
             <X className="w-4 h-4 sm:hidden" />
           </button>
-        </div>
+        )}
+      </div>
 
         {/* Filter & Search Bar */}
         <div className="p-2 sm:p-3 bg-terminal-950/60 border-b border-terminal-border flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5 font-mono text-xs">
@@ -249,6 +263,15 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
           })}
         </div>
       </div>
+  );
+
+  if (isFullPage) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+      {content}
     </div>
   );
 };

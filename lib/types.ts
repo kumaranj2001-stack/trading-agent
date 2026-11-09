@@ -33,6 +33,21 @@ export type TradableSymbol = ForexPair | MetalCommodityAsset | IndianMarketAsset
 
 export type CurrencyPair = TradableSymbol;
 
+export type NavigationTab = 
+  | 'terminal'       // 01. Terminal (Live SSOT Chart, Orders & 5-Agent Swarm Signal)
+  | 'agent'          // 02. Agent (5-Role Multi-Agent Swarm Intelligence Command Desk)
+  | 'backtest'       // 03. Backtest (Monte Carlo Walk-Forward Backtester)
+  | 'journals'       // 04. Journals (Persistent Trade Journal & Historical Loss Review)
+  | 'var'            // 05. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
+  | 'debate'         // 06. Five-Agent Debate (Interactive Multi-Role Consensus Stream)
+  | 'roles'          // 07. Roles (5-Role Architecture & System Governance)
+  | 'architecture'   // 07. Roles alias
+  | 'wire'           // 08. Wire (38 Monitored Financial Outlets & Institutional Wires)
+  | 'firebase'       // 09. Firebase (Firestore Cloud Realtime State Sync)
+  | 'knowledge'      // 10. Knowledge (1,050+ Strategies & Institutional Heuristics)
+  | 'scanner'        // 11. Scanner (Multi-Asset Screener & Confluence Hunter)
+  | 'calendar';      // 12. Calendar (Institutional Macroeconomic Release Pulse)
+
 export type TimeFrame = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
 export type MarketSessionStatus = 

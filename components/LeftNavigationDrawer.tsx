@@ -23,20 +23,20 @@ import {
   PlayCircle,
   Sliders,
 } from 'lucide-react';
-import { CurrencyPair, ExecutionMode, MarketSegment } from '@/lib/types';
+import { CurrencyPair, ExecutionMode, MarketSegment, NavigationTab } from '@/lib/types';
 
 export interface LeftNavigationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
-  activeTab: 'terminal' | 'debate' | 'backtest' | 'architecture';
-  setActiveTab: (tab: 'terminal' | 'debate' | 'backtest' | 'architecture') => void;
-  onOpenJournal: () => void;
-  onOpenMonteCarlo: () => void;
-  onOpenNewsWire: () => void;
-  onOpenFirebase: () => void;
-  onOpenKnowledge: () => void;
-  onOpenScanner: () => void;
-  onOpenCalendar: () => void;
+  activeTab: NavigationTab | string;
+  setActiveTab: (tab: any) => void;
+  onOpenJournal?: () => void;
+  onOpenMonteCarlo?: () => void;
+  onOpenNewsWire?: () => void;
+  onOpenFirebase?: () => void;
+  onOpenKnowledge?: () => void;
+  onOpenScanner?: () => void;
+  onOpenCalendar?: () => void;
   onOpenSettings?: () => void;
   executionMode?: ExecutionMode;
   onToggleExecutionMode?: () => void;
@@ -122,20 +122,13 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       icon: Bot,
       color: 'text-indigo-400',
       activeBg: 'bg-indigo-500/15 border-indigo-500/40 text-indigo-300 font-semibold',
-      isActive: false,
+      isActive: activeTab === 'agent',
       badge: '5 DESKS',
       badgeColor: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
       action: () => {
-        setActiveTab('terminal');
+        setActiveTab('agent');
         onClose();
-        setTimeout(() => {
-          const el = document.getElementById('swarm-intelligence-section') || document.getElementById('unified-decision-banner');
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          } else if (onTriggerAnalysis) {
-            onTriggerAnalysis();
-          }
-        }, 100);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     },
     {
@@ -163,12 +156,13 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       icon: BookOpen,
       color: 'text-emerald-400',
       activeBg: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-semibold',
-      isActive: false,
+      isActive: activeTab === 'journals',
       badge: `${journalCount} LOGS`,
       badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
       action: () => {
+        setActiveTab('journals');
         onClose();
-        onOpenJournal();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     },
     {
@@ -179,12 +173,13 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       icon: Shield,
       color: 'text-amber-400',
       activeBg: 'bg-amber-500/15 border-amber-500/40 text-amber-300 font-semibold',
-      isActive: false,
+      isActive: activeTab === 'var',
       badge: '95% / 99%',
       badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
       action: () => {
+        setActiveTab('var');
         onClose();
-        onOpenMonteCarlo();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     },
     {
@@ -195,7 +190,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       icon: MessageSquare,
       color: 'text-sky-400',
       activeBg: 'bg-sky-500/15 border-sky-500/40 text-sky-300 font-semibold',
-      isActive: activeTab === 'debate',
+      isActive: activeTab === 'debate' || activeTab === 'five-agent-debate',
       badge: 'ACTIVE',
       badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
       action: () => {
@@ -212,11 +207,11 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       icon: Layers,
       color: 'text-rose-400',
       activeBg: 'bg-rose-500/15 border-rose-500/40 text-rose-300 font-semibold',
-      isActive: activeTab === 'architecture',
+      isActive: activeTab === 'roles' || activeTab === 'architecture',
       badge: '5 AGENTS',
       badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
       action: () => {
-        setActiveTab('architecture');
+        setActiveTab('roles');
         onClose();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
@@ -229,12 +224,13 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       icon: Radio,
       color: 'text-red-400',
       activeBg: 'bg-red-500/15 border-red-500/40 text-red-300 font-semibold',
-      isActive: false,
+      isActive: activeTab === 'wire',
       badge: '38 FEEDS',
       badgeColor: 'bg-red-500/20 text-red-400 border-red-500/30',
       action: () => {
+        setActiveTab('wire');
         onClose();
-        onOpenNewsWire();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     },
     {
@@ -245,12 +241,13 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       icon: Cloud,
       color: 'text-yellow-400',
       activeBg: 'bg-yellow-500/15 border-yellow-500/40 text-yellow-300 font-semibold',
-      isActive: false,
+      isActive: activeTab === 'firebase',
       badge: 'ONLINE',
       badgeColor: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
       action: () => {
+        setActiveTab('firebase');
         onClose();
-        onOpenFirebase();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     },
     {
@@ -261,12 +258,13 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       icon: Database,
       color: 'text-teal-400',
       activeBg: 'bg-teal-500/15 border-teal-500/40 text-teal-300 font-semibold',
-      isActive: false,
+      isActive: activeTab === 'knowledge',
       badge: '1,050+',
       badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
       action: () => {
+        setActiveTab('knowledge');
         onClose();
-        onOpenKnowledge();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     },
     {
@@ -277,12 +275,13 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       icon: Radar,
       color: 'text-blue-400',
       activeBg: 'bg-blue-500/15 border-blue-500/40 text-blue-300 font-semibold',
-      isActive: false,
+      isActive: activeTab === 'scanner',
       badge: 'SCAN',
       badgeColor: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       action: () => {
+        setActiveTab('scanner');
         onClose();
-        onOpenScanner();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     },
     {
@@ -293,12 +292,13 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       icon: Calendar,
       color: 'text-orange-400',
       activeBg: 'bg-orange-500/15 border-orange-500/40 text-orange-300 font-semibold',
-      isActive: false,
+      isActive: activeTab === 'calendar',
       badge: 'MACRO',
       badgeColor: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
       action: () => {
+        setActiveTab('calendar');
         onClose();
-        onOpenCalendar();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     },
   ];

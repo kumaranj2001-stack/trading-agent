@@ -28,11 +28,12 @@ import {
   CheckCircle,
   Activity,
   ArrowUpDown,
-  Tag
+  Tag,
+  ArrowLeft
 } from 'lucide-react';
 
 export interface NewsWireModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   articles?: NewsArticle[];
   sentimentScore?: number;
@@ -40,10 +41,11 @@ export interface NewsWireModalProps {
   symbol: string;
   onRefreshScrape?: () => void;
   isScraping?: boolean;
+  isFullPage?: boolean;
 }
 
 export const NewsWireModal: React.FC<NewsWireModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   articles: initialArticles = [],
   sentimentScore = 0.30,
@@ -51,6 +53,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
   symbol,
   onRefreshScrape,
   isScraping = false,
+  isFullPage = false,
 }) => {
   // Navigation Tabs in News Terminal
   const [activeTab, setActiveTab] = useState<'STREAM' | 'NARRATIVES' | 'MEMORIES' | 'SOURCES'>('STREAM');
@@ -77,14 +80,14 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
 
   // 1. Lock Background Body Scroll while Modal is open (Solves background scrolling bug)
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isFullPage) {
       const originalOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = originalOverflow;
       };
     }
-  }, [isOpen]);
+  }, [isOpen, isFullPage]);
 
   // 2. Low-Latency Data Ingestion & Direct Server Streaming Pipeline
   useEffect(() => {
@@ -228,74 +231,79 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  return (
+  if (!isOpen && !isFullPage) return null;
+
+  const content = (
     <div 
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-hidden overscroll-contain select-none"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Real-Time News Terminal"
-      onClick={onClose}
+      className={`bg-terminal-900 border border-terminal-border rounded-2xl w-full ${isFullPage ? 'min-h-[750px] shadow-xl' : 'max-w-6xl h-[94vh] sm:h-[90vh] shadow-2xl'} flex flex-col overflow-hidden overscroll-contain animate-fade-in`}
+      onClick={(e) => e.stopPropagation()}
     >
-      <div 
-        className="bg-terminal-900 border border-terminal-border rounded-2xl w-full max-w-6xl h-[94vh] sm:h-[90vh] flex flex-col shadow-2xl overflow-hidden overscroll-contain animate-fade-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Terminal Header */}
-        <div className="p-3.5 sm:p-4 bg-terminal-950 border-b border-terminal-border flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 border border-sky-400/40 flex items-center justify-center text-white shrink-0 shadow-lg shadow-sky-500/20">
-              <Radio className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+      {/* Terminal Header */}
+      <div className="p-3.5 sm:p-4 bg-terminal-950 border-b border-terminal-border flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 border border-sky-400/40 flex items-center justify-center text-white shrink-0 shadow-lg shadow-sky-500/20">
+            <Radio className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-white text-sm sm:text-base tracking-wide truncate">
+                08 // QRI TRADER // REAL-TIME 38-SOURCE NEWS WIRE & MEMORY ENGINE
+              </h3>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                38 SOURCES LIVE
+              </span>
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-white text-sm sm:text-base tracking-wide truncate">
-                  QRI TRADER // REAL-TIME 38-SOURCE NEWS WIRE & MEMORY ENGINE
-                </h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0 font-bold flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                  38 SOURCES LIVE
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-mono truncate">
-                Second-by-second live wire stream • Chronological story linking • Persistent daily memories
-              </p>
-            </div>
+            <p className="text-xs text-slate-400 font-mono truncate">
+              Second-by-second live wire stream • Chronological story linking • Persistent daily memories
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Real-Time Stream Cadence Pill */}
+          <div 
+            className="px-2.5 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5 shadow-sm"
+            title="24/7 uninterrupted institutional primary feed (1.5s real-time tick pulse)"
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span>1.5s</span>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Real-Time Stream Cadence Pill (Matches exact screenshot layout) */}
-            <div 
-              className="px-2.5 py-1.5 rounded-lg border border-emerald-500/40 bg-emerald-950/40 text-emerald-300 font-mono text-xs font-bold flex items-center gap-1.5 shadow-sm"
-              title="24/7 uninterrupted institutional primary feed (1.5s real-time tick pulse)"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span>1.5s</span>
-            </div>
-
-            {onRefreshScrape && (
-              <button
-                onClick={onRefreshScrape}
-                disabled={isScraping}
-                className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 shadow-sm"
-                title="Force refresh all 38 primary institutional feeds"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isScraping ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">REFRESH 38</span>
-              </button>
-            )}
-
+          {onRefreshScrape && (
             <button
-              onClick={handleExportMemories}
-              className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1"
-              title="Export Daily News Memories as JSON"
+              onClick={onRefreshScrape}
+              disabled={isScraping}
+              className="px-2.5 sm:px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 transition-all disabled:opacity-50 shadow-sm"
+              title="Force refresh all 38 primary institutional feeds"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Export</span>
+              <RefreshCw className={`w-3.5 h-3.5 ${isScraping ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">REFRESH 38</span>
             </button>
+          )}
 
+          <button
+            onClick={handleExportMemories}
+            className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1"
+            title="Export Daily News Memories as JSON"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Export</span>
+          </button>
+
+          {isFullPage ? (
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5 font-semibold"
+              title="Return to Terminal"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+              <span>RETURN TO TERMINAL</span>
+            </button>
+          ) : (
             <button
               onClick={onClose}
               className="p-1.5 sm:px-3 sm:py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors"
@@ -304,8 +312,9 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
               <X className="w-4 h-4 sm:hidden" />
               <span className="hidden sm:inline">Close</span>
             </button>
-          </div>
+          )}
         </div>
+      </div>
 
         {/* Breaking News Flash Ticker (Strictly verified, zero mock tokens) */}
         {newFlashAlert && (
@@ -912,6 +921,21 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           </div>
         </div>
       </div>
+  );
+
+  if (isFullPage) {
+    return content;
+  }
+
+  return (
+    <div 
+      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-hidden overscroll-contain select-none"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Real-Time News Terminal"
+      onClick={onClose}
+    >
+      {content}
     </div>
   );
 };

@@ -12,19 +12,22 @@ import {
   X,
   ExternalLink,
   Copy,
-  Check
+  Check,
+  ArrowLeft
 } from 'lucide-react';
 import { BrowserStorageManager, FirebaseConnectionStatus } from '@/lib/browserStorage';
 import { firebaseConfig } from '@/lib/firebase';
 
 interface FirebaseStatusModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
+  isFullPage?: boolean;
 }
 
 export const FirebaseStatusModal: React.FC<FirebaseStatusModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
+  isFullPage = false,
 }) => {
   const [status, setStatus] = useState<FirebaseConnectionStatus | null>(null);
   const [isChecking, setIsChecking] = useState<boolean>(false);
@@ -70,39 +73,49 @@ service cloud.firestore {
     setTimeout(() => setCopiedRules(false), 2500);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !isFullPage) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div 
-        className="w-full max-w-2xl bg-terminal-950 border border-terminal-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-terminal-border bg-gradient-to-r from-terminal-900 to-amber-950/30">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
-              <Cloud className="w-5 h-5 animate-pulse" />
-            </div>
-            <div>
-              <h2 className="font-mono text-base font-bold text-white flex items-center gap-2">
-                Firebase Firestore Backend
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
-                  Cloud Live
-                </span>
-              </h2>
-              <p className="text-xs text-slate-400 font-mono">
-                Project: <span className="text-amber-300 font-bold">{firebaseConfig.projectId}</span>
-              </p>
-            </div>
+  const content = (
+    <div 
+      className={`w-full ${isFullPage ? 'shadow-xl' : 'max-w-2xl max-h-[90vh] shadow-2xl'} bg-terminal-950 border border-terminal-border rounded-2xl overflow-hidden flex flex-col`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-terminal-border bg-gradient-to-r from-terminal-900 to-amber-950/30">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+            <Cloud className="w-5 h-5 animate-pulse" />
           </div>
+          <div>
+            <h2 className="font-mono text-base font-bold text-white flex items-center gap-2">
+              09 // FIREBASE FIRESTORE REALTIME SYNC & DIAGNOSTIC
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
+                Cloud Live
+              </span>
+            </h2>
+            <p className="text-xs text-slate-400 font-mono">
+              Project: <span className="text-amber-300 font-bold">{firebaseConfig.projectId}</span> • Real-Time Firestore Synchronization
+            </p>
+          </div>
+        </div>
+        {isFullPage ? (
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5 font-semibold"
+            title="Return to Terminal"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+            <span>RETURN TO TERMINAL</span>
+          </button>
+        ) : (
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-terminal-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
-        </div>
+        )}
+      </div>
 
         {/* Content Body */}
         <div className="p-5 overflow-y-auto space-y-5 font-mono text-xs">
@@ -246,10 +259,19 @@ service cloud.firestore {
             onClick={onClose}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-black font-bold font-mono text-xs transition-colors shadow-lg"
           >
-            Close
+            {isFullPage ? 'Return to Terminal' : 'Close'}
           </button>
         </div>
       </div>
+  );
+
+  if (isFullPage) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+      {content}
     </div>
   );
 };

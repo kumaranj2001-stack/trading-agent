@@ -11,10 +11,15 @@ import {
   Newspaper, 
   Radio, 
   Database, 
-  HardDrive 
+  HardDrive,
+  ArrowLeft 
 } from 'lucide-react';
 
-export const ArchitectureView: React.FC = () => {
+export interface ArchitectureViewProps {
+  onBackToTerminal?: () => void;
+}
+
+export const ArchitectureView: React.FC<ArchitectureViewProps> = ({ onBackToTerminal }) => {
   return (
     <div className="bg-terminal-900 border border-terminal-border rounded-xl p-4 sm:p-6 shadow-lg space-y-6">
       {/* Title */}
@@ -22,11 +27,23 @@ export const ArchitectureView: React.FC = () => {
         <div className="flex items-center justify-between flex-wrap gap-2">
           <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
             <Cpu className="w-5 h-5 text-cyan-400" />
-            <span>5-Agent Institutional Swarm Architecture & Roles</span>
+            <span>07 // 5-ROLE INSTITUTIONAL SWARM ARCHITECTURE & GOVERNANCE</span>
           </h2>
-          <span className="px-2.5 py-0.5 rounded text-[11px] font-mono bg-sky-500/20 text-sky-400 border border-sky-500/40">
-            5 ROLES + 38 NEWS WIRES
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded text-[11px] font-mono bg-sky-500/20 text-sky-400 border border-sky-500/40">
+              5 ROLES + 38 NEWS WIRES
+            </span>
+            {onBackToTerminal && (
+              <button
+                onClick={onBackToTerminal}
+                className="px-3 py-1 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5 font-semibold"
+                title="Return to Terminal"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+                <span>RETURN TO TERMINAL</span>
+              </button>
+            )}
+          </div>
         </div>
         <p className="text-xs text-slate-400 font-mono mt-1">
           Complete structural specifications of the 5 autonomous trading roles, real-time financial news scraper, and local browser persistence engine.

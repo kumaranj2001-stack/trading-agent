@@ -33,6 +33,7 @@ import {
   Sliders,
   ShieldAlert,
   ArrowRight,
+  ArrowLeft,
   CornerDownRight,
   Flame,
   Zap
@@ -51,6 +52,7 @@ interface AgentDebateFeedProps {
   onSendCustomPrompt?: (prompt: string) => void;
   onClearScenario?: () => void;
   isDebating?: boolean;
+  onBackToTerminal?: () => void;
 }
 
 const PRESET_SCENARIOS = [
@@ -73,6 +75,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
   onSendCustomPrompt,
   onClearScenario,
   isDebating = false,
+  onBackToTerminal,
 }) => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [activeFilterRound, setActiveFilterRound] = useState<number | 'ALL'>('ALL');
@@ -309,7 +312,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-white text-base sm:text-lg tracking-wide">
-                Autonomous 5-Agent Debate & Consensus Chamber
+                06 // AUTONOMOUS 5-AGENT DEBATE & CONSENSUS CHAMBER
               </h3>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -344,6 +347,17 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
           <span className="px-2.5 py-1 rounded-lg text-xs font-mono font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/30">
             GRADE {confluenceGrade} ({confidenceScore}%)
           </span>
+
+          {onBackToTerminal && (
+            <button
+              onClick={onBackToTerminal}
+              className="px-3 py-1 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5 font-semibold"
+              title="Return to Terminal"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+              <span>RETURN TO TERMINAL</span>
+            </button>
+          )}
         </div>
       </div>
 

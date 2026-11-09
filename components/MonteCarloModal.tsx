@@ -2,20 +2,22 @@
 
 import React, { useState, useEffect } from 'react';
 import { MonteCarloProjection } from '@/lib/types';
-import { LineChart, X, RefreshCw, Sparkles, ShieldCheck } from 'lucide-react';
+import { LineChart, X, RefreshCw, Sparkles, ShieldCheck, ArrowLeft } from 'lucide-react';
 
 interface MonteCarloModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   monteCarlo?: MonteCarloProjection;
   pair: string;
+  isFullPage?: boolean;
 }
 
 export const MonteCarloModal: React.FC<MonteCarloModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   monteCarlo: initialMonteCarlo,
   pair,
+  isFullPage = false,
 }) => {
   const [data, setData] = useState<MonteCarloProjection | undefined>(initialMonteCarlo);
   const [percentiles, setPercentiles] = useState<{ p5: number; p25: number; p50: number; p75: number; p95: number } | null>(null);
@@ -48,39 +50,50 @@ export const MonteCarloModal: React.FC<MonteCarloModalProps> = ({
     }
   }, [isOpen, pair, initialMonteCarlo]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isFullPage) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-terminal-900 border border-terminal-border rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="p-3 sm:p-4 bg-terminal-950 border-b border-terminal-border flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-emerald-950 border border-emerald-800 flex items-center justify-center text-emerald-400 shrink-0">
-              <LineChart className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-white text-sm sm:text-base truncate">Monte Carlo VaR Engine</h3>
-                <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
-                  <Sparkles className="w-2.5 h-2.5" />
-                  REST API CONNECTED
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 font-mono truncate">
-                1,000 simulated institutional paths for {pair}
-              </p>
-            </div>
+  const content = (
+    <div className={`bg-terminal-900 border border-terminal-border rounded-xl w-full ${isFullPage ? 'shadow-xl' : 'max-w-3xl max-h-[90vh] shadow-2xl'} flex flex-col overflow-hidden`}>
+      {/* Header */}
+      <div className="p-3 sm:p-4 bg-terminal-950 border-b border-terminal-border flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-emerald-950 border border-emerald-800 flex items-center justify-center text-emerald-400 shrink-0">
+            <LineChart className="w-4 h-4" />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-white text-sm sm:text-base truncate">
+                05 // MONTE CARLO VALUE-AT-RISK (VaR) & DOWNSIDE SIMULATION
+              </h3>
+              <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5" />
+                REST API CONNECTED
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-mono truncate">
+              1,000 simulated institutional paths for {pair} • Tail risk and loss distribution
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchSimulation}
+            disabled={isLoading}
+            className="p-1.5 sm:px-2.5 sm:py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 font-mono text-xs flex items-center gap-1 transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Re-Simulate</span>
+          </button>
+          {isFullPage ? (
             <button
-              onClick={fetchSimulation}
-              disabled={isLoading}
-              className="p-1.5 sm:px-2.5 sm:py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 font-mono text-xs flex items-center gap-1 transition-colors"
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5 font-semibold"
+              title="Return to Terminal"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Re-Simulate</span>
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+              <span>RETURN TO TERMINAL</span>
             </button>
+          ) : (
             <button
               onClick={onClose}
               className="p-1.5 sm:px-3 sm:py-1.5 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 font-mono text-xs transition-colors shrink-0"
@@ -89,8 +102,9 @@ export const MonteCarloModal: React.FC<MonteCarloModalProps> = ({
               <span className="hidden sm:inline">Close</span>
               <X className="w-4 h-4 sm:hidden" />
             </button>
-          </div>
+          )}
         </div>
+      </div>
 
         {/* Body */}
         {data && (
@@ -152,6 +166,15 @@ export const MonteCarloModal: React.FC<MonteCarloModalProps> = ({
           </div>
         )}
       </div>
+  );
+
+  if (isFullPage) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+      {content}
     </div>
   );
 };

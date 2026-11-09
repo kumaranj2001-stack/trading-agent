@@ -14,7 +14,7 @@ import {
   Snowflake,
   Lock
 } from 'lucide-react';
-import { CurrencyPair, ExecutionMode, MarketSegment, MarketSessionInfo, TimeFrame } from '@/lib/types';
+import { CurrencyPair, ExecutionMode, MarketSegment, MarketSessionInfo, TimeFrame, NavigationTab } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
 import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES } from '@/lib/marketData';
 
@@ -27,8 +27,8 @@ export interface HeaderProps {
   timeframe: TimeFrame;
   onSelectPair: (p: CurrencyPair) => void;
   onSelectTimeframe: (tf: TimeFrame) => void;
-  activeTab?: 'terminal' | 'debate' | 'backtest' | 'architecture';
-  setActiveTab?: (tab: 'terminal' | 'debate' | 'backtest' | 'architecture') => void;
+  activeTab?: NavigationTab | string;
+  setActiveTab?: (tab: any) => void;
   portfolio?: PortfolioState;
   onOpenSettings?: () => void;
   onOpenScanner?: () => void;

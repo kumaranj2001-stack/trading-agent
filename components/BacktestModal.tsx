@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { History, Play, CheckCircle, XCircle, ShieldAlert, Award, ArrowUpRight } from 'lucide-react';
+import { History, Play, CheckCircle, XCircle, ShieldAlert, Award, ArrowUpRight, ArrowLeft } from 'lucide-react';
 import { CurrencyPair } from '@/lib/types';
 
 interface BacktestSummary {
@@ -29,7 +29,11 @@ interface BacktestScenarioItem {
   rationale: string;
 }
 
-export const BacktestView: React.FC = () => {
+export interface BacktestViewProps {
+  onBackToTerminal?: () => void;
+}
+
+export const BacktestView: React.FC<BacktestViewProps> = ({ onBackToTerminal }) => {
   const [isRunning, setIsRunning] = useState(false);
   const [summary, setSummary] = useState<BacktestSummary | null>(null);
   const [scenarios, setScenarios] = useState<BacktestScenarioItem[]>([]);
@@ -60,21 +64,34 @@ export const BacktestView: React.FC = () => {
         <div>
           <h2 className="text-base font-bold text-white flex items-center gap-2">
             <History className="w-5 h-5 text-amber-400" />
-            <span>Macroeconomic Backtest & Stress Testing Simulator</span>
+            <span>03 // MONTE CARLO WALK-FORWARD BACKTEST & STRESS SIMULATOR</span>
           </h2>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Test the 4-agent swarm against historical volatility spikes, central bank surprise rate cuts, and NFP announcements.
+            Test the 5-agent swarm against historical volatility spikes, central bank surprise rate cuts, and NFP announcements.
           </p>
         </div>
 
-        <button
-          onClick={runBacktest}
-          disabled={isRunning}
-          className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-mono text-xs font-bold rounded-lg flex items-center gap-2 shadow-lg shadow-amber-600/20 disabled:opacity-50 transition-all active:scale-95"
-        >
-          <Play className={`w-4 h-4 ${isRunning ? 'animate-spin' : ''}`} />
-          <span>{isRunning ? 'SIMULATING SCENARIOS...' : 'EXECUTE FULL BACKTEST'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={runBacktest}
+            disabled={isRunning}
+            className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-mono text-xs font-bold rounded-lg flex items-center gap-2 shadow-lg shadow-amber-600/20 disabled:opacity-50 transition-all active:scale-95"
+          >
+            <Play className={`w-4 h-4 ${isRunning ? 'animate-spin' : ''}`} />
+            <span>{isRunning ? 'SIMULATING SCENARIOS...' : 'EXECUTE FULL BACKTEST'}</span>
+          </button>
+
+          {onBackToTerminal && (
+            <button
+              onClick={onBackToTerminal}
+              className="px-3 py-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5 font-semibold"
+              title="Return to Terminal"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+              <span>RETURN TO TERMINAL</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {summary && (

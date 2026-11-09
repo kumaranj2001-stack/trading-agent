@@ -2,18 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { MacroIndicator } from '@/lib/types';
-import { Calendar, X, RefreshCw, Filter, Search, Sparkles } from 'lucide-react';
+import { Calendar, X, RefreshCw, Filter, Search, Sparkles, ArrowLeft } from 'lucide-react';
 
 interface EconomicCalendarModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   calendar?: MacroIndicator[];
+  isFullPage?: boolean;
 }
 
 export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
   calendar: initialCalendar = [],
+  isFullPage = false,
 }) => {
   const [events, setEvents] = useState<MacroIndicator[]>(initialCalendar);
   const [currencyFilter, setCurrencyFilter] = useState<string>('ALL');
@@ -50,39 +52,50 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
     }
   }, [isOpen, currencyFilter, impactFilter, searchQuery]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isFullPage) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
-      <div className="bg-terminal-900 border border-terminal-border rounded-xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-        {/* Modal Header */}
-        <div className="p-3 sm:p-4 bg-terminal-950 border-b border-terminal-border flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-purple-950 border border-purple-800 flex items-center justify-center text-purple-400 shrink-0">
-              <Calendar className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-white text-sm sm:text-base truncate">Macroeconomic Calendar</h3>
-                <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1">
-                  <Sparkles className="w-2.5 h-2.5" />
-                  REST API CONNECTED
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 font-mono truncate">
-                Central Bank & Macro Catalysts Radar ({events.length} Events • {highImpactCount} High Impact)
-              </p>
-            </div>
+  const content = (
+    <div className={`bg-terminal-900 border border-terminal-border rounded-xl w-full ${isFullPage ? 'shadow-xl' : 'max-w-4xl max-h-[90vh] shadow-2xl'} flex flex-col overflow-hidden`}>
+      {/* Modal / Page Header */}
+      <div className="p-3 sm:p-4 bg-terminal-950 border-b border-terminal-border flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-purple-950 border border-purple-800 flex items-center justify-center text-purple-400 shrink-0">
+            <Calendar className="w-4 h-4" />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-white text-sm sm:text-base truncate">
+                12 // INSTITUTIONAL MACROECONOMIC CALENDAR & DISPATCHES
+              </h3>
+              <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-purple-500/20 text-purple-300 border border-purple-500/40 flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5" />
+                REST API CONNECTED
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 font-mono truncate">
+              Central Bank & Macro Catalysts Radar ({events.length} Events • {highImpactCount} High Impact)
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchCalendar}
+            disabled={isLoading}
+            className="p-1.5 sm:px-2.5 sm:py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 font-mono text-xs flex items-center gap-1 transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+          {isFullPage ? (
             <button
-              onClick={fetchCalendar}
-              disabled={isLoading}
-              className="p-1.5 sm:px-2.5 sm:py-1 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 font-mono text-xs flex items-center gap-1 transition-colors"
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5 font-semibold"
+              title="Return to Terminal"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
+              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
+              <span>RETURN TO TERMINAL</span>
             </button>
+          ) : (
             <button
               onClick={onClose}
               className="p-1.5 sm:px-3 sm:py-1.5 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 font-mono text-xs transition-colors shrink-0"
@@ -91,8 +104,9 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
               <span className="hidden sm:inline">Close</span>
               <X className="w-4 h-4 sm:hidden" />
             </button>
-          </div>
+          )}
         </div>
+      </div>
 
         {/* Filter Bar */}
         <div className="p-2 sm:p-3 bg-terminal-950/60 border-b border-terminal-border flex flex-wrap items-center justify-between gap-2 text-xs font-mono">
@@ -189,6 +203,15 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
           </div>
         </div>
       </div>
+  );
+
+  if (isFullPage) {
+    return content;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
+      {content}
     </div>
   );
 };
