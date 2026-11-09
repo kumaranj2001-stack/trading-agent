@@ -83,7 +83,8 @@ export type AgentRole =
   | 'fundamental_analyst'
   | 'forex_analyst'
   | 'news_analyst'
-  | 'risk_manager';
+  | 'risk_manager'
+  | 'terminal_node';
 
 export type ExecutionMode = 'MANUAL' | 'SEMI_AUTONOMOUS' | 'FULL_AUTOPILOT';
 
@@ -468,6 +469,68 @@ export interface AgentDebateMessage {
   strategyCategory?: string;
   winRate?: number;
   side?: 'BUY' | 'SELL' | 'NEUTRAL';
+  isTerminalNode?: boolean;
+  terminalData?: DebateTerminalNode;
+}
+
+export type DebateActionableDirective = 'MAINTAIN_POSITION' | 'MODIFY_POSITION' | 'STRATEGIC_EXIT';
+
+export interface DebateScenarioContext {
+  id: string;
+  prompt: string;
+  category: 'REVERSAL' | 'VOLATILITY_EXPANSION' | 'MACRO_SHOCK' | 'LIQUIDITY_RUN' | 'BLACK_SWAN' | 'CUSTOM';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  injectedAt: string;
+  isActive: boolean;
+  flowControlAction: 'RE_EVALUATE_SWARM' | 'STRESS_TEST' | 'VERIFY_INVALIDATION';
+}
+
+export interface DebateDivergenceMetrics {
+  baselineBias: SignalDirection;
+  debatedBias: SignalDirection;
+  baselineConfidence: number;
+  debatedConfidence: number;
+  confidenceDelta: number;
+  baselineRiskReward: number;
+  debatedRiskReward: number;
+  riskRewardDelta: number;
+  baselineStopLoss: number;
+  debatedStopLoss: number;
+  baselineTakeProfit: number;
+  debatedTakeProfit: number;
+  stopLossAdjustmentPips: number;
+  positionSizeAdjustmentPercent: number;
+  divergenceSeverity: 'NONE' | 'LOW' | 'MODERATE' | 'SEVERE' | 'CRITICAL';
+  divergenceSummary: string;
+  structuralInvalidationTriggered: boolean;
+}
+
+export interface DebateTerminalNode {
+  nodeId: string;
+  timestamp: string;
+  activeScenario?: DebateScenarioContext;
+  directive: DebateActionableDirective;
+  directiveConfidence: number;
+  directiveTitle: string;
+  actionableSummary: string;
+  divergence: DebateDivergenceMetrics;
+  updatedThresholds: DebatePriceThresholds;
+  executionGuidance: {
+    action: 'MAINTAIN' | 'SCALE_DOWN' | 'TIGHTEN_STOPS' | 'CLOSE_NOW' | 'HEDGE';
+    suggestedLotSize: number;
+    suggestedStopLoss: number;
+    suggestedTakeProfit: number;
+    maxRiskDollars: number;
+    urgency: 'IMMEDIATE' | 'NEXT_BAR' | 'MONITOR';
+    rationale: string;
+  };
+  swarmSignOff: {
+    technicalAnalyst: string;
+    fundamentalAnalyst: string;
+    newsAnalyst: string;
+    forexAnalyst: string;
+    chiefRiskOfficer: string;
+  };
 }
 
 export interface DebatePriceThresholds {
@@ -503,6 +566,9 @@ export interface DebateSynthesisResult {
   summary: string;
   consensusVerdict: string;
   timestamp: string;
+  activeScenario?: DebateScenarioContext;
+  terminalNode?: DebateTerminalNode;
+  divergence?: DebateDivergenceMetrics;
 }
 
 export interface SwarmConsensusResult {

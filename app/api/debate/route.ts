@@ -25,11 +25,17 @@ export async function POST(req: NextRequest) {
       ? (rawTimeframe as TimeFrame) 
       : '1h';
 
-    // Sanitize user prompt: truncate to 300 chars, strip dangerous control characters
-    const sanitizedPrompt = rawUserPrompt
-      .slice(0, 300)
-      .replace(/[<>]/g, '')
-      .trim();
+    // Check for scenario reset directive
+    const resetScenario = Boolean(body.resetScenario);
+    const rawScenario = resetScenario ? undefined : (body.scenario ?? body.userPrompt ?? undefined);
+
+    // Sanitize scenario input: string prompt or structured context object
+    let scenarioInput: any = undefined;
+    if (typeof rawScenario === 'string' && rawScenario.trim().length > 0) {
+      scenarioInput = rawScenario.slice(0, 300).replace(/[<>]/g, '').trim();
+    } else if (typeof rawScenario === 'object' && rawScenario !== null) {
+      scenarioInput = rawScenario;
+    }
 
     // Validate optional incoming real-time terminal chart candles
     const candlesInput = Array.isArray(body.candles) && body.candles.length > 0
@@ -42,39 +48,24 @@ export async function POST(req: NextRequest) {
         )
       : undefined;
 
+    // Execute Cascading Swarm Evaluation under Persistent Scenario Condition
     const coordinator = new SwarmCoordinator();
-    const result = coordinator.runConsensus(pair, timeframe, candlesInput);
-
-    // If user provided a specific prompt/question, enhance the debate with custom context
-    const debate = [...result.debateTranscript];
-    if (sanitizedPrompt.length > 0) {
-      debate.push({
-        id: `user-query-${Date.now()}`,
-        round: 4,
-        role: 'risk_manager',
-        agentName: 'Sarah Stirling (Risk Manager)',
-        avatarColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800',
-        content: `Custom Scenario Ingestion — "${sanitizedPrompt}": Chief Risk Office evaluated against real-time chart structure on ${pair} [${timeframe}]. Stress tests indicate potential intraday spread expansion; dynamic hard stop-loss anchored at ${result.debateSynthesis?.priceThresholds.stopLoss ?? 'structural floor'} insulates the position while maintaining our ${result.debateSynthesis?.priceThresholds.riskRewardRatio ?? 2.2}:1 R:R profile.`,
-        sentiment: 'CAUTION',
-        timestamp: 'Just now',
-        citedRuleId: 'RISK-STRESS-001',
-        citedRuleName: 'Macro Stress Scenario Invalidation Filter',
-        strategyCategory: 'RISK',
-        winRate: 85.0,
-        side: 'NEUTRAL',
-      });
-    }
+    const result = coordinator.runConsensus(pair, timeframe, candlesInput, scenarioInput);
 
     return NextResponse.json({
       success: true,
       data: {
         pair,
         timeframe,
-        transcript: debate,
+        transcript: result.debateTranscript,
         synthesis: result.debateSynthesis,
+        terminalNode: result.debateSynthesis?.terminalNode,
+        divergence: result.debateSynthesis?.divergence,
+        activeScenario: result.debateSynthesis?.activeScenario,
         consensus: result.consensusDirection,
         confidence: result.overallConfidence,
         priceThresholds: result.debateSynthesis?.priceThresholds,
+        executionSignal: result.executionSignal,
       },
     });
   } catch (error: any) {

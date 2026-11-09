@@ -10,14 +10,18 @@ import {
   DebateSynthesisResult,
   DebatePriceThresholds,
   DebateCitedRule,
-  SignalDirection
+  SignalDirection,
+  DebateScenarioContext,
+  DebateDivergenceMetrics,
+  DebateTerminalNode,
+  DebateActionableDirective
 } from '../types';
 import { TechnicalAnalystAgent } from './TechnicalAnalyst';
 import { FundamentalAnalystAgent } from './FundamentalAnalyst';
 import { ForexMarketAnalystAgent } from './ForexMarketAnalyst';
 import { NewsAnalystAgent } from './NewsAnalyst';
 import { RiskManagerAgent, RiskManagerConfig, DEFAULT_RISK_CONFIG } from './RiskManager';
-import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, generateCandles, getMarketSegmentForSymbol } from '../marketData';
+import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, PIP_VALUES, generateCandles, getMarketSegmentForSymbol } from '../marketData';
 import { knowledgeEngine } from '../knowledge/KnowledgeEngine';
 import { JournalStorageManager } from '../journalStorage';
 
@@ -39,11 +43,44 @@ export class SwarmCoordinator {
   public runConsensus(
     pair: CurrencyPair,
     timeframe: TimeFrame = '1h',
-    candles?: Candle[]
+    candles?: Candle[],
+    scenarioInput?: DebateScenarioContext | string
   ): SwarmConsensusResult {
     const marketCandles = candles && candles.length > 0 ? candles : generateCandles(pair, timeframe, 60);
     const currentPrice = marketCandles[marketCandles.length - 1].close;
     const marketSegment: MarketSegment = getMarketSegmentForSymbol(pair);
+
+    // Normalize & Persist Injected Scenario Context
+    let scenarioContext: DebateScenarioContext | undefined = undefined;
+    if (typeof scenarioInput === 'string' && scenarioInput.trim().length > 0) {
+      const prompt = scenarioInput.trim();
+      const lower = prompt.toLowerCase();
+      let category: DebateScenarioContext['category'] = 'CUSTOM';
+      if (/revers|turn|dump|pump|crash|topping|bottoming|pullback|correction|pivot|exhaust/.test(lower)) {
+        category = 'REVERSAL';
+      } else if (/volatil|spike|whipsaw|atr|surge|expansion|squeeze|spread/.test(lower)) {
+        category = 'VOLATILITY_EXPANSION';
+      } else if (/fed|rate|cpi|inflation|hike|cut|war|geopoliti|yield|tariff|central bank/.test(lower)) {
+        category = 'MACRO_SHOCK';
+      } else if (/liquidity|stop run|sweep|hunt|grab|order flow/.test(lower)) {
+        category = 'LIQUIDITY_RUN';
+      }
+
+      const severity: DebateScenarioContext['severity'] = 
+        (/crash|reversal|shock|emergency|black swan|dump|panic|escalation/.test(lower)) ? 'HIGH' : 'MEDIUM';
+
+      scenarioContext = {
+        id: `scen-${Date.now()}`,
+        prompt,
+        category,
+        severity,
+        injectedAt: new Date().toISOString(),
+        isActive: true,
+        flowControlAction: 'RE_EVALUATE_SWARM',
+      };
+    } else if (typeof scenarioInput === 'object' && scenarioInput && scenarioInput.isActive) {
+      scenarioContext = scenarioInput;
+    }
 
     // 1. Technical Analysis (with 525+ Knowledge Rules)
     const technical = this.technicalAnalyst.analyze(pair, timeframe, marketCandles);
@@ -135,7 +172,7 @@ export class SwarmCoordinator {
       ],
     };
 
-    // Build 5-Agent Debate Transcript and Definitive Price Threshold Synthesis
+    // Build 5-Agent Debate Transcript and Definitive Price Threshold Synthesis with DAG Terminal Node
     const debateOutcome = this.generateDebateTranscript(
       pair,
       currentPrice,
@@ -149,7 +186,8 @@ export class SwarmCoordinator {
       marketCandles,
       consensusDirection,
       confluenceGrade,
-      overallConfidence
+      overallConfidence,
+      scenarioContext
     );
 
     // Active Pre-Trade Historical Journal Audit
@@ -163,6 +201,14 @@ export class SwarmCoordinator {
       guardrailActionApplied: journalAudit.activeGuardrailAction || 'Standard risk-adjusted sizing with 22-pip dynamic invalidation',
       historicalSafetyScore: Math.min(95, Math.max(40, Math.round((symHistory?.winRate ?? journalAudit.winRate) * 1.15))),
     };
+
+    const terminalDirective = debateOutcome.synthesis.terminalNode?.directive ?? 'MAINTAIN_POSITION';
+    const isExitDirective = terminalDirective === 'STRATEGIC_EXIT';
+    const finalLots = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedLotSize ?? risk.parameters.positionSizeLots;
+    const finalStopLoss = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedStopLoss ?? risk.parameters.stopLoss;
+    const finalTakeProfit = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedTakeProfit ?? risk.parameters.takeProfit1;
+    const finalRiskReward = debateOutcome.synthesis.terminalNode?.updatedThresholds.riskRewardRatio ?? risk.parameters.riskRewardRatio;
+    const finalMaxRisk = debateOutcome.synthesis.terminalNode?.updatedThresholds.maxLossUsd ?? risk.parameters.maxLossUsd;
 
     return {
       pair,
@@ -192,16 +238,18 @@ export class SwarmCoordinator {
       debateTranscript: debateOutcome.transcript,
       debateSynthesis: debateOutcome.synthesis,
       executionSignal: {
-        authorized: risk.verdict !== 'VETOED' && risk.action !== 'NO_TRADE' && consensusDirection !== 'HOLD',
-        orderType: risk.action === 'BUY' ? 'BUY_MARKET' : risk.action === 'SELL' ? 'SELL_MARKET' : 'NONE',
+        authorized: !isExitDirective && risk.verdict !== 'VETOED' && risk.action !== 'NO_TRADE' && consensusDirection !== 'HOLD',
+        orderType: isExitDirective
+          ? 'NONE'
+          : risk.action === 'BUY' ? 'BUY_MARKET' : risk.action === 'SELL' ? 'SELL_MARKET' : 'NONE',
         symbol: pair,
-        lots: risk.parameters.positionSizeLots,
+        lots: finalLots,
         entry: risk.parameters.entryPrice,
-        stopLoss: risk.parameters.stopLoss,
-        takeProfit: risk.parameters.takeProfit1,
-        riskReward: risk.parameters.riskRewardRatio,
-        riskAmountUsd: risk.parameters.maxLossUsd,
-        status: risk.verdict === 'VETOED' ? 'VETOED' : 'READY',
+        stopLoss: finalStopLoss,
+        takeProfit: finalTakeProfit,
+        riskReward: finalRiskReward,
+        riskAmountUsd: finalMaxRisk,
+        status: isExitDirective ? 'VETOED' : (risk.verdict === 'VETOED' ? 'VETOED' : 'READY'),
       },
     };
   }
@@ -264,7 +312,8 @@ export class SwarmCoordinator {
     candles: Candle[],
     consensusDirection: 'BUY' | 'SELL' | 'HOLD',
     confluenceGrade: SwarmConsensusResult['confluenceGrade'],
-    overallConfidence: number
+    overallConfidence: number,
+    scenarioContext?: DebateScenarioContext
   ): { transcript: AgentDebateMessage[]; synthesis: DebateSynthesisResult } {
     const messages: AgentDebateMessage[] = [];
     const isIndian = segment === 'INDIAN_MARKET';
@@ -284,6 +333,99 @@ export class SwarmCoordinator {
 
     const dominantSide: 'BUY' | 'SELL' = (consensusDirection === 'SELL' || risk.action === 'SELL') ? 'SELL' : 'BUY';
     const opposingSide: 'BUY' | 'SELL' = dominantSide === 'BUY' ? 'SELL' : 'BUY';
+
+    // Baseline Metrics Anchor
+    const baselineDirection = consensusDirection;
+    const baselineConfidence = overallConfidence;
+    const baselineRiskReward = risk.parameters.riskRewardRatio;
+    const baselineStopLoss = risk.parameters.stopLoss;
+    const baselineTakeProfit = risk.parameters.takeProfit1;
+    const baselinePositionSize = risk.parameters.positionSizeLots;
+
+    // Dynamic Cascading Swarm Re-Evaluation under Persistent Scenario
+    let debatedDirection = consensusDirection;
+    let debatedConfidence = overallConfidence;
+    let debatedRiskReward = risk.parameters.riskRewardRatio;
+    let debatedStopLoss = risk.parameters.stopLoss;
+    let debatedTakeProfit = risk.parameters.takeProfit1;
+    let debatedPositionSize = risk.parameters.positionSizeLots;
+
+    const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
+
+    if (scenarioContext && scenarioContext.isActive) {
+      if (scenarioContext.category === 'REVERSAL') {
+        debatedConfidence = Math.max(34, overallConfidence - 26);
+        debatedDirection = debatedConfidence < 52 ? 'HOLD' : consensusDirection;
+        const currentStopDist = Math.abs(price - risk.parameters.stopLoss);
+        const tightenedStopDist = Math.max(currentStopDist * 0.65, 12 * pipMultiplier);
+        debatedStopLoss = consensusDirection === 'BUY'
+          ? Number((price - tightenedStopDist).toFixed(decimals))
+          : Number((price + tightenedStopDist).toFixed(decimals));
+        debatedPositionSize = Number((risk.parameters.positionSizeLots * 0.6).toFixed(2));
+        debatedRiskReward = Number((Math.abs(debatedTakeProfit - price) / Math.max(tightenedStopDist, 0.0001)).toFixed(2));
+      } else if (scenarioContext.category === 'VOLATILITY_EXPANSION') {
+        debatedConfidence = Math.max(38, overallConfidence - 16);
+        debatedPositionSize = Number((risk.parameters.positionSizeLots * 0.5).toFixed(2));
+        debatedRiskReward = Number((risk.parameters.riskRewardRatio * 0.88).toFixed(2));
+      } else if (scenarioContext.category === 'MACRO_SHOCK') {
+        debatedConfidence = Math.max(35, overallConfidence - 22);
+        debatedPositionSize = Number((risk.parameters.positionSizeLots * 0.5).toFixed(2));
+        const shockStopDist = Math.abs(price - risk.parameters.stopLoss) * 0.75;
+        debatedStopLoss = consensusDirection === 'BUY'
+          ? Number((price - shockStopDist).toFixed(decimals))
+          : Number((price + shockStopDist).toFixed(decimals));
+        debatedRiskReward = Number((risk.parameters.riskRewardRatio * 0.82).toFixed(2));
+      } else {
+        debatedConfidence = Math.max(40, overallConfidence - 12);
+        debatedPositionSize = Number((risk.parameters.positionSizeLots * 0.75).toFixed(2));
+      }
+    }
+
+    const confidenceDelta = scenarioContext ? (debatedConfidence - baselineConfidence) : 0;
+    const riskRewardDelta = scenarioContext ? Number((debatedRiskReward - baselineRiskReward).toFixed(2)) : 0;
+    const stopLossAdjustmentPips = scenarioContext ? Number(((debatedStopLoss - baselineStopLoss) / pipMultiplier).toFixed(1)) : 0;
+    const positionSizeAdjustmentPercent = scenarioContext && baselinePositionSize > 0
+      ? Math.round(((debatedPositionSize - baselinePositionSize) / baselinePositionSize) * 100)
+      : 0;
+
+    let divergenceSeverity: DebateDivergenceMetrics['divergenceSeverity'] = 'NONE';
+    if (scenarioContext && scenarioContext.isActive) {
+      const isExtremeScenario = scenarioContext.severity === 'HIGH' && 
+        /collapse|crash|black swan|break|breach|invalidation|abort|stop out|liquidation|dump/i.test(scenarioContext.prompt);
+
+      if ((baselineDirection === 'BUY' && debatedDirection === 'SELL') || 
+          (baselineDirection === 'SELL' && debatedDirection === 'BUY') || 
+          debatedConfidence < 38 ||
+          isExtremeScenario) {
+        divergenceSeverity = 'CRITICAL';
+      } else if (baselineDirection !== 'HOLD' && debatedDirection === 'HOLD') {
+        divergenceSeverity = 'SEVERE';
+      } else if (Math.abs(confidenceDelta) >= 20) {
+        divergenceSeverity = 'MODERATE';
+      } else if (Math.abs(confidenceDelta) >= 8) {
+        divergenceSeverity = 'LOW';
+      } else {
+        divergenceSeverity = 'NONE';
+      }
+    }
+
+    let directive: DebateActionableDirective = 'MAINTAIN_POSITION';
+    let executionAction: 'MAINTAIN' | 'SCALE_DOWN' | 'TIGHTEN_STOPS' | 'CLOSE_NOW' | 'HEDGE' = 'MAINTAIN';
+    let urgency: 'IMMEDIATE' | 'NEXT_BAR' | 'MONITOR' = 'MONITOR';
+
+    if (risk.verdict === 'VETOED' || divergenceSeverity === 'CRITICAL') {
+      directive = 'STRATEGIC_EXIT';
+      executionAction = 'CLOSE_NOW';
+      urgency = 'IMMEDIATE';
+    } else if (divergenceSeverity === 'SEVERE' || divergenceSeverity === 'MODERATE') {
+      directive = 'MODIFY_POSITION';
+      executionAction = Math.abs(stopLossAdjustmentPips) > 3 ? 'TIGHTEN_STOPS' : 'SCALE_DOWN';
+      urgency = 'NEXT_BAR';
+    } else {
+      directive = 'MAINTAIN_POSITION';
+      executionAction = 'MAINTAIN';
+      urgency = 'MONITOR';
+    }
 
     // Query Knowledge Engine for Opposing Rules from 525 Technical and 525 Fundamental Rule Bases
     const opposingRuleSets = knowledgeEngine.getOpposingRules(segment, dominantSide);
@@ -508,8 +650,8 @@ export class SwarmCoordinator {
     // ===============================================================
     // ROUND 4: Chief Risk Officer Binding Synthesis & Verdict
     // ===============================================================
-    const tpDiff = Math.abs(risk.parameters.takeProfit1 - price);
-    const slDiff = Math.abs(price - risk.parameters.stopLoss);
+    const tpDiff = Math.abs(debatedTakeProfit - price);
+    const slDiff = Math.abs(price - debatedStopLoss);
 
     messages.push({
       id: 'deb-10',
@@ -517,30 +659,135 @@ export class SwarmCoordinator {
       role: 'risk_manager',
       agentName: risk.agentName,
       avatarColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800',
-      content: risk.verdict === 'VETOED'
-        ? `CHIEF RISK OFFICER BINDING VERDICT: PROPOSAL REJECTED under Risk Governance: ${risk.reasoning}. Opposing arguments (${techOpposeRule.id} WR: ${techOpposeRule.expectedWinRate}% vs ${techSupportRule.id} WR: ${techSupportRule.expectedWinRate}%) failed to achieve required confluence. Capital preservation enforced.`
-        : risk.verdict === 'MODIFIED'
-        ? `CHIEF RISK OFFICER BINDING VERDICT: Cross-examination of 525 technical and 525 fundamental strategies concluded. Opposing argument ${techOpposeRule.id} arbitrated and subordinated to ${techSupportRule.id} (${techSupportRule.expectedWinRate}% WR). SETUP APPROVED WITH STRICT THRESHOLDS:
-• Definitive Bias: ${dominantSide} (${confluenceGrade} Grade, ${overallConfidence}% Confidence)
+      content: directive === 'STRATEGIC_EXIT'
+        ? `CHIEF RISK OFFICER BINDING VERDICT: PROPOSAL VETOED under Risk Governance: Injected scenario "${scenarioContext?.prompt || 'Stress Event'}" triggers structural invalidation. Opposing arguments (${techOpposeRule.id} WR: ${techOpposeRule.expectedWinRate}%) dominate. Capital preservation enforced.`
+        : directive === 'MODIFY_POSITION'
+        ? `CHIEF RISK OFFICER BINDING VERDICT: Scenario cross-examination concluded. Opposing risk ${techOpposeRule.id} arbitrated with dynamic risk mitigation. SETUP APPROVED WITH RISK-ADJUSTED PARAMETERS:
+• Definitive Bias: ${dominantSide} (${confluenceGrade} Grade, ${debatedConfidence}% Confidence)
 • Entry Level: ${price.toFixed(decimals)}
-• Profit Target (TP): ${risk.parameters.takeProfit1.toFixed(decimals)} (+${tpDiff.toFixed(decimals)} / +$${risk.parameters.projectedGainUsd} USD)
-• Hard Stop-Loss (SL): ${risk.parameters.stopLoss.toFixed(decimals)} (-${slDiff.toFixed(decimals)} / max risk $${risk.parameters.maxLossUsd} USD)
-• Mathematical Edge: ${risk.parameters.riskRewardRatio}:1 R:R, ${risk.parameters.positionSizeLots} Standard Lots (${risk.parameters.accountRiskPercent}% account risk)
-• Hard Invalidation: ${timeframe} candle close beyond ${risk.parameters.stopLoss.toFixed(decimals)}.`
-        : `CHIEF RISK OFFICER BINDING VERDICT: FULL CONFLUENCE AUTHORIZATION across all 5 desks. Opposing thesis ${techOpposeRule.id} resolved. Trade cleared for execution:
-• Definitive Bias: ${dominantSide} (${confluenceGrade} Grade, ${overallConfidence}% Confidence)
+• Adjusted Profit Target (TP): ${debatedTakeProfit.toFixed(decimals)} (+${tpDiff.toFixed(decimals)})
+• Tightened Stop-Loss (SL): ${debatedStopLoss.toFixed(decimals)} (-${slDiff.toFixed(decimals)})
+• Risk-Adjusted Sizing: ${debatedPositionSize} Standard Lots (reduced from ${baselinePositionSize} lots, R:R ${debatedRiskReward}:1)
+• Hard Invalidation: ${timeframe} candle close beyond ${debatedStopLoss.toFixed(decimals)}.`
+        : `CHIEF RISK OFFICER BINDING VERDICT: FULL CONFLUENCE AUTHORIZATION across all 5 desks. Opposing thesis ${techOpposeRule.id} safely absorbed by structural buffers. Trade cleared for execution:
+• Definitive Bias: ${dominantSide} (${confluenceGrade} Grade, ${debatedConfidence}% Confidence)
 • Entry Level: ${price.toFixed(decimals)}
-• Profit Target (TP): ${risk.parameters.takeProfit1.toFixed(decimals)} (+${tpDiff.toFixed(decimals)} / +$${risk.parameters.projectedGainUsd} USD)
-• Hard Stop-Loss (SL): ${risk.parameters.stopLoss.toFixed(decimals)} (-${slDiff.toFixed(decimals)} / max risk $${risk.parameters.maxLossUsd} USD)
-• Mathematical Edge: ${risk.parameters.riskRewardRatio}:1 R:R, ${risk.parameters.positionSizeLots} Standard Lots
-• Hard Invalidation: ${timeframe} bar close beyond ${risk.parameters.stopLoss.toFixed(decimals)}. Order authorized.`,
-      sentiment: risk.verdict === 'VETOED' ? 'CAUTION' : (dominantSide === 'BUY' ? 'BULLISH' : 'BEARISH'),
+• Profit Target (TP): ${debatedTakeProfit.toFixed(decimals)} (+${tpDiff.toFixed(decimals)})
+• Hard Stop-Loss (SL): ${debatedStopLoss.toFixed(decimals)} (-${slDiff.toFixed(decimals)})
+• Mathematical Edge: ${debatedRiskReward}:1 R:R, ${debatedPositionSize} Standard Lots
+• Hard Invalidation: ${timeframe} bar close beyond ${debatedStopLoss.toFixed(decimals)}. Order authorized.`,
+      sentiment: directive === 'STRATEGIC_EXIT' ? 'CAUTION' : (dominantSide === 'BUY' ? 'BULLISH' : 'BEARISH'),
       timestamp: '00:20s',
       citedRuleId: 'RISK-GOV-001',
       citedRuleName: 'Dynamic 1.5x ATR Invalidation & 2:1 R:R Mandatory Filter',
       strategyCategory: 'RISK',
       winRate: 84.5,
       side: dominantSide,
+    });
+
+    // ===============================================================
+    // ROUND 5: CONSOLIDATED TERMINAL NODE (DAG Conclusion Node)
+    // ===============================================================
+    const directiveTitle = directive === 'STRATEGIC_EXIT'
+      ? 'STRATEGIC EXIT DIRECTIVE: ABORT SETUP / CLOSE POSITION'
+      : directive === 'MODIFY_POSITION'
+      ? 'RISK-MITIGATION DIRECTIVE: TIGHTEN STOPS & REDUCE POSITION SIZING'
+      : 'MAINTAIN POSITION DIRECTIVE: CONFLUENCE RESILIENT ACROSS 5 DESKS';
+
+    const actionableSummary = directive === 'STRATEGIC_EXIT'
+      ? `Dialectical deliberation concluded that scenario condition "${scenarioContext?.prompt || 'Elevated Risk'}" triggers a structural invalidation breach. Continued holding exposes the account to asymmetric tail-risk. Immediate strategic exit or order abort is mandated.`
+      : directive === 'MODIFY_POSITION'
+      ? `The debated scenario "${scenarioContext?.prompt}" introduces a ${divergenceSeverity.toLowerCase()} divergence from baseline (Confidence dropped ${confidenceDelta}%, R:R shifted to ${debatedRiskReward}:1). Risk Manager mandates reducing position size to ${debatedPositionSize} lots (${positionSizeAdjustmentPercent}% reduction) and ratcheting stop-loss to ${debatedStopLoss.toFixed(decimals)}.`
+      : `Dialectical review confirmed that active 1.5x ATR structural buffers safely absorb scenario condition "${scenarioContext?.prompt || 'Baseline'}". Baseline parameters remain valid with ${debatedRiskReward}:1 R:R profile. Maintain active position.`;
+
+    const swarmSignOff = {
+      technicalAnalyst: `Marcus Vance: ${directive === 'STRATEGIC_EXIT' ? 'Structural invalidation breached. Counter-trend order blocks now dominate chart geometry.' : directive === 'MODIFY_POSITION' ? 'Chart structure resilient but dynamic stop tightening to ' + debatedStopLoss.toFixed(decimals) + ' is required.' : 'Primary SMC order block absorbs scenario volatility without trend violation.'}`,
+      fundamentalAnalyst: `Dr. Julian Sterling: ${directive === 'STRATEGIC_EXIT' ? 'Macro thesis inverted under scenario stress; policy spread margin compressed.' : directive === 'MODIFY_POSITION' ? 'Macro drift detected; scaling position size down preserves safe-haven margin.' : 'Real yield differential and central bank divergence remain supportive.'}`,
+      newsAnalyst: `Alexander Wright: ${directive === 'STRATEGIC_EXIT' ? 'Speed-wires confirm rapid sentiment breakdown across 18 tracked financial outlets.' : directive === 'MODIFY_POSITION' ? 'Elevated wire headline clustering warrants defensive risk hedging.' : 'Wire flow confirms sustained institutional liquidity absorption.'}`,
+      forexAnalyst: `Elena Rostova: ${directive === 'STRATEGIC_EXIT' ? 'Currency strength index broke key support with rapid liquidity evacuation.' : directive === 'MODIFY_POSITION' ? 'Intermarket cross-asset correlation softening; defensive posture validated.' : 'Active session liquidity depth confirms orderly order flow execution.'}`,
+      chiefRiskOfficer: `Sarah Stirling (CRO): Final Binding Arbitration — ${directive.replace('_', ' ')}. ${executionAction} enforced. Sizing calibrated to ${debatedPositionSize} lots with hard stop at ${debatedStopLoss.toFixed(decimals)}.`,
+    };
+
+    const maxLossCalc = Number((Math.abs(price - debatedStopLoss) / pipMultiplier * debatedPositionSize * 10).toFixed(2));
+    const projectedGainCalc = Number((Math.abs(debatedTakeProfit - price) / pipMultiplier * debatedPositionSize * 10).toFixed(2));
+
+    const updatedThresholds: DebatePriceThresholds = {
+      entryPrice: price,
+      takeProfit: debatedTakeProfit,
+      stopLoss: debatedStopLoss,
+      riskRewardRatio: debatedRiskReward,
+      positionSizeLots: debatedPositionSize,
+      maxLossUsd: maxLossCalc > 0 ? maxLossCalc : risk.parameters.maxLossUsd,
+      projectedGainUsd: projectedGainCalc > 0 ? projectedGainCalc : risk.parameters.projectedGainUsd,
+      invalidationCriteria: directive === 'STRATEGIC_EXIT'
+        ? `Scenario "${scenarioContext?.prompt}" breached structural threshold`
+        : `${timeframe} candle close beyond ${debatedStopLoss.toFixed(decimals)}`,
+      trajectoryHorizonBars: 16,
+      projectedPriceMove: Number((debatedTakeProfit - price).toFixed(decimals)),
+    };
+
+    const divergenceMetrics: DebateDivergenceMetrics = {
+      baselineBias: baselineDirection === 'BUY' ? 'BUY' : baselineDirection === 'SELL' ? 'SELL' : 'NEUTRAL',
+      debatedBias: debatedDirection === 'BUY' ? 'BUY' : debatedDirection === 'SELL' ? 'SELL' : 'NEUTRAL',
+      baselineConfidence,
+      debatedConfidence,
+      confidenceDelta,
+      baselineRiskReward,
+      debatedRiskReward,
+      riskRewardDelta,
+      baselineStopLoss,
+      debatedStopLoss,
+      baselineTakeProfit,
+      debatedTakeProfit,
+      stopLossAdjustmentPips,
+      positionSizeAdjustmentPercent,
+      divergenceSeverity,
+      divergenceSummary: `${divergenceSeverity} divergence: Confidence delta ${confidenceDelta > 0 ? '+' : ''}${confidenceDelta}%, R:R delta ${riskRewardDelta > 0 ? '+' : ''}${riskRewardDelta}:1.`,
+      structuralInvalidationTriggered: directive === 'STRATEGIC_EXIT',
+    };
+
+    const terminalNode: DebateTerminalNode = {
+      nodeId: `terminal-node-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      activeScenario: scenarioContext,
+      directive,
+      directiveConfidence: Math.round((overallConfidence + debatedConfidence) / 2),
+      directiveTitle,
+      actionableSummary,
+      divergence: divergenceMetrics,
+      updatedThresholds,
+      executionGuidance: {
+        action: executionAction,
+        suggestedLotSize: debatedPositionSize,
+        suggestedStopLoss: debatedStopLoss,
+        suggestedTakeProfit: debatedTakeProfit,
+        maxRiskDollars: updatedThresholds.maxLossUsd,
+        urgency,
+        rationale: actionableSummary,
+      },
+      swarmSignOff,
+    };
+
+    messages.push({
+      id: `terminal-node-${Date.now()}`,
+      round: 5,
+      role: 'terminal_node',
+      agentName: 'Consolidated Terminal Node (DAG Conclusion)',
+      avatarColor: directive === 'STRATEGIC_EXIT'
+        ? 'text-rose-400 bg-rose-950/80 border-rose-700'
+        : directive === 'MODIFY_POSITION'
+        ? 'text-amber-400 bg-amber-950/80 border-amber-700'
+        : 'text-emerald-400 bg-emerald-950/80 border-emerald-700',
+      content: `[TERMINAL SYNTHESIS — LOGICAL CONCLUSION NODE IN DAG]
+• Actionable Directive: ${directive.replace('_', ' ')} (${urgency} ACTION REQUIRED)
+• Scenario Ingested: "${scenarioContext?.prompt || 'Baseline Market Conditions'}"
+• Divergence Assessment: ${divergenceMetrics.divergenceSummary}
+• Execution Guidance: ${terminalNode.executionGuidance.action} — Sizing ${debatedPositionSize} Lots (Stop ${debatedStopLoss.toFixed(decimals)}, Target ${debatedTakeProfit.toFixed(decimals)}, R:R ${debatedRiskReward}:1)
+• Swarm Resolution: ${actionableSummary}`,
+      sentiment: directive === 'STRATEGIC_EXIT' ? 'BEARISH' : directive === 'MODIFY_POSITION' ? 'CAUTION' : 'BULLISH',
+      timestamp: 'Conclusion',
+      isTerminalNode: true,
+      terminalData: terminalNode,
     });
 
     // Build Cited Rules Registry
@@ -591,44 +838,30 @@ export class SwarmCoordinator {
         category: 'RISK',
         winRate: 84.5,
         side: dominantSide,
-        rationale: `Capital protection protocol fixing hard stop at ${risk.parameters.stopLoss.toFixed(decimals)} with $${risk.parameters.maxLossUsd} downside cap`,
+        rationale: `Capital protection protocol fixing hard stop at ${debatedStopLoss.toFixed(decimals)} with $${updatedThresholds.maxLossUsd} downside cap`,
       },
     ];
 
-    const definitiveBias: SignalDirection = risk.verdict === 'VETOED'
+    const definitiveBias: SignalDirection = directive === 'STRATEGIC_EXIT'
       ? 'NEUTRAL'
       : dominantSide === 'BUY'
-      ? (overallConfidence >= 80 ? 'STRONG_BUY' : 'BUY')
-      : (overallConfidence >= 80 ? 'STRONG_SELL' : 'SELL');
-
-    const priceThresholds: DebatePriceThresholds = {
-      entryPrice: price,
-      takeProfit: risk.parameters.takeProfit1,
-      stopLoss: risk.parameters.stopLoss,
-      riskRewardRatio: risk.parameters.riskRewardRatio,
-      positionSizeLots: risk.parameters.positionSizeLots,
-      maxLossUsd: risk.parameters.maxLossUsd,
-      projectedGainUsd: risk.parameters.projectedGainUsd,
-      invalidationCriteria: risk.verdict === 'VETOED'
-        ? (risk.vetoReasons?.[0] || 'Vetoed by Risk Governance')
-        : `${timeframe} candle close beyond ${risk.parameters.stopLoss.toFixed(decimals)}`,
-      trajectoryHorizonBars: 16,
-      projectedPriceMove: Number((risk.parameters.takeProfit1 - price).toFixed(decimals)),
-    };
+      ? (debatedConfidence >= 80 ? 'STRONG_BUY' : 'BUY')
+      : (debatedConfidence >= 80 ? 'STRONG_SELL' : 'SELL');
 
     const synthesis: DebateSynthesisResult = {
       pair,
       timeframe,
       definitiveBias,
       confluenceGrade,
-      confidenceScore: overallConfidence,
-      priceThresholds,
+      confidenceScore: debatedConfidence,
+      priceThresholds: updatedThresholds,
       citedRules,
-      summary: `Autonomous 5-Desk Debate Synthesized: ${definitiveBias} (${confluenceGrade} Grade, ${overallConfidence}% Confidence). Entry: ${price.toFixed(decimals)} | Target: ${risk.parameters.takeProfit1.toFixed(decimals)} | Hard SL: ${risk.parameters.stopLoss.toFixed(decimals)} (R:R ${risk.parameters.riskRewardRatio}:1).`,
-      consensusVerdict: risk.verdict === 'VETOED'
-        ? `VETO ENFORCED: ${risk.reasoning}`
-        : `EXECUTION APPROVED: ${dominantSide} ${risk.parameters.positionSizeLots} Lots on ${pair}. Stop Loss anchored at ${risk.parameters.stopLoss.toFixed(decimals)}, Target at ${risk.parameters.takeProfit1.toFixed(decimals)}.`,
+      summary: `Autonomous 5-Desk Debate Synthesized: ${directive.replace('_', ' ')} (${confluenceGrade} Grade, ${debatedConfidence}% Confidence). Entry: ${price.toFixed(decimals)} | Target: ${debatedTakeProfit.toFixed(decimals)} | Hard SL: ${debatedStopLoss.toFixed(decimals)} (R:R ${debatedRiskReward}:1).`,
+      consensusVerdict: directiveTitle,
       timestamp: new Date().toISOString(),
+      activeScenario: scenarioContext,
+      terminalNode,
+      divergence: divergenceMetrics,
     };
 
     return {

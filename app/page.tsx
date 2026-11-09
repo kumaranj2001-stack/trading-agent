@@ -11,7 +11,9 @@ import {
   MarketScannerOpportunity, 
   MacroIndicator,
   MarketSegment,
-  KnowledgeRule 
+  KnowledgeRule,
+  DebateScenarioContext,
+  DebatePriceThresholds 
 } from '@/lib/types';
 import { INITIAL_PORTFOLIO, PortfolioState } from '@/lib/store';
 import { DEFAULT_RISK_CONFIG, RiskManagerConfig } from '@/lib/agents/RiskManager';
@@ -89,6 +91,7 @@ export default function Home() {
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
+  const [activeDebateScenario, setActiveDebateScenario] = useState<DebateScenarioContext | null>(null);
 
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
@@ -404,7 +407,7 @@ export default function Home() {
     }
   };
 
-  // Handle custom debate prompt
+  // Handle custom debate prompt (persistent scenario injection)
   const handleCustomDebatePrompt = async (prompt: string) => {
     setIsDebating(true);
     try {
@@ -415,7 +418,7 @@ export default function Home() {
           pair: selectedPair,
           timeframe,
           candles,
-          userPrompt: prompt,
+          scenario: prompt,
         }),
       });
       const json = await res.json();
@@ -424,12 +427,117 @@ export default function Home() {
           ...consensus,
           debateTranscript: json.data.transcript,
           debateSynthesis: json.data.synthesis || consensus.debateSynthesis,
+          executionSignal: json.data.executionSignal || consensus.executionSignal,
         });
+        if (json.data.activeScenario) {
+          setActiveDebateScenario(json.data.activeScenario);
+          const dir = json.data.terminalNode?.directive || 'PROCESSED';
+          showNotification(`Scenario Active: "${prompt}" (Directive: ${dir.replace('_', ' ')})`);
+        }
       }
     } catch (e) {
       console.error(e);
     } finally {
       setIsDebating(false);
+    }
+  };
+
+  // Handle clearing active debate scenario (resetting to baseline consensus)
+  const handleClearDebateScenario = async () => {
+    setIsDebating(true);
+    try {
+      setActiveDebateScenario(null);
+      const res = await fetch('/api/debate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pair: selectedPair,
+          timeframe,
+          candles,
+          resetScenario: true,
+        }),
+      });
+      const json = await res.json();
+      if (json.success && json.data && consensus) {
+        setConsensus({
+          ...consensus,
+          debateTranscript: json.data.transcript,
+          debateSynthesis: json.data.synthesis || consensus.debateSynthesis,
+          executionSignal: json.data.executionSignal || consensus.executionSignal,
+        });
+        showNotification('Debate Scenario Cleared — Restored to Baseline Market Conditions');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsDebating(false);
+    }
+  };
+
+  // Handle Risk-Mitigation Modification
+  const handleApplyRiskModification = (thresholds: DebatePriceThresholds) => {
+    if (!consensus) return;
+    setConsensus({
+      ...consensus,
+      executionSignal: {
+        ...consensus.executionSignal,
+        lots: thresholds.positionSizeLots,
+        stopLoss: thresholds.stopLoss,
+        takeProfit: thresholds.takeProfit,
+        riskReward: thresholds.riskRewardRatio,
+        riskAmountUsd: thresholds.maxLossUsd,
+        status: 'READY',
+      },
+    });
+
+    // If an open position exists for this symbol, modify its stop-loss and take-profit
+    const existingPos = portfolio.positions.find(p => p.symbol === selectedPair);
+    if (existingPos) {
+      const updatedPositions = portfolio.positions.map(p => {
+        if (p.symbol === selectedPair) {
+          return {
+            ...p,
+            stopLoss: thresholds.stopLoss,
+            takeProfit: thresholds.takeProfit,
+          };
+        }
+        return p;
+      });
+      setPortfolio({
+        ...portfolio,
+        positions: updatedPositions,
+      });
+      BrowserStorageManager.savePortfolio({
+        ...portfolio,
+        positions: updatedPositions,
+      });
+    }
+
+    showNotification(`Risk-Mitigation Applied: Stop tightened to ${thresholds.stopLoss}, Lots scaled to ${thresholds.positionSizeLots}`);
+  };
+
+  // Handle Strategic Exit / Abort Order
+  const handleStrategicExit = () => {
+    const openPos = portfolio.positions.find(p => p.symbol === selectedPair);
+    if (openPos) {
+      handleClosePosition(openPos.id);
+      showNotification(`Strategic Exit Executed: Open position on ${selectedPair} closed to preserve capital.`);
+    }
+
+    if (consensus) {
+      setConsensus({
+        ...consensus,
+        executionSignal: {
+          ...consensus.executionSignal,
+          authorized: false,
+          orderType: 'NONE',
+          status: 'VETOED',
+        },
+      });
+    }
+
+    if (!openPos) {
+      showNotification(`Strategic Exit Mandated: Order execution aborted under scenario invalidation.`);
     }
   };
 
@@ -679,8 +787,12 @@ export default function Home() {
             pair={selectedPair}
             timeframe={timeframe}
             synthesis={consensus?.debateSynthesis}
+            activeScenario={activeDebateScenario}
             onExecuteTrade={handleExecuteTrade}
+            onApplyModification={handleApplyRiskModification}
+            onStrategicExit={handleStrategicExit}
             onSendCustomPrompt={handleCustomDebatePrompt}
+            onClearScenario={handleClearDebateScenario}
             isDebating={isDebating}
           />
         )}

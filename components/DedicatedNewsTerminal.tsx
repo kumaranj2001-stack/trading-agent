@@ -66,7 +66,7 @@ export const DedicatedNewsTerminal: React.FC<DedicatedNewsTerminalProps> = ({
   // 2. Initial load of all 18 sources and persistent daily memories
   const loadData = async () => {
     try {
-      const res = await fetch(/api/news?symbol=\);
+      const res = await fetch(`/api/news?symbol=${selectedPair}`);
       const json = await res.json();
       if (json.success && Array.isArray(json.data?.headlines) && json.data.headlines.length > 0) {
         setArticles(json.data.headlines);
