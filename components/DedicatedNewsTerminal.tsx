@@ -416,7 +416,7 @@ export const DedicatedNewsTerminal: React.FC<DedicatedNewsTerminalProps> = ({
                       <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1.5 border-t border-terminal-border/60">
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span className="text-slate-500 uppercase text-[10px]">Affected:</span>
-                          {article.relatedSymbols.map((sym) => (
+                          {Array.from(new Set(article.relatedSymbols)).map((sym) => (
                             <span
                               key={sym}
                               className={`px-1.5 py-0.2 rounded font-bold ${
