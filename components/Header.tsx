@@ -103,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               onClick={onOpenLeftDrawer}
               className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors flex items-center justify-center shrink-0 active:scale-95 shadow-sm group"
-              title="Open Navigation Menu (Terminal, Knowledge, Agent, Five-Agent Debate, Role, Journals, Wire with 38 Feeds, Macro Calendar, Scanner, VAR, Journals, Firebase)"
+              title="Open Navigation Menu (Terminal, Knowledge, Agent, Five-Agent Debate, Role, Journals, Wire with 38 Feeds, Macro Calendar, Macro Intelligence, Scanner, VAR, Journals, Firebase)"
               aria-label="Open Navigation Menu"
             >
               <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 group-hover:scale-110 transition-transform" />

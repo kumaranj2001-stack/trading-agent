@@ -34,19 +34,22 @@ export type TradableSymbol = ForexPair | MetalCommodityAsset | IndianMarketAsset
 export type CurrencyPair = TradableSymbol;
 
 export type NavigationTab = 
-  | 'terminal'       // 01. Terminal (Live SSOT Chart, Orders & 5-Agent Swarm Signal)
-  | 'agent'          // 02. Agent (5-Role Multi-Agent Swarm Intelligence Command Desk)
-  | 'backtest'       // 03. Backtest (Monte Carlo Walk-Forward Backtester)
-  | 'journals'       // 04. Journals (Persistent Trade Journal & Historical Loss Review)
-  | 'var'            // 05. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
-  | 'debate'         // 06. Five-Agent Debate (Interactive Multi-Role Consensus Stream)
-  | 'roles'          // 07. Roles (5-Role Architecture & System Governance)
-  | 'architecture'   // 07. Roles alias
-  | 'wire'           // 08. Wire (38 Monitored Financial Outlets & Institutional Wires)
-  | 'firebase'       // 09. Firebase (Firestore Cloud Realtime State Sync)
-  | 'knowledge'      // 10. Knowledge (1,050+ Strategies & Institutional Heuristics)
-  | 'scanner'        // 11. Scanner (Multi-Asset Screener & Confluence Hunter)
-  | 'calendar';      // 12. Calendar (Institutional Macroeconomic Release Pulse)
+  | 'terminal'             // 01. Terminal (Live SSOT Chart, Orders & 5-Agent Swarm Signal)
+  | 'knowledge'            // 02. Knowledge (1,050+ Strategies & Institutional Heuristics)
+  | 'agent'                // 03. Agent (5-Role Multi-Agent Swarm Intelligence Command Desk)
+  | 'debate'               // 04. Five-Agent Debate (Interactive Multi-Role Consensus Stream)
+  | 'five-agent-debate'    // 04. Debate alias
+  | 'roles'                // 05. Roles (5-Role Architecture & System Governance)
+  | 'architecture'         // 05. Roles alias
+  | 'journals'             // 06. Journals (Persistent Trade Journal & Historical Loss Review)
+  | 'wire'                 // 07. Wire (38 Monitored Financial Outlets & Institutional Wires)
+  | 'calendar'             // 08. Macro Calendar (Institutional Macroeconomic Release Pulse)
+  | 'macro-intelligence'   // 09. Event-Driven Macro Intelligence & Execution Engine
+  | 'macro-engine'         // 09. Alias
+  | 'scanner'              // 10. Scanner (Multi-Asset Screener & Confluence Hunter)
+  | 'var'                  // 11. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
+  | 'backtest'             // Backtest (Monte Carlo Walk-Forward Backtester)
+  | 'firebase';            // 13. Firebase (Firestore Cloud Realtime State Sync)
 
 export type TimeFrame = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
@@ -751,4 +754,135 @@ export interface HistoricalJournalAnalysis {
   primaryLossCauses: Array<{ category: JournalLossCategory; count: number; percentage: number }>;
   recurringMistakesWarning?: string;
   activeGuardrailAction?: string;
+}
+
+// ============================================================================
+// 09 // EVENT-DRIVEN MACRO INTELLIGENCE AND EXECUTION ENGINE
+// ============================================================================
+
+export type MacroCatalystCategory = 
+  | 'CENTRAL_BANK' 
+  | 'INFLATION' 
+  | 'EMPLOYMENT' 
+  | 'GROWTH_GDP' 
+  | 'MANUFACTURING_PMI' 
+  | 'ENERGY_COMMODITIES' 
+  | 'BULLION_RESERVES';
+
+export interface MacroCatalystEvent {
+  id: string;
+  title: string;
+  category: MacroCatalystCategory;
+  country: string;
+  currency: string;
+  date: string;
+  timeUtc: string;
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  previous: string;
+  previousNumeric: number;
+  forecast: string;
+  forecastNumeric: number;
+  actual?: string;
+  actualNumeric?: number;
+  unit: string;
+  source: string;
+  primarySourceUrl?: string;
+  fallbackSources: string[];
+  correlatedPairs: CurrencyPair[];
+  description: string;
+  isLiveNow?: boolean;
+  secondsUntilRelease?: number;
+}
+
+export type MacroSignalType = 'BUY' | 'SELL' | 'UNCONFIRMED';
+export type ConvergenceStatus = 'CONVERGED' | 'AWAITING_CONVERGENCE' | 'DISCREPANCY_FLAGGED';
+
+export interface MacroIntelligenceReport {
+  id: string;
+  timestamp: number;
+  timestampFormatted: string;
+  catalystEvent: MacroCatalystEvent;
+  selectedPair: CurrencyPair;
+  signal: MacroSignalType;
+  confidenceScore: number; // 85% to 97% target validation threshold
+  validationStatus: ConvergenceStatus;
+  statusDescription: string;
+  
+  // Real-Time Data Convergence & Fail-Safe Verification
+  dataConvergence: {
+    isConverged: boolean;
+    confidenceThresholdMet: boolean;
+    timeoutExceeded: boolean;
+    latencyMs: number;
+    primarySourceData: {
+      source: string;
+      actual: string | null;
+      timestamp: number;
+    };
+    fallbackScrapedData: {
+      source: string;
+      actual: string | null;
+      timestamp: number;
+    };
+    discrepancyDeltaPercent: number;
+    auditLog: string[];
+  };
+
+  // Quantitative Deviation Analysis
+  catalystAnalysis: {
+    previous: string;
+    forecast: string;
+    actual: string;
+    surpriseDelta: number; // Actual - Forecast
+    surprisePercent: number;
+    surpriseDirection: 'HAWKISH_BEAT' | 'DOVISH_MISS' | 'IN_LINE';
+    historicalVolatilityImpactPips: number;
+  };
+
+  // Qualitative Sentiment & Central Bank Tone Analysis
+  sentimentAnalysis: {
+    wireSentimentScore: number; // -1.0 to +1.0
+    monitoredOutletsCount: number;
+    centralBankTone: 'HAWKISH' | 'DOVISH' | 'NEUTRAL' | 'AGGRESSIVELY_HAWKISH' | 'DEEPLY_DOVISH';
+    policyDivergenceScore: number; // 1 to 10
+    relevantHeadlines: Array<{
+      title: string;
+      source: string;
+      sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+      timeAgo: string;
+      url?: string;
+    }>;
+  };
+
+  // Institutional Order Flow & Technical Price Action Structure
+  orderFlowStructure: {
+    flowBias: 'INSTITUTIONAL_ACCUMULATION' | 'INSTITUTIONAL_DISTRIBUTION' | 'NEUTRAL_CHOP';
+    orderBookImbalanceRatio: number; // e.g. 1.82 (Bids / Asks)
+    keyLiquidityPools: {
+      buySideLiquidity: number;
+      sellSideLiquidity: number;
+    };
+    technicalStructureTrend: 'BULLISH_EXPANSION' | 'BEARISH_BREAKDOWN' | 'RANGE_COMPRESSION';
+    currentPrice: number;
+  };
+
+  // Mathematical Execution Parameters (Strict SL/TP rules applied)
+  executionParameters: {
+    entryZone: {
+      min: number;
+      max: number;
+      recommendedEntry: number;
+    };
+    stopLoss: number;
+    takeProfit1: number;
+    takeProfit2: number;
+    takeProfit3: number;
+    riskRewardRatio: number; // e.g. 2.6
+    recommendedLotSize: number;
+    maxRiskDollars: number;
+    executionValidityMinutes: number;
+  };
+
+  // Swarm Synthesis & Strategic Rationale
+  strategicSummary: string;
 }

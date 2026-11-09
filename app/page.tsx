@@ -32,6 +32,7 @@ import { ArchitectureView } from '@/components/ArchitectureView';
 import { SettingsModal } from '@/components/SettingsModal';
 import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
+import { MacroIntelligenceDesk } from '@/components/MacroIntelligenceDesk';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
 import { NewsWireModal } from '@/components/NewsWireModal';
@@ -971,7 +972,37 @@ export default function Home() {
           />
         )}
 
-        {/* Tab 11: Multi-Asset Screener & Opportunity Scanner */}
+        {/* Tab 08: Institutional Macroeconomic Calendar */}
+        {activeTab === 'calendar' && (
+          <EconomicCalendarModal
+            isFullPage={true}
+            onClose={() => setActiveTab('terminal')}
+            calendar={calendar}
+          />
+        )}
+
+        {/* Tab 09: Dedicated Event-Driven Macro Intelligence and Execution Engine */}
+        {(activeTab === 'macro-intelligence' || (activeTab as string) === 'macro-engine') && (
+          <MacroIntelligenceDesk
+            isFullPage={true}
+            onClose={() => setActiveTab('terminal')}
+            selectedPair={selectedPair}
+            onSelectPair={handleSelectPair}
+            onExecuteTrade={(tradeParams) => {
+              if (tradeParams) {
+                handleExecuteTrade();
+                showNotification(`MACRO TRADE EXECUTED: ${tradeParams.direction} ${tradeParams.symbol} @ ${tradeParams.entry}`);
+              }
+            }}
+            onSyncToTerminal={(params) => {
+              handleSelectPair(params.symbol);
+              setActiveTab('terminal');
+              showNotification(`MACRO PARAMS SYNCED: ${params.direction} on ${params.symbol} loaded into Terminal.`);
+            }}
+          />
+        )}
+
+        {/* Tab 10: Multi-Asset Screener & Opportunity Scanner */}
         {activeTab === 'scanner' && (
           <OpportunityScannerModal
             isFullPage={true}
@@ -983,15 +1014,6 @@ export default function Home() {
             }}
             isScanning={isScanning}
             onRefreshScan={fetchOpportunities}
-          />
-        )}
-
-        {/* Tab 12: Institutional Macroeconomic Calendar */}
-        {activeTab === 'calendar' && (
-          <EconomicCalendarModal
-            isFullPage={true}
-            onClose={() => setActiveTab('terminal')}
-            calendar={calendar}
           />
         )}
       </main>

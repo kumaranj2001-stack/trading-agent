@@ -22,6 +22,7 @@ import {
   TrendingUp,
   PlayCircle,
   Sliders,
+  Zap,
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, NavigationTab } from '@/lib/types';
 
@@ -37,6 +38,7 @@ export interface LeftNavigationDrawerProps {
   onOpenKnowledge?: () => void;
   onOpenScanner?: () => void;
   onOpenCalendar?: () => void;
+  onOpenMacroIntelligence?: () => void;
   onOpenSettings?: () => void;
   executionMode?: ExecutionMode;
   onToggleExecutionMode?: () => void;
@@ -234,8 +236,25 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'scanner',
+      id: 'macro-intelligence',
       number: '09',
+      label: 'Macro Intelligence',
+      description: 'Event-Driven Macro Intelligence & Execution Engine',
+      icon: Zap,
+      color: 'text-cyan-400',
+      activeBg: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 font-semibold',
+      isActive: activeTab === 'macro-intelligence' || activeTab === 'macro-engine',
+      badge: '95% CONVERGENCE',
+      badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+      action: () => {
+        setActiveTab('macro-intelligence');
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
+    {
+      id: 'scanner',
+      number: '10',
       label: 'Scanner',
       description: 'Multi-Asset Screener & Confluence Hunter',
       icon: Radar,
@@ -252,7 +271,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'var',
-      number: '10',
+      number: '11',
       label: 'VAR',
       description: '1,000-Path Monte Carlo Value-at-Risk',
       icon: Shield,
@@ -269,7 +288,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'journals-history',
-      number: '11',
+      number: '12',
       label: 'Journals',
       description: 'Historical Execution Logs & Loss Attribution',
       icon: BookOpen,
@@ -286,7 +305,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'firebase',
-      number: '12',
+      number: '13',
       label: 'Firebase',
       description: 'Firestore Cloud Realtime State Sync',
       icon: Cloud,
@@ -345,7 +364,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             ACTIVE: <strong className="text-white">{selectedPair}</strong>
           </span>
-          <span className="text-[10px] text-slate-400 uppercase">12 MODULES</span>
+          <span className="text-[10px] text-slate-400 uppercase">13 MODULES</span>
         </div>
 
         {/* Scrollable Navigation Items List (Vertically 1 by 1 without clipping) */}
