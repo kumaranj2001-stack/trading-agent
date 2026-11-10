@@ -27,7 +27,6 @@ interface UnifiedDecisionBannerProps {
   onOpenMonteCarlo?: () => void;
   isMarketFrozen?: boolean;
   sessionInfo?: MarketSessionInfo | null;
-  showRiskGovernance?: boolean;
 }
 
 export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
@@ -37,7 +36,6 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   onOpenMonteCarlo,
   isMarketFrozen = false,
   sessionInfo = null,
-  showRiskGovernance = false,
 }) => {
   const { unifiedDecision, agents, executionSignal, currentPrice, pair } = consensus;
   const isBuy = unifiedDecision.direction === 'BUY';
@@ -242,23 +240,19 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
         </div>
       )}
 
-      {/* Core Fundamental & Technical Reasons Driving the Decision */}
+      {/* Core Fundamental & Technical Reasons Driving the Decision (5 Structured Pillars) */}
       <div className="mt-4 space-y-2.5">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
             <Flame className="w-3.5 h-3.5 text-amber-400" />
-            Core Drivers Behind the {unifiedDecision.direction} Decision {showRiskGovernance ? '(5-Desk Synthesis)' : '(4-Desk Market Analysis)'}
+            Core Drivers Behind the {unifiedDecision.direction} Decision (5-Desk Synthesis)
           </h4>
           <span className="text-[10px] font-mono text-cyan-400">
-            {showRiskGovernance ? '5/5 AGENTS SYNCHRONIZED' : '4/4 MARKET DESKS SYNCHRONIZED'}
+            5/5 AGENTS SYNCHRONIZED
           </span>
         </div>
 
-        <div className={`grid gap-2.5 font-mono text-xs ${
-          showRiskGovernance 
-            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
-            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-        }`}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 font-mono text-xs">
           {/* Pillar 1: Fundamental Macro Catalyst */}
           <div className="bg-terminal-950/80 border border-purple-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-purple-600/60 transition-colors">
             <div>
@@ -336,36 +330,34 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </div>
           </div>
 
-          {/* Pillar 5: Risk Manager & Capital Preservation (Rendered exclusively when showRiskGovernance is true) */}
-          {showRiskGovernance && (
-            <div className="bg-terminal-950/80 border border-emerald-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-emerald-600/60 transition-colors md:col-span-2 lg:col-span-2">
-              <div>
-                <div className="flex items-center justify-between mb-2 text-emerald-400 text-xs sm:text-sm font-bold">
-                  <span className="flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4" />
-                    5. Risk Governance & Edge
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded font-bold ${
-                    isApproved 
-                      ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-300' 
-                      : 'bg-rose-950/60 border border-rose-800 text-rose-300'
-                  }`}>
-                    {agents.risk.verdict}
-                  </span>
-                </div>
-                <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
-                  {unifiedDecision.coreReasons.riskGovernance}
-                </p>
+          {/* Pillar 5: Risk Manager & Capital Preservation */}
+          <div className="bg-terminal-950/80 border border-emerald-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-emerald-600/60 transition-colors md:col-span-2 lg:col-span-2">
+            <div>
+              <div className="flex items-center justify-between mb-2 text-emerald-400 text-xs sm:text-sm font-bold">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4" />
+                  5. Risk Governance & Edge
+                </span>
+                <span className={`text-xs px-2 py-0.5 rounded font-bold ${
+                  isApproved 
+                    ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-300' 
+                    : 'bg-rose-950/60 border border-rose-800 text-rose-300'
+                }`}>
+                  {agents.risk.verdict}
+                </span>
               </div>
-              {agents.risk.monteCarlo && (
-                <div className="mt-2.5 pt-2 border-t border-emerald-900/60 flex flex-wrap items-center justify-between text-xs text-slate-300 font-medium">
-                  <span>Monte Carlo 1,000 Paths: Win Prob {agents.risk.monteCarlo.projectedProfitProbability}%</span>
-                  <span>95% VaR: ${agents.risk.monteCarlo.var95Usd}</span>
-                  <span>Sharpe: {agents.risk.monteCarlo.sharpeRatio}</span>
-                </div>
-              )}
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                {unifiedDecision.coreReasons.riskGovernance}
+              </p>
             </div>
-          )}
+            {agents.risk.monteCarlo && (
+              <div className="mt-2.5 pt-2 border-t border-emerald-900/60 flex flex-wrap items-center justify-between text-xs text-slate-300 font-medium">
+                <span>Monte Carlo 1,000 Paths: Win Prob {agents.risk.monteCarlo.projectedProfitProbability}%</span>
+                <span>95% VaR: ${agents.risk.monteCarlo.var95Usd}</span>
+                <span>Sharpe: {agents.risk.monteCarlo.sharpeRatio}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
