@@ -34,7 +34,7 @@ import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
 import { VisionAtlasWorkspace } from '@/components/VisionAtlasWorkspace';
 import { MacroIntelligenceDesk } from '@/components/MacroIntelligenceDesk';
-import { OrderFlowAnalysis } from '@/components/OrderFlowAnalysis';
+import { OrderFlowDesk } from '@/components/OrderFlowDesk';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
 import { NewsWireModal } from '@/components/NewsWireModal';
@@ -57,7 +57,6 @@ export default function Home() {
   const [sessionInfo, setSessionInfo] = useState<MarketSessionInfo | null>(null);
   const [isMarketFrozen, setIsMarketFrozen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<NavigationTab>('terminal');
-  const [terminalCanvasMode, setTerminalCanvasMode] = useState<'CHART' | 'ORDER_FLOW'>('CHART');
   
   // Market Data state
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -797,67 +796,16 @@ export default function Home() {
               />
             )}
 
-            {/* Terminal Workspace View Switcher: Interactive Candlestick Chart vs Order Flow Footprint & Volume Profile */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 p-2 sm:p-2.5 bg-terminal-950/80 border border-terminal-border rounded-xl font-mono text-xs shadow-sm">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-slate-400 font-bold uppercase text-[11px] flex items-center gap-1.5 pl-1">
-                  <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-                  Terminal Canvas Mode:
-                </span>
-                <div className="flex items-center bg-terminal-900 border border-terminal-border rounded-lg p-0.5">
-                  <button
-                    onClick={() => setTerminalCanvasMode('CHART')}
-                    className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 text-xs font-semibold ${
-                      terminalCanvasMode === 'CHART'
-                        ? 'bg-cyan-600 text-white font-bold shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>📊 Candlestick Canvas</span>
-                  </button>
-                  <button
-                    onClick={() => setTerminalCanvasMode('ORDER_FLOW')}
-                    className={`px-3 py-1 rounded transition-colors flex items-center gap-1.5 text-xs font-semibold ${
-                      terminalCanvasMode === 'ORDER_FLOW'
-                        ? 'bg-cyan-600 text-white font-bold shadow'
-                        : 'text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    <span>🌊 Order Flow & Footprint Matrix</span>
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 text-[10px] text-slate-400 pr-1">
-                <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/40">
-                  ● WS LIVE STREAMING
-                </span>
-                <span className="text-emerald-400 font-bold hidden sm:inline">
-                  Sub-100ms Microstructure
-                </span>
-              </div>
-            </div>
-
-            {/* Candlestick Chart or Order Flow Footprint Analysis */}
-            {terminalCanvasMode === 'CHART' ? (
-              <ChartView
-                candles={candles}
-                pair={selectedPair}
-                timeframe={timeframe}
-                stopLoss={consensus?.agents.risk.parameters.stopLoss}
-                takeProfit={consensus?.agents.risk.parameters.takeProfit1}
-                entryPrice={consensus?.agents.risk.parameters.entryPrice}
-                signalBias={consensus?.agents.technical.bias}
-              />
-            ) : (
-              <OrderFlowAnalysis
-                symbol={selectedPair}
-                timeframe={timeframe}
-                candles={candles}
-                isFullPage={false}
-                onClose={() => setTerminalCanvasMode('CHART')}
-              />
-            )}
+            {/* Candlestick Chart (OANDA Live Streaming or Swarm Matrix) */}
+            <ChartView
+              candles={candles}
+              pair={selectedPair}
+              timeframe={timeframe}
+              stopLoss={consensus?.agents.risk.parameters.stopLoss}
+              takeProfit={consensus?.agents.risk.parameters.takeProfit1}
+              entryPrice={consensus?.agents.risk.parameters.entryPrice}
+              signalBias={consensus?.agents.technical.bias}
+            />
 
             {/* 📓 Active Pre-Trade Historical Journal Loss Review & Guardrails Desk */}
             <HistoricalJournalDesk
@@ -1026,6 +974,22 @@ export default function Home() {
           />
         )}
 
+        {/* Tab 09: Order Flow & Real-Time Price Action Execution Engine */}
+        {(activeTab === 'order-flow' || (activeTab as string) === 'orderflow') && (
+          <OrderFlowDesk
+            isFullPage={true}
+            onClose={() => setActiveTab('terminal')}
+            selectedPair={selectedPair}
+            onSelectPair={handleSelectPair}
+            onExecuteTrade={(tradeParams) => {
+              if (tradeParams) {
+                handleExecuteTrade();
+                showNotification(`ORDER FLOW TRADE EXECUTED: ${tradeParams.direction} ${tradeParams.symbol} @ ${tradeParams.entry}`);
+              }
+            }}
+          />
+        )}
+
         {/* Tab 9: Firebase Cloud Firestore Realtime State Sync & Diagnostics */}
         {activeTab === 'firebase' && (
           <FirebaseStatusModal
@@ -1085,17 +1049,6 @@ export default function Home() {
             }}
             isScanning={isScanning}
             onRefreshScan={fetchOpportunities}
-          />
-        )}
-
-        {/* Dedicated View: Order Flow & Footprint Matrix Analysis */}
-        {(activeTab === 'order-flow' || (activeTab as string) === 'orderflow') && (
-          <OrderFlowAnalysis
-            symbol={selectedPair}
-            timeframe={timeframe}
-            candles={candles}
-            isFullPage={true}
-            onClose={() => setActiveTab('terminal')}
           />
         )}
       </main>

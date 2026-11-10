@@ -5,6 +5,7 @@ import { MacroIndicator } from '@/lib/types';
 export const runtime = 'nodejs';
 
 export async function GET(req: NextRequest) {
+  const startTime = performance.now();
   try {
     const { searchParams } = new URL(req.url);
     const currency = searchParams.get('currency')?.toUpperCase();
@@ -12,7 +13,13 @@ export async function GET(req: NextRequest) {
     const rawSearch = searchParams.get('search') || '';
     const search = rawSearch.slice(0, 100).toLowerCase().trim();
 
-    let events: MacroIndicator[] = [...MACRO_ECONOMIC_CALENDAR];
+    let events: MacroIndicator[] = [...MACRO_ECONOMIC_CALENDAR].map(e => ({
+      ...e,
+      time: e.time || '18:30 IST',
+      timeUtc: e.timeUtc || '13:00 UTC',
+      exactTimestamp: e.exactTimestamp || `${e.date}T13:00:00.000Z`,
+      timezone: e.timezone || 'IST (UTC+5:30)',
+    }));
 
     if (currency && currency !== 'ALL') {
       events = events.filter(e => e.region.toUpperCase() === currency);
@@ -30,37 +37,18 @@ export async function GET(req: NextRequest) {
     }
 
     const highImpactCount = events.filter(e => e.impact === 'HIGH').length;
-    const responseTime = new Date().toISOString();
-
-    // Map each indicator to guarantee exact chronological timestamp metadata
-    const enrichedEvents = events.map(evt => {
-      const defaultTime = evt.time || '13:30 UTC';
-      const eventTimestamp = evt.timestamp || `${evt.date}T${defaultTime.split(' ')[0]}:00.000Z`;
-      
-      // Calculate minutes until or since event
-      const eventEpoch = new Date(eventTimestamp).getTime();
-      const nowEpoch = Date.now();
-      const diffMinutes = Math.round((eventEpoch - nowEpoch) / 60000);
-
-      return {
-        ...evt,
-        time: defaultTime,
-        timestamp: eventTimestamp,
-        timezone: evt.timezone || 'UTC',
-        timeRemainingMinutes: diffMinutes,
-      };
-    });
+    const responseTimeMs = Math.max(1, Math.round(performance.now() - startTime));
 
     return NextResponse.json({
       success: true,
       data: {
-        totalEvents: enrichedEvents.length,
+        totalEvents: events.length,
         highImpactCount,
-        events: enrichedEvents,
-        nextHighImpactEvent: enrichedEvents.find(e => e.impact === 'HIGH') || null,
-        responseTime,
-        serverClockUtc: new Date().toUTCString(),
-        timestamp: responseTime,
+        events,
+        nextHighImpactEvent: events.find(e => e.impact === 'HIGH') || null,
+        responseTimeMs,
+        serverTimestamp: new Date().toISOString(),
+        timezone: 'IST',
       },
     });
   } catch (error: any) {

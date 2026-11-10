@@ -45,13 +45,13 @@ export type NavigationTab =
   | 'architecture'         // 06. Roles alias
   | 'journals'             // 07. Journals (Persistent Trade Journal & Historical Loss Review)
   | 'wire'                 // 08. Wire (38 Monitored Financial Outlets & Institutional Wires)
-  | 'calendar'             // 09. Macro Calendar (Institutional Macroeconomic Release Pulse)
+  | 'order-flow'           // 09. Order Flow & Momentum Execution Engine (Footprint, Volume Profile & Dual Weighting)
+  | 'orderflow'            // 09. Order Flow Alias
+  | 'calendar'             // 10. Macro Calendar (Institutional Macroeconomic Release Pulse)
   | 'macro-intelligence'   // 10. Event-Driven Macro Intelligence & Execution Engine
   | 'macro-engine'         // 10. Alias
   | 'scanner'              // 11. Scanner (Multi-Asset Screener & Confluence Hunter)
   | 'var'                  // 12. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
-  | 'order-flow'           // 13. Order Flow (Footprint Charts, Volume Profile & CVD Delta Ladder)
-  | 'orderflow'            // 13. Order Flow alias
   | 'backtest'             // Backtest (Monte Carlo Walk-Forward Backtester)
   | 'firebase';            // 14. Firebase (Firestore Cloud Realtime State Sync)
 
@@ -149,10 +149,10 @@ export interface MacroIndicator {
   previous: string | number;
   impact: 'HIGH' | 'MEDIUM' | 'LOW';
   date: string;
-  time?: string;                 // Precise release time e.g. "18:00 UTC", "13:30 UTC"
-  timestamp?: string;            // ISO 8601 release timestamp e.g. "2026-11-05T18:00:00Z"
-  timezone?: string;             // Timezone identifier e.g. "UTC"
-  localTimeFormatted?: string;   // Local user timezone presentation
+  time?: string;
+  timeUtc?: string;
+  exactTimestamp?: string;
+  timezone?: string;
   timeRemainingMinutes?: number;
   surpriseDeviation?: number;
 }
@@ -424,103 +424,6 @@ export interface DailyNewsReflection {
 }
 
 // ==========================================
-// ⚡ DUAL-CONFIRMATION: TECHNICAL MOMENTUM & FUNDAMENTAL SENTIMENT
-// ==========================================
-export interface DualConfirmationAnalysis {
-  technicalMomentum: {
-    score: number; // 0 to 100
-    rsiValue: number;
-    rsiStatus: string;
-    macdHistogram: number;
-    macdTrend: 'EXPANDING_BULLISH' | 'EXPANDING_BEARISH' | 'CONVERGING_NEUTRAL';
-    structureMomentum: 'BULLISH_EXPANSION' | 'BEARISH_EXPANSION' | 'COMPRESSION';
-    direction: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
-    isDivergencePresent: boolean;
-    divergenceType?: 'BULLISH_DIVERGENCE' | 'BEARISH_DIVERGENCE' | 'NONE';
-  };
-  fundamentalSentiment: {
-    score: number; // 0 to 100
-    macroRegime: string;
-    realRateSpread: number;
-    centralBankDivergence: 'HAWKISH_DOMINANT' | 'DOVISH_DOMINANT' | 'BALANCED';
-    wireSentimentScore: number;
-    direction: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
-  };
-  confirmationStatus: 'DUAL_CONFIRMED' | 'DIVERGENCE_REJECTED' | 'WAITING_FOR_CONFIRMATION';
-  entryAuthorized: boolean;
-  confluenceWeightRatio: {
-    technicalWeightPercent: number; // 50%
-    fundamentalWeightPercent: number; // 50%
-  };
-  combinedConfirmationScore: number; // 0 to 100
-  confirmationRationale: string;
-}
-
-// ==========================================
-// 🌊 ORDER FLOW & FOOTPRINT / VOLUME PROFILE
-// ==========================================
-export interface PriceLevelVolume {
-  price: number;
-  bidVolume: number;
-  askVolume: number;
-  totalVolume: number;
-  delta: number; // askVolume - bidVolume
-  isImbalance: boolean;
-  imbalanceType?: 'BUY_IMBALANCE' | 'SELL_IMBALANCE';
-}
-
-export interface CandleFootprint {
-  candleIndex: number;
-  timestamp: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  levels: PriceLevelVolume[];
-  totalCandleVolume: number;
-  candleDelta: number;
-  pocPrice: number; // Point of Control for this candle
-  stackedBuyImbalances: number[];
-  stackedSellImbalances: number[];
-}
-
-export interface VolumeProfileBucket {
-  priceLevel: number;
-  buyVolume: number;
-  sellVolume: number;
-  totalVolume: number;
-  volumePercent: number;
-  isPoc: boolean; // Point of Control (highest volume node)
-  isValueArea: boolean; // Inside 70% Value Area (VAH to VAL)
-}
-
-export interface OrderFlowSessionAnalysis {
-  symbol: CurrencyPair;
-  timeframe: TimeFrame;
-  currentPrice: number;
-  sessionVolume: number;
-  totalBuyVolume: number;
-  totalSellVolume: number;
-  buyVolumeRatioPercent: number;
-  sellVolumeRatioPercent: number;
-  cumulativeVolumeDelta: number;
-  cvdTrend: 'AGGRESSIVE_BUYING' | 'AGGRESSIVE_SELLING' | 'ABSORPTION_BUY' | 'ABSORPTION_SELL';
-  pocPrice: number; // Point of Control
-  valueAreaHigh: number; // VAH
-  valueAreaLow: number; // VAL
-  highVolumeNodes: number[];
-  lowVolumeNodes: number[];
-  footprints: CandleFootprint[];
-  volumeProfile: VolumeProfileBucket[];
-  institutionalOrderBlocks: {
-    type: 'DEMAND' | 'SUPPLY';
-    priceRange: [number, number];
-    volumeStacked: number;
-    mitigated: boolean;
-  }[];
-}
-
-// ==========================================
 // 🎯 UNIFIED 5-ROLE DECISION INTERFACE
 // ==========================================
 export interface UnifiedDecision {
@@ -537,7 +440,6 @@ export interface UnifiedDecision {
     riskGovernance: string;
   };
   keyDriversList: string[];
-  dualConfirmation?: DualConfirmationAnalysis;
 }
 
 export interface MonteCarloProjection {
@@ -733,8 +635,6 @@ export interface SwarmConsensusResult {
   };
   debateTranscript: AgentDebateMessage[];
   debateSynthesis?: DebateSynthesisResult;
-  dualConfirmation?: DualConfirmationAnalysis;
-  orderFlow?: OrderFlowSessionAnalysis;
   executionSignal: {
     authorized: boolean;
     orderType: 'BUY_MARKET' | 'SELL_MARKET' | 'NONE';
@@ -1325,4 +1225,93 @@ export interface VisionAtlasPayload {
     citedFundamentalModelIds: string[];
     executiveNarrative: string;
   };
+}
+
+// ============================================================================
+// ORDER FLOW ANALYSIS, FOOTPRINT & WEIGHTED MOMENTUM-SENTIMENT ENGINE
+// ============================================================================
+
+export interface FootprintPriceLevel {
+  price: number;
+  bidVolume: number;         // Aggressive market sells hitting the bid
+  askVolume: number;         // Aggressive market buys lifting the ask
+  delta: number;             // askVolume - bidVolume
+  totalVolume: number;
+  isPointOfControl: boolean; // POC: Level with highest traded volume
+  bidImbalance: boolean;     // Bid volume >= 3x opposite ask
+  askImbalance: boolean;     // Ask volume >= 3x opposite bid
+}
+
+export interface VolumeProfileAnalysis {
+  pointOfControl: number;        // POC
+  valueAreaHigh: number;         // VAH (70% Volume Boundary)
+  valueAreaLow: number;          // VAL (70% Volume Boundary)
+  totalVolume: number;
+  buyingVolume: number;
+  sellingVolume: number;
+  buyingPressurePercent: number; // e.g. 64.2%
+  sellingPressurePercent: number;// e.g. 35.8%
+  cumulativeVolumeDelta: number; // CVD
+  highVolumeNodes: number[];     // HVNs (Acceptance Zones)
+  lowVolumeNodes: number[];      // LVNs (Rejection / Breakout Zones)
+}
+
+export interface TechnicalMomentumMetrics {
+  score: number;                 // 0 to 100
+  weight: number;                // e.g. 0.50 (50%)
+  bias: 'BULLISH_MOMENTUM' | 'BEARISH_MOMENTUM' | 'NEUTRAL';
+  rsi: number;
+  rsiSlope: 'RISING' | 'FALLING' | 'FLAT';
+  orderFlowCvdDelta: number;
+  vwapDistancePercent: number;
+  emaRibbonAlignment: 'STRONG_BULLISH' | 'BULLISH' | 'NEUTRAL' | 'BEARISH' | 'STRONG_BEARISH';
+  momentumDrivers: string[];
+}
+
+export interface FundamentalSentimentMetrics {
+  score: number;                 // 0 to 100
+  weight: number;                // e.g. 0.50 (50%)
+  bias: 'RISK_ON_EXPANSION' | 'RISK_OFF_CONTRACTION' | 'NEUTRAL';
+  wireSentimentScore: number;    // -1.0 to +1.0
+  monitoredFeedsCount: number;   // 38 institutional feeds
+  centralBankStance: 'HAWKISH' | 'DOVISH' | 'NEUTRAL';
+  macroRegime: string;
+  catalystAlignment: 'ALIGNED' | 'DIVERGENT' | 'NEUTRAL';
+  sentimentDrivers: string[];
+}
+
+export interface DualConfirmationEntryMatrix {
+  compositeScore: number;        // 0 to 100
+  technicalWeight: number;       // 0.50
+  fundamentalWeight: number;     // 0.50
+  entryConfirmationStatus: 'CONFIRMED_BUY' | 'CONFIRMED_SELL' | 'MOMENTUM_FUNDAMENTAL_DIVERGENCE' | 'CONSOLIDATION_NEUTRAL';
+  isEntryAuthorized: boolean;
+  verdictDescription: string;
+  recommendedEntryPrice: number;
+  orderFlowAnchorStopLoss: number;
+  orderFlowTarget1: number;
+  orderFlowTarget2: number;
+  riskRewardRatio: number;
+}
+
+export interface OrderFlowAnalysisReport {
+  id: string;
+  symbol: CurrencyPair;
+  timestamp: string;
+  responseTimeMs: number;
+  liveWebSocketTelemetry: {
+    status: 'STREAMING' | 'CONNECTED' | 'RECONNECTING';
+    protocol: 'WebSocket / SSE Primary Stream';
+    latencyMs: number;
+    bidPrice: number;
+    askPrice: number;
+    spread: number;
+    tickVelocityPerSec: number;
+    lastTickDirection: 'UP_TICK' | 'DOWN_TICK' | 'NO_CHANGE';
+  };
+  footprintLevels: FootprintPriceLevel[];
+  volumeProfile: VolumeProfileAnalysis;
+  technicalMomentum: TechnicalMomentumMetrics;
+  fundamentalSentiment: FundamentalSentimentMetrics;
+  dualConfirmation: DualConfirmationEntryMatrix;
 }

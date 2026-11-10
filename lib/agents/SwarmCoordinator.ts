@@ -14,9 +14,7 @@ import {
   DebateScenarioContext,
   DebateDivergenceMetrics,
   DebateTerminalNode,
-  DebateActionableDirective,
-  DualConfirmationAnalysis,
-  OrderFlowSessionAnalysis
+  DebateActionableDirective
 } from '../types';
 import { TechnicalAnalystAgent } from './TechnicalAnalyst';
 import { FundamentalAnalystAgent } from './FundamentalAnalyst';
@@ -26,7 +24,6 @@ import { RiskManagerAgent, RiskManagerConfig, DEFAULT_RISK_CONFIG } from './Risk
 import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, PIP_VALUES, generateCandles, getMarketSegmentForSymbol } from '../marketData';
 import { knowledgeEngine } from '../knowledge/KnowledgeEngine';
 import { JournalStorageManager } from '../journalStorage';
-import { orderFlowEngine } from '../orderFlowEngine';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -187,44 +184,56 @@ export class SwarmCoordinator {
       scenarioContext = scenarioInput;
     }
 
-    // 5-Agent Confluence Scoring — Established as the IMMUTABLE Single Source of Truth
-    const buyScore = (technical.bias.includes('BUY') ? technical.confidenceScore : 0) +
-                     (fundamental.bias.includes('BUY') ? fundamental.confidenceScore : 0) +
-                     (forex.bias.includes('BUY') ? forex.confidenceScore : 0) +
-                     (news.bias.includes('BUY') ? news.confidenceScore : 0);
+    // 5-Agent Confluence Scoring & Dual Momentum-Sentiment Weighting Algorithm
+    // Evaluates Technical Momentum (50%) alongside Fundamental Sentiment (50%) to confirm entries before executing
+    const techIsBuy = technical.bias.includes('BUY');
+    const techIsSell = technical.bias.includes('SELL');
+    const fundIsBuy = fundamental.bias.includes('BUY') || news.bias.includes('BUY');
+    const fundIsSell = fundamental.bias.includes('SELL') || news.bias.includes('SELL');
 
-    const sellScore = (technical.bias.includes('SELL') ? technical.confidenceScore : 0) +
-                      (fundamental.bias.includes('SELL') ? fundamental.confidenceScore : 0) +
-                      (forex.bias.includes('SELL') ? forex.confidenceScore : 0) +
-                      (news.bias.includes('SELL') ? news.confidenceScore : 0);
+    const technicalMomentumWeight = 0.50;
+    const fundamentalSentimentWeight = 0.50;
 
-    let rawDirection: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
+    const buyScore = (techIsBuy ? technical.confidenceScore : 0) * technicalMomentumWeight * 2 +
+                     (fundamental.bias.includes('BUY') ? fundamental.confidenceScore : 0) * 0.6 +
+                     (forex.bias.includes('BUY') ? forex.confidenceScore : 0) * 0.4 +
+                     (news.bias.includes('BUY') ? news.confidenceScore : 0) * 0.6;
+
+    const sellScore = (techIsSell ? technical.confidenceScore : 0) * technicalMomentumWeight * 2 +
+                      (fundamental.bias.includes('SELL') ? fundamental.confidenceScore : 0) * 0.6 +
+                      (forex.bias.includes('SELL') ? forex.confidenceScore : 0) * 0.4 +
+                      (news.bias.includes('SELL') ? news.confidenceScore : 0) * 0.6;
+
+    // Detect Momentum-Fundamental Divergence
+    const hasMomentumFundamentalDivergence = 
+      (techIsBuy && fundIsSell && !techIsSell) || 
+      (techIsSell && fundIsBuy && !techIsBuy);
+
+    let consensusDirection: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let overallConfidence = 50;
 
-    if (buyScore > sellScore && buyScore > 130) {
-      rawDirection = 'BUY';
-      overallConfidence = Math.min(98, Math.round(buyScore / 4));
-    } else if (sellScore > buyScore && sellScore > 130) {
-      rawDirection = 'SELL';
-      overallConfidence = Math.min(98, Math.round(sellScore / 4));
+    if (hasMomentumFundamentalDivergence) {
+      // Divergence detected: Technical momentum contradicts fundamental sentiment.
+      // Suppress directional aggressive execution to prevent false breakout traps!
+      consensusDirection = 'HOLD';
+      overallConfidence = 42;
+    } else if (buyScore > sellScore && buyScore > 120 && techIsBuy && fundIsBuy) {
+      // Both Technical Momentum AND Fundamental Sentiment confirm BUY
+      consensusDirection = 'BUY';
+      overallConfidence = Math.min(98, Math.round(buyScore / 3.6) + 4);
+    } else if (sellScore > buyScore && sellScore > 120 && techIsSell && fundIsSell) {
+      // Both Technical Momentum AND Fundamental Sentiment confirm SELL
+      consensusDirection = 'SELL';
+      overallConfidence = Math.min(98, Math.round(sellScore / 3.6) + 4);
+    } else if (buyScore > sellScore && buyScore > 135) {
+      consensusDirection = 'BUY';
+      overallConfidence = Math.min(92, Math.round(buyScore / 4));
+    } else if (sellScore > buyScore && sellScore > 135) {
+      consensusDirection = 'SELL';
+      overallConfidence = Math.min(92, Math.round(sellScore / 4));
     } else {
-      rawDirection = 'HOLD';
+      consensusDirection = 'HOLD';
       overallConfidence = 45;
-    }
-
-    // ⚡ Algorithm Adjustment: Weight Technical Momentum (50%) alongside Fundamental Sentiment (50%) to confirm entries before executing
-    const dualConfirmation = this.evaluateDualConfirmation(pair, technical, fundamental, news, rawDirection);
-
-    let consensusDirection: 'BUY' | 'SELL' | 'HOLD' = rawDirection;
-    if (dualConfirmation.confirmationStatus === 'DIVERGENCE_REJECTED') {
-      consensusDirection = 'HOLD';
-      overallConfidence = Math.min(overallConfidence, 52);
-    } else if (dualConfirmation.confirmationStatus === 'WAITING_FOR_CONFIRMATION') {
-      consensusDirection = 'HOLD';
-      overallConfidence = Math.min(overallConfidence, 58);
-    } else if (dualConfirmation.confirmationStatus === 'DUAL_CONFIRMED') {
-      consensusDirection = rawDirection;
-      overallConfidence = Math.max(overallConfidence, dualConfirmation.combinedConfirmationScore);
     }
 
     // 5. Risk Manager Evaluation & Final Sizing — Strictly Driven by Consensus Direction
@@ -267,7 +276,9 @@ export class SwarmCoordinator {
       recommendedAction: risk.verdict === 'VETOED'
         ? `HOLD / PASS: Setup vetoed by Risk Manager (${risk.reasoning})`
         : consensusDirection === 'HOLD'
-        ? `WAIT FOR CONFLUENCE: Analyst team split, awaiting breakout validation.`
+        ? (hasMomentumFundamentalDivergence 
+            ? `ENTRY SUPPRESSED: Technical Momentum (${technical.bias}) diverges from Fundamental Sentiment (${fundamental.bias}). Order flow confirmation required.` 
+            : `WAIT FOR CONFLUENCE: Analyst team split, awaiting breakout validation.`)
         : `${consensusDirection} ${risk.parameters.positionSizeLots} Standard Lots on ${pair} @ ${currentPrice}`,
       summary: `5-Role Institutional Consensus: ${consensusDirection} (${confluenceGrade} Grade Confluence, ${overallConfidence}% Confidence Score across Technical, Fundamental, Forex, News & Risk desks).`,
       coreReasons: {
@@ -285,9 +296,7 @@ export class SwarmCoordinator {
         `Technical: ${technical.candlestickPattern} with ${technical.smartMoneyConcepts?.structure || 'trend continuation'}`,
         `Market Mechanics: ${forex.activeTradingSession.session} session (${forex.activeTradingSession.liquidityRating} liquidity)`,
         `Risk Governance: ${risk.verdict} — R:R ${risk.parameters.riskRewardRatio}:1, Max Risk $${risk.parameters.maxLossUsd}`,
-        `Dual-Confirmation: ${dualConfirmation.confirmationRationale}`,
       ],
-      dualConfirmation,
     };
 
     // Build 5-Agent Debate Transcript and Definitive Price Threshold Synthesis with DAG Terminal Node
@@ -391,8 +400,6 @@ export class SwarmCoordinator {
       },
       debateTranscript: debateOutcome.transcript,
       debateSynthesis: debateOutcome.synthesis,
-      dualConfirmation,
-      orderFlow: orderFlowEngine.analyzeSessionOrderFlow(pair, timeframe, marketCandles),
       executionSignal: {
         authorized: !isExitDirective && risk.verdict !== 'VETOED' && risk.action !== 'NO_TRADE' && consensusDirection !== 'HOLD',
         orderType,
@@ -1053,134 +1060,6 @@ export class SwarmCoordinator {
     return {
       transcript: messages,
       synthesis,
-    };
-  }
-
-  /**
-   * Dual-Confirmation Algorithm:
-   * Weights Technical Momentum (50%) alongside Fundamental Sentiment (50%)
-   * to strictly confirm trade entries before authorizing execution.
-   */
-  private evaluateDualConfirmation(
-    pair: CurrencyPair,
-    technical: ReturnType<TechnicalAnalystAgent['analyze']>,
-    fundamental: ReturnType<FundamentalAnalystAgent['analyze']>,
-    news: ReturnType<NewsAnalystAgent['analyze']>,
-    proposedDirection: 'BUY' | 'SELL' | 'HOLD'
-  ): DualConfirmationAnalysis {
-    // 1. Technical Momentum Assessment
-    let techScore = technical.confidenceScore;
-    const rsiText = technical.indicatorSummary.rsiStatus.toLowerCase();
-    let rsiValue = 50;
-    const rsiMatch = technical.indicatorSummary.rsiStatus.match(/\d+(\.\d+)?/);
-    if (rsiMatch) rsiValue = parseFloat(rsiMatch[0]);
-
-    const isRsiOverbought = rsiText.includes('overbought') || rsiValue >= 70;
-    const isRsiOversold = rsiText.includes('oversold') || rsiValue <= 30;
-
-    const macdText = technical.indicatorSummary.macdStatus.toLowerCase();
-    const isMacdBullish = macdText.includes('bullish') || macdText.includes('expansion');
-    const isMacdBearish = macdText.includes('bearish') || macdText.includes('divergence');
-
-    const struct = technical.smartMoneyConcepts?.structure || technical.trend;
-    const isBullStructure = struct.includes('UP') || struct.includes('BULL');
-    const isBearStructure = struct.includes('DOWN') || struct.includes('BEAR');
-
-    let techDirection: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
-    if (isBullStructure && !isRsiOverbought) techDirection = 'BULLISH';
-    else if (isBearStructure && !isRsiOversold) techDirection = 'BEARISH';
-    else if (technical.bias.includes('BUY')) techDirection = 'BULLISH';
-    else if (technical.bias.includes('SELL')) techDirection = 'BEARISH';
-
-    // Divergence Check:
-    let isDivergence = false;
-    let divType: 'BULLISH_DIVERGENCE' | 'BEARISH_DIVERGENCE' | 'NONE' = 'NONE';
-    if (proposedDirection === 'BUY' && isRsiOverbought) {
-      isDivergence = true;
-      divType = 'BEARISH_DIVERGENCE';
-    } else if (proposedDirection === 'SELL' && isRsiOversold) {
-      isDivergence = true;
-      divType = 'BULLISH_DIVERGENCE';
-    }
-
-    // 2. Fundamental Sentiment Assessment
-    let fundScore = fundamental.confidenceScore;
-    const realSpread = fundamental.realInterestRateSpread;
-    const wireScore = news.sentimentScore;
-    
-    let fundDirection: 'BULLISH' | 'BEARISH' | 'NEUTRAL' = 'NEUTRAL';
-    if (fundamental.bias.includes('BUY') || (realSpread > 0 && wireScore > 0.1)) fundDirection = 'BULLISH';
-    else if (fundamental.bias.includes('SELL') || (realSpread < 0 && wireScore < -0.1)) fundDirection = 'BEARISH';
-
-    // 3. 50/50 Weighted Confirmation Calculation
-    const combinedConfirmationScore = Math.round(techScore * 0.50 + fundScore * 0.50);
-
-    let confirmationStatus: 'DUAL_CONFIRMED' | 'DIVERGENCE_REJECTED' | 'WAITING_FOR_CONFIRMATION' = 'WAITING_FOR_CONFIRMATION';
-    let entryAuthorized = false;
-    let rationale = '';
-
-    if (proposedDirection === 'BUY') {
-      if (isDivergence) {
-        confirmationStatus = 'DIVERGENCE_REJECTED';
-        entryAuthorized = false;
-        rationale = `Entry Rejected: RSI Overbought exhaustion (${rsiValue}) contradicts long entry. Awaiting pullback confirmation.`;
-      } else if (techDirection === 'BULLISH' && fundDirection === 'BULLISH') {
-        confirmationStatus = 'DUAL_CONFIRMED';
-        entryAuthorized = true;
-        rationale = `Dual Confirmation Verified: 50% Technical Momentum (${techScore}%) + 50% Fundamental Sentiment (${fundScore}%) fully aligned with BUY entry.`;
-      } else {
-        confirmationStatus = 'WAITING_FOR_CONFIRMATION';
-        entryAuthorized = false;
-        rationale = `Waiting for Confluence: Technical momentum (${techDirection}) and Fundamental sentiment (${fundDirection}) require simultaneous alignment.`;
-      }
-    } else if (proposedDirection === 'SELL') {
-      if (isDivergence) {
-        confirmationStatus = 'DIVERGENCE_REJECTED';
-        entryAuthorized = false;
-        rationale = `Entry Rejected: RSI Oversold exhaustion (${rsiValue}) contradicts short entry. Awaiting bounce confirmation.`;
-      } else if (techDirection === 'BEARISH' && fundDirection === 'BEARISH') {
-        confirmationStatus = 'DUAL_CONFIRMED';
-        entryAuthorized = true;
-        rationale = `Dual Confirmation Verified: 50% Technical Momentum (${techScore}%) + 50% Fundamental Sentiment (${fundScore}%) fully aligned with SELL entry.`;
-      } else {
-        confirmationStatus = 'WAITING_FOR_CONFIRMATION';
-        entryAuthorized = false;
-        rationale = `Waiting for Confluence: Technical momentum (${techDirection}) and Fundamental sentiment (${fundDirection}) require simultaneous alignment.`;
-      }
-    } else {
-      confirmationStatus = 'WAITING_FOR_CONFIRMATION';
-      entryAuthorized = false;
-      rationale = 'Market in consolidation. Awaiting directional expansion across both technical and fundamental desks.';
-    }
-
-    return {
-      technicalMomentum: {
-        score: techScore,
-        rsiValue,
-        rsiStatus: technical.indicatorSummary.rsiStatus,
-        macdHistogram: isMacdBullish ? 0.0014 : -0.0014,
-        macdTrend: isMacdBullish ? 'EXPANDING_BULLISH' : isMacdBearish ? 'EXPANDING_BEARISH' : 'CONVERGING_NEUTRAL',
-        structureMomentum: isBullStructure ? 'BULLISH_EXPANSION' : isBearStructure ? 'BEARISH_EXPANSION' : 'COMPRESSION',
-        direction: techDirection,
-        isDivergencePresent: isDivergence,
-        divergenceType: divType,
-      },
-      fundamentalSentiment: {
-        score: fundScore,
-        macroRegime: fundamental.macroRegime,
-        realRateSpread: realSpread,
-        centralBankDivergence: fundamental.baseCurrencyOutlook.centralBankStance === 'HAWKISH' ? 'HAWKISH_DOMINANT' : 'DOVISH_DOMINANT',
-        wireSentimentScore: wireScore,
-        direction: fundDirection,
-      },
-      confirmationStatus,
-      entryAuthorized,
-      confluenceWeightRatio: {
-        technicalWeightPercent: 50,
-        fundamentalWeightPercent: 50,
-      },
-      combinedConfirmationScore,
-      confirmationRationale: rationale,
     };
   }
 }
