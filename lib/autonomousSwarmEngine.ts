@@ -167,18 +167,18 @@ class AutonomousSwarmEngineImpl {
         desks: [
           {
             name: 'Marcus Vance',
-            role: 'Technical Analyst (525 Strategies)',
+            role: 'Technical Analyst (1,050 SMC/ICT Strategies)',
             status: 'STREAMING',
             lastLatencyMs: Math.round(cycleLatency * 0.28),
-            strategiesEvaluated: 525,
+            strategiesEvaluated: 1050,
             bias: calibratedResult.agents.technical.bias,
           },
           {
             name: 'Dr. Julian Sterling',
-            role: 'Fundamental Analyst (525 Macro Engines)',
+            role: 'Fundamental Analyst (1,000 Macro Engines)',
             status: 'STREAMING',
             lastLatencyMs: Math.round(cycleLatency * 0.24),
-            strategiesEvaluated: 525,
+            strategiesEvaluated: 1000,
             bias: calibratedResult.agents.fundamental.bias,
           },
           {

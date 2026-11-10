@@ -179,6 +179,10 @@ export interface KnowledgeRule {
   expectedWinRate: number; // percentage, e.g. 78.5%
   signalAction: SignalDirection;
   invalidationCriteria: string;
+  framework?: 'SMC' | 'ICT' | 'CLASSICAL_QUANT' | 'MACRO_REGIME' | 'CENTRAL_BANK' | 'COT_FLOW';
+  timeframeScope?: 'MICRO' | 'INTRADAY' | 'SWING' | 'MACRO';
+  spatialZoneTarget?: 'DEMAND_OB' | 'SUPPLY_OB' | 'FVG' | 'OTE_POCKET' | 'BSL' | 'SSL' | 'EQUILIBRIUM';
+  quantParameters?: Record<string, any>;
 }
 
 export interface KnowledgeMatchResult {
@@ -921,6 +925,9 @@ export interface SMCOrderBlock {
   timeframe: string;
   volumeScore: number;
   candleIndex?: number;
+  spatialScore?: number;
+  conformingRules?: string[];
+  rationale?: string;
 }
 
 export interface ConfidenceParam {
@@ -993,7 +1000,7 @@ export interface InstitutionalPattern {
 
 export interface ParallelEngineTelemetry {
   technicalPipeline: {
-    totalIndicators: 525;
+    totalIndicators: number;
     bullishCount: number;
     bearishCount: number;
     neutralCount: number;
@@ -1001,7 +1008,7 @@ export interface ParallelEngineTelemetry {
     activeCategoryPassing: Record<string, number>;
   };
   fundamentalPipeline: {
-    totalModels: 525;
+    totalModels: number;
     supportiveCount: number;
     restrictiveCount: number;
     neutralCount: number;
@@ -1127,6 +1134,9 @@ export interface VisionAtlasPayload {
     executiveSummary: string;
     fullNarrative: string;
     generatedAt: string;
+    citedTechnicalRuleIds?: string[];
+    citedFundamentalModelIds?: string[];
+    synthesisGrade?: 'A+' | 'A' | 'B';
   };
 
   // Automated Pattern Recognition & Institutional Filter
@@ -1139,4 +1149,15 @@ export interface VisionAtlasPayload {
 
   // Multi-Threaded Parallel Engine Telemetry
   parallelTelemetry: ParallelEngineTelemetry;
+
+  // Institutional Multi-Timeframe Quant Synthesis
+  multiTimeframeSynthesis?: {
+    synthesisGrade: 'A+' | 'A' | 'B';
+    confidenceScore: number;
+    microTriggerConfirmed: boolean;
+    macroBiasAligned: boolean;
+    citedTechnicalRuleIds: string[];
+    citedFundamentalModelIds: string[];
+    executiveNarrative: string;
+  };
 }

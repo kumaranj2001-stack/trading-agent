@@ -326,7 +326,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <span>•</span>
               <span>Chart Data: <strong className="text-indigo-300">{candles.length} Bars Ingested</strong></span>
               <span>•</span>
-              <span>Knowledge Base: <strong className="text-amber-300">525 Technical + 525 Fundamental Rules</strong></span>
+              <span>Knowledge Base: <strong className="text-amber-300">1,050 Technical + 1,000 Fundamental Rules (2,050 Total)</strong></span>
             </p>
           </div>
         </div>
@@ -879,7 +879,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
           <div className="flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-indigo-400" />
             <h4 className="font-bold text-xs text-white">
-              Institutional Knowledge Base Cross-Examination (525 Technical & 525 Fundamental Rules)
+              Institutional Knowledge Base Cross-Examination (1,050 Technical & 1,000 Fundamental Rules)
             </h4>
           </div>
           <span className="text-[10px] font-mono text-slate-400">

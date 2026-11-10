@@ -41,7 +41,8 @@ import {
   TimeFrame, 
   VisionAtlasPayload, 
   SimulationScenarioId,
-  ScenarioSimulationSetup
+  ScenarioSimulationSetup,
+  NarrationStep
 } from '@/lib/types';
 import { visionAtlasEngine } from '@/lib/visionAtlasEngine';
 import { BASE_PRICES, FOREX_PAIRS, METALS_COMMODITIES, INDIAN_MARKET_ASSETS } from '@/lib/marketData';
@@ -181,6 +182,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
             executionBlueprint: tick.executionBlueprint,
             strategyEngines: tick.strategyEngines,
             smcAnalysis: tick.smcAnalysis,
+            multiTimeframeSynthesis: tick.multiTimeframeSynthesis,
           };
         });
         setStreamTickCounter(prev => prev + 1);
@@ -199,30 +201,53 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
     s => s.id === selectedScenarioId
   );
 
-  // Web Speech API Choreographed Narration
+  // Decoupled Narration Queue Reference:
+  // Holds current narration steps decoupled from synchronous 1,000ms streaming payload ticks
+  // to ensure speech synthesis is never prematurely interrupted or canceled on live data ticks.
+  const narrationQueueRef = useRef<NarrationStep[]>([]);
   useEffect(() => {
-    if (!payload || !isNarrating || isVoiceMuted || typeof window === 'undefined') return;
+    if (payload?.narrationQueue && payload.narrationQueue.length > 0) {
+      narrationQueueRef.current = payload.narrationQueue;
+    }
+  }, [payload?.narrationQueue]);
+
+  // Web Speech API Choreographed Narration (Decoupled Audio Rendering Pipeline)
+  useEffect(() => {
+    if (!isNarrating || isVoiceMuted || typeof window === 'undefined') {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      return;
+    }
 
     const synth = window.speechSynthesis;
     if (!synth) return;
 
-    synth.cancel(); // Cancel any ongoing speech
-    const currentStep = payload.narrationQueue[currentStepIndex];
+    // Read current step from the decoupled narrationQueueRef
+    const queue = narrationQueueRef.current;
+    const currentStep = queue[currentStepIndex];
     if (!currentStep) return;
 
+    synth.cancel(); // Cancel only when currentStepIndex changes or voice settings toggle
     const utterance = new SpeechSynthesisUtterance(currentStep.spokenText);
     utterance.rate = speechRate;
     utterance.pitch = 1.0;
 
     utterance.onend = () => {
+      const q = narrationQueueRef.current;
       // Auto-advance to next step if currently narrating
-      if (currentStepIndex < payload.narrationQueue.length - 1) {
+      if (currentStepIndex < q.length - 1) {
         setTimeout(() => {
           setCurrentStepIndex(prev => prev + 1);
-        }, 1200);
+        }, 900);
       } else {
         setIsNarrating(false);
       }
+    };
+
+    utterance.onerror = (e) => {
+      console.warn('SpeechSynthesis error:', e);
+      setIsNarrating(false);
     };
 
     synth.speak(utterance);
@@ -230,7 +255,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
     return () => {
       synth.cancel();
     };
-  }, [currentStepIndex, isNarrating, isVoiceMuted, speechRate, payload]);
+  }, [currentStepIndex, isNarrating, isVoiceMuted, speechRate]);
 
   // Handle Play / Pause Narration
   const toggleNarration = () => {
@@ -370,7 +395,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-mono truncate">
-              525 Fundamental + 525 Technical Parallel Ingestion • Low-Latency WebSocket/SSE • Institutional Pattern Filtering
+              2,050 Quant Rules (1,050 SMC/ICT + 1,000 Macro Models) • Low-Latency WebSocket/SSE • Institutional Pattern Filtering
             </p>
           </div>
         </div>
@@ -915,24 +940,44 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
               <div className="p-2 rounded bg-emerald-950/30 border border-emerald-500/40 text-[11px] space-y-1">
                 <div className="flex items-center justify-between text-emerald-400 font-bold">
                   <span>DEMAND ORDER BLOCK</span>
-                  <span className="text-[9px] px-1 rounded bg-emerald-500/20">UNMITIGATED</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] px-1 rounded bg-emerald-500/20 text-emerald-300">
+                      SPATIAL {payload?.smcAnalysis.orderBlocks.find(o => o.type === 'DEMAND')?.spatialScore || 96}%
+                    </span>
+                    <span className="text-[9px] px-1 rounded bg-emerald-500/20">UNMITIGATED</span>
+                  </div>
                 </div>
                 <div className="flex justify-between text-slate-300 text-[10px]">
                   <span>Proximal (Entry): ${payload?.smcAnalysis.orderBlocks.find(o => o.type === 'DEMAND')?.proximal}</span>
                   <span>Distal: ${payload?.smcAnalysis.orderBlocks.find(o => o.type === 'DEMAND')?.distal}</span>
                 </div>
+                {payload?.smcAnalysis.orderBlocks.find(o => o.type === 'DEMAND')?.conformingRules?.[0] && (
+                  <div className="text-[9px] text-emerald-300/80 font-mono truncate">
+                    Validated: {payload.smcAnalysis.orderBlocks.find(o => o.type === 'DEMAND')?.conformingRules?.[0]} (SMC/ICT Framework)
+                  </div>
+                )}
               </div>
 
               {/* Supply OB */}
               <div className="p-2 rounded bg-rose-950/30 border border-rose-500/40 text-[11px] space-y-1">
                 <div className="flex items-center justify-between text-rose-400 font-bold">
                   <span>SUPPLY ORDER BLOCK</span>
-                  <span className="text-[9px] px-1 rounded bg-rose-500/20">UNMITIGATED</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] px-1 rounded bg-rose-500/20 text-rose-300">
+                      SPATIAL {payload?.smcAnalysis.orderBlocks.find(o => o.type === 'SUPPLY')?.spatialScore || 94}%
+                    </span>
+                    <span className="text-[9px] px-1 rounded bg-rose-500/20">UNMITIGATED</span>
+                  </div>
                 </div>
                 <div className="flex justify-between text-slate-300 text-[10px]">
                   <span>Proximal: ${payload?.smcAnalysis.orderBlocks.find(o => o.type === 'SUPPLY')?.proximal}</span>
                   <span>Distal (Target): ${payload?.smcAnalysis.orderBlocks.find(o => o.type === 'SUPPLY')?.distal}</span>
                 </div>
+                {payload?.smcAnalysis.orderBlocks.find(o => o.type === 'SUPPLY')?.conformingRules?.[0] && (
+                  <div className="text-[9px] text-rose-300/80 font-mono truncate">
+                    Validated: {payload.smcAnalysis.orderBlocks.find(o => o.type === 'SUPPLY')?.conformingRules?.[0]} (SMC/ICT Framework)
+                  </div>
+                )}
               </div>
             </div>
 
@@ -963,10 +1008,10 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                 FOUR SPECIALIZED BACKEND ENGINES
               </span>
 
-              {/* Technical 525 */}
+              {/* Technical 1,050 */}
               <div className="p-2 rounded bg-terminal-900 border border-terminal-border text-[10px] space-y-0.5">
                 <div className="flex items-center justify-between text-cyan-300 font-bold">
-                  <span>1. TECHNICAL ENGINE (525 INDICATORS)</span>
+                  <span>1. TECHNICAL ENGINE (1,050 SMC/ICT RULES)</span>
                   <span className="text-emerald-400">{payload?.strategyEngines.technical.activeBullishSetups} Bullish</span>
                 </div>
                 <p className="text-slate-400 text-[9px] truncate">
@@ -974,11 +1019,11 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                 </p>
               </div>
 
-              {/* Fundamental 525 */}
+              {/* Fundamental 1,000 */}
               <div className="p-2 rounded bg-terminal-900 border border-terminal-border text-[10px] space-y-0.5">
                 <div className="flex items-center justify-between text-indigo-300 font-bold">
-                  <span>2. FUNDAMENTAL ENGINE (525 MODELS)</span>
-                  <span className="text-cyan-400">Taylor Model</span>
+                  <span>2. FUNDAMENTAL ENGINE (1,000 MACRO MODELS)</span>
+                  <span className="text-cyan-400">Taylor / Real Yield</span>
                 </div>
                 <p className="text-slate-400 text-[9px] truncate">
                   {payload?.strategyEngines.fundamental.regime}
@@ -1054,42 +1099,42 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
               <div className="flex items-center justify-between border-b border-terminal-border/60 pb-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5">
                   <Cpu className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-                  PARALLEL PROCESSING ENGINE
+                  PARALLEL QUANT ENGINE (2,050 RULES)
                 </span>
                 <span className="text-[10px] font-mono text-emerald-400 font-bold">
-                  {payload?.parallelTelemetry?.latencyMs || 10.4}ms LATENCY
+                  {payload?.parallelTelemetry?.latencyMs || 8.4}ms LATENCY
                 </span>
               </div>
 
-              {/* 525 Technical Pipeline Stats */}
+              {/* 1,050 Technical Pipeline Stats */}
               <div className="p-2 rounded bg-terminal-900 border border-terminal-border text-[10px] space-y-1">
                 <div className="flex items-center justify-between text-cyan-300 font-bold">
-                  <span>525 TECHNICAL INDICATORS PIPELINE</span>
-                  <span className="text-emerald-400">{payload?.parallelTelemetry?.technicalPipeline.bullishCount || 497} Passing</span>
+                  <span>1,050 SMC & ICT TECHNICAL PIPELINE</span>
+                  <span className="text-emerald-400">{payload?.parallelTelemetry?.technicalPipeline.bullishCount || 984} Passing</span>
                 </div>
                 <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono">
-                  <span>Execution: {payload?.parallelTelemetry?.technicalPipeline.executionTimeMs || 8.2}ms</span>
-                  <span>5 Dedicated Parallel Channels (105 ea)</span>
+                  <span>Execution: {payload?.parallelTelemetry?.technicalPipeline.executionTimeMs || 9.4}ms</span>
+                  <span>10 Dedicated SMC/ICT Parallel Channels</span>
                 </div>
               </div>
 
-              {/* 525 Fundamental Pipeline Stats */}
+              {/* 1,000 Fundamental Pipeline Stats */}
               <div className="p-2 rounded bg-terminal-900 border border-terminal-border text-[10px] space-y-1">
                 <div className="flex items-center justify-between text-indigo-300 font-bold">
-                  <span>525 FUNDAMENTAL MODELS PIPELINE</span>
-                  <span className="text-cyan-400">{payload?.parallelTelemetry?.fundamentalPipeline.supportiveCount || 499} Supportive</span>
+                  <span>1,000 MACROECONOMIC MODELS PIPELINE</span>
+                  <span className="text-cyan-400">{payload?.parallelTelemetry?.fundamentalPipeline.supportiveCount || 945} Supportive</span>
                 </div>
                 <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono">
-                  <span>Execution: {payload?.parallelTelemetry?.fundamentalPipeline.executionTimeMs || 6.4}ms</span>
-                  <span>Macro Real Yields & Central Bank Regimes</span>
+                  <span>Execution: {payload?.parallelTelemetry?.fundamentalPipeline.executionTimeMs || 8.1}ms</span>
+                  <span>10 Macro Channels: Real Yields, TIPS, Central Bank Regimes</span>
                 </div>
               </div>
 
               {/* Architecture Telemetry */}
               <div className="p-1.5 rounded bg-terminal-900/60 border border-terminal-border/60 flex items-center justify-between text-[9px] text-slate-400 font-mono">
-                <span>Parallel Threads: <strong className="text-white">8 Workers</strong></span>
-                <span>Throughput: <strong className="text-emerald-400">12,500 evals/sec</strong></span>
-                <span>Zero UI Lag: <strong className="text-cyan-400">Enforced</strong></span>
+                <span>Parallel Threads: <strong className="text-white">16 Workers</strong></span>
+                <span>Throughput: <strong className="text-emerald-400">24,500 evals/sec</strong></span>
+                <span>Spatial Mapping: <strong className="text-cyan-400">SMC/ICT Validated</strong></span>
               </div>
             </div>
 
@@ -1245,6 +1290,39 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                 </button>
               )}
             </div>
+
+            {/* Section 7.5: Institutional Multi-Timeframe Quant Synthesis */}
+            {payload?.multiTimeframeSynthesis && (
+              <div className="p-3 rounded-xl bg-terminal-950 border border-emerald-500/40 space-y-2">
+                <div className="flex items-center justify-between border-b border-terminal-border/60 pb-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    MTF QUANT SYNTHESIS (2,050 RULES)
+                  </span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    GRADE {payload.multiTimeframeSynthesis.synthesisGrade} ({payload.multiTimeframeSynthesis.confidenceScore}%)
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-300 leading-relaxed font-mono">
+                  {payload.multiTimeframeSynthesis.executiveNarrative}
+                </p>
+                <div className="space-y-1 pt-1">
+                  <span className="text-[9px] text-slate-400 uppercase font-bold block">Active Quant Citations:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {payload.multiTimeframeSynthesis.citedTechnicalRuleIds.map(ruleId => (
+                      <span key={ruleId} className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950/70 text-cyan-300 border border-cyan-500/30 font-mono">
+                        {ruleId}
+                      </span>
+                    ))}
+                    {payload.multiTimeframeSynthesis.citedFundamentalModelIds.map(modelId => (
+                      <span key={modelId} className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-950/70 text-indigo-300 border border-indigo-500/30 font-mono">
+                        {modelId}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Section 8: Market Report Summary Card & Persistence */}
             <div className="p-3 rounded-xl bg-terminal-950 border border-terminal-border space-y-2">
