@@ -36,20 +36,22 @@ export type CurrencyPair = TradableSymbol;
 export type NavigationTab = 
   | 'terminal'             // 01. Terminal (Live SSOT Chart, Orders & 5-Agent Swarm Signal)
   | 'knowledge'            // 02. Knowledge (1,050+ Strategies & Institutional Heuristics)
-  | 'agent'                // 03. Agent (5-Role Multi-Agent Swarm Intelligence Command Desk)
-  | 'debate'               // 04. Five-Agent Debate (Interactive Multi-Role Consensus Stream)
-  | 'five-agent-debate'    // 04. Debate alias
-  | 'roles'                // 05. Roles (5-Role Architecture & System Governance)
-  | 'architecture'         // 05. Roles alias
-  | 'journals'             // 06. Journals (Persistent Trade Journal & Historical Loss Review)
-  | 'wire'                 // 07. Wire (38 Monitored Financial Outlets & Institutional Wires)
-  | 'calendar'             // 08. Macro Calendar (Institutional Macroeconomic Release Pulse)
-  | 'macro-intelligence'   // 09. Event-Driven Macro Intelligence & Execution Engine
-  | 'macro-engine'         // 09. Alias
-  | 'scanner'              // 10. Scanner (Multi-Asset Screener & Confluence Hunter)
-  | 'var'                  // 11. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
+  | 'vision-atlas'         // 03. Vision Atlas Lab (Advanced Market Analysis & Interactive Simulation Module)
+  | 'vision-atlas-lab'     // 03. Vision Atlas Lab alias
+  | 'agent'                // 04. Agent (5-Role Multi-Agent Swarm Intelligence Command Desk)
+  | 'debate'               // 05. Five-Agent Debate (Interactive Multi-Role Consensus Stream)
+  | 'five-agent-debate'    // 05. Debate alias
+  | 'roles'                // 06. Roles (5-Role Architecture & System Governance)
+  | 'architecture'         // 06. Roles alias
+  | 'journals'             // 07. Journals (Persistent Trade Journal & Historical Loss Review)
+  | 'wire'                 // 08. Wire (38 Monitored Financial Outlets & Institutional Wires)
+  | 'calendar'             // 09. Macro Calendar (Institutional Macroeconomic Release Pulse)
+  | 'macro-intelligence'   // 10. Event-Driven Macro Intelligence & Execution Engine
+  | 'macro-engine'         // 10. Alias
+  | 'scanner'              // 11. Scanner (Multi-Asset Screener & Confluence Hunter)
+  | 'var'                  // 12. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
   | 'backtest'             // Backtest (Monte Carlo Walk-Forward Backtester)
-  | 'firebase';            // 13. Firebase (Firestore Cloud Realtime State Sync)
+  | 'firebase';            // 14. Firebase (Firestore Cloud Realtime State Sync)
 
 export type TimeFrame = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
@@ -885,4 +887,186 @@ export interface MacroIntelligenceReport {
 
   // Swarm Synthesis & Strategic Rationale
   strategicSummary: string;
+}
+
+// ============================================================================
+// 03 // VISION ATLAS LAB: ADVANCED MARKET ANALYSIS & SIMULATION WORKSPACE
+// ============================================================================
+
+export type VisionAtlasTimeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w';
+
+export interface VisionAtlasTimeframeTrend {
+  timeframe: VisionAtlasTimeframe;
+  trend: 'BULLISH' | 'BEARISH' | 'RANGING';
+  emaAlignment: string;
+  rsiValue: number;
+  structure: 'BOS_EXPANSION' | 'CHOCH_REVERSAL' | 'INTERNAL_CONSOLIDATION';
+  confidence: number;
+}
+
+export interface SMCZone {
+  high: number;
+  low: number;
+  equilibrium: number;
+  currentZone: 'PREMIUM' | 'DISCOUNT' | 'EQUILIBRIUM';
+  discountPercent: number; // 0% (extreme low / deep discount) to 100% (extreme high / expensive premium)
+}
+
+export interface SMCOrderBlock {
+  id: string;
+  type: 'DEMAND' | 'SUPPLY';
+  proximal: number; // near boundary
+  distal: number;   // far boundary
+  mitigated: boolean;
+  timeframe: string;
+  volumeScore: number;
+  candleIndex?: number;
+}
+
+export interface ConfidenceParam {
+  id: string;
+  name: string;
+  score: number; // 0.0 to 1.0 point
+  maxScore: number; // 1.0 point
+  status: 'CONFIRMED' | 'PARTIAL' | 'UNCONFIRMED';
+  details: string;
+}
+
+export interface NarrationStep {
+  stepNumber: number; // 1 to 7
+  title: string;
+  subtitle: string;
+  spokenText: string;
+  visualFocus: 
+    | 'MARKET_STRUCTURE' 
+    | 'MTF_ALIGNMENT' 
+    | 'PREMIUM_DISCOUNT' 
+    | 'ORDER_BLOCKS' 
+    | 'CONFLUENCE_METRICS' 
+    | 'INSTITUTIONAL_ENGINES' 
+    | 'ACTIONABLE_EXECUTION';
+}
+
+export type SimulationScenarioId = 
+  | 'bullish_breakout'
+  | 'bearish_breakdown'
+  | 'liquidity_sweep_reversal'
+  | 'supply_ob_rejection'
+  | 'premium_discount_mean_reversion'
+  | 'volatility_compression_breakout'
+  | 'choppy_consolidation';
+
+export interface ScenarioSimulationSetup {
+  id: SimulationScenarioId;
+  name: string;
+  description: string;
+  directionalBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  isActionable: boolean;
+  stopLoss?: number;
+  takeProfit?: number;
+  projectedCandles: Candle[];
+}
+
+export interface VisionAtlasPayload {
+  symbol: CurrencyPair;
+  timeframe: TimeFrame;
+  timestamp: number;
+  timestampFormatted: string;
+
+  // Real-Time Telemetry Grid
+  telemetry: {
+    currentPrice: number;
+    directionalBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    trendStrengthPercent: number;
+    smcStructure: 'BOS_BULLISH' | 'BOS_BEARISH' | 'CHOCH_REVERSAL' | 'RANGE_CONSOLIDATION';
+    rsiMomentum: number;
+    atrVolatility: number;
+    rangePositioning: 'PREMIUM' | 'DISCOUNT' | 'EQUILIBRIUM';
+    rangePercent: number;
+  };
+
+  // Multi-Timeframe Alignment Matrix (7 Timeframes)
+  multiTimeframeMatrix: VisionAtlasTimeframeTrend[];
+
+  // Smart Money Concepts & Structure
+  smcAnalysis: {
+    fractalSwings: {
+      swingHighs: Array<{ price: number; index: number }>;
+      swingLows: Array<{ price: number; index: number }>;
+    };
+    premiumDiscount: SMCZone;
+    orderBlocks: SMCOrderBlock[];
+    supportResistance: {
+      support1: number;
+      support2: number;
+      resistance1: number;
+      resistance2: number;
+    };
+  };
+
+  // 6-Point Confidence Score Breakdown
+  confidenceBreakdown: {
+    parameters: ConfidenceParam[];
+    totalScore: number; // 0.0 to 6.0 points
+    maxScore: number;   // 6.0 points
+    percentage: number; // e.g. 93.3%
+    grade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  };
+
+  // 7-Step Choreographed Narration Queue
+  narrationQueue: NarrationStep[];
+
+  // 7 Distinct Interactive Scenario Setups
+  scenarioSimulations: ScenarioSimulationSetup[];
+
+  // Four Specialized Processing Engines
+  strategyEngines: {
+    technical: {
+      totalEvaluated: number; // 525 distinct indicator combinations
+      activeBullishSetups: number;
+      activeBearishSetups: number;
+      topValidatedSetups: Array<{ name: string; score: number; timeframe: string }>;
+    };
+    fundamental: {
+      totalEvaluated: number; // 525 fundamental models
+      regime: string;
+      interestRateDifferential: string;
+      monetaryPolicyShift: string;
+      topModels: Array<{ name: string; impact: string }>;
+    };
+    newsAnalyst: {
+      monitoredFeeds: number; // 38 institutional feeds
+      geopoliticalRiskIndex: number; // 0 to 100
+      sentimentScore: number; // -1.0 to 1.0
+      breakingAlert?: string;
+    };
+    riskManager: {
+      var95: number;
+      var99: number;
+      recommendedLotSize: number;
+      maxDrawdownRiskDollars: number;
+      riskRewardRatio: number;
+    };
+  };
+
+  // Actionable Execution Blueprint
+  executionBlueprint: {
+    entryZoneMin: number;
+    entryZoneMax: number;
+    recommendedEntry: number;
+    hardStopLoss: number;
+    takeProfit1: number;
+    takeProfit2: number;
+    takeProfit3: number;
+    riskRewardRatio: number;
+  };
+
+  // Market Report Summary Card
+  marketReport: {
+    id: string;
+    title: string;
+    executiveSummary: string;
+    fullNarrative: string;
+    generatedAt: string;
+  };
 }

@@ -14,6 +14,7 @@ import {
   Database,
   Radar,
   Calendar,
+  Compass,
   X,
   Sun,
   Moon,
@@ -36,6 +37,7 @@ export interface LeftNavigationDrawerProps {
   onOpenNewsWire?: () => void;
   onOpenFirebase?: () => void;
   onOpenKnowledge?: () => void;
+  onOpenVisionAtlas?: () => void;
   onOpenScanner?: () => void;
   onOpenCalendar?: () => void;
   onOpenMacroIntelligence?: () => void;
@@ -134,8 +136,25 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'agent',
+      id: 'vision-atlas',
       number: '03',
+      label: 'Vision Atlas Lab',
+      description: 'Advanced SMC Analysis & Live Simulator',
+      icon: Compass,
+      color: 'text-cyan-400',
+      activeBg: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 font-semibold',
+      isActive: activeTab === 'vision-atlas' || activeTab === 'vision-atlas-lab',
+      badge: 'SMC SIM',
+      badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+      action: () => {
+        setActiveTab('vision-atlas');
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
+    {
+      id: 'agent',
+      number: '04',
       label: 'Agent',
       description: '5-Role Multi-Agent Swarm Intelligence',
       icon: Bot,
@@ -152,7 +171,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'five-agent-debate',
-      number: '04',
+      number: '05',
       label: 'Five-Agent Debate',
       description: 'Interactive Multi-Role Consensus Stream',
       icon: MessageSquare,
@@ -169,7 +188,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'roles',
-      number: '05',
+      number: '06',
       label: 'Role',
       description: '5-Role Governance & Architecture',
       icon: Layers,
@@ -186,7 +205,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'journals',
-      number: '06',
+      number: '07',
       label: 'Journals',
       description: 'Persistent Trade Journal & Loss Review',
       icon: BookOpen,
@@ -203,7 +222,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'wire',
-      number: '07',
+      number: '08',
       label: 'Wire',
       description: 'Wire with 38 Live Financial Outlets & Institutional Feeds',
       icon: Radio,
@@ -220,7 +239,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'calendar',
-      number: '08',
+      number: '09',
       label: 'Macro Calendar',
       description: 'Institutional Macro Economic Release Pulse',
       icon: Calendar,
@@ -237,7 +256,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'macro-intelligence',
-      number: '09',
+      number: '10',
       label: 'Macro Intelligence',
       description: 'Event-Driven Macro Intelligence & Execution Engine',
       icon: Zap,
@@ -254,7 +273,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'scanner',
-      number: '10',
+      number: '11',
       label: 'Scanner',
       description: 'Multi-Asset Screener & Confluence Hunter',
       icon: Radar,
@@ -271,7 +290,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'var',
-      number: '11',
+      number: '12',
       label: 'VAR',
       description: '1,000-Path Monte Carlo Value-at-Risk',
       icon: Shield,
@@ -288,7 +307,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'journals-history',
-      number: '12',
+      number: '13',
       label: 'Journals',
       description: 'Historical Execution Logs & Loss Attribution',
       icon: BookOpen,
@@ -305,7 +324,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'firebase',
-      number: '13',
+      number: '14',
       label: 'Firebase',
       description: 'Firestore Cloud Realtime State Sync',
       icon: Cloud,
@@ -364,7 +383,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             ACTIVE: <strong className="text-white">{selectedPair}</strong>
           </span>
-          <span className="text-[10px] text-slate-400 uppercase">13 MODULES</span>
+          <span className="text-[10px] text-slate-400 uppercase">14 MODULES</span>
         </div>
 
         {/* Scrollable Navigation Items List (Vertically 1 by 1 without clipping) */}

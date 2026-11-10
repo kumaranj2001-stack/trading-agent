@@ -32,6 +32,7 @@ import { ArchitectureView } from '@/components/ArchitectureView';
 import { SettingsModal } from '@/components/SettingsModal';
 import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
+import { VisionAtlasWorkspace } from '@/components/VisionAtlasWorkspace';
 import { MacroIntelligenceDesk } from '@/components/MacroIntelligenceDesk';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
@@ -833,6 +834,23 @@ export default function Home() {
               onClosePosition={handleClosePosition}
             />
           </div>
+        )}
+
+        {/* Tab 03: Vision Atlas Lab - Advanced SMC Analysis & Live Simulator */}
+        {(activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab') && (
+          <VisionAtlasWorkspace
+            pair={selectedPair}
+            timeframe={timeframe}
+            candles={candles}
+            onSelectPair={handleSelectPair}
+            onSelectTimeframe={handleSelectTimeframe}
+            onClose={() => setActiveTab('terminal')}
+            onSyncToTerminal={(params) => {
+              handleSelectPair(params.symbol);
+              setActiveTab('terminal');
+              showNotification(`VISION ATLAS SYNCED: ${params.direction} on ${params.symbol} loaded into Terminal.`);
+            }}
+          />
         )}
 
         {/* Tab 2: Dedicated 5-Desk Agent Swarm Command Desk */}
