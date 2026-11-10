@@ -45,13 +45,15 @@ export type NavigationTab =
   | 'architecture'         // 06. Roles alias
   | 'journals'             // 07. Journals (Persistent Trade Journal & Historical Loss Review)
   | 'wire'                 // 08. Wire (38 Monitored Financial Outlets & Institutional Wires)
-  | 'calendar'             // 09. Macro Calendar (Institutional Macroeconomic Release Pulse)
-  | 'macro-intelligence'   // 10. Event-Driven Macro Intelligence & Execution Engine
-  | 'macro-engine'         // 10. Alias
-  | 'scanner'              // 11. Scanner (Multi-Asset Screener & Confluence Hunter)
-  | 'var'                  // 12. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
+  | 'order-flow'           // 09. Order Flow & Liquidity Profiler (Footprint Charts & Volume Profile)
+  | 'orderflow'            // 09. Alias
+  | 'calendar'             // 10. Macro Calendar (Institutional Macroeconomic Release Pulse)
+  | 'macro-intelligence'   // 11. Event-Driven Macro Intelligence & Execution Engine
+  | 'macro-engine'         // 11. Alias
+  | 'scanner'              // 12. Scanner (Multi-Asset Screener & Confluence Hunter)
+  | 'var'                  // 13. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
   | 'backtest'             // Backtest (Monte Carlo Walk-Forward Backtester)
-  | 'firebase';            // 14. Firebase (Firestore Cloud Realtime State Sync)
+  | 'firebase';            // 15. Firebase (Firestore Cloud Realtime State Sync)
 
 export type TimeFrame = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
@@ -149,6 +151,243 @@ export interface MacroIndicator {
   date: string;
   timeRemainingMinutes?: number;
   surpriseDeviation?: number;
+  time?: string; // e.g. "14:00 EST / 00:30 IST"
+  timestamp?: string | number; // Exact ISO-8601 UTC timestamp or epoch ms
+  timeIST?: string;   // 12-hour formatted IST time, e.g. "07:00 PM IST"
+  timeUTC?: string;   // 24-hour UTC, e.g. "13:30 UTC"
+  timestampEpochMs?: number; // Unix timestamp in milliseconds
+  dateTimeIST?: string; // Formatted combined string for responsive display
+}
+
+// ==========================================
+// ORDER FLOW, FOOTPRINT & VOLUME PROFILE INTERFACES
+// ==========================================
+
+export interface FootprintPriceLevel {
+  price: number;
+  bidVolume: number;
+  askVolume: number;
+  totalVolume: number;
+  delta: number;
+  isPointOfControl?: boolean;
+  bidImbalance?: boolean;
+  askImbalance?: boolean;
+  imbalanceType?: 'BUY_IMBALANCE' | 'SELL_IMBALANCE' | 'NONE';
+  isImbalanceBuy?: boolean;  // Ask vol >= Bid vol * threshold (e.g. 300%)
+  isImbalanceSell?: boolean; // Bid vol >= Ask vol * threshold
+}
+
+export interface VolumeProfileAnalysis {
+  pointOfControl: number;
+  valueAreaHigh: number;
+  valueAreaLow: number;
+  totalVolume: number;
+  buyingVolume: number;
+  sellingVolume: number;
+  buyingPressurePercent: number;
+  sellingPressurePercent: number;
+  cumulativeVolumeDelta: number;
+  highVolumeNodes: number[];
+  lowVolumeNodes: number[];
+}
+
+export interface TechnicalMomentumMetrics {
+  score: number; // 0 to 100
+  weight: number; // 0.50 default
+  bias: 'BULLISH_MOMENTUM' | 'BEARISH_MOMENTUM' | 'NEUTRAL';
+  rsi: number;
+  rsiSlope: 'RISING' | 'FALLING' | 'FLAT';
+  orderFlowCvdDelta: number;
+  vwapDistancePercent: number;
+  emaRibbonAlignment: 'STRONG_BULLISH' | 'BULLISH' | 'NEUTRAL' | 'BEARISH' | 'STRONG_BEARISH';
+  momentumDrivers: string[];
+}
+
+export interface FundamentalSentimentMetrics {
+  score: number; // 0 to 100
+  weight: number; // 0.50 default
+  bias: 'RISK_ON_EXPANSION' | 'RISK_OFF_CONTRACTION' | 'NEUTRAL';
+  wireSentimentScore: number;
+  monitoredFeedsCount: number;
+  centralBankStance: 'HAWKISH' | 'DOVISH' | 'NEUTRAL';
+  macroRegime: string;
+  catalystAlignment: 'ALIGNED' | 'DIVERGENT';
+  sentimentDrivers: string[];
+}
+
+export interface DualConfirmationEntryMatrix {
+  compositeScore: number;
+  technicalWeight: number;
+  fundamentalWeight: number;
+  entryConfirmationStatus: 'CONFIRMED_BUY' | 'CONFIRMED_SELL' | 'MOMENTUM_FUNDAMENTAL_DIVERGENCE' | 'CONSOLIDATION_NEUTRAL';
+  isEntryAuthorized: boolean;
+  verdictDescription: string;
+  recommendedEntryPrice: number;
+  orderFlowAnchorStopLoss: number;
+  orderFlowTarget1: number;
+  orderFlowTarget2: number;
+  riskRewardRatio: number;
+}
+
+export interface OrderFlowAnalysisReport {
+  id: string;
+  symbol: CurrencyPair;
+  timestamp: string;
+  responseTimeMs: number;
+  liveWebSocketTelemetry: {
+    status: 'STREAMING' | 'DISCONNECTED';
+    protocol: string;
+    latencyMs: number;
+    bidPrice: number;
+    askPrice: number;
+    spread: number;
+    tickVelocityPerSec: number;
+    lastTickDirection: 'UP_TICK' | 'DOWN_TICK';
+  };
+  footprintLevels: FootprintPriceLevel[];
+  volumeProfile: VolumeProfileAnalysis;
+  technicalMomentum: TechnicalMomentumMetrics;
+  fundamentalSentiment: FundamentalSentimentMetrics;
+  dualConfirmation: DualConfirmationEntryMatrix;
+}
+
+export interface OrderFlowSessionAnalysis {
+  sessionVolume: number;
+  cumulativeVolumeDelta: number;
+  cumulativeDelta?: number;
+  cvdTrend: 'ACCUMULATING' | 'DISTRIBUTING' | 'NEUTRAL';
+  pocPrice: number;
+  valueAreaLow: number;
+  valueAreaHigh: number;
+  currentPrice: number;
+  buyVolumeRatioPercent: number;
+  sellVolumeRatioPercent: number;
+  totalBuyVolume: number;
+  totalSellVolume: number;
+  footprints: Array<{
+    timestamp: number;
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    volume: number;
+    totalCandleVolume: number;
+    delta: number;
+    candleDelta: number;
+    poc: number;
+    pocPrice: number;
+    stackedBuyImbalances: number[];
+    stackedSellImbalances: number[];
+    levels: FootprintPriceLevel[];
+  }>;
+  volumeProfile: Array<{
+    price: number;
+    priceLevel: number;
+    volume: number;
+    totalVolume: number;
+    volumePercent: number;
+    buyVol: number;
+    sellVol: number;
+    delta: number;
+    isPoc: boolean;
+    isValueArea: boolean;
+    isVah: boolean;
+    isVal: boolean;
+  }>;
+  institutionalOrderBlocks: Array<{
+    price: number;
+    priceRange: string;
+    type: 'DEMAND' | 'SUPPLY';
+    volume: number;
+    volumeStacked: number;
+    mitigated: boolean;
+    isMitigated: boolean;
+  }>;
+}
+
+export interface FootprintBar {
+  id: string;
+  timestamp: number;
+  timeFormatted: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  totalVolume: number;
+  barDelta: number;
+  cumulativeDelta: number;
+  pocPrice: number;
+  vahPrice: number;
+  valPrice: number;
+  priceLevels: FootprintPriceLevel[];
+  direction: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+}
+
+export interface VolumeProfileBin {
+  price: number;
+  buyVolume: number;
+  sellVolume: number;
+  totalVolume: number;
+  percentage: number;
+  isPoc: boolean;
+  isHvn: boolean;
+  isLvn: boolean;
+  isValueArea: boolean;
+}
+
+export interface OrderFlowTapePrint {
+  id: string;
+  timestamp: number;
+  timeFormatted: string;
+  price: number;
+  size: number;
+  side: 'BUY' | 'SELL';
+  isBlock: boolean;
+  aggressor: 'BUYER' | 'SELLER';
+}
+
+export interface TriFactorExecutionSignal {
+  symbol: CurrencyPair;
+  timestamp: string;
+  technicalMomentum: {
+    score: number; // 0 to 100
+    bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    emaTrendAlignment: 'BULLISH_STACK' | 'BEARISH_STACK' | 'CHOP';
+    rsi14: number;
+    marketStructure: 'BULLISH_EXPANSION' | 'BEARISH_EXPANSION' | 'RANGE';
+    weightedContribution: number; // weight: 35%
+  };
+  fundamentalSentiment: {
+    score: number; // 0 to 100
+    bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    wireSentimentScore: number; // -1 to +1 from 38 feeds
+    macroeconomicCatalystSurprise: 'HAWKISH_BEAT' | 'DOVISH_MISS' | 'IN_LINE';
+    centralBankPolicyStance: string;
+    weightedContribution: number; // weight: 35%
+  };
+  orderFlowConfluence: {
+    score: number; // 0 to 100
+    bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    footprintDeltaBias: 'STRONG_BUY_IMBALANCE' | 'STRONG_SELL_IMBALANCE' | 'BALANCED';
+    volumeProfileLocation: 'ABOVE_POC' | 'BELOW_POC' | 'AT_POC';
+    cumulativeDeltaTrend: 'ACCUMULATING' | 'DISTRIBUTING' | 'NEUTRAL';
+    buyingPressurePercent: number;
+    sellingPressurePercent: number;
+    weightedContribution: number; // weight: 30%
+  };
+  compositeScore: number; // 0 to 100
+  minimumThresholdMet: boolean;
+  confirmedSignal: 'BUY' | 'SELL' | 'UNCONFIRMED_FILTERED';
+  confirmationReason: string;
+  executionParameters: {
+    entryPrice: number;
+    stopLoss: number;
+    takeProfit1: number;
+    takeProfit2: number;
+    riskRewardRatio: number;
+    lotSize: number;
+    maxRiskDollars: number;
+  };
 }
 
 export interface CurrencyStrength {
@@ -179,6 +418,10 @@ export interface KnowledgeRule {
   expectedWinRate: number; // percentage, e.g. 78.5%
   signalAction: SignalDirection;
   invalidationCriteria: string;
+  framework?: 'SMC' | 'ICT' | 'CLASSICAL_QUANT' | 'MACRO_REGIME' | 'CENTRAL_BANK' | 'COT_FLOW';
+  timeframeScope?: 'MICRO' | 'INTRADAY' | 'SWING' | 'MACRO';
+  spatialZoneTarget?: 'DEMAND_OB' | 'SUPPLY_OB' | 'FVG' | 'OTE_POCKET' | 'BSL' | 'SSL' | 'EQUILIBRIUM';
+  quantParameters?: Record<string, any>;
 }
 
 export interface KnowledgeMatchResult {
@@ -637,6 +880,23 @@ export interface SwarmConsensusResult {
     riskAmountUsd: number;
     status: 'READY' | 'EXECUTED' | 'VETOED';
   };
+  dualConfirmation?: {
+    confirmationStatus: 'DUAL_CONFIRMED' | 'DIVERGENCE_REJECTED' | 'CONSOLIDATION_NEUTRAL';
+    entryAuthorized: boolean;
+    technicalMomentum: {
+      score: number;
+      rsiStatus: string;
+      structureMomentum: string;
+      direction: string;
+    };
+    fundamentalSentiment: {
+      score: number;
+      macroRegime: string;
+      centralBankDivergence: string;
+      direction: string;
+    };
+    confirmationRationale: string;
+  };
   autonomousLoopTelemetry?: {
     cycleNumber: number;
     timestamp: string;
@@ -799,6 +1059,18 @@ export interface MacroCatalystEvent {
 export type MacroSignalType = 'BUY' | 'SELL' | 'UNCONFIRMED';
 export type ConvergenceStatus = 'CONVERGED' | 'AWAITING_CONVERGENCE' | 'DISCREPANCY_FLAGGED';
 
+export interface PreFlightGateResult {
+  passed: boolean;
+  status: 'GATE_PASSED' | 'GATE_ABORTED_NO_CATALYST';
+  symbol: CurrencyPair;
+  matchedEvent: MacroCatalystEvent | null;
+  activeOrImminentCatalysts: MacroCatalystEvent[];
+  catalystCount: number;
+  abortReason: string | null;
+  recommendedActivePairs: CurrencyPair[];
+  timestamp: number;
+}
+
 export interface MacroIntelligenceReport {
   id: string;
   timestamp: number;
@@ -810,6 +1082,53 @@ export interface MacroIntelligenceReport {
   validationStatus: ConvergenceStatus;
   statusDescription: string;
   
+  // Strict Pre-Flight Verification Gate
+  preFlightVerification?: {
+    status: 'PASSED' | 'ABORTED_NO_CATALYST';
+    gateVerifiedAt: string;
+    scheduledEventsFound: number;
+    matchedCatalystId: string | null;
+    isImminentOrActive: boolean;
+    abortAlertMessage?: string;
+  };
+
+  // Mandatory Dual-Stage Validation Mechanism
+  dualStageValidation?: {
+    // Stage 1: Curated 38-Source Wire Stream Ingestion & Evaluation
+    stage1WireStream: {
+      status: 'CONFIRMED' | 'INSUFFICIENT_DETAIL' | 'AMBIGUOUS' | 'NEWS_GAP_DETECTED';
+      monitoredOutletsCount: number; // 38
+      primaryWireConfidence: number; // e.g. 78% or 91%
+      articleCount: number;
+      detailDepth: 'INSTITUTIONAL_HIGH' | 'MODERATE' | 'SPARSE';
+      ambiguityScore: number; // 0.00 to 1.00
+      newsGapsDetected: string[];
+      primarySourcesProcessed: string[];
+    };
+    // Stage 2: Autonomous Web-Search Fallback Agent
+    stage2WebSearchFallback: {
+      status: 'TRIGGERED_AND_CONVERGED' | 'STANDBY_NOT_REQUIRED';
+      triggered: boolean;
+      triggerReason: string | null;
+      externalSourcesQueried: string[];
+      realTimeIndicesCrossReferenced: string[];
+      verifiedFactsSynthesized: string[];
+      rumorsQuarantined: string[];
+      secondaryValidationConfidence: number;
+      dataIntegrityScore: number;
+    };
+  };
+
+  // Connected Sources Manifest
+  connectedSourceManifest?: {
+    totalSourcesSynthesized: number;
+    primaryWireOutletsCount: number;
+    externalFallbackPortalsCount: number;
+    allSourceNames: string[];
+    verificationIntegrityLevel: '100%_VERIFIED_FACTS' | 'QUARANTINED';
+    unifiedFactSummary: string[];
+  };
+
   // Real-Time Data Convergence & Fail-Safe Verification
   dataConvergence: {
     isConverged: boolean;
@@ -921,6 +1240,9 @@ export interface SMCOrderBlock {
   timeframe: string;
   volumeScore: number;
   candleIndex?: number;
+  spatialScore?: number;
+  conformingRules?: string[];
+  rationale?: string;
 }
 
 export interface ConfidenceParam {
@@ -993,7 +1315,7 @@ export interface InstitutionalPattern {
 
 export interface ParallelEngineTelemetry {
   technicalPipeline: {
-    totalIndicators: 525;
+    totalIndicators: number;
     bullishCount: number;
     bearishCount: number;
     neutralCount: number;
@@ -1001,7 +1323,7 @@ export interface ParallelEngineTelemetry {
     activeCategoryPassing: Record<string, number>;
   };
   fundamentalPipeline: {
-    totalModels: 525;
+    totalModels: number;
     supportiveCount: number;
     restrictiveCount: number;
     neutralCount: number;
@@ -1127,6 +1449,9 @@ export interface VisionAtlasPayload {
     executiveSummary: string;
     fullNarrative: string;
     generatedAt: string;
+    citedTechnicalRuleIds?: string[];
+    citedFundamentalModelIds?: string[];
+    synthesisGrade?: 'A+' | 'A' | 'B';
   };
 
   // Automated Pattern Recognition & Institutional Filter
@@ -1139,4 +1464,15 @@ export interface VisionAtlasPayload {
 
   // Multi-Threaded Parallel Engine Telemetry
   parallelTelemetry: ParallelEngineTelemetry;
+
+  // Institutional Multi-Timeframe Quant Synthesis
+  multiTimeframeSynthesis?: {
+    synthesisGrade: 'A+' | 'A' | 'B';
+    confidenceScore: number;
+    microTriggerConfirmed: boolean;
+    macroBiasAligned: boolean;
+    citedTechnicalRuleIds: string[];
+    citedFundamentalModelIds: string[];
+    executiveNarrative: string;
+  };
 }
