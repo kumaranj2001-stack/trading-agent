@@ -44,6 +44,57 @@ export interface NewsWireModalProps {
   isFullPage?: boolean;
 }
 
+const SOURCE_SHORT_NAMES: Record<string, string> = {
+  bloomberg: 'Bloomberg',
+  reuters: 'Reuters',
+  ft: 'Financial Times',
+  wsj: 'Wall Street Journal',
+  the_economist: 'The Economist',
+  cnbc: 'CNBC',
+  marketwatch: 'MarketWatch',
+  barrons: "Barron's",
+  seekingalpha: 'Seeking Alpha',
+  fxstreet: 'FXStreet',
+  investing: 'Investing.com',
+  forexlive: 'ForexLive',
+  dailyfx: 'DailyFX',
+  reuters_fx: 'Reuters FX',
+  bloomberg_cur: 'Bloomberg FX',
+  fed_monetary: 'Federal Reserve',
+  ecb_policy: 'ECB Portal',
+  boe_policy: 'Bank of England',
+  boj_policy: 'Bank of Japan',
+  snb_policy: 'SNB Watch',
+  lbma: 'LBMA Bullion',
+  cme: 'CME Group',
+  platts: 'S&P Platts',
+  opec: 'OPEC+ Watch',
+  iea: 'IEA Energy',
+  eia: 'US EIA Petroleum',
+  wgc: 'World Gold Council',
+  scotiabank: 'Scotia Metals',
+  kitco: 'Kitco Metals',
+  bafin: 'BaFin Europe',
+  sec: 'US SEC EDGAR',
+  bis: 'BIS Basel',
+  imf: 'IMF Global',
+  worldbank: 'World Bank',
+  ustreasury: 'US Treasury',
+  zerohedge: 'ZeroHedge',
+  coindesk: 'CoinDesk Macro',
+  rbi: 'RBI Central Bank',
+  nse_bse: 'NSE / BSE Wire',
+};
+
+function getSourceBadgeLabel(source: FinancialSource): string {
+  if (SOURCE_SHORT_NAMES[source.id]) {
+    return SOURCE_SHORT_NAMES[source.id];
+  }
+  const cleaned = source.name.replace(/^The\s+/i, '');
+  if (cleaned.length <= 15) return cleaned;
+  return cleaned.slice(0, 14) + '…';
+}
+
 export const NewsWireModal: React.FC<NewsWireModalProps> = ({
   isOpen = true,
   onClose,
@@ -247,7 +298,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-white text-sm sm:text-base tracking-wide truncate">
-                08 // QRI TRADER // REAL-TIME 38-SOURCE NEWS WIRE & MEMORY ENGINE
+                QRI TRADER // REAL-TIME 38 - SOURCE NEWS WIRE & MEMORY ENGINE
               </h3>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shrink-0 font-bold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
@@ -294,25 +345,15 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
             <span className="hidden md:inline">Export</span>
           </button>
 
-          {isFullPage ? (
-            <button
-              onClick={onClose}
-              className="px-3 py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5 font-semibold"
-              title="Return to Terminal"
-            >
-              <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
-              <span>RETURN TO TERMINAL</span>
-            </button>
-          ) : (
-            <button
-              onClick={onClose}
-              className="p-1.5 sm:px-3 sm:py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors"
-              aria-label="Close wire terminal"
-            >
-              <X className="w-4 h-4 sm:hidden" />
-              <span className="hidden sm:inline">Close</span>
-            </button>
-          )}
+          <button
+            onClick={onClose}
+            className="p-1.5 sm:px-3 sm:py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border font-mono text-xs transition-colors flex items-center gap-1.5"
+            aria-label="Close wire terminal"
+            title="Close Wire Terminal"
+          >
+            <X className="w-3.5 h-3.5 sm:hidden" />
+            <span className="hidden sm:inline">Close</span>
+          </button>
         </div>
       </div>
 
@@ -321,7 +362,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           <div className="bg-rose-500/20 text-rose-300 px-4 py-1.5 text-xs font-mono font-semibold flex items-center gap-2 animate-pulse shrink-0 border-b border-rose-500/40">
             <Flame className="w-3.5 h-3.5 text-rose-400 shrink-0" />
             <span className="font-bold text-rose-200">BREAKING FLASH:</span>
-            <span className="truncate">{newFlashAlert}</span>
+            <span className="truncate">{newFlashAlert.replace(/\[TICK\s*#\d+\]/gi, '').trim()}</span>
           </div>
         )}
 
@@ -417,13 +458,14 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
 
         {/* 38 Financial Sources Active Filter Pills (Shown on STREAM tab) */}
         {activeTab === 'STREAM' && (
-          <div className="p-2 sm:p-2.5 bg-terminal-950/40 border-b border-terminal-border flex items-center justify-between gap-2 overflow-x-auto scrollbar-none font-mono text-xs whitespace-nowrap shrink-0">
-            <div className="flex items-center gap-1.5 min-w-0">
+          <div className="p-2 sm:p-2.5 bg-terminal-950/80 border-b border-terminal-border flex flex-col md:flex-row md:items-center justify-between gap-2.5 shrink-0">
+            {/* Left: Horizontally Scrollable 38 Sources Pills */}
+            <div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto scrollbar-thin pb-1 md:pb-0 font-mono text-xs whitespace-nowrap">
               <button
                 onClick={() => setSelectedSourceFilter('ALL')}
-                className={`px-2.5 py-1 rounded-md transition-colors shrink-0 ${
+                className={`px-2.5 py-1 rounded-md transition-colors shrink-0 font-bold ${
                   selectedSourceFilter === 'ALL'
-                    ? 'bg-sky-600 text-white font-bold'
+                    ? 'bg-sky-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white bg-terminal-900 border border-terminal-border'
                 }`}
               >
@@ -444,8 +486,8 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
                     }`}
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                    <span>{source.name.split(' ')[0]}</span>
-                    <span className="text-[9px] px-1 rounded bg-terminal-950 text-slate-400">
+                    <span>{getSourceBadgeLabel(source)}</span>
+                    <span className="text-[9px] px-1 rounded bg-terminal-950 text-slate-400 font-mono">
                       {sourceArticleCount || 4}
                     </span>
                   </button>
@@ -453,15 +495,15 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
               })}
             </div>
 
-            {/* Impact Filter, Impact Sorting & Search Input */}
-            <div className="flex items-center gap-1.5 shrink-0">
+            {/* Right: Search Input, Impact Sorting & Priority Filters (Never Colliding) */}
+            <div className="flex items-center gap-1.5 shrink-0 font-mono text-xs pt-1 md:pt-0 border-t md:border-t-0 md:border-l border-terminal-border md:pl-2.5">
               <div className="relative">
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search 38 outlets..."
-                  className="bg-terminal-900 border border-terminal-border rounded-lg pl-7 pr-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 w-28 sm:w-40 font-sans"
+                  className="bg-terminal-900 border border-terminal-border rounded-lg pl-7 pr-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-sky-500 w-32 sm:w-44 font-sans"
                 />
                 <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2 top-2" />
               </div>
@@ -527,7 +569,9 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
                 const isCritical = article.impact === 'CRITICAL';
                 
                 // Strictly deduplicate impacted symbols to prevent [XAU/USD] repetition
-                const uniqueImpactedSymbols = Array.from(new Set(article.relatedSymbols));
+                const uniqueImpactedSymbols = Array.from(
+                  new Set((article.relatedSymbols && article.relatedSymbols.length > 0 ? article.relatedSymbols : [symbol]).map(s => s.trim().toUpperCase()))
+                );
 
                 return (
                   <div 
@@ -580,7 +624,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
                     </div>
 
                     <h4 className="text-white font-bold text-sm sm:text-base leading-snug mb-1 font-sans">
-                      {article.title}
+                      {article.title.replace(/\[TICK\s*#\d+\]/gi, '').trim()}
                     </h4>
 
                     <p className="text-slate-300 text-xs sm:text-sm font-sans leading-relaxed mb-2">
@@ -593,10 +637,10 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
                         {uniqueImpactedSymbols.map(sym => (
                           <span 
                             key={sym} 
-                            className={`px-1.5 py-0.2 rounded font-bold ${
+                            className={`px-2 py-0.5 rounded font-bold text-[10px] ${
                               sym === symbol 
                                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40' 
-                                : 'bg-terminal-900 text-slate-300'
+                                : 'bg-terminal-900 text-slate-300 border border-terminal-border/80'
                             }`}
                           >
                             {sym}
