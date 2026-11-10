@@ -37,7 +37,6 @@ import { MacroIntelligenceDesk } from '@/components/MacroIntelligenceDesk';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
 import { NewsWireModal } from '@/components/NewsWireModal';
-import { OrderFlowDesk } from '@/components/OrderFlowDesk';
 import { FirebaseStatusModal } from '@/components/FirebaseStatusModal';
 import { LeftNavigationDrawer } from '@/components/LeftNavigationDrawer';
 import { JournalModal } from '@/components/JournalModal';
@@ -974,20 +973,6 @@ export default function Home() {
           />
         )}
 
-        {/* Tab 09: Order Flow & Real-Time Price Action Analytics (Footprint & Volume Profile) */}
-        {(activeTab === 'order-flow' || (activeTab as string) === 'orderflow') && (
-          <OrderFlowDesk
-            isFullPage={true}
-            onClose={() => setActiveTab('terminal')}
-            selectedPair={selectedPair}
-            onSelectPair={handleSelectPair}
-            onExecuteTrade={(trade) => {
-              handleExecuteTrade();
-              showNotification(`ORDER FLOW TRADE EXECUTED: ${trade.direction} ${trade.symbol} @ ${trade.entry}`);
-            }}
-          />
-        )}
-
         {/* Tab 9: Firebase Cloud Firestore Realtime State Sync & Diagnostics */}
         {activeTab === 'firebase' && (
           <FirebaseStatusModal
@@ -1081,7 +1066,6 @@ export default function Home() {
         onOpenKnowledge={() => setActiveTab('knowledge')}
         onOpenScanner={() => setActiveTab('scanner')}
         onOpenCalendar={() => setActiveTab('calendar')}
-        onOpenOrderFlow={() => setActiveTab('order-flow')}
         onOpenSettings={() => setIsSettingsOpen(true)}
         executionMode={executionMode}
         onToggleExecutionMode={handleToggleExecutionMode}

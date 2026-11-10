@@ -241,7 +241,7 @@ export const OrderFlowAnalysis: React.FC<OrderFlowAnalysisProps> = ({
 
             <div className="overflow-x-auto pb-2 scrollbar-thin">
               <div className="flex gap-3 min-w-max">
-                {footprints.map((fp: any, idx: number) => {
+                {footprints.map((fp, idx) => {
                   const isBullCandle = fp.close >= fp.open;
                   const isSelected = selectedCandleIdx === idx || (selectedCandleIdx === null && idx === footprints.length - 1);
 
@@ -271,7 +271,7 @@ export const OrderFlowAnalysis: React.FC<OrderFlowAnalysisProps> = ({
 
                       {/* Footprint Price Levels Ladder */}
                       <div className="space-y-1 text-[10px]">
-                        {fp.levels.map((lvl: any, lIdx: number) => {
+                        {fp.levels.map((lvl, lIdx) => {
                           const isCandlePoc = lvl.price === fp.pocPrice;
                           return (
                             <div
@@ -323,7 +323,7 @@ export const OrderFlowAnalysis: React.FC<OrderFlowAnalysisProps> = ({
             </div>
 
             <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
-              {volumeProfile.map((bucket: any, bIdx: number) => (
+              {volumeProfile.map((bucket, bIdx) => (
                 <div
                   key={bIdx}
                   className={`p-1.5 rounded-lg flex items-center gap-3 text-xs ${
@@ -429,7 +429,7 @@ export const OrderFlowAnalysis: React.FC<OrderFlowAnalysisProps> = ({
               </span>
 
               <div className="space-y-2.5">
-                {sessionData.institutionalOrderBlocks.map((ob: any, oIdx: number) => (
+                {sessionData.institutionalOrderBlocks.map((ob, oIdx) => (
                   <div
                     key={oIdx}
                     className={`p-3 rounded-lg border text-xs space-y-1 ${
