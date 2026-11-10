@@ -94,7 +94,7 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-white text-sm sm:text-base truncate">
-                10 // INSTITUTIONAL KNOWLEDGE BASE (2,050+ STRATEGIES & HEURISTICS)
+                10 // INSTITUTIONAL KNOWLEDGE BASE (1,050+ STRATEGIES & HEURISTICS)
               </h3>
               <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                 {allRules.length} VERIFIED RULES
@@ -104,7 +104,7 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">
-              1,050 Technical (Deep SMC & ICT) • 1,000 Fundamental Macro Models (2,050 Total Rules)
+              525 Technical (SMC / Confluence) • 525 Fundamental (Central Banks / Indian Markets)
             </p>
           </div>
         </div>

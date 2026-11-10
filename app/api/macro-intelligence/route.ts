@@ -10,16 +10,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category') as MacroCatalystCategory | 'ALL' | null;
     const eventId = searchParams.get('eventId');
-    const checkPreFlight = searchParams.get('checkPreFlight') === 'true';
-    const symbol = searchParams.get('symbol') as CurrencyPair | null;
-
-    if (checkPreFlight && symbol) {
-      const preFlight = macroIntelligenceEngine.validatePreFlightGate(symbol, eventId || undefined);
-      return NextResponse.json({
-        success: true,
-        data: preFlight,
-      });
-    }
 
     if (eventId) {
       const correlatedPairs = macroIntelligenceEngine.getCorrelatedPairs(eventId);

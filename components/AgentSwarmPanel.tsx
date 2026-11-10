@@ -122,7 +122,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
             <Activity className="w-3.5 h-3.5" />
             Continuous Loop Active {telemetry?.cycleNumber ? `(Cycle #${telemetry.cycleNumber})` : ''}
           </span>
-          <span>• 1,050 Technical + 1,000 Macro Quant Rules</span>
+          <span>• 525 Technical + 525 Macro Strategies</span>
           <span>• 38 Wires Streamed</span>
           <span className="text-cyan-400 font-bold">
             {telemetry?.latencyMs ? `${telemetry.latencyMs}ms Latency` : 'Zero Human Latency'}

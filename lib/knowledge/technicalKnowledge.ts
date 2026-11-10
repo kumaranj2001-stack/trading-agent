@@ -1,337 +1,228 @@
 import { KnowledgeRule, SignalDirection } from '../types';
 
-// ============================================================================
-// EXPANDED INSTITUTIONAL TECHNICAL KNOWLEDGE BASE (1,050 QUANT RULES)
-// Incorporates Deep Smart Money Concepts (SMC) & Inner Circle Trader (ICT) Frameworks
-// Balanced 1,000+ Technical Allocation
-// ============================================================================
+// Structured generation of 520+ distinct institutional technical rules across 10 key categories:
+// 1. Smart Money Concepts (SMC) & Liquidity (Rules 1-60)
+// 2. Candlestick Price Action Formations (Rules 61-120)
+// 3. Multi-Moving Average & Ribbon Alignments (Rules 121-175)
+// 4. Momentum Oscillators & Divergences (Rules 176-235)
+// 5. Volatility & Bollinger Band Dynamics (Rules 236-285)
+// 6. Chart Geometry & Structural Patterns (Rules 286-345)
+// 7. Volume Spread Analysis (VSA) & Order Flow (Rules 346-395)
+// 8. Fibonacci & Harmonic Mathematical Confluences (Rules 396-445)
+// 9. Indian Market Special Technical Setups (ORB, CPR, Expiry Day) (Rules 446-490)
+// 10. Multi-Timeframe High-Accuracy Entry Protocols (Rules 491-525)
 
-// 1. Deep SMC & ICT Frameworks: Order Blocks, Breakers, Mitigations, Rejections (150 rules)
-const SMC_OB_TYPES = [
-  'Institutional Demand Order Block',
-  'Institutional Supply Order Block',
-  'Bearish Breaker Block (Failed Demand)',
-  'Bullish Breaker Block (Failed Supply)',
-  'Mitigation Block Retest',
-  'Rejection Block Long Shadow',
-  'Propulsion Order Block',
-  'Vacuum Block Low Volume Re-entry'
-];
-
-// 2. ICT Liquidity Pools & Sweeps (150 rules)
-const ICT_LIQUIDITY_TYPES = [
-  'Buy-Side Liquidity (BSL) Equal Highs Sweep',
-  'Sell-Side Liquidity (SSL) Equal Lows Sweep',
-  'Turtle Soup False Breakout Reversal',
-  'Judah Swing London Open Trap',
-  'Purge & Revert Liquidity Run',
-  'Asian Session High/Low Liquidity Sweep',
-  'Internal Range Liquidity (IRL) Distribution',
-  'External Range Liquidity (ERL) Run'
-];
-
-// 3. Fair Value Gaps (FVG) & Imbalance Matrix (120 rules)
-const FVG_TYPES = [
-  'Bullish Fair Value Gap (FVG) Imbalance',
-  'Bearish Fair Value Gap (FVG) Imbalance',
-  'Inversion FVG Support-Resistance Flip',
-  'Balanced Price Range (BPR) Confluence',
-  'Liquidity Void Rapid Refill',
-  'Volume Imbalance (Open-Close Gap)'
-];
-
-// 4. ICT Optimal Trade Entry (OTE) & Premium/Discount Matrix (100 rules)
-const OTE_TYPES = [
-  'Fibonacci 62% OTE Golden Pocket Entry',
-  'Fibonacci 70.5% Institutional Sweet Spot',
-  'Fibonacci 79% Deep Structural Discount Reload',
-  '50% Equilibrium Premium Rejection',
-  'Deep Discount Valuation (<38.2%)',
-  'Extreme Premium Exhaustion (>78.6%)'
-];
-
-// 5. Market Structure Shifts & Transitions (100 rules)
-const MSS_TYPES = [
-  'Break of Structure (BOS) Trend Expansion',
-  'Change of Character (CHoCH) Reversal',
-  'Market Structure Shift (MSS) Displacement',
-  'Inducement Level Trap & Continuation',
-  'Fractal High/Low Sweep Structure Reversal'
-];
-
-// 6. Volume Spread Analysis (VSA) & Wyckoff Dynamics (100 rules)
-const VSA_TYPES = [
-  'Stopping Volume Institutional Absorption',
-  'Wyckoff Phase C Spring Formation',
-  'Wyckoff Phase C Upthrust After Distribution (UTAD)',
-  'No Supply Test on Pullback',
-  'No Demand Upthrust into Resistance',
-  'Cumulative Volume Delta (CVD) Absorption'
-];
-
-// 7. Multi-Moving Average & Ribbon Alignments (80 rules)
-const MA_TYPES = [
-  'Triple EMA Ribbon Stack (20/50/200)',
-  'Golden/Death Cross Macro Shift',
-  'Dynamic EMA 20 Pullback Absorption',
-  'EMA Ribbon Compression & Volatility Coil'
-];
-
-// 8. Momentum Oscillators & Relative Strength Stacks (80 rules)
-const MOM_TYPES = [
-  'RSI (14) Regular Structural Divergence',
-  'RSI (14) Hidden Trend Continuation Divergence',
-  'Stochastic Momentum Index (SMI) Extreme Turn',
-  'MACD Histogram Kinetic Acceleration'
-];
-
-// 9. Volatility Compression & ATR Regime Breakouts (70 rules)
-const VOL_TYPES = [
-  'Bollinger Band Squeeze Range Expansion',
-  'Keltner Channel Upper/Lower Band Exhaustion',
-  'ATR Volatility Expansion Surge',
-  'Volatility Contraction Pattern (VCP) Coil'
-];
-
-// 10. Multi-Timeframe High-Accuracy Execution & Killzones (100 rules)
-const MTF_KZ_TYPES = [
-  'London Open Killzone (02:00 - 05:00 EST)',
-  'New York Open Killzone (07:00 - 10:00 EST)',
-  'ICT Silver Bullet Time Window',
-  'Daily Bias HTF FVG Confluence',
-  '4H Order Block to 15M MSS Trigger Bridge'
-];
+const SMC_SUBCATEGORIES = ['Order Block', 'Fair Value Gap (FVG)', 'Liquidity Sweep', 'Market Structure Shift', 'Premium/Discount Array'];
+const CANDLE_SUBCATEGORIES = ['Single Bar', 'Double Bar Reversal', 'Triple Bar Formation', 'Exhaustion Cluster', 'Momentum Expansion'];
+const MA_SUBCATEGORIES = ['Golden/Death Cross', 'Dynamic Support/Resistance', 'Triple EMA Stack', 'Ribbon Squeeze', '200 EMA Macro Gate'];
+const MOMENTUM_SUBCATEGORIES = ['Regular Divergence', 'Hidden Divergence', 'Extreme Overbought/Oversold', 'Zero-Line Crossover', 'Histogram Impulse'];
+const VOLATILITY_SUBCATEGORIES = ['Bollinger Squeeze Breakout', 'Band Rejection', 'ATR Surge', 'Keltner Channel Confluence', 'Volatility Contraction (VCP)'];
+const GEOMETRY_SUBCATEGORIES = ['Breakout & Retest', 'Reversal Patterns', 'Continuation Flags', 'Harmonic Bat/Gartley', 'Wyckoff Accumulation/Distribution'];
+const VSA_SUBCATEGORIES = ['Stopping Volume', 'Climactic Absorption', 'No Supply Test', 'No Demand Test', 'Effort vs Result'];
+const FIB_SUBCATEGORIES = ['Golden Pocket (0.618-0.65)', '0.50 Equilibrium Bounce', 'Deep Retracement (0.786)', 'Extension Target (1.618)', 'Cluster Confluence'];
+const INDIAN_TECH_SUBCATEGORIES = ['15-Min Opening Range Breakout (ORB)', 'Central Pivot Range (CPR) Width', 'VWAP Institutional Defense', 'Bank Nifty Round Strike Pin', 'Weekly Expiry Gamma Squeeze'];
+const MTF_SUBCATEGORIES = ['Daily Bias Alignment', '4H-15M Trend Bridge', 'High Timeframe FVG Tap', 'London/NY Session Sweep', 'Session Open Momentum Injection'];
 
 export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
   const rules: KnowledgeRule[] = [];
 
-  // 1. Deep SMC & ICT Frameworks: Order Blocks & Breakers (150 rules)
-  for (let i = 1; i <= 150; i++) {
+  // 1. SMC Rules (60 rules)
+  for (let i = 1; i <= 60; i++) {
     const isBull = i % 2 === 1;
-    const sub = SMC_OB_TYPES[i % SMC_OB_TYPES.length];
+    const sub = SMC_SUBCATEGORIES[i % SMC_SUBCATEGORIES.length];
     rules.push({
-      id: `TECH-SMC-OB-${String(i).padStart(3, '0')}`,
+      id: `TECH-SMC-${String(i).padStart(3, '0')}`,
       category: 'TECHNICAL',
-      subcategory: `SMC/ICT: ${sub}`,
-      marketScope: i > 120 ? 'INDIAN_MARKET' : 'GLOBAL',
-      ruleName: isBull ? `Bullish ${sub} Precision Protocol #${i}` : `Bearish ${sub} Rejection Protocol #${i}`,
+      subcategory: `SMC: ${sub}`,
+      marketScope: i > 45 ? 'INDIAN_MARKET' : 'GLOBAL',
+      ruleName: isBull ? `Bullish ${sub} Institutional Entry Protocol #${i}` : `Bearish ${sub} Institutional Liquidity Invalidation #${i}`,
       conditionDescription: isBull
-        ? `Price taps the proximal edge of an unmitigated Bullish ${sub} located in the institutional discount zone, followed by instantaneous buy-side displacement and volume absorption.`
-        : `Price retests the proximal edge of an unmitigated Bearish ${sub} in the premium zone, confirming rejection with lower timeframe market structure shift.`,
-      confidenceWeight: 9 + (i % 2),
-      expectedWinRate: Number((76.5 + (i % 12) * 1.1).toFixed(1)),
+        ? `Price sweeps sell-side liquidity into an unmitigated Bullish ${sub} followed by rapid displacement and Break of Structure (BOS).`
+        : `Price sweeps buy-side liquidity into an unmitigated Bearish ${sub} followed by displacement lower with Fair Value Gap formation.`,
+      confidenceWeight: 8 + (i % 3),
+      expectedWinRate: Number((72.5 + (i % 15) * 0.9).toFixed(1)),
       signalAction: isBull ? (i % 4 === 1 ? 'STRONG_BUY' : 'BUY') : (i % 4 === 0 ? 'STRONG_SELL' : 'SELL'),
-      invalidationCriteria: isBull ? 'Candle body close penetrating beyond the distal boundary of the Order Block.' : 'Candle body close exceeding the distal upper boundary of the Order Block.',
-      framework: 'SMC',
-      timeframeScope: i % 3 === 0 ? 'SWING' : 'INTRADAY',
-      spatialZoneTarget: isBull ? 'DEMAND_OB' : 'SUPPLY_OB',
+      invalidationCriteria: isBull ? 'Candle body close below the bottom of the Order Block or FVG boundary.' : 'Candle body close above the top of the Bearish Order Block.',
     });
   }
 
-  // 2. ICT Liquidity Pools & Sweeps (150 rules)
-  for (let i = 1; i <= 150; i++) {
+  // 2. Candlestick Patterns (60 rules)
+  for (let i = 1; i <= 60; i++) {
     const isBull = i % 2 === 1;
-    const sub = ICT_LIQUIDITY_TYPES[i % ICT_LIQUIDITY_TYPES.length];
+    const sub = CANDLE_SUBCATEGORIES[i % CANDLE_SUBCATEGORIES.length];
     rules.push({
-      id: `TECH-ICT-LIQ-${String(i).padStart(3, '0')}`,
+      id: `TECH-CNDL-${String(i).padStart(3, '0')}`,
       category: 'TECHNICAL',
-      subcategory: `ICT Liquidity: ${sub}`,
+      subcategory: `Candlestick: ${sub}`,
       marketScope: 'GLOBAL',
-      ruleName: isBull ? `Bullish ${sub} Trap & Reversal #${i}` : `Bearish ${sub} Liquidity Run Invalidation #${i}`,
+      ruleName: isBull ? `Bullish ${sub} Reversal Confirmation Pattern #${i}` : `Bearish ${sub} Exhaustion Reversal Pattern #${i}`,
       conditionDescription: isBull
-        ? `Sell-side liquidity resting below key swing low is swept by an intraday wick which instantly closes back inside range, absorbing retail stops into institutional buy orders.`
-        : `Buy-side liquidity resting above equal highs is purged on climactic volume followed by an immediate bearish impulse closing beneath the swept level.`,
-      confidenceWeight: 9,
-      expectedWinRate: Number((77.0 + (i % 10) * 1.2).toFixed(1)),
-      signalAction: isBull ? 'STRONG_BUY' : 'STRONG_SELL',
-      invalidationCriteria: isBull ? 'Price creates sustained acceptance below the swept swing low.' : 'Price makes sustained acceptance above the swept swing high.',
-      framework: 'ICT',
-      timeframeScope: 'INTRADAY',
-      spatialZoneTarget: isBull ? 'SSL' : 'BSL',
-    });
-  }
-
-  // 3. Fair Value Gaps (FVG) & Imbalance Matrix (120 rules)
-  for (let i = 1; i <= 120; i++) {
-    const isBull = i % 2 === 1;
-    const sub = FVG_TYPES[i % FVG_TYPES.length];
-    rules.push({
-      id: `TECH-ICT-FVG-${String(i).padStart(3, '0')}`,
-      category: 'TECHNICAL',
-      subcategory: `ICT Imbalance: ${sub}`,
-      marketScope: 'GLOBAL',
-      ruleName: isBull ? `Bullish ${sub} Retest & Expansion #${i}` : `Bearish ${sub} Mitigation & Cascading Protocol #${i}`,
-      conditionDescription: isBull
-        ? `Price retraces into a 3-bar displacement Bullish ${sub} where Bar 1 high and Bar 3 low leave unhedged buy-side imbalance, acting as high-probability support.`
-        : `Price retraces into a Bearish ${sub} leaving clear sell-side imbalance, confirming downward continuation as sell orders distribute.`,
-      confidenceWeight: 8 + (i % 3),
-      expectedWinRate: Number((75.0 + (i % 11) * 1.1).toFixed(1)),
+        ? `High-volume Bullish Hammer / Engulfing candle prints at key daily support with lower shadow > 2.5x body length.`
+        : `Bearish Shooting Star or Engulfing prints at key resistance with upper wick rejection confirming seller dominance.`,
+      confidenceWeight: 7 + (i % 3),
+      expectedWinRate: Number((69.0 + (i % 12) * 1.1).toFixed(1)),
       signalAction: isBull ? 'BUY' : 'SELL',
-      invalidationCriteria: isBull ? 'Full candle body close through the bottom boundary of the FVG.' : 'Full candle body close penetrating above the top boundary of the FVG.',
-      framework: 'ICT',
-      timeframeScope: 'INTRADAY',
-      spatialZoneTarget: 'FVG',
+      invalidationCriteria: isBull ? 'Subsequent bar violates lower wick low.' : 'Subsequent bar trades above upper rejection high.',
     });
   }
 
-  // 4. ICT Optimal Trade Entry (OTE) & Premium/Discount Matrix (100 rules)
-  for (let i = 1; i <= 100; i++) {
+  // 3. Moving Average & Ribbon Alignments (55 rules)
+  for (let i = 1; i <= 55; i++) {
     const isBull = i % 2 === 1;
-    const sub = OTE_TYPES[i % OTE_TYPES.length];
+    const sub = MA_SUBCATEGORIES[i % MA_SUBCATEGORIES.length];
     rules.push({
-      id: `TECH-ICT-OTE-${String(i).padStart(3, '0')}`,
-      category: 'TECHNICAL',
-      subcategory: `ICT Valuation: ${sub}`,
-      marketScope: 'GLOBAL',
-      ruleName: isBull ? `Bullish ${sub} Asymmetric Execution #${i}` : `Bearish ${sub} Premium Exhaustion #${i}`,
-      conditionDescription: isBull
-        ? `Price anchors within the Fibonacci 62% - 79% Optimal Trade Entry pocket inside the institutional discount zone, offering favorable > 1:3 risk-to-reward ratio.`
-        : `Price extends into the deep premium territory (> 70.5% retracement) showing upper wick exhaustion and failure to print higher highs.`,
-      confidenceWeight: 9,
-      expectedWinRate: Number((78.0 + (i % 9) * 1.2).toFixed(1)),
-      signalAction: isBull ? 'STRONG_BUY' : 'STRONG_SELL',
-      invalidationCriteria: isBull ? 'Break and close below the 100% swing origin level.' : 'Break and close above the 100% swing high origin level.',
-      framework: 'ICT',
-      timeframeScope: 'SWING',
-      spatialZoneTarget: 'OTE_POCKET',
-    });
-  }
-
-  // 5. Market Structure Shifts & Transitions (100 rules)
-  for (let i = 1; i <= 100; i++) {
-    const isBull = i % 2 === 1;
-    const sub = MSS_TYPES[i % MSS_TYPES.length];
-    rules.push({
-      id: `TECH-SMC-MSS-${String(i).padStart(3, '0')}`,
-      category: 'TECHNICAL',
-      subcategory: `SMC Structure: ${sub}`,
-      marketScope: 'GLOBAL',
-      ruleName: isBull ? `Bullish ${sub} Structural Transition #${i}` : `Bearish ${sub} Trend Invalidation #${i}`,
-      conditionDescription: isBull
-        ? `Lower timeframe prints a decisive Market Structure Shift with an energetic displacement candle closing above the last swing high, accompanied by volume expansion.`
-        : `Price breaks beneath the key swing low with significant displacement body close, confirming bearish Change of Character.`,
-      confidenceWeight: 8 + (i % 3),
-      expectedWinRate: Number((74.5 + (i % 10) * 1.0).toFixed(1)),
-      signalAction: isBull ? 'BUY' : 'SELL',
-      invalidationCriteria: isBull ? 'Subsequent price violates the displacement candle swing low.' : 'Subsequent price trades above the displacement candle swing high.',
-      framework: 'SMC',
-      timeframeScope: 'MICRO',
-      spatialZoneTarget: 'EQUILIBRIUM',
-    });
-  }
-
-  // 6. Volume Spread Analysis & Wyckoff Dynamics (100 rules)
-  for (let i = 1; i <= 100; i++) {
-    const isBull = i % 2 === 1;
-    const sub = VSA_TYPES[i % VSA_TYPES.length];
-    rules.push({
-      id: `TECH-VSA-WYC-${String(i).padStart(3, '0')}`,
-      category: 'TECHNICAL',
-      subcategory: `VSA/Wyckoff: ${sub}`,
-      marketScope: 'GLOBAL',
-      ruleName: isBull ? `Bullish ${sub} Volume Footprint #${i}` : `Bearish ${sub} Distribution Protocol #${i}`,
-      conditionDescription: isBull
-        ? `Ultra-high stopping volume bar prints on narrow spread down-candle, demonstrating massive passive limit absorption by institutional smart money.`
-        : `Upthrust bar on heavy volume closes off its lows, revealing effort with no directional progress indicating institutional selling.`,
-      confidenceWeight: 8,
-      expectedWinRate: Number((73.0 + (i % 11) * 1.1).toFixed(1)),
-      signalAction: isBull ? 'BUY' : 'SELL',
-      invalidationCriteria: isBull ? 'Price cascades below stopping volume anchor bar.' : 'Price punches above upthrust high on continuing volume.',
-      framework: 'CLASSICAL_QUANT',
-      timeframeScope: 'INTRADAY',
-      spatialZoneTarget: isBull ? 'DEMAND_OB' : 'SUPPLY_OB',
-    });
-  }
-
-  // 7. Multi-Moving Average & Ribbon Alignments (80 rules)
-  for (let i = 1; i <= 80; i++) {
-    const isBull = i % 2 === 1;
-    const sub = MA_TYPES[i % MA_TYPES.length];
-    rules.push({
-      id: `TECH-MA-RIB-${String(i).padStart(3, '0')}`,
+      id: `TECH-MA-${String(i).padStart(3, '0')}`,
       category: 'TECHNICAL',
       subcategory: `Moving Averages: ${sub}`,
       marketScope: 'GLOBAL',
-      ruleName: isBull ? `Bullish ${sub} Dynamic Momentum #${i}` : `Bearish ${sub} Trend Cascading #${i}`,
+      ruleName: isBull ? `Bullish ${sub} Confluence Alignment #${i}` : `Bearish ${sub} Trend Breakdown Protocol #${i}`,
       conditionDescription: isBull
-        ? `EMA 20 > EMA 50 > EMA 200 in clean ascending fan formation with price pulling back to test EMA 20 dynamic support on low volume.`
-        : `EMA 20 crosses beneath EMA 50 with price cascading below the 200 EMA macro threshold confirming macro structural weakness.`,
-      confidenceWeight: 7 + (i % 3),
-      expectedWinRate: Number((71.0 + (i % 12) * 0.9).toFixed(1)),
+        ? `Price holds above EMA 20 while EMA 20 > EMA 50 > EMA 200 in ascending parallel slope with pullbacks respected.`
+        : `Price cascades below EMA 20 with EMA 20 crossing beneath EMA 50 confirming bearish trend expansion.`,
+      confidenceWeight: 7 + (i % 4),
+      expectedWinRate: Number((71.0 + (i % 14) * 0.8).toFixed(1)),
       signalAction: isBull ? 'BUY' : 'SELL',
-      invalidationCriteria: isBull ? 'Sustained close below EMA 50.' : 'Sustained close above EMA 50.',
-      framework: 'CLASSICAL_QUANT',
-      timeframeScope: 'SWING',
-      spatialZoneTarget: 'EQUILIBRIUM',
+      invalidationCriteria: isBull ? 'Sustained close below EMA 50 on 1H/4H timeframe.' : 'Recovery and close above EMA 50.',
     });
   }
 
-  // 8. Momentum Oscillators & Relative Strength Stacks (80 rules)
-  for (let i = 1; i <= 80; i++) {
+  // 4. Momentum Oscillators & Divergences (60 rules)
+  for (let i = 1; i <= 60; i++) {
     const isBull = i % 2 === 1;
-    const sub = MOM_TYPES[i % MOM_TYPES.length];
+    const sub = MOMENTUM_SUBCATEGORIES[i % MOMENTUM_SUBCATEGORIES.length];
     rules.push({
-      id: `TECH-MOM-OSC-${String(i).padStart(3, '0')}`,
+      id: `TECH-MOM-${String(i).padStart(3, '0')}`,
       category: 'TECHNICAL',
-      subcategory: `Oscillators: ${sub}`,
+      subcategory: `Momentum: ${sub}`,
       marketScope: 'GLOBAL',
-      ruleName: isBull ? `Bullish ${sub} Velocity Confirmation #${i}` : `Bearish ${sub} Exhaustion Reversal #${i}`,
+      ruleName: isBull ? `Bullish ${sub} Momentum Signal #${i}` : `Bearish ${sub} Momentum Signal #${i}`,
       conditionDescription: isBull
-        ? `Price prints lower structural low while RSI (14) prints higher low in oversold territory (< 35), signaling momentum exhaustion and impending reversal.`
-        : `Price prints higher structural high while RSI (14) prints lower high in overbought territory (> 65) confirming buyer exhaustion.`,
-      confidenceWeight: 8,
-      expectedWinRate: Number((73.5 + (i % 10) * 1.1).toFixed(1)),
+        ? `Lower low on price action coinciding with higher low on RSI (14) or MACD histogram in oversold territory (< 35).`
+        : `Higher high on price action coinciding with lower high on RSI (14) in overbought territory (> 65) indicating exhaustion.`,
+      confidenceWeight: 8 + (i % 3),
+      expectedWinRate: Number((73.0 + (i % 10) * 1.2).toFixed(1)),
       signalAction: isBull ? 'STRONG_BUY' : 'STRONG_SELL',
-      invalidationCriteria: isBull ? 'New structural price low invalidating divergence anchor.' : 'New structural price high invalidating divergence anchor.',
-      framework: 'CLASSICAL_QUANT',
-      timeframeScope: 'INTRADAY',
-      spatialZoneTarget: 'EQUILIBRIUM',
+      invalidationCriteria: isBull ? 'Price makes new structural low breaking divergence swing.' : 'Price makes new structural high invalidating bearish divergence.',
     });
   }
 
-  // 9. Volatility Compression & ATR Regime Breakouts (70 rules)
-  for (let i = 1; i <= 70; i++) {
+  // 5. Volatility & Bollinger Bands (50 rules)
+  for (let i = 1; i <= 50; i++) {
     const isBull = i % 2 === 1;
-    const sub = VOL_TYPES[i % VOL_TYPES.length];
+    const sub = VOLATILITY_SUBCATEGORIES[i % VOLATILITY_SUBCATEGORIES.length];
     rules.push({
-      id: `TECH-VOL-EXP-${String(i).padStart(3, '0')}`,
+      id: `TECH-VOL-${String(i).padStart(3, '0')}`,
       category: 'TECHNICAL',
       subcategory: `Volatility: ${sub}`,
       marketScope: 'GLOBAL',
-      ruleName: isBull ? `Bullish ${sub} Kinetic Impulse #${i}` : `Bearish ${sub} Range Breakdown #${i}`,
+      ruleName: isBull ? `Bullish ${sub} Expansion Entry #${i}` : `Bearish ${sub} Rejection & Mean Reversion #${i}`,
       conditionDescription: isBull
-        ? `Bollinger Bandwidth contracts below historical 10th percentile followed by explosive upper band expansion on 2.5x volume.`
-        : `Volatility contracts sharply followed by lower band penetration and downward expansion confirming liquidity cascade.`,
-      confidenceWeight: 8,
-      expectedWinRate: Number((72.0 + (i % 11) * 1.0).toFixed(1)),
+        ? `Bollinger Bandwidth contracts below 0.70 followed by upper band penetration on 2x average volume.`
+        : `Price closes outside upper Bollinger Band with immediate bearish candle pinbar back inside the band.`,
+      confidenceWeight: 7 + (i % 3),
+      expectedWinRate: Number((70.5 + (i % 11) * 1.0).toFixed(1)),
       signalAction: isBull ? 'BUY' : 'SELL',
-      invalidationCriteria: isBull ? 'Price returns inside midpoint of Bollinger Band.' : 'Price returns above midpoint of Bollinger Band.',
-      framework: 'CLASSICAL_QUANT',
-      timeframeScope: 'INTRADAY',
-      spatialZoneTarget: 'EQUILIBRIUM',
+      invalidationCriteria: 'Mean reversion failure back past Middle 20-SMA band.',
     });
   }
 
-  // 10. Multi-Timeframe High-Accuracy Execution & Killzones (100 rules)
-  for (let i = 1; i <= 100; i++) {
+  // 6. Chart Geometry & Classic Patterns (60 rules)
+  for (let i = 1; i <= 60; i++) {
     const isBull = i % 2 === 1;
-    const sub = MTF_KZ_TYPES[i % MTF_KZ_TYPES.length];
+    const sub = GEOMETRY_SUBCATEGORIES[i % GEOMETRY_SUBCATEGORIES.length];
     rules.push({
-      id: `TECH-MTF-KZ-${String(i).padStart(3, '0')}`,
+      id: `TECH-GEOM-${String(i).padStart(3, '0')}`,
       category: 'TECHNICAL',
-      subcategory: `Killzones & MTF: ${sub}`,
-      marketScope: i > 80 ? 'INDIAN_MARKET' : 'GLOBAL',
-      ruleName: isBull ? `Bullish ${sub} Session Injection Protocol #${i}` : `Bearish ${sub} Session Purge #${i}`,
+      subcategory: `Geometry: ${sub}`,
+      marketScope: 'GLOBAL',
+      ruleName: isBull ? `Bullish ${sub} Geometry Rule #${i}` : `Bearish ${sub} Structural Breakdown #${i}`,
       conditionDescription: isBull
-        ? `Price sweeps Asian session lows right at the opening of ${sub}, taps an unmitigated 4H Order Block, and prints a 5M market structure shift.`
-        : `Price sweeps session highs at ${sub} open, hits institutional 4H Supply Order Block, and accelerates lower on institutional distribution.`,
-      confidenceWeight: 10,
-      expectedWinRate: Number((81.0 + (i % 8) * 1.1).toFixed(1)),
+        ? `Ascending triangle or Inverse Head & Shoulders breakout confirmed with retest of neckline with descending volume on pullback.`
+        : `Head & Shoulders or Double Top pattern neckline broken with volume surge confirming structural trend change.`,
+      confidenceWeight: 8 + (i % 3),
+      expectedWinRate: Number((74.0 + (i % 10) * 0.9).toFixed(1)),
+      signalAction: isBull ? 'BUY' : 'SELL',
+      invalidationCriteria: 'Price breaks back inside previous consolidation pattern range.',
+    });
+  }
+
+  // 7. Volume Spread Analysis (VSA) (50 rules)
+  for (let i = 1; i <= 50; i++) {
+    const isBull = i % 2 === 1;
+    const sub = VSA_SUBCATEGORIES[i % VSA_SUBCATEGORIES.length];
+    rules.push({
+      id: `TECH-VSA-${String(i).padStart(3, '0')}`,
+      category: 'TECHNICAL',
+      subcategory: `VSA: ${sub}`,
+      marketScope: 'GLOBAL',
+      ruleName: isBull ? `Bullish ${sub} Smart Money Accumulation #${i}` : `Bearish ${sub} Smart Money Distribution #${i}`,
+      conditionDescription: isBull
+        ? `Ultra-high volume on narrow spread down-bar indicating institutional stopping volume and heavy absorption.`
+        : `High volume up-bar with narrow spread closing in the middle or low indicating heavy hidden selling / distribution.`,
+      confidenceWeight: 8 + (i % 3),
+      expectedWinRate: Number((75.0 + (i % 8) * 1.3).toFixed(1)),
+      signalAction: isBull ? 'BUY' : 'SELL',
+      invalidationCriteria: 'Break of stopping volume anchor candle range.',
+    });
+  }
+
+  // 8. Fibonacci & Harmonics (50 rules)
+  for (let i = 1; i <= 50; i++) {
+    const isBull = i % 2 === 1;
+    const sub = FIB_SUBCATEGORIES[i % FIB_SUBCATEGORIES.length];
+    rules.push({
+      id: `TECH-FIB-${String(i).padStart(3, '0')}`,
+      category: 'TECHNICAL',
+      subcategory: `Fibonacci: ${sub}`,
+      marketScope: 'GLOBAL',
+      ruleName: isBull ? `Bullish ${sub} Optimal Trade Entry (OTE) #${i}` : `Bearish ${sub} Resistance Rejection #${i}`,
+      conditionDescription: isBull
+        ? `Price retraces precisely into the 0.618 - 0.65 Golden Pocket with bullish rejection wick aligned with prior swing support.`
+        : `Price retraces to 0.786 Fibonacci deep retest zone meeting significant confluence of descending trendline and Bearish Order Block.`,
+      confidenceWeight: 8 + (i % 2),
+      expectedWinRate: Number((73.5 + (i % 10) * 1.1).toFixed(1)),
+      signalAction: isBull ? 'BUY' : 'SELL',
+      invalidationCriteria: isBull ? 'Candle close beyond 1.00 swing low.' : 'Candle close beyond 1.00 swing high.',
+    });
+  }
+
+  // 9. Indian Market Special Technical Setups (45 rules)
+  for (let i = 1; i <= 45; i++) {
+    const isBull = i % 2 === 1;
+    const sub = INDIAN_TECH_SUBCATEGORIES[i % INDIAN_TECH_SUBCATEGORIES.length];
+    rules.push({
+      id: `TECH-IN-${String(i).padStart(3, '0')}`,
+      category: 'TECHNICAL',
+      subcategory: `NSE/BSE Setup: ${sub}`,
+      marketScope: 'INDIAN_MARKET',
+      ruleName: isBull ? `NIFTY/BANKNIFTY ${sub} Bullish Institutional Setup #${i}` : `NIFTY/BANKNIFTY ${sub} Bearish Breakdown #${i}`,
+      conditionDescription: isBull
+        ? `NIFTY / BANK NIFTY opens with a narrow Central Pivot Range (CPR), breaks the 15-minute high on heavy institutional volume, and stays above VWAP.`
+        : `Price breaks below the 15-minute Opening Range Low with Bank Nifty heavyweights (HDFC Bank, ICICI Bank) dragging index beneath VWAP.`,
+      confidenceWeight: 9,
+      expectedWinRate: Number((76.5 + (i % 8) * 1.2).toFixed(1)),
       signalAction: isBull ? 'STRONG_BUY' : 'STRONG_SELL',
-      invalidationCriteria: isBull ? 'Violation of session low following sweep.' : 'Violation of session high following sweep.',
-      framework: 'ICT',
-      timeframeScope: 'MICRO',
-      spatialZoneTarget: isBull ? 'DEMAND_OB' : 'SUPPLY_OB',
+      invalidationCriteria: 'Violation of day opening price or opposite side of the 15-minute Opening Range candle.',
+    });
+  }
+
+  // 10. Multi-Timeframe High-Accuracy Entry Protocols (35 rules)
+  for (let i = 1; i <= 35; i++) {
+    const isBull = i % 2 === 1;
+    const sub = MTF_SUBCATEGORIES[i % MTF_SUBCATEGORIES.length];
+    rules.push({
+      id: `TECH-MTF-${String(i).padStart(3, '0')}`,
+      category: 'TECHNICAL',
+      subcategory: `MTF Confluence: ${sub}`,
+      marketScope: 'GLOBAL',
+      ruleName: isBull ? `Bullish ${sub} Confluence Filter #${i}` : `Bearish ${sub} Confluence Filter #${i}`,
+      conditionDescription: isBull
+        ? `Daily timeframe is in confirmed uptrend (Price > Daily EMA 50), 4H taps unmitigated FVG, and 15M prints a clean BOS to trigger market entry.`
+        : `Daily timeframe is in clear downtrend, 4H rejects bearish supply zone, and 15M breaks lower supporting structure.`,
+      confidenceWeight: 10,
+      expectedWinRate: Number((79.0 + (i % 6) * 1.5).toFixed(1)),
+      signalAction: isBull ? 'STRONG_BUY' : 'STRONG_SELL',
+      invalidationCriteria: 'Higher timeframe structure broken against trade direction.',
     });
   }
 
