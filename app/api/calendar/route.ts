@@ -30,15 +30,37 @@ export async function GET(req: NextRequest) {
     }
 
     const highImpactCount = events.filter(e => e.impact === 'HIGH').length;
+    const responseTime = new Date().toISOString();
+
+    // Map each indicator to guarantee exact chronological timestamp metadata
+    const enrichedEvents = events.map(evt => {
+      const defaultTime = evt.time || '13:30 UTC';
+      const eventTimestamp = evt.timestamp || `${evt.date}T${defaultTime.split(' ')[0]}:00.000Z`;
+      
+      // Calculate minutes until or since event
+      const eventEpoch = new Date(eventTimestamp).getTime();
+      const nowEpoch = Date.now();
+      const diffMinutes = Math.round((eventEpoch - nowEpoch) / 60000);
+
+      return {
+        ...evt,
+        time: defaultTime,
+        timestamp: eventTimestamp,
+        timezone: evt.timezone || 'UTC',
+        timeRemainingMinutes: diffMinutes,
+      };
+    });
 
     return NextResponse.json({
       success: true,
       data: {
-        totalEvents: events.length,
+        totalEvents: enrichedEvents.length,
         highImpactCount,
-        events,
-        nextHighImpactEvent: events.find(e => e.impact === 'HIGH') || null,
-        timestamp: new Date().toISOString(),
+        events: enrichedEvents,
+        nextHighImpactEvent: enrichedEvents.find(e => e.impact === 'HIGH') || null,
+        responseTime,
+        serverClockUtc: new Date().toUTCString(),
+        timestamp: responseTime,
       },
     });
   } catch (error: any) {

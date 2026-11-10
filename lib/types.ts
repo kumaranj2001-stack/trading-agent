@@ -50,6 +50,8 @@ export type NavigationTab =
   | 'macro-engine'         // 10. Alias
   | 'scanner'              // 11. Scanner (Multi-Asset Screener & Confluence Hunter)
   | 'var'                  // 12. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
+  | 'order-flow'           // 13. Order Flow (Footprint Charts, Volume Profile & CVD Delta Ladder)
+  | 'orderflow'            // 13. Order Flow alias
   | 'backtest'             // Backtest (Monte Carlo Walk-Forward Backtester)
   | 'firebase';            // 14. Firebase (Firestore Cloud Realtime State Sync)
 
@@ -147,6 +149,10 @@ export interface MacroIndicator {
   previous: string | number;
   impact: 'HIGH' | 'MEDIUM' | 'LOW';
   date: string;
+  time?: string;                 // Precise release time e.g. "18:00 UTC", "13:30 UTC"
+  timestamp?: string;            // ISO 8601 release timestamp e.g. "2026-11-05T18:00:00Z"
+  timezone?: string;             // Timezone identifier e.g. "UTC"
+  localTimeFormatted?: string;   // Local user timezone presentation
   timeRemainingMinutes?: number;
   surpriseDeviation?: number;
 }
@@ -418,6 +424,103 @@ export interface DailyNewsReflection {
 }
 
 // ==========================================
+// ⚡ DUAL-CONFIRMATION: TECHNICAL MOMENTUM & FUNDAMENTAL SENTIMENT
+// ==========================================
+export interface DualConfirmationAnalysis {
+  technicalMomentum: {
+    score: number; // 0 to 100
+    rsiValue: number;
+    rsiStatus: string;
+    macdHistogram: number;
+    macdTrend: 'EXPANDING_BULLISH' | 'EXPANDING_BEARISH' | 'CONVERGING_NEUTRAL';
+    structureMomentum: 'BULLISH_EXPANSION' | 'BEARISH_EXPANSION' | 'COMPRESSION';
+    direction: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    isDivergencePresent: boolean;
+    divergenceType?: 'BULLISH_DIVERGENCE' | 'BEARISH_DIVERGENCE' | 'NONE';
+  };
+  fundamentalSentiment: {
+    score: number; // 0 to 100
+    macroRegime: string;
+    realRateSpread: number;
+    centralBankDivergence: 'HAWKISH_DOMINANT' | 'DOVISH_DOMINANT' | 'BALANCED';
+    wireSentimentScore: number;
+    direction: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  };
+  confirmationStatus: 'DUAL_CONFIRMED' | 'DIVERGENCE_REJECTED' | 'WAITING_FOR_CONFIRMATION';
+  entryAuthorized: boolean;
+  confluenceWeightRatio: {
+    technicalWeightPercent: number; // 50%
+    fundamentalWeightPercent: number; // 50%
+  };
+  combinedConfirmationScore: number; // 0 to 100
+  confirmationRationale: string;
+}
+
+// ==========================================
+// 🌊 ORDER FLOW & FOOTPRINT / VOLUME PROFILE
+// ==========================================
+export interface PriceLevelVolume {
+  price: number;
+  bidVolume: number;
+  askVolume: number;
+  totalVolume: number;
+  delta: number; // askVolume - bidVolume
+  isImbalance: boolean;
+  imbalanceType?: 'BUY_IMBALANCE' | 'SELL_IMBALANCE';
+}
+
+export interface CandleFootprint {
+  candleIndex: number;
+  timestamp: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  levels: PriceLevelVolume[];
+  totalCandleVolume: number;
+  candleDelta: number;
+  pocPrice: number; // Point of Control for this candle
+  stackedBuyImbalances: number[];
+  stackedSellImbalances: number[];
+}
+
+export interface VolumeProfileBucket {
+  priceLevel: number;
+  buyVolume: number;
+  sellVolume: number;
+  totalVolume: number;
+  volumePercent: number;
+  isPoc: boolean; // Point of Control (highest volume node)
+  isValueArea: boolean; // Inside 70% Value Area (VAH to VAL)
+}
+
+export interface OrderFlowSessionAnalysis {
+  symbol: CurrencyPair;
+  timeframe: TimeFrame;
+  currentPrice: number;
+  sessionVolume: number;
+  totalBuyVolume: number;
+  totalSellVolume: number;
+  buyVolumeRatioPercent: number;
+  sellVolumeRatioPercent: number;
+  cumulativeVolumeDelta: number;
+  cvdTrend: 'AGGRESSIVE_BUYING' | 'AGGRESSIVE_SELLING' | 'ABSORPTION_BUY' | 'ABSORPTION_SELL';
+  pocPrice: number; // Point of Control
+  valueAreaHigh: number; // VAH
+  valueAreaLow: number; // VAL
+  highVolumeNodes: number[];
+  lowVolumeNodes: number[];
+  footprints: CandleFootprint[];
+  volumeProfile: VolumeProfileBucket[];
+  institutionalOrderBlocks: {
+    type: 'DEMAND' | 'SUPPLY';
+    priceRange: [number, number];
+    volumeStacked: number;
+    mitigated: boolean;
+  }[];
+}
+
+// ==========================================
 // 🎯 UNIFIED 5-ROLE DECISION INTERFACE
 // ==========================================
 export interface UnifiedDecision {
@@ -434,6 +537,7 @@ export interface UnifiedDecision {
     riskGovernance: string;
   };
   keyDriversList: string[];
+  dualConfirmation?: DualConfirmationAnalysis;
 }
 
 export interface MonteCarloProjection {
@@ -629,6 +733,8 @@ export interface SwarmConsensusResult {
   };
   debateTranscript: AgentDebateMessage[];
   debateSynthesis?: DebateSynthesisResult;
+  dualConfirmation?: DualConfirmationAnalysis;
+  orderFlow?: OrderFlowSessionAnalysis;
   executionSignal: {
     authorized: boolean;
     orderType: 'BUY_MARKET' | 'SELL_MARKET' | 'NONE';

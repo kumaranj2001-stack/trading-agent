@@ -179,6 +179,67 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
         </div>
       </div>
 
+      {/* ⚡ Dual-Confirmation: Technical Momentum & Fundamental Sentiment Confirmation Gate */}
+      {consensus.dualConfirmation && (
+        <div className={`mt-3 p-3 rounded-xl border font-mono text-xs shadow-md transition-all ${
+          consensus.dualConfirmation.confirmationStatus === 'DUAL_CONFIRMED'
+            ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200'
+            : consensus.dualConfirmation.confirmationStatus === 'DIVERGENCE_REJECTED'
+            ? 'bg-rose-950/40 border-rose-500/50 text-rose-200'
+            : 'bg-amber-950/40 border-amber-500/50 text-amber-200'
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/60 pb-2 mb-2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className={`w-4 h-4 ${
+                consensus.dualConfirmation.confirmationStatus === 'DUAL_CONFIRMED'
+                  ? 'text-emerald-400'
+                  : consensus.dualConfirmation.confirmationStatus === 'DIVERGENCE_REJECTED'
+                  ? 'text-rose-400'
+                  : 'text-amber-400'
+              }`} />
+              <span className="font-bold text-white uppercase text-xs tracking-wide">
+                DUAL-CONFIRMATION ENTRY GATE: {consensus.dualConfirmation.confirmationStatus.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+              consensus.dualConfirmation.entryAuthorized
+                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+            }`}>
+              {consensus.dualConfirmation.entryAuthorized ? 'ENTRY AUTHORIZED' : 'EXECUTION WITHHELD'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
+            {/* Technical Momentum Weight (50%) */}
+            <div className="p-2 rounded bg-terminal-950/80 border border-terminal-border/80">
+              <div className="flex justify-between font-bold text-cyan-300 mb-1">
+                <span>Technical Momentum (50% Weight):</span>
+                <span>{consensus.dualConfirmation.technicalMomentum.score}% Score</span>
+              </div>
+              <p className="text-slate-300 text-[10px]">
+                RSI: {consensus.dualConfirmation.technicalMomentum.rsiStatus} • Trend: {consensus.dualConfirmation.technicalMomentum.structureMomentum} • Direction: {consensus.dualConfirmation.technicalMomentum.direction}
+              </p>
+            </div>
+
+            {/* Fundamental Sentiment Weight (50%) */}
+            <div className="p-2 rounded bg-terminal-950/80 border border-terminal-border/80">
+              <div className="flex justify-between font-bold text-purple-300 mb-1">
+                <span>Fundamental Sentiment (50% Weight):</span>
+                <span>{consensus.dualConfirmation.fundamentalSentiment.score}% Score</span>
+              </div>
+              <p className="text-slate-300 text-[10px]">
+                Regime: {consensus.dualConfirmation.fundamentalSentiment.macroRegime} • Central Bank: {consensus.dualConfirmation.fundamentalSentiment.centralBankDivergence.replace(/_/g, ' ')} • Direction: {consensus.dualConfirmation.fundamentalSentiment.direction}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-2 text-[10px] text-slate-300 italic">
+            • {consensus.dualConfirmation.confirmationRationale}
+          </div>
+        </div>
+      )}
+
       {/* Core Fundamental & Technical Reasons Driving the Decision (5 Structured Pillars) */}
       <div className="mt-4 space-y-2.5">
         <div className="flex items-center justify-between">

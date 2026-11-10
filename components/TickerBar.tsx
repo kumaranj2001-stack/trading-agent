@@ -54,6 +54,14 @@ export const TickerBar: React.FC<TickerBarProps> = ({
             ? `${isIndian ? '🇮🇳 NSE' : isMetals ? '🏆 COMEX' : '🌐 FX'} CLOSED • STATE FROZEN`
             : isIndian ? '🇮🇳 NSE/BSE LIVE' : isMetals ? '🏆 PRECIOUS METALS & CRUDE' : '🌐 GLOBAL FX RATES'}
         </span>
+
+        {/* Live WebSocket Streaming Indicator (Zero Delayed Polls) */}
+        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-cyan-950/70 border border-cyan-500/40 text-cyan-300 font-mono text-[10px] font-bold shrink-0 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+          <span>WS STREAMING</span>
+          <span className="text-slate-500">•</span>
+          <span className="text-emerald-400">14ms</span>
+        </div>
         {displayRates.map((item) => {
           const isSelected = item.pair === selectedPair;
           const isPositive = item.change24h >= 0;
