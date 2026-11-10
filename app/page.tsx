@@ -837,7 +837,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Tab 03: Vision Atlas Lab - Advanced SMC Analysis & Live Simulator */}
+        {/* Tab 03: Vision Atlas Lab - Multi-Factor Confluence & 1,050+ Institutional Strategies */}
         {(activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab') && (
           <VisionAtlasWorkspace
             pair={selectedPair}

@@ -1348,11 +1348,84 @@ export interface InstitutionalOptimalEntry {
   institutionalScore: number;
 }
 
+export interface ConfluenceFactorItem {
+  id: string;
+  factor: string;
+  category: 'TECHNICAL' | 'FUNDAMENTAL' | 'FLOW' | 'CENTRAL_BANK';
+  status: 'ALIGNED_BULLISH' | 'ALIGNED_BEARISH' | 'NEUTRAL' | 'DIVERGENT';
+  weightPercent: number;
+  impactScore: number;
+  description: string;
+}
+
+export interface MultiFactorConfluenceReport {
+  compositeScore: number; // 0.0 to 100.0%
+  grade: 'A+' | 'A' | 'B' | 'C' | 'NEUTRAL';
+  directionalBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  activeSetupName: string;
+  dynamicWeights: {
+    technicalWeight: number; // e.g. 52
+    fundamentalWeight: number; // e.g. 48
+    flowWeight: number; // e.g. 25
+    centralBankWeight: number; // e.g. 25
+    rationale: string;
+  };
+  technicalStream: {
+    totalRulesEvaluated: number; // 525
+    passingRulesCount: number;
+    bullishCount: number;
+    bearishCount: number;
+    neutralCount: number;
+    streamConfidence: number; // 0-100%
+    dominantPattern: string;
+    subcategories: Record<string, { count: number; score: number; bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL' }>;
+    topMatchedRules: KnowledgeRule[];
+  };
+  fundamentalStream: {
+    totalRulesEvaluated: number; // 525
+    passingRulesCount: number;
+    supportiveCount: number;
+    restrictiveCount: number;
+    neutralCount: number;
+    streamConfidence: number; // 0-100%
+    regimeBias: string;
+    centralBankPolicyStance: {
+      usFed: 'HAWKISH' | 'DOVISH' | 'NEUTRAL';
+      rbi: 'HAWKISH' | 'DOVISH' | 'ACCOMMODATIVE' | 'NEUTRAL';
+      ecb: 'HAWKISH' | 'DOVISH' | 'NEUTRAL';
+      boj: 'HAWKISH' | 'DOVISH' | 'NEUTRAL';
+      rateDifferentialBps: number;
+      rateSpreadDirection: string;
+    };
+    indianMarketDynamics: {
+      fiiFpiNetCashFlowCr: number;
+      diiNetCashFlowCr: number;
+      fiiIndexLongShortRatio: number;
+      indiaVix: number;
+      rbiRepoStance: string;
+      currentAccountDeficitStatus: string;
+      corporateEarningsImpact: string;
+    };
+    macroCommodityTransmission: {
+      crudeOilImpact: string;
+      goldReserveInflow: string;
+      dxyDollarStrengthIndex: number;
+      inflationTrajectory: string;
+    };
+    topMatchedRules: KnowledgeRule[];
+  };
+  confluenceMatrix: ConfluenceFactorItem[];
+  institutionalRationale: string;
+}
+
 export interface VisionAtlasPayload {
   symbol: CurrencyPair;
   timeframe: TimeFrame;
   timestamp: number;
   timestampFormatted: string;
+
+  // Unified Multi-Factor Confluence Engine (Synthesizing 1,050+ Institutional Strategies)
+  multiFactorConfluence: MultiFactorConfluenceReport;
 
   // Real-Time Telemetry Grid
   telemetry: {
