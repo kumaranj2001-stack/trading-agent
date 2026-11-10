@@ -832,6 +832,11 @@ export interface DebateSynthesisResult {
   activeScenario?: DebateScenarioContext;
   terminalNode?: DebateTerminalNode;
   divergence?: DebateDivergenceMetrics;
+  riskGovernance?: {
+    verdict: RiskVerdict;
+    reasoning: string;
+    monteCarlo?: MonteCarloProjection;
+  };
 }
 
 export interface SwarmConsensusResult {

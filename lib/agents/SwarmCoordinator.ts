@@ -1055,6 +1055,13 @@ export class SwarmCoordinator {
       activeScenario: scenarioContext,
       terminalNode,
       divergence: divergenceMetrics,
+      riskGovernance: {
+        verdict: risk.verdict,
+        reasoning: risk.verdict === 'VETOED'
+          ? `VETO ENFORCED: ${risk.vetoReasons?.[0] || 'Circuit breaker active.'}`
+          : `RISK APPROVED: ${debatedRiskReward}:1 Risk-to-Reward ratio, stop anchored at ${debatedStopLoss.toFixed(decimals)} (${dominantSide === 'SELL' ? 'above entry' : 'below entry'}), targeting ${debatedTakeProfit.toFixed(decimals)} (${dominantSide === 'SELL' ? 'below entry' : 'above entry'}) with $${updatedThresholds.maxLossUsd} downside cap (${risk.parameters.accountRiskPercent}% equity).`,
+        monteCarlo: risk.monteCarlo,
+      },
     };
 
     return {

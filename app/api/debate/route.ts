@@ -66,6 +66,8 @@ export async function POST(req: NextRequest) {
         confidence: result.overallConfidence,
         priceThresholds: result.debateSynthesis?.priceThresholds,
         executionSignal: result.executionSignal,
+        risk: result.agents.risk,
+        riskGovernance: result.unifiedDecision.coreReasons.riskGovernance,
       },
     });
   } catch (error: any) {

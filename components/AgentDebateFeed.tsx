@@ -9,12 +9,14 @@ import {
   DebateSynthesisResult, 
   DebatePriceThresholds,
   DebateScenarioContext,
-  DebateActionableDirective
+  DebateActionableDirective,
+  SwarmConsensusResult
 } from '@/lib/types';
 import { 
   Send, 
   Bot, 
   Shield, 
+  ShieldCheck,
   BarChart2, 
   Globe, 
   Scale, 
@@ -53,6 +55,7 @@ interface AgentDebateFeedProps {
   onClearScenario?: () => void;
   isDebating?: boolean;
   onBackToTerminal?: () => void;
+  consensus?: SwarmConsensusResult | null;
 }
 
 const PRESET_SCENARIOS = [
@@ -76,6 +79,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
   onClearScenario,
   isDebating = false,
   onBackToTerminal,
+  consensus,
 }) => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [activeFilterRound, setActiveFilterRound] = useState<number | 'ALL'>('ALL');
@@ -174,6 +178,23 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
 
   const isBuy = definitiveBias.includes('BUY');
   const isSell = definitiveBias.includes('SELL');
+
+  // Dedicated Risk Governance & Edge derived state (Exclusive to Autonomous 5-Agent Debate & Consensus Chamber)
+  const effectiveRiskVerdict = 
+    isModifyPosition ? 'MODIFIED' : 
+    isStrategicExit ? 'VETOED' : 
+    (consensus?.agents?.risk?.verdict || synthesis?.riskGovernance?.verdict || 'APPROVED');
+
+  const effectiveRiskGovernance = 
+    consensus?.unifiedDecision?.coreReasons?.riskGovernance || 
+    synthesis?.riskGovernance?.reasoning || 
+    (isModifyPosition 
+      ? `DYNAMIC MITIGATION: Ratcheted hard stop-loss to ${formatPrice(thresholds.stopLoss)} (${isSell ? 'above entry' : 'below entry'}), reduced position sizing to ${thresholds.positionSizeLots} lots, locking R:R at ${thresholds.riskRewardRatio}:1 with -$${thresholds.maxLossUsd} USD downside risk cap.` 
+      : isStrategicExit 
+      ? `VETO ENFORCED: Capital preservation gate engaged. Tail-risk invalidation threshold breached by active scenario stress condition.` 
+      : `RISK APPROVED: ${thresholds.riskRewardRatio}:1 Risk-to-Reward ratio, stop anchored at ${formatPrice(thresholds.stopLoss)} (${isSell ? 'above entry' : 'below entry'}), targeting ${formatPrice(thresholds.takeProfit)} with -$${thresholds.maxLossUsd} USD downside cap.`);
+
+  const effectiveMonteCarlo = consensus?.agents?.risk?.monteCarlo || synthesis?.riskGovernance?.monteCarlo;
 
   const directiveBadgeColor = isStrategicExit
     ? 'text-rose-400 bg-rose-950/80 border-rose-600 shadow-rose-950/50'
@@ -831,6 +852,37 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                 {thresholds.positionSizeLots} Standard Lots
               </span>
             </div>
+          </div>
+
+          {/* 5. RISK GOVERNANCE & EDGE (Dedicated Section Exclusive to 5-Agent Debate & Consensus Chamber) */}
+          <div className="bg-terminal-900/90 border border-emerald-500/40 rounded-xl p-3 flex flex-col justify-between font-mono text-xs space-y-2 shadow-sm">
+            <div>
+              <div className="flex items-center justify-between mb-1.5 text-emerald-400 font-bold">
+                <span className="flex items-center gap-1.5 text-xs">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  5. Risk Governance & Edge
+                </span>
+                <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                  effectiveRiskVerdict === 'APPROVED' 
+                    ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-300' 
+                    : effectiveRiskVerdict === 'MODIFIED'
+                    ? 'bg-amber-950/60 border border-amber-800 text-amber-300'
+                    : 'bg-rose-950/60 border border-rose-800 text-rose-300'
+                }`}>
+                  {effectiveRiskVerdict}
+                </span>
+              </div>
+              <p className="text-slate-300 text-[11px] leading-relaxed font-sans">
+                {effectiveRiskGovernance}
+              </p>
+            </div>
+            {effectiveMonteCarlo && (
+              <div className="pt-2 border-t border-emerald-900/60 flex flex-wrap items-center justify-between text-[10px] text-slate-300 font-medium">
+                <span>Monte Carlo 1,000 Paths: Win Prob <strong className="text-emerald-400">{effectiveMonteCarlo.projectedProfitProbability}%</strong></span>
+                <span>95% VaR: <strong className="text-cyan-300">${effectiveMonteCarlo.var95Usd}</strong></span>
+                <span>Sharpe: <strong className="text-indigo-300">{effectiveMonteCarlo.sharpeRatio}</strong></span>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons: Driven by Actionable Directive & Definitive Bias */}

@@ -793,6 +793,7 @@ export default function Home() {
                 onOpenMonteCarlo={() => setActiveTab('var')}
                 isMarketFrozen={isMarketFrozen}
                 sessionInfo={sessionInfo}
+                showRiskGovernance={false}
               />
             )}
 
@@ -893,6 +894,7 @@ export default function Home() {
                 onOpenMonteCarlo={() => setActiveTab('var')}
                 isMarketFrozen={isMarketFrozen}
                 sessionInfo={sessionInfo}
+                showRiskGovernance={false}
               />
             )}
 
@@ -952,6 +954,7 @@ export default function Home() {
             onClearScenario={handleClearDebateScenario}
             isDebating={isDebating}
             onBackToTerminal={() => setActiveTab('terminal')}
+            consensus={consensus}
           />
         )}
 
