@@ -803,6 +803,18 @@ export interface MacroCatalystEvent {
 export type MacroSignalType = 'BUY' | 'SELL' | 'UNCONFIRMED';
 export type ConvergenceStatus = 'CONVERGED' | 'AWAITING_CONVERGENCE' | 'DISCREPANCY_FLAGGED';
 
+export interface PreFlightGateResult {
+  passed: boolean;
+  status: 'GATE_PASSED' | 'GATE_ABORTED_NO_CATALYST';
+  symbol: CurrencyPair;
+  matchedEvent: MacroCatalystEvent | null;
+  activeOrImminentCatalysts: MacroCatalystEvent[];
+  catalystCount: number;
+  abortReason: string | null;
+  recommendedActivePairs: CurrencyPair[];
+  timestamp: number;
+}
+
 export interface MacroIntelligenceReport {
   id: string;
   timestamp: number;
@@ -814,6 +826,53 @@ export interface MacroIntelligenceReport {
   validationStatus: ConvergenceStatus;
   statusDescription: string;
   
+  // Strict Pre-Flight Verification Gate
+  preFlightVerification: {
+    status: 'PASSED' | 'ABORTED_NO_CATALYST';
+    gateVerifiedAt: string;
+    scheduledEventsFound: number;
+    matchedCatalystId: string | null;
+    isImminentOrActive: boolean;
+    abortAlertMessage?: string;
+  };
+
+  // Mandatory Dual-Stage Validation Mechanism
+  dualStageValidation: {
+    // Stage 1: Curated 38-Source Wire Stream Ingestion & Evaluation
+    stage1WireStream: {
+      status: 'CONFIRMED' | 'INSUFFICIENT_DETAIL' | 'AMBIGUOUS' | 'NEWS_GAP_DETECTED';
+      monitoredOutletsCount: number; // 38
+      primaryWireConfidence: number; // e.g. 78% or 91%
+      articleCount: number;
+      detailDepth: 'INSTITUTIONAL_HIGH' | 'MODERATE' | 'SPARSE';
+      ambiguityScore: number; // 0.00 to 1.00
+      newsGapsDetected: string[];
+      primarySourcesProcessed: string[];
+    };
+    // Stage 2: Autonomous Web-Search Fallback Agent
+    stage2WebSearchFallback: {
+      status: 'TRIGGERED_AND_CONVERGED' | 'STANDBY_NOT_REQUIRED';
+      triggered: boolean;
+      triggerReason: string | null;
+      externalSourcesQueried: string[];
+      realTimeIndicesCrossReferenced: string[];
+      verifiedFactsSynthesized: string[];
+      rumorsQuarantined: string[];
+      secondaryValidationConfidence: number;
+      dataIntegrityScore: number;
+    };
+  };
+
+  // Connected Sources Manifest
+  connectedSourceManifest: {
+    totalSourcesSynthesized: number;
+    primaryWireOutletsCount: number;
+    externalFallbackPortalsCount: number;
+    allSourceNames: string[];
+    verificationIntegrityLevel: '100%_VERIFIED_FACTS' | 'QUARANTINED';
+    unifiedFactSummary: string[];
+  };
+
   // Real-Time Data Convergence & Fail-Safe Verification
   dataConvergence: {
     isConverged: boolean;

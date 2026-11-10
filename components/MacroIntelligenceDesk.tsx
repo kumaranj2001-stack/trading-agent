@@ -35,7 +35,8 @@ import {
   MacroCatalystCategory, 
   MacroCatalystEvent, 
   MacroIntelligenceReport, 
-  MacroSignalType 
+  MacroSignalType,
+  PreFlightGateResult
 } from '@/lib/types';
 import { HIGH_IMPACT_MACRO_CATALYSTS, macroIntelligenceEngine } from '@/lib/macroIntelligenceEngine';
 import { BASE_PRICES } from '@/lib/marketData';
@@ -67,11 +68,15 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEventId, setSelectedEventId] = useState<string>(HIGH_IMPACT_MACRO_CATALYSTS[0].id);
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>(initialPair);
+  const [assetFilterMode, setAssetFilterMode] = useState<'CORRELATED' | 'ALL'>('CORRELATED');
   const [activeReport, setActiveReport] = useState<MacroIntelligenceReport | null>(null);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationStep, setGenerationStep] = useState<string>('');
   const [historyReports, setHistoryReports] = useState<MacroIntelligenceReport[]>([]);
   const [showAuditLogs, setShowAuditLogs] = useState<boolean>(false);
+
+  // Dynamic pre-flight verification gate evaluation
+  const preFlightResult: PreFlightGateResult = macroIntelligenceEngine.validatePreFlightGate(selectedPair, selectedEventId);
 
   // Sync initialPair if parent changes
   useEffect(() => {
@@ -123,22 +128,37 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
     }
   };
 
-  // Generate Report Action
+  // Generate Report Action with Pre-Flight Verification Gate
   const handleGenerateReport = async (forceUnconfirmed: boolean = false) => {
+    // 0. Pre-Flight Verification Gate Check
+    const preFlight = macroIntelligenceEngine.validatePreFlightGate(selectedPair, selectedEventId);
+    if (!forceUnconfirmed && !preFlight.passed) {
+      // Immediately abort and alert user; compile abort report
+      const abortedRep = macroIntelligenceEngine.generateMacroIntelligenceReport(selectedEventId, selectedPair);
+      setActiveReport(abortedRep);
+      setIsGenerating(false);
+      setGenerationStep('');
+      return;
+    }
+
     setIsGenerating(true);
-    setGenerationStep('Connecting to 38 Primary Financial Feeds & Central Bank Ports...');
+    setGenerationStep('Pre-Flight Gate: Cross-referencing macro calendar for scheduled catalysts...');
 
     setTimeout(() => {
-      setGenerationStep('Executing Autonomous Low-Latency Fallback Scraper...');
-    }, 350);
+      setGenerationStep('Stage 1: Ingesting 38 Curated Financial Wires & evaluating confidence...');
+    }, 300);
 
     setTimeout(() => {
-      setGenerationStep('Cross-Verifying Actual vs Forecast Figures (95% Confidence Threshold)...');
-    }, 700);
+      setGenerationStep('Stage 2: Evaluating primary detail; triggering autonomous web-search fallback...');
+    }, 650);
 
     setTimeout(() => {
-      setGenerationStep('Synthesizing Order Flow Imbalances & Technical Structure...');
-    }, 1050);
+      setGenerationStep('Synthesizing verified facts across indices & quarantining rumors...');
+    }, 1000);
+
+    setTimeout(() => {
+      setGenerationStep('Connecting all data sources & generating trade parameters...');
+    }, 1350);
 
     setTimeout(async () => {
       try {
@@ -152,7 +172,7 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
           }),
         });
         const json = await res.json();
-        if (json.success && json.data) {
+        if (json.data) {
           const rep: MacroIntelligenceReport = json.data;
           setActiveReport(rep);
 
@@ -171,15 +191,13 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
         setIsGenerating(false);
         setGenerationStep('');
       }
-    }, 1400);
+    }, 1600);
   };
 
-  // Generate initial default report on first load if none active
+  // Generate report or pre-flight check when catalyst or pair changes
   useEffect(() => {
-    if (!activeReport) {
-      const rep = macroIntelligenceEngine.generateMacroIntelligenceReport(selectedEventId, selectedPair);
-      setActiveReport(rep);
-    }
+    const rep = macroIntelligenceEngine.generateMacroIntelligenceReport(selectedEventId, selectedPair);
+    setActiveReport(rep);
   }, [selectedEventId, selectedPair]);
 
   // Export Report as JSON
@@ -373,20 +391,38 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
             <div className="flex items-center justify-between border-b border-terminal-border pb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
                 <Layers className="w-4 h-4 text-indigo-400" />
-                CORRELATED TERMINAL PAIRS
+                TRADABLE ASSET SELECTOR
               </span>
-              <span className="text-[10px] font-mono text-slate-400">
-                DYNAMICALLY FILTERED
-              </span>
+              <div className="flex items-center gap-1 bg-terminal-950 p-0.5 rounded border border-terminal-border text-[9px] font-mono">
+                <button
+                  onClick={() => setAssetFilterMode('CORRELATED')}
+                  className={`px-2 py-0.5 rounded transition-colors ${
+                    assetFilterMode === 'CORRELATED' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  Correlated ({correlatedPairs.length})
+                </button>
+                <button
+                  onClick={() => setAssetFilterMode('ALL')}
+                  className={`px-2 py-0.5 rounded transition-colors ${
+                    assetFilterMode === 'ALL' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  All ({Object.keys(BASE_PRICES).length})
+                </button>
+              </div>
             </div>
             <p className="text-[11px] text-slate-400 font-mono">
-              Catalyst directly impacts liquidity & order flow on these verified asset classes:
+              {assetFilterMode === 'CORRELATED' 
+                ? 'Catalyst directly impacts liquidity & order flow on these verified asset classes:' 
+                : 'Select any asset in terminal to test pre-flight verification gate validation:'}
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {correlatedPairs.map((p: CurrencyPair) => {
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[220px] overflow-y-auto pr-1">
+              {(assetFilterMode === 'CORRELATED' ? correlatedPairs : (Object.keys(BASE_PRICES) as CurrencyPair[])).map((p: CurrencyPair) => {
                 const isSelected = p === selectedPair;
                 const price = (BASE_PRICES as Record<string, number>)[p] || 0;
+                const isCorrelated = correlatedPairs.includes(p);
                 return (
                   <button
                     key={p}
@@ -394,15 +430,22 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                       setSelectedPair(p);
                       if (onSelectPair) onSelectPair(p);
                     }}
-                    className={`p-2.5 rounded-lg border text-left font-mono transition-all ${
+                    className={`p-2.5 rounded-lg border text-left font-mono transition-all relative ${
                       isSelected
                         ? 'bg-gradient-to-br from-indigo-950/80 to-cyan-950/80 border-cyan-400 text-white shadow-md ring-1 ring-cyan-400/50'
-                        : 'bg-terminal-950 border-terminal-border text-slate-300 hover:border-slate-500 hover:text-white'
+                        : isCorrelated
+                        ? 'bg-terminal-950 border-terminal-border text-slate-300 hover:border-slate-500 hover:text-white'
+                        : 'bg-terminal-950/50 border-terminal-border/60 text-slate-500 hover:border-rose-500/50 hover:text-slate-300'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold">{p}</span>
+                      <span className="text-xs font-bold truncate">{p}</span>
                       {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>}
+                      {!isCorrelated && (
+                        <span className="text-[8px] px-1 rounded bg-rose-950/60 text-rose-400 border border-rose-800/40">
+                          Uncorrelated
+                        </span>
+                      )}
                     </div>
                     <span className="text-[11px] text-slate-400 block mt-0.5">
                       ${price > 1000 ? price.toLocaleString() : price.toFixed(p.includes('JPY') ? 3 : 4)}
@@ -413,6 +456,51 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
             </div>
           </div>
 
+          {/* Pre-Flight Gate Status Alert / Badge */}
+          {preFlightResult.passed ? (
+            <div className="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/50 flex items-center justify-between font-mono text-[11px] text-emerald-300">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>
+                  PRE-FLIGHT GATE: <strong className="text-white">PASSED</strong> ({preFlightResult.catalystCount} Active Catalyst Confirmations)
+                </span>
+              </div>
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/40">
+                ACTIVE
+              </span>
+            </div>
+          ) : (
+            <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-500/80 font-mono text-xs text-rose-200 space-y-2 animate-shake">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <ShieldAlert className="w-4 h-4 text-rose-400 animate-pulse" />
+                  PRE-FLIGHT GATE ABORT
+                </span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-bold border border-rose-500/40">
+                  ZERO CATALYSTS
+                </span>
+              </div>
+              <p className="text-[11px] text-rose-100 leading-snug">
+                The macro calendar returned <strong>0 active or imminent catalysts</strong> scheduled for <strong className="text-white underline">{selectedPair}</strong>. Pipeline aborted to eliminate false positives from empty data sets.
+              </p>
+              <div className="pt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
+                <span className="text-slate-300">Switch to active pair:</span>
+                {preFlightResult.recommendedActivePairs.slice(0, 3).map(rec => (
+                  <button
+                    key={rec}
+                    onClick={() => {
+                      setSelectedPair(rec);
+                      if (onSelectPair) onSelectPair(rec);
+                    }}
+                    className="px-1.5 py-0.5 rounded bg-terminal-900 hover:bg-terminal-800 text-cyan-300 border border-cyan-500/40 font-bold"
+                  >
+                    {rec}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Action Trigger Buttons */}
           <div className="space-y-2">
             <button
@@ -421,12 +509,18 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
               className={`w-full py-3 px-4 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-98 ${
                 isGenerating
                   ? 'bg-terminal-800 text-slate-400 cursor-not-allowed border border-terminal-border'
+                  : !preFlightResult.passed
+                  ? 'bg-rose-900/60 hover:bg-rose-800/80 text-rose-200 border border-rose-500/60'
                   : 'bg-gradient-to-r from-cyan-600 via-indigo-600 to-cyan-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-cyan-500/25 border border-cyan-400/40'
               }`}
             >
               <Zap className={`w-4 h-4 ${isGenerating ? 'animate-spin' : 'text-cyan-300 animate-pulse'}`} />
               <span>
-                {isGenerating ? generationStep : `GENERATE REPORT FOR ${selectedPair}`}
+                {isGenerating 
+                  ? generationStep 
+                  : !preFlightResult.passed 
+                  ? `PRE-FLIGHT ABORT: ZERO CATALYSTS FOR ${selectedPair}` 
+                  : `GENERATE REPORT FOR ${selectedPair}`}
               </span>
             </button>
 
@@ -446,6 +540,78 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
         {/* RIGHT COLUMN: Real-Time Intelligence Report & Execution Ticket (7 Columns) */}
         <div className="lg:col-span-7 space-y-4">
           {activeReport ? (
+            activeReport.preFlightVerification?.status === 'ABORTED_NO_CATALYST' ? (
+              /* PRE-FLIGHT GATE ABORT TERMINATION VIEW */
+              <div className="p-6 rounded-2xl bg-rose-950/70 border border-rose-500/70 shadow-2xl font-mono text-rose-200 space-y-4 animate-fade-in">
+                <div className="flex items-center justify-between border-b border-rose-500/40 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-rose-900/80 border border-rose-400 flex items-center justify-center text-white">
+                      <ShieldAlert className="w-6 h-6 text-rose-300 animate-pulse" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white uppercase tracking-wider">
+                        PRE-FLIGHT VERIFICATION GATE: ABORTED
+                      </h3>
+                      <p className="text-xs text-rose-300">
+                        Zero scheduled macroeconomic catalysts confirmed for {activeReport.selectedPair}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded bg-rose-500/20 text-rose-300 border border-rose-500/50 font-bold text-xs">
+                    PIPELINE TERMINATED
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-xl bg-black/60 border border-rose-500/30 text-xs text-rose-100 space-y-2 leading-relaxed">
+                  <span className="text-rose-400 font-bold block uppercase">
+                    Risk Governance & False-Positive Elimination Protocol:
+                  </span>
+                  <p>
+                    The automation cross-referenced <strong className="text-white underline">{activeReport.selectedPair}</strong> against the institutional macro calendar prior to document compilation. Because <strong>0 scheduled or imminent macroeconomic catalysts</strong> exist for this specific asset, report compilation was immediately halted.
+                  </p>
+                  <p className="text-slate-400">
+                    This strict architectural verification gate prevents the generation of false positives, speculative trade setups, and hallucinations from empty calendar data sets.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-terminal-950 border border-terminal-border text-xs space-y-1.5 text-slate-300">
+                  <span className="font-bold text-slate-400 block uppercase text-[10px]">Gate Verification Audit:</span>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span>Evaluated Symbol:</span>
+                    <strong className="text-white font-mono">{activeReport.selectedPair}</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span>Calendar Scheduled Events:</span>
+                    <strong className="text-rose-400 font-mono">0 Events Active</strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span>Pipeline Action:</span>
+                    <strong className="text-amber-400 font-mono">Quarantined / Aborted</strong>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <span className="text-xs text-slate-300 font-bold block mb-2">
+                    Actionable Remediation: Select an asset with verified catalysts:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {['XAU/USD', 'EUR/USD', 'WTI_CRUDE', 'USD/JPY', 'NIFTY 50'].map(p => (
+                      <button
+                        key={p}
+                        onClick={() => {
+                          setSelectedPair(p as CurrencyPair);
+                          if (onSelectPair) onSelectPair(p as CurrencyPair);
+                        }}
+                        className="py-2 px-3 rounded-lg bg-terminal-900 hover:bg-terminal-800 text-cyan-300 hover:text-white border border-cyan-500/40 font-bold text-xs transition-all shadow-sm flex items-center gap-1.5"
+                      >
+                        <Zap className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Switch to {p}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-4">
               {/* Primary Signal & Validation Status Banner */}
               <div className={`p-4 sm:p-5 rounded-2xl border shadow-xl transition-all ${
@@ -486,6 +652,9 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                           {activeReport.signal === 'SELL' && `DEFINITIVE SELL SIGNAL (${activeReport.selectedPair})`}
                           {activeReport.signal === 'UNCONFIRMED' && `UNCONFIRMED – AWAITING DATA CONVERGENCE`}
                         </span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                          PRE-FLIGHT GATE VERIFIED
+                        </span>
                       </div>
                       <p className="text-xs text-slate-300 font-mono mt-0.5">
                         {activeReport.statusDescription}
@@ -517,6 +686,141 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                   {activeReport.strategicSummary}
                 </div>
               </div>
+
+              {/* MANDATORY DUAL-STAGE VALIDATION PIPELINE */}
+              {activeReport.dualStageValidation && (
+                <div className="p-4 rounded-xl bg-terminal-900 border border-indigo-500/40 space-y-3 shadow-md font-mono text-xs">
+                  <div className="flex items-center justify-between border-b border-terminal-border pb-2">
+                    <span className="font-bold text-white flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-cyan-400" />
+                      MANDATORY DUAL-STAGE VALIDATION MECHANISM
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-bold">
+                      DUAL-STAGE INTEGRITY ACTIVE
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Stage 1: Curated 38-Source Wire Stream */}
+                    <div className="p-3 rounded-lg bg-terminal-950 border border-terminal-border space-y-2">
+                      <div className="flex items-center justify-between border-b border-terminal-border/60 pb-1.5">
+                        <span className="font-bold text-cyan-300 flex items-center gap-1.5 text-[11px]">
+                          <Radio className="w-3.5 h-3.5 text-cyan-400" />
+                          STAGE 1: 38-SOURCE WIRE STREAM
+                        </span>
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                          activeReport.dualStageValidation.stage1WireStream.status === 'CONFIRMED'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                        }`}>
+                          {activeReport.dualStageValidation.stage1WireStream.status.replace('_', ' ')}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 text-[10px] text-slate-300">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Primary Wire Confidence:</span>
+                          <strong className="text-emerald-400">{activeReport.dualStageValidation.stage1WireStream.primaryWireConfidence}%</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Coverage Depth:</span>
+                          <strong className="text-white">{activeReport.dualStageValidation.stage1WireStream.articleCount} Articles / {activeReport.dualStageValidation.stage1WireStream.monitoredOutletsCount} Outlets</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Ambiguity Score:</span>
+                          <strong className="text-cyan-300">{activeReport.dualStageValidation.stage1WireStream.ambiguityScore} / 1.00</strong>
+                        </div>
+                      </div>
+
+                      {activeReport.dualStageValidation.stage1WireStream.newsGapsDetected.length > 0 && (
+                        <div className="p-1.5 rounded bg-amber-950/40 border border-amber-500/40 text-[9px] text-amber-200 space-y-0.5">
+                          <span className="font-bold block text-amber-300">Evaluated Wire Gaps:</span>
+                          {activeReport.dualStageValidation.stage1WireStream.newsGapsDetected.map((gap, i) => (
+                            <p key={i}>• {gap}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stage 2: Autonomous Web-Search Fallback Agent */}
+                    <div className="p-3 rounded-lg bg-terminal-950 border border-terminal-border space-y-2">
+                      <div className="flex items-center justify-between border-b border-terminal-border/60 pb-1.5">
+                        <span className="font-bold text-indigo-300 flex items-center gap-1.5 text-[11px]">
+                          <Search className="w-3.5 h-3.5 text-indigo-400" />
+                          STAGE 2: AUTONOMOUS WEB-SEARCH AGENT
+                        </span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                          {activeReport.dualStageValidation.stage2WebSearchFallback.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+
+                      <div className="space-y-1 text-[10px] text-slate-300">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Secondary Validation:</span>
+                          <strong className="text-emerald-400">{activeReport.dualStageValidation.stage2WebSearchFallback.secondaryValidationConfidence}%</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Data Integrity Score:</span>
+                          <strong className="text-cyan-300">{activeReport.dualStageValidation.stage2WebSearchFallback.dataIntegrityScore}%</strong>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">External Sources Queried:</span>
+                          <strong className="text-white">{activeReport.dualStageValidation.stage2WebSearchFallback.externalSourcesQueried.length} Portals</strong>
+                        </div>
+                      </div>
+
+                      {/* Verified Facts & Quarantined Rumors List */}
+                      <div className="space-y-1 pt-1">
+                        <span className="text-[9px] text-slate-400 font-bold block uppercase">Synthesized Verified Facts:</span>
+                        {activeReport.dualStageValidation.stage2WebSearchFallback.verifiedFactsSynthesized.slice(0, 2).map((fact, i) => (
+                          <div key={i} className="flex items-start gap-1 text-[9px] text-emerald-300">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
+                            <span>{fact}</span>
+                          </div>
+                        ))}
+                        {activeReport.dualStageValidation.stage2WebSearchFallback.rumorsQuarantined.map((rumor, i) => (
+                          <div key={i} className="flex items-start gap-1 text-[9px] text-rose-300">
+                            <XCircle className="w-3 h-3 text-rose-400 shrink-0 mt-0.5" />
+                            <span>{rumor}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CONNECTED SOURCE MANIFEST CARD */}
+              {activeReport.connectedSourceManifest && (
+                <div className="p-4 rounded-xl bg-terminal-900 border border-terminal-border space-y-3 shadow-md font-mono text-xs">
+                  <div className="flex items-center justify-between border-b border-terminal-border pb-2">
+                    <span className="font-bold text-white flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-emerald-400" />
+                      CONNECTED SOURCE MANIFEST ({activeReport.connectedSourceManifest.totalSourcesSynthesized} SOURCES SYNTHESIZED)
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      {activeReport.connectedSourceManifest.verificationIntegrityLevel.replace('_', ' ')}
+                    </span>
+                  </div>
+
+                  {/* Badges of Connected Sources */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {activeReport.connectedSourceManifest.allSourceNames.map((s, idx) => (
+                      <span key={idx} className="text-[9px] px-2 py-0.5 rounded bg-terminal-950 border border-terminal-border/80 text-slate-300 font-mono">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Unified Fact Summary */}
+                  <div className="p-3 rounded-lg bg-terminal-950 border border-terminal-border space-y-1 text-[10px] text-slate-300 leading-relaxed">
+                    <span className="text-cyan-400 font-bold block mb-1">PROPER SOURCE DATA SYNTHESIS:</span>
+                    {activeReport.connectedSourceManifest.unifiedFactSummary.map((sum, i) => (
+                      <p key={i}>• {sum}</p>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Data Convergence & Fail-Safe Verification Telemetry */}
               <div className="p-4 rounded-xl bg-terminal-900 border border-terminal-border space-y-3 shadow-md font-mono text-xs">
@@ -741,7 +1045,8 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                 </div>
               </div>
             </div>
-          ) : (
+          )
+        ) : (
             <div className="p-8 rounded-2xl bg-terminal-900 border border-terminal-border text-center space-y-3 font-mono">
               <Zap className="w-10 h-10 text-cyan-400 mx-auto animate-pulse" />
               <h3 className="text-white text-base font-bold">Select Catalyst & Click Generate Report</h3>
