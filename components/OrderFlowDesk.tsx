@@ -313,7 +313,7 @@ export const OrderFlowDesk: React.FC<OrderFlowDeskProps> = ({
               </div>
 
               <div className="space-y-1 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
-                {report?.footprintLevels.map((lvl, idx) => {
+                {report?.footprintLevels.map((lvl: FootprintPriceLevel, idx: number) => {
                   const isPoc = lvl.isPointOfControl;
                   const deltaPositive = lvl.delta >= 0;
 
@@ -429,7 +429,7 @@ export const OrderFlowDesk: React.FC<OrderFlowDeskProps> = ({
             <div className="space-y-1 pt-1">
               <span className="text-[10px] text-slate-400 uppercase font-bold block">Volume Distribution by Price Level:</span>
               <div className="space-y-1">
-                {report?.footprintLevels.slice(0, 7).map((lvl, i) => {
+                {report?.footprintLevels.slice(0, 7).map((lvl: FootprintPriceLevel, i: number) => {
                   const maxTotal = report.volumeProfile.totalVolume || 1;
                   const barWidth = Math.min(100, Math.round((lvl.totalVolume / (maxTotal / 5)) * 100));
 
@@ -592,7 +592,7 @@ export const OrderFlowDesk: React.FC<OrderFlowDeskProps> = ({
 
               <div className="p-2 rounded bg-terminal-950 border border-terminal-border/80 space-y-1 text-[9px] text-slate-300">
                 <span className="font-bold text-cyan-400 block uppercase">Momentum Drivers:</span>
-                {report?.technicalMomentum.momentumDrivers.map((d, i) => (
+                {report?.technicalMomentum.momentumDrivers.map((d: string, i: number) => (
                   <p key={i}>• {d}</p>
                 ))}
               </div>
@@ -640,7 +640,7 @@ export const OrderFlowDesk: React.FC<OrderFlowDeskProps> = ({
 
               <div className="p-2 rounded bg-terminal-950 border border-terminal-border/80 space-y-1 text-[9px] text-slate-300">
                 <span className="font-bold text-indigo-400 block uppercase">Sentiment Drivers:</span>
-                {report?.fundamentalSentiment.sentimentDrivers.map((d, i) => (
+                {report?.fundamentalSentiment.sentimentDrivers.map((d: string, i: number) => (
                   <p key={i}>• {d}</p>
                 ))}
               </div>

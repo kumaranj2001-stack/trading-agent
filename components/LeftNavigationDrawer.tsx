@@ -24,6 +24,7 @@ import {
   PlayCircle,
   Sliders,
   Zap,
+  BarChart2,
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, NavigationTab } from '@/lib/types';
 
@@ -41,6 +42,7 @@ export interface LeftNavigationDrawerProps {
   onOpenScanner?: () => void;
   onOpenCalendar?: () => void;
   onOpenMacroIntelligence?: () => void;
+  onOpenOrderFlow?: () => void;
   onOpenSettings?: () => void;
   executionMode?: ExecutionMode;
   onToggleExecutionMode?: () => void;
@@ -63,6 +65,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
   onOpenKnowledge,
   onOpenScanner,
   onOpenCalendar,
+  onOpenOrderFlow,
   onOpenSettings,
   executionMode,
   onToggleExecutionMode,
@@ -238,8 +241,25 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'calendar',
+      id: 'order-flow',
       number: '09',
+      label: 'Order Flow',
+      description: 'Footprint Charts, Volume Profile & Dual Confluence Execution',
+      icon: BarChart2,
+      color: 'text-cyan-400',
+      activeBg: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 font-semibold',
+      isActive: activeTab === 'order-flow' || activeTab === 'orderflow',
+      badge: 'WEBSOCKET',
+      badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+      action: () => {
+        setActiveTab('order-flow');
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
+    {
+      id: 'calendar',
+      number: '10',
       label: 'Macro Calendar',
       description: 'Institutional Macro Economic Release Pulse',
       icon: Calendar,
@@ -256,7 +276,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'macro-intelligence',
-      number: '10',
+      number: '11',
       label: 'Macro Intelligence',
       description: 'Event-Driven Macro Intelligence & Execution Engine',
       icon: Zap,
@@ -273,7 +293,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'scanner',
-      number: '11',
+      number: '12',
       label: 'Scanner',
       description: 'Multi-Asset Screener & Confluence Hunter',
       icon: Radar,
@@ -290,7 +310,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'var',
-      number: '12',
+      number: '13',
       label: 'VAR',
       description: '1,000-Path Monte Carlo Value-at-Risk',
       icon: Shield,
@@ -307,7 +327,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'journals-history',
-      number: '13',
+      number: '14',
       label: 'Journals',
       description: 'Historical Execution Logs & Loss Attribution',
       icon: BookOpen,
@@ -324,7 +344,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'firebase',
-      number: '14',
+      number: '15',
       label: 'Firebase',
       description: 'Firestore Cloud Realtime State Sync',
       icon: Cloud,
