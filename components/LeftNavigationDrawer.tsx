@@ -207,8 +207,25 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'wire',
+      id: 'journals',
       number: '07',
+      label: 'Journals',
+      description: 'Persistent Trade Journal & Loss Review',
+      icon: BookOpen,
+      color: 'text-emerald-400',
+      activeBg: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-semibold',
+      isActive: activeTab === 'journals',
+      badge: `${journalCount} LOGS`,
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      action: () => {
+        setActiveTab('journals');
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
+    {
+      id: 'wire',
+      number: '08',
       label: 'Wire',
       description: 'Wire with 38 Live Financial Outlets & Institutional Feeds',
       icon: Radio,
@@ -225,7 +242,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'order-flow',
-      number: '08',
+      number: '09',
       label: 'Order Flow',
       description: 'Footprint Charts, Volume Profile & Dual Confluence Execution',
       icon: BarChart2,
@@ -236,23 +253,6 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
       action: () => {
         setActiveTab('order-flow');
-        onClose();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      },
-    },
-    {
-      id: 'journals',
-      number: '09',
-      label: 'Journals',
-      description: 'Persistent Trade Journal & Loss Review',
-      icon: BookOpen,
-      color: 'text-emerald-400',
-      activeBg: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-semibold',
-      isActive: activeTab === 'journals',
-      badge: `${journalCount} LOGS`,
-      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      action: () => {
-        setActiveTab('journals');
         onClose();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
