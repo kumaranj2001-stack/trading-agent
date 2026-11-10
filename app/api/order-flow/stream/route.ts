@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const rawSymbol = searchParams.get('symbol') || searchParams.get('pair') || 'XAU/USD';
+  const rawSymbol = searchParams.get('symbol') || 'XAU/USD';
   const symbol: CurrencyPair = (rawSymbol in BASE_PRICES) ? (rawSymbol as CurrencyPair) : 'XAU/USD';
 
   const encoder = new TextEncoder();
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
         console.error('Order Flow SSE initial snapshot error:', err);
       }
 
-      // 2. High-frequency live tick streaming (1000ms cadence)
+      // 2. High-frequency live tick streaming (sub-second broadcast)
       const interval = setInterval(() => {
         try {
           const tick = orderFlowEngine.generateLiveStreamTick(symbol);
@@ -42,18 +42,21 @@ export async function GET(req: NextRequest) {
             controller.close();
           } catch {}
         }
-      }, 1000);
+      }, 750);
 
       // Handle client disconnect
       req.signal.addEventListener('abort', () => {
         clearInterval(interval);
+        try {
+          controller.close();
+        } catch {}
       });
     },
   });
 
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream',
+      'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',

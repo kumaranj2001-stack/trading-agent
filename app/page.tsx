@@ -739,6 +739,7 @@ export default function Home() {
         onOpenMonteCarlo={() => setActiveTab('var')}
         onOpenKnowledge={() => setActiveTab('knowledge')}
         onOpenNewsWire={() => setActiveTab('wire')}
+        onOpenOrderFlow={() => setActiveTab('order-flow')}
         onOpenFirebase={() => setActiveTab('firebase')}
         onOpenJournal={() => setActiveTab('journals')}
         onOpenLeftDrawer={() => setIsLeftDrawerOpen(true)}
@@ -974,17 +975,17 @@ export default function Home() {
           />
         )}
 
-        {/* Tab 09: Order Flow & Real-Time Price Action Execution Engine */}
+        {/* Tab 8.5: Dedicated Order Flow & Real-Time Price Action Execution Engine */}
         {(activeTab === 'order-flow' || (activeTab as string) === 'orderflow') && (
           <OrderFlowDesk
             isFullPage={true}
             onClose={() => setActiveTab('terminal')}
             selectedPair={selectedPair}
             onSelectPair={handleSelectPair}
-            onExecuteTrade={(tradeParams) => {
-              if (tradeParams) {
+            onExecuteTrade={(trade) => {
+              if (trade) {
                 handleExecuteTrade();
-                showNotification(`ORDER FLOW TRADE EXECUTED: ${tradeParams.direction} ${tradeParams.symbol} @ ${tradeParams.entry}`);
+                showNotification(`ORDER FLOW TRADE EXECUTED: ${trade.direction} ${trade.symbol} @ $${trade.entry}`);
               }
             }}
           />
@@ -1079,6 +1080,7 @@ export default function Home() {
         onOpenJournal={() => setActiveTab('journals')}
         onOpenMonteCarlo={() => setActiveTab('var')}
         onOpenNewsWire={() => setActiveTab('wire')}
+        onOpenOrderFlow={() => setActiveTab('order-flow')}
         onOpenFirebase={() => setActiveTab('firebase')}
         onOpenKnowledge={() => setActiveTab('knowledge')}
         onOpenScanner={() => setActiveTab('scanner')}

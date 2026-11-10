@@ -7,25 +7,21 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
-  const startTime = performance.now();
   try {
     const { searchParams } = new URL(req.url);
-    const rawSymbol = searchParams.get('symbol') || searchParams.get('pair') || 'XAU/USD';
+    const rawSymbol = searchParams.get('symbol') || 'XAU/USD';
     const symbol: CurrencyPair = (rawSymbol in BASE_PRICES) ? (rawSymbol as CurrencyPair) : 'XAU/USD';
 
     const report = orderFlowEngine.analyzeOrderFlow(symbol);
-    const responseTimeMs = Math.max(1, Math.round(performance.now() - startTime));
 
     return NextResponse.json({
       success: true,
-      data: {
-        ...report,
-        responseTimeMs,
-      },
+      data: report,
+      timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to generate order flow analysis' },
+      { success: false, error: error.message || 'Failed to analyze order flow' },
       { status: 500 }
     );
   }

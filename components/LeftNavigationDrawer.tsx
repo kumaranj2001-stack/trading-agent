@@ -36,6 +36,7 @@ export interface LeftNavigationDrawerProps {
   onOpenJournal?: () => void;
   onOpenMonteCarlo?: () => void;
   onOpenNewsWire?: () => void;
+  onOpenOrderFlow?: () => void;
   onOpenFirebase?: () => void;
   onOpenKnowledge?: () => void;
   onOpenVisionAtlas?: () => void;
@@ -60,6 +61,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
   onOpenJournal,
   onOpenMonteCarlo,
   onOpenNewsWire,
+  onOpenOrderFlow,
   onOpenFirebase,
   onOpenKnowledge,
   onOpenScanner,
@@ -242,12 +244,12 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       id: 'order-flow',
       number: '09',
       label: 'Order Flow',
-      description: 'Live WebSocket Price Action, Footprint & Momentum Engine',
+      description: 'Footprint, Volume Profile & Dual-Weighting Engine',
       icon: BarChart2,
       color: 'text-cyan-400',
       activeBg: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 font-semibold',
-      isActive: activeTab === 'order-flow' || (activeTab as string) === 'orderflow',
-      badge: 'LIVE WS',
+      isActive: activeTab === 'order-flow' || activeTab === 'orderflow',
+      badge: '0ms WS',
       badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
       action: () => {
         setActiveTab('order-flow');

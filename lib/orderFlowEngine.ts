@@ -19,7 +19,8 @@ import {
   TechnicalMomentumMetrics, 
   FundamentalSentimentMetrics, 
   DualConfirmationEntryMatrix, 
-  OrderFlowAnalysisReport 
+  OrderFlowAnalysisReport,
+  OrderFlowSessionAnalysis 
 } from './types';
 import { BASE_PRICES } from './marketData';
 import { realTimeNewsEngine } from './newsEngine';
@@ -96,6 +97,7 @@ export class OrderFlowEngine {
         isPointOfControl: false,
         bidImbalance,
         askImbalance,
+        imbalanceType: askImbalance ? 'BUY_IMBALANCE' : bidImbalance ? 'SELL_IMBALANCE' : 'NONE',
       });
     }
 
@@ -492,6 +494,120 @@ export class OrderFlowEngine {
       buyingPressurePercent: report.volumeProfile.buyingPressurePercent,
       tickVelocity: 14.2,
       confirmationStatus: report.dualConfirmation.entryConfirmationStatus,
+    };
+  }
+
+  /**
+   * Session Order Flow Analysis (Multi-Candle Footprints & Volume Profile)
+   */
+  public analyzeSessionOrderFlow(
+    symbol: CurrencyPair,
+    timeframe: string,
+    candles: any[]
+  ): OrderFlowSessionAnalysis {
+    const report = this.analyzeOrderFlow(symbol);
+    const currentPrice = report.liveWebSocketTelemetry.bidPrice;
+
+    // Generate footprints for provided candles or generate 12 recent session candles
+    const sessionCandles = candles && candles.length > 0 ? candles.slice(-14) : [];
+    const footprints = sessionCandles.map((c, idx) => {
+      const cPrice = c.close || currentPrice;
+      const levels = this.generateFootprintLevels(symbol, cPrice);
+      const vp = this.calculateVolumeProfile(levels);
+      const stackedBuy = levels.filter(l => l.imbalanceType === 'BUY_IMBALANCE').map(l => l.price);
+      const stackedSell = levels.filter(l => l.imbalanceType === 'SELL_IMBALANCE').map(l => l.price);
+
+      return {
+        timestamp: c.timestamp || (Date.now() - (14 - idx) * 3600000),
+        open: c.open || cPrice,
+        high: c.high || cPrice * 1.002,
+        low: c.low || cPrice * 0.998,
+        close: c.close || cPrice,
+        volume: c.volume || vp.totalVolume,
+        totalCandleVolume: c.volume || vp.totalVolume,
+        delta: vp.cumulativeVolumeDelta,
+        candleDelta: vp.cumulativeVolumeDelta,
+        poc: vp.pointOfControl,
+        pocPrice: vp.pointOfControl,
+        stackedBuyImbalances: stackedBuy,
+        stackedSellImbalances: stackedSell,
+        levels,
+      };
+    });
+
+    if (footprints.length === 0) {
+      const levels = report.footprintLevels;
+      const stackedBuy = levels.filter(l => l.imbalanceType === 'BUY_IMBALANCE').map(l => l.price);
+      const stackedSell = levels.filter(l => l.imbalanceType === 'SELL_IMBALANCE').map(l => l.price);
+
+      footprints.push({
+        timestamp: Date.now(),
+        open: currentPrice,
+        high: currentPrice * 1.002,
+        low: currentPrice * 0.998,
+        close: currentPrice,
+        volume: report.volumeProfile.totalVolume,
+        totalCandleVolume: report.volumeProfile.totalVolume,
+        delta: report.volumeProfile.cumulativeVolumeDelta,
+        candleDelta: report.volumeProfile.cumulativeVolumeDelta,
+        poc: report.volumeProfile.pointOfControl,
+        pocPrice: report.volumeProfile.pointOfControl,
+        stackedBuyImbalances: stackedBuy,
+        stackedSellImbalances: stackedSell,
+        levels,
+      });
+    }
+
+    const maxProfileVol = report.volumeProfile.totalVolume || 1;
+    const vpList = report.footprintLevels.map(lvl => ({
+      price: lvl.price,
+      priceLevel: lvl.price,
+      volume: lvl.totalVolume,
+      totalVolume: lvl.totalVolume,
+      volumePercent: Math.round((lvl.totalVolume / maxProfileVol) * 100),
+      buyVol: lvl.askVolume,
+      sellVol: lvl.bidVolume,
+      delta: lvl.delta,
+      isPoc: lvl.isPointOfControl,
+      isValueArea: lvl.price <= report.volumeProfile.valueAreaHigh && lvl.price >= report.volumeProfile.valueAreaLow,
+      isVah: lvl.price === report.volumeProfile.valueAreaHigh,
+      isVal: lvl.price === report.volumeProfile.valueAreaLow,
+    }));
+
+    return {
+      sessionVolume: report.volumeProfile.totalVolume,
+      cumulativeVolumeDelta: report.volumeProfile.cumulativeVolumeDelta,
+      cvdTrend: report.volumeProfile.cumulativeVolumeDelta >= 0 ? 'ACCUMULATING' : 'DISTRIBUTING',
+      pocPrice: report.volumeProfile.pointOfControl,
+      valueAreaLow: report.volumeProfile.valueAreaLow,
+      valueAreaHigh: report.volumeProfile.valueAreaHigh,
+      currentPrice,
+      buyVolumeRatioPercent: report.volumeProfile.buyingPressurePercent,
+      sellVolumeRatioPercent: report.volumeProfile.sellingPressurePercent,
+      totalBuyVolume: report.volumeProfile.buyingVolume,
+      totalSellVolume: report.volumeProfile.sellingVolume,
+      footprints,
+      volumeProfile: vpList,
+      institutionalOrderBlocks: [
+        {
+          price: Number((currentPrice * 0.996).toFixed(2)),
+          priceRange: `$${(currentPrice * 0.994).toFixed(2)} - $${(currentPrice * 0.998).toFixed(2)}`,
+          type: 'DEMAND',
+          volume: 480,
+          volumeStacked: 480,
+          mitigated: false,
+          isMitigated: false,
+        },
+        {
+          price: Number((currentPrice * 1.004).toFixed(2)),
+          priceRange: `$${(currentPrice * 1.002).toFixed(2)} - $${(currentPrice * 1.006).toFixed(2)}`,
+          type: 'SUPPLY',
+          volume: 520,
+          volumeStacked: 520,
+          mitigated: false,
+          isMitigated: false,
+        },
+      ],
     };
   }
 }
