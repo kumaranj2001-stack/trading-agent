@@ -967,6 +967,65 @@ export interface ScenarioSimulationSetup {
   projectedCandles: Candle[];
 }
 
+export interface InstitutionalPattern {
+  id: string;
+  type: 
+    | 'FVG_BULLISH' 
+    | 'FVG_BEARISH' 
+    | 'BSL_SWEEP' 
+    | 'SSL_SWEEP' 
+    | 'DEMAND_OB_UNMITIGATED' 
+    | 'SUPPLY_OB_UNMITIGATED' 
+    | 'DISCOUNT_RELOAD' 
+    | 'PREMIUM_REJECTION' 
+    | 'CHOCH_REVERSAL';
+  name: string;
+  category: 'ORDER_BLOCK' | 'LIQUIDITY_SWEEP' | 'IMBALANCE_GAP' | 'MARKET_STRUCTURE';
+  timeframe: string;
+  levelMin: number;
+  levelMax: number;
+  confidenceImpact: number;
+  institutionalCriteriaMet: string[];
+  grade: 'A+' | 'A' | 'B';
+  timestamp: number;
+  status: 'ACTIVE_PRIME' | 'MITIGATED' | 'FORMING';
+}
+
+export interface ParallelEngineTelemetry {
+  technicalPipeline: {
+    totalIndicators: 525;
+    bullishCount: number;
+    bearishCount: number;
+    neutralCount: number;
+    executionTimeMs: number;
+    activeCategoryPassing: Record<string, number>;
+  };
+  fundamentalPipeline: {
+    totalModels: 525;
+    supportiveCount: number;
+    restrictiveCount: number;
+    neutralCount: number;
+    executionTimeMs: number;
+    dominantCatalyst: string;
+  };
+  parallelWorkers: number;
+  totalThroughputPerSec: number;
+  latencyMs: number;
+  liveStreamConnected: boolean;
+}
+
+export interface InstitutionalOptimalEntry {
+  direction: 'BUY' | 'SELL';
+  grade: 'A+' | 'A' | 'FILTERED_OUT';
+  optimalPrice: number;
+  zoneMin: number;
+  zoneMax: number;
+  riskReward: number;
+  confluenceFactors: string[];
+  invalidationLevel: number;
+  institutionalScore: number;
+}
+
 export interface VisionAtlasPayload {
   symbol: CurrencyPair;
   timeframe: TimeFrame;
@@ -1069,4 +1128,15 @@ export interface VisionAtlasPayload {
     fullNarrative: string;
     generatedAt: string;
   };
+
+  // Automated Pattern Recognition & Institutional Filter
+  patternRecognition: {
+    patterns: InstitutionalPattern[];
+    activeGrade: 'A+' | 'A' | 'FILTERED_OUT';
+    highProbabilityCriteriaMet: string[];
+    isolatedOptimalEntry: InstitutionalOptimalEntry;
+  };
+
+  // Multi-Threaded Parallel Engine Telemetry
+  parallelTelemetry: ParallelEngineTelemetry;
 }
