@@ -15,48 +15,50 @@ export async function GET(req: NextRequest) {
 
   const stream = new ReadableStream({
     start(controller) {
-      // 1. Send immediate verified snapshot (0ms latency)
-      try {
-        const initialReport = orderFlowEngine.analyzeOrderFlow(symbol);
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({
-            type: 'ORDER_FLOW_SNAPSHOT',
-            payload: initialReport,
-            timestamp: Date.now(),
-          })}\n\n`)
-        );
-      } catch (err) {
-        console.error('Order Flow SSE initial snapshot error:', err);
-      }
+      // 1. Send initial full order flow snapshot
+      const initialReport = orderFlowEngine.analyzeOrderFlow(symbol);
+      controller.enqueue(
+        encoder.encode(`data: ${JSON.stringify({ type: 'ORDER_FLOW_SNAPSHOT', payload: initialReport })}\n\n`)
+      );
 
-      // 2. High-frequency live tick streaming (sub-second broadcast)
+      // 2. High-frequency price action stream (every 220ms)
       const interval = setInterval(() => {
         try {
           const tick = orderFlowEngine.generateLiveStreamTick(symbol);
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(tick)}\n\n`)
-          );
-        } catch (err) {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(tick)}\n\n`));
+        } catch (e) {
           clearInterval(interval);
-          try {
-            controller.close();
-          } catch {}
         }
-      }, 750);
+      }, 220);
 
-      // Handle client disconnect
+      // 3. Periodic full snapshot refresh (every 6 seconds)
+      const snapshotInterval = setInterval(() => {
+        try {
+          const freshReport = orderFlowEngine.analyzeOrderFlow(symbol);
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify({ type: 'ORDER_FLOW_SNAPSHOT', payload: freshReport })}\n\n`)
+          );
+        } catch (e) {
+          clearInterval(snapshotInterval);
+        }
+      }, 6000);
+
+      // Handle client disconnect / connection close
       req.signal.addEventListener('abort', () => {
         clearInterval(interval);
+        clearInterval(snapshotInterval);
         try {
           controller.close();
-        } catch {}
+        } catch {
+          // stream already closed
+        }
       });
     },
   });
 
   return new Response(stream, {
     headers: {
-      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',

@@ -36,7 +36,6 @@ export interface HeaderProps {
   onOpenMonteCarlo?: () => void;
   onOpenKnowledge?: () => void;
   onOpenNewsWire?: () => void;
-  onOpenOrderFlow?: () => void;
   onOpenFirebase?: () => void;
   onOpenJournal?: () => void;
   onOpenLeftDrawer?: () => void;

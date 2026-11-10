@@ -34,10 +34,10 @@ import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
 import { VisionAtlasWorkspace } from '@/components/VisionAtlasWorkspace';
 import { MacroIntelligenceDesk } from '@/components/MacroIntelligenceDesk';
-import { OrderFlowDesk } from '@/components/OrderFlowDesk';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
 import { NewsWireModal } from '@/components/NewsWireModal';
+import { OrderFlowDesk } from '@/components/OrderFlowDesk';
 import { FirebaseStatusModal } from '@/components/FirebaseStatusModal';
 import { LeftNavigationDrawer } from '@/components/LeftNavigationDrawer';
 import { JournalModal } from '@/components/JournalModal';
@@ -739,7 +739,6 @@ export default function Home() {
         onOpenMonteCarlo={() => setActiveTab('var')}
         onOpenKnowledge={() => setActiveTab('knowledge')}
         onOpenNewsWire={() => setActiveTab('wire')}
-        onOpenOrderFlow={() => setActiveTab('order-flow')}
         onOpenFirebase={() => setActiveTab('firebase')}
         onOpenJournal={() => setActiveTab('journals')}
         onOpenLeftDrawer={() => setIsLeftDrawerOpen(true)}
@@ -975,7 +974,7 @@ export default function Home() {
           />
         )}
 
-        {/* Tab 8.5: Dedicated Order Flow & Real-Time Price Action Execution Engine */}
+        {/* Tab 09: Order Flow & Real-Time Price Action Analytics (Footprint & Volume Profile) */}
         {(activeTab === 'order-flow' || (activeTab as string) === 'orderflow') && (
           <OrderFlowDesk
             isFullPage={true}
@@ -983,10 +982,8 @@ export default function Home() {
             selectedPair={selectedPair}
             onSelectPair={handleSelectPair}
             onExecuteTrade={(trade) => {
-              if (trade) {
-                handleExecuteTrade();
-                showNotification(`ORDER FLOW TRADE EXECUTED: ${trade.direction} ${trade.symbol} @ $${trade.entry}`);
-              }
+              handleExecuteTrade();
+              showNotification(`ORDER FLOW TRADE EXECUTED: ${trade.direction} ${trade.symbol} @ ${trade.entry}`);
             }}
           />
         )}
@@ -1080,11 +1077,11 @@ export default function Home() {
         onOpenJournal={() => setActiveTab('journals')}
         onOpenMonteCarlo={() => setActiveTab('var')}
         onOpenNewsWire={() => setActiveTab('wire')}
-        onOpenOrderFlow={() => setActiveTab('order-flow')}
         onOpenFirebase={() => setActiveTab('firebase')}
         onOpenKnowledge={() => setActiveTab('knowledge')}
         onOpenScanner={() => setActiveTab('scanner')}
         onOpenCalendar={() => setActiveTab('calendar')}
+        onOpenOrderFlow={() => setActiveTab('order-flow')}
         onOpenSettings={() => setIsSettingsOpen(true)}
         executionMode={executionMode}
         onToggleExecutionMode={handleToggleExecutionMode}

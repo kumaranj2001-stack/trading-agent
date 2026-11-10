@@ -4,7 +4,6 @@ import { CurrencyPair } from '@/lib/types';
 import { BASE_PRICES } from '@/lib/marketData';
 
 export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
