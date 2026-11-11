@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { JournalStorageManager } from '@/lib/journalStorage';
 import { CurrencyPair, JournalEntry } from '@/lib/types';
 import { BASE_PRICES } from '@/lib/marketData';
+import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 
 export const runtime = 'nodejs';
 
@@ -16,6 +17,9 @@ export async function GET(req: NextRequest) {
     const journals = JournalStorageManager.getJournals();
     const filteredJournals = symbol ? journals.filter(j => j.symbol === symbol) : journals;
     const analysis = JournalStorageManager.analyzeHistoricalJournals(symbol);
+    const synthesizedRules = diagnosticReasoningEngine.getDynamicRules();
+    const diagnosticAudits = diagnosticReasoningEngine.getDiagnosticAudits();
+    const failureStats = diagnosticReasoningEngine.getFailureStats();
 
     return NextResponse.json({
       success: true,
@@ -23,6 +27,10 @@ export async function GET(req: NextRequest) {
         totalJournals: filteredJournals.length,
         journals: filteredJournals,
         analysis,
+        synthesizedRules,
+        diagnosticAudits,
+        failureStats,
+        ledgerStatus: 'IMMUTABLE_EVENT_DRIVEN_LOG',
         timestamp: new Date().toISOString(),
       },
     });
@@ -80,6 +88,7 @@ export async function POST(req: NextRequest) {
       lessonLearned: body.lessonLearned || 'Strict risk-reward parameters adhered to.',
       notes: body.notes || 'Executed according to 5-Agent Consensus.',
       tags: Array.isArray(body.tags) ? body.tags : ['SwarmConsensus', 'LiveAPI'],
+      isImmutableLedgerRecord: true,
     };
 
     JournalStorageManager.saveJournal(newEntry);
@@ -90,7 +99,7 @@ export async function POST(req: NextRequest) {
       data: {
         entry: newEntry,
         analysis: updatedAnalysis,
-        message: 'Journal entry successfully persisted to institutional database.',
+        message: 'Journal entry successfully persisted to immutable ledger.',
       },
     });
   } catch (error: any) {
@@ -102,24 +111,13 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json({ success: false, error: 'Journal ID required' }, { status: 400 });
-    }
-
-    JournalStorageManager.deleteJournal(id);
-
-    return NextResponse.json({
-      success: true,
-      message: `Journal entry ${id} successfully removed.`,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to delete journal entry' },
-      { status: 500 }
-    );
-  }
+  // Prohibit manual deletion to ensure ledger immutability and prevent tampering
+  return NextResponse.json(
+    { 
+      success: false, 
+      error: 'LEDGER_TAMPERING_PROHIBITED: Historical journal is an immutable, event-driven audit ledger. Manual entry deletion is strictly deprecated and disallowed.',
+      policy: 'IMMUTABLE_AUDIT_TRAIL',
+    },
+    { status: 403 }
+  );
 }

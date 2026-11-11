@@ -5,10 +5,12 @@ import {
   KnowledgeRule, 
   MarketSegment, 
   SignalDirection, 
-  TechnicalIndicators 
+  TechnicalIndicators,
+  FailureConstraintRule
 } from '../types';
 import { TECHNICAL_KNOWLEDGE_BASE } from './technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from './fundamentalKnowledge';
+import { diagnosticReasoningEngine } from '../diagnosticReasoningEngine';
 
 export class KnowledgeEngine {
   private technicalRules: KnowledgeRule[];
@@ -19,11 +21,22 @@ export class KnowledgeEngine {
     this.fundamentalRules = FUNDAMENTAL_KNOWLEDGE_BASE;
   }
 
-  public getTotalStats(): { technicalCount: number; fundamentalCount: number; totalCount: number } {
+  public getTotalStats(): { 
+    technicalCount: number; 
+    fundamentalCount: number; 
+    dynamicConstraintCount: number; 
+    totalCount: number;
+    baselineRules: number;
+    synthesizedRules: number;
+  } {
+    const dynamicRules = diagnosticReasoningEngine.getDynamicRules();
     return {
       technicalCount: this.technicalRules.length,
       fundamentalCount: this.fundamentalRules.length,
-      totalCount: this.technicalRules.length + this.fundamentalRules.length,
+      dynamicConstraintCount: dynamicRules.length,
+      totalCount: this.technicalRules.length + this.fundamentalRules.length + dynamicRules.length,
+      baselineRules: this.technicalRules.length + this.fundamentalRules.length,
+      synthesizedRules: dynamicRules.length,
     };
   }
 
@@ -33,6 +46,18 @@ export class KnowledgeEngine {
 
   public getFundamentalRules(): KnowledgeRule[] {
     return this.fundamentalRules;
+  }
+
+  public getDynamicRules(): FailureConstraintRule[] {
+    return diagnosticReasoningEngine.getDynamicRules();
+  }
+
+  public getAllRules(): KnowledgeRule[] {
+    return [
+      ...this.technicalRules,
+      ...this.fundamentalRules,
+      ...diagnosticReasoningEngine.getDynamicRules(),
+    ];
   }
 
   public getOpposingRules(segment: MarketSegment, dominantSide: 'BUY' | 'SELL'): {

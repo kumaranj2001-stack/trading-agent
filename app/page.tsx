@@ -54,6 +54,7 @@ import { AutonomousSwarmEngine, AutonomousSwarmTelemetry } from '@/lib/autonomou
 import { tradeInvalidationEngine } from '@/lib/tradeInvalidationEngine';
 import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
 import { ExecutionTelemetryEngine } from '@/lib/executionTelemetryEngine';
+import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 
 const executionTelemetryEngine = ExecutionTelemetryEngine.getInstance();
 
@@ -289,6 +290,23 @@ export default function Home() {
     const isSellTrade = signal.orderType === 'SELL_MARKET' || calibratedResult.unifiedDecision.direction === 'SELL';
     const autoTradeType: 'BUY' | 'SELL' = isSellTrade ? 'SELL' : 'BUY';
 
+    // 🛡️ Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
+    const preCheck = diagnosticReasoningEngine.crossReferenceSetup({
+      symbol: signal.symbol,
+      direction: autoTradeType,
+      lots: signal.lots,
+      indicators: calibratedResult.agents?.technical?.indicators,
+      smcStructure: calibratedResult.agents?.technical?.smartMoneyConcepts?.structure,
+      centralBankBias: calibratedResult.agents?.fundamental?.baseCurrencyOutlook?.centralBankStance,
+    });
+
+    if (!preCheck.allowed) {
+      console.warn(`[AUTOPILOT_PRE_EXECUTION_VETO] Entry aborted: ${preCheck.reason}`);
+      return;
+    }
+
+    const autoLots = preCheck.action === 'ADJUST_SIZING' ? (preCheck.adjustedLots || 0.01) : signal.lots;
+
     let autoStopLoss = signal.stopLoss;
     let autoTakeProfit = signal.takeProfit;
     if (autoTradeType === 'SELL') {
@@ -315,7 +333,7 @@ export default function Home() {
       id: `pos-${Date.now()}`,
       symbol: signal.symbol,
       type: autoTradeType,
-      lots: signal.lots,
+      lots: autoLots,
       entryPrice: livePrice,
       currentPrice: livePrice,
       stopLoss: autoStopLoss,
@@ -706,6 +724,27 @@ export default function Home() {
     const isSell = signal.orderType === 'SELL_MARKET' || consensus.unifiedDecision.direction === 'SELL';
     const tradeType: 'BUY' | 'SELL' = isSell ? 'SELL' : 'BUY';
 
+    // 4. Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
+    const preExecutionFilter = diagnosticReasoningEngine.crossReferenceSetup({
+      symbol: signal.symbol,
+      direction: tradeType,
+      lots: signal.lots,
+      indicators: consensus.agents?.technical?.indicators,
+      smcStructure: consensus.agents?.technical?.smartMoneyConcepts?.structure,
+      centralBankBias: consensus.agents?.fundamental?.baseCurrencyOutlook?.centralBankStance,
+    });
+
+    if (!preExecutionFilter.allowed) {
+      showNotification(`🛑 PRE-EXECUTION VETO: ${preExecutionFilter.reason}`);
+      return;
+    }
+
+    let executionLots = signal.lots;
+    if (preExecutionFilter.action === 'ADJUST_SIZING') {
+      executionLots = preExecutionFilter.adjustedLots || 0.01;
+      showNotification(`⚠️ CAUTION FILTER APPLIED: ${preExecutionFilter.reason}`);
+    }
+
     // Strict Mathematical Invariant: Guarantee Stop Loss & Target orientation relative to entry
     let executionStopLoss = signal.stopLoss;
     let executionTakeProfit = signal.takeProfit;
@@ -734,7 +773,7 @@ export default function Home() {
       id: `pos-${Date.now()}`,
       symbol: signal.symbol,
       type: tradeType,
-      lots: signal.lots,
+      lots: executionLots,
       entryPrice: liveEntryPrice,
       currentPrice: liveEntryPrice,
       stopLoss: executionStopLoss,
@@ -745,7 +784,7 @@ export default function Home() {
       riskReward: signal.riskReward,
     };
 
-    const marginUsedForTrade = (signal.lots * 100000) / 30;
+    const marginUsedForTrade = (executionLots * 100000) / 30;
     const updatedPositions = [newPosition, ...portfolio.positions];
     const newMarginUsed = portfolio.marginUsed + marginUsedForTrade;
 
@@ -836,8 +875,26 @@ export default function Home() {
     setPortfolio(updatedPortfolio);
     BrowserStorageManager.savePortfolio(updatedPortfolio);
 
-    // 📓 Persistent Trading Journal: Auto-log trade outcome, exit price & realized P&L
-    JournalStorageManager.recordTradeClose(pos.id, liveExitPrice, finalPnl);
+    // 📓 Immutable Event-Driven Data Bus: Transmit complete execution payload directly to journal
+    const closeResult = JournalStorageManager.recordTradeClose(
+      pos,
+      liveExitPrice,
+      finalPnl,
+      finalPnl > 0 ? 'WIN' : finalPnl < 0 ? 'LOSS' : 'SCRATCH',
+      {
+        exitReason: exitReason || 'MANUAL_CLOSE',
+        invalidationTriggers: invalidationTriggers || [],
+        pos,
+      }
+    );
+
+    // 🔬 Diagnostic Reasoning Engine: Instant notification when recursive audit synthesizes a new failure rule
+    if (finalPnl < 0 && closeResult.diagnosticAudit) {
+      const audit = closeResult.diagnosticAudit;
+      showNotification(
+        `🔬 DIAGNOSTIC AUDIT: ${audit.failureClassification.replace('_', ' ')} isolated on ${pos.symbol}. Dynamically synthesized Operative Rule #${audit.ruleIndex} into Knowledge Base.`
+      );
+    }
 
     const pnlPrefix = finalPnl >= 0 ? '+' : '';
     const alertMsg = isAutoInvalidation

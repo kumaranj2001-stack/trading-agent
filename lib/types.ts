@@ -1098,7 +1098,109 @@ export type JournalLossCategory =
   | 'OVERLEVERAGED'
   | 'COUNTER_TREND'
   | 'SESSION_LIQUIDITY_DROP'
+  | 'TECHNICAL_BREAKDOWN'
+  | 'FUNDAMENTAL_MISALIGNMENT'
+  | 'HYBRID_CONFLUENCE_FAILURE'
+  | 'SUPPORT_VIOLATION'
+  | 'RESISTANCE_BREACH'
+  | 'CENTRAL_BANK_HAWKISH_SHOCK'
+  | 'INTEREST_RATE_DIVERGENCE'
   | 'NONE_DISCIPLINED_WIN';
+
+export type FailureClassification = 
+  | 'TECHNICAL_BREAKDOWN' 
+  | 'FUNDAMENTAL_MISALIGNMENT' 
+  | 'HYBRID_CONFLUENCE_FAILURE';
+
+export interface TechnicalConfluenceSnapshot {
+  emaStack: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  ema20: number;
+  ema50: number;
+  ema200: number;
+  rsi: number;
+  rsiState: 'OVERSOLD' | 'OVERBOUGHT' | 'BULLISH_MOMENTUM' | 'BEARISH_MOMENTUM' | 'NEUTRAL';
+  macdStatus: string;
+  bollingerBandwidth: number;
+  smcStructure: string;
+  orderBlockLevel?: number;
+  candlestickPattern: string;
+  atr: number;
+}
+
+export interface FundamentalPulseSnapshot {
+  centralBankBias: string;
+  monetaryDivergence: string;
+  interestRateSpreadBps: number;
+  geopoliticalRiskIndex: 'LOW' | 'ELEVATED' | 'HIGH' | 'CRITICAL';
+  macroSentimentScore: number;
+  activeHighImpactCatalyst?: string;
+  fiiFlowDiiRatio?: number;
+  inflationSurpriseDeviation?: number;
+}
+
+export interface EntryConfluenceSnapshot {
+  timestamp: number;
+  symbol: CurrencyPair;
+  orderType: 'BUY' | 'SELL';
+  entryPrice: number;
+  stopLoss: number;
+  takeProfit: number;
+  lots: number;
+  technical: TechnicalConfluenceSnapshot;
+  fundamental: FundamentalPulseSnapshot;
+  confluenceGrade: ConfluenceGrade;
+  confidenceScore: number;
+  citedRuleIds: string[];
+}
+
+export interface DiagnosticFailureAudit {
+  tradeId: string;
+  auditTimestamp: number;
+  symbol: CurrencyPair;
+  orderType: 'BUY' | 'SELL';
+  entryPrice: number;
+  exitPrice: number;
+  realizedLossUsd: number;
+  lossPips: number;
+  failureClassification: FailureClassification;
+  pointOfFailure: string;
+  primaryFailureMetric: string;
+  technicalViolationDetails: string;
+  fundamentalMisalignmentDetails: string;
+  mitigationRuleDirective: string;
+  synthesizedRuleId: string;
+  synthesizedRuleName: string;
+  ruleIndex: number;
+}
+
+export interface FailureConstraintRule extends KnowledgeRule {
+  isSynthesizedFromLoss: true;
+  originatingTradeId: string;
+  createdTimestamp: number;
+  failureAudit: DiagnosticFailureAudit;
+  triggerConditions: {
+    symbol: CurrencyPair;
+    direction: 'BUY' | 'SELL';
+    rsiMin?: number;
+    rsiMax?: number;
+    emaStack?: 'BULLISH' | 'BEARISH';
+    centralBankBias?: string;
+    interestRateSpreadThresholdBps?: number;
+    smcStructureInvalid?: string;
+  };
+  enforcementAction: 'DECLINE_ENTRY' | 'SCALE_DOWN_SIZE' | 'REQUIRE_WIDER_BUFFER';
+  enforcementLotSize?: number;
+  preventativeMessage: string;
+}
+
+export interface PreExecutionFilterResult {
+  allowed: boolean;
+  action: 'PROCEED' | 'ADJUST_SIZING' | 'DECLINE_ENTRY';
+  adjustedLots?: number;
+  matchingFailureRule?: FailureConstraintRule;
+  similarityScore: number;
+  reason: string;
+}
 
 export interface JournalEntry {
   id: string;
@@ -1131,6 +1233,12 @@ export interface JournalEntry {
   lessonLearned?: string;
   notes?: string;
   tags?: string[];
+  isImmutableLedgerRecord?: boolean;
+  entrySnapshot?: EntryConfluenceSnapshot;
+  diagnosticAudit?: DiagnosticFailureAudit;
+  synthesizedRuleId?: string;
+  exitReason?: string;
+  invalidationTriggers?: string[];
 }
 
 export interface HistoricalJournalAnalysis {
