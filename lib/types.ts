@@ -478,6 +478,7 @@ export interface TechnicalAnalysis {
     macdStatus: string;
     volatilityState: string;
   };
+  indicators?: TechnicalIndicators;
   smartMoneyConcepts?: {
     structure: string;
     orderBlock: string;
@@ -873,9 +874,11 @@ export interface DebateTerminalNode {
 export interface DebatePriceThresholds {
   entryPrice: number;
   takeProfit: number;
+  takeProfit2?: number;
   stopLoss: number;
   riskRewardRatio: number;
   positionSizeLots: number;
+  volatilityScaledLots?: number;
   maxLossUsd: number;
   projectedGainUsd: number;
   invalidationCriteria: string;

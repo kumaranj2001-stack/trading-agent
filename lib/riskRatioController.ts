@@ -188,14 +188,15 @@ export class RiskRatioController {
   }
 
   /**
-   * Calculates dynamic lot sizing driven strictly by the assigned confidence grade.
+   * Calculates dynamic lot sizing driven strictly by the assigned confidence grade and volatility.
    * Eliminates VETOED states by guaranteeing a minimum conservative volume (0.01 lots for Grade F).
    */
   public calculateDynamicLotSize(
     grade: ConfluenceGrade,
     accountBalance: number = 25000,
     stopDistancePips: number = 30,
-    isVetoTriggered: boolean = false
+    isVetoTriggered: boolean = false,
+    volatilityMultiplier: number = 1.0
   ): {
     lotSize: number;
     riskPercent: number;
@@ -211,8 +212,9 @@ export class RiskRatioController {
 
     const tier = this.getTierParameters(effectiveGrade);
 
-    // Dynamic sizing enforced strictly by tier
-    let lotSize = tier.defaultLots;
+    // Dynamic sizing enforced strictly by tier, scaled by volatility multiplier (e.g. lower size during extreme volatility)
+    const clampedVol = Math.max(0.5, Math.min(1.5, volatilityMultiplier));
+    let lotSize = tier.defaultLots * clampedVol;
 
     // Safety guardrails: clamp between minConservativeLots (0.01) and maxInstitutionalLots (5.0)
     lotSize = Math.max(this.currentConfig.minConservativeLots, Math.min(this.currentConfig.maxInstitutionalLots, lotSize));

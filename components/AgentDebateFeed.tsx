@@ -9,7 +9,8 @@ import {
   DebateSynthesisResult, 
   DebatePriceThresholds,
   DebateScenarioContext,
-  DebateActionableDirective
+  DebateActionableDirective,
+  KnowledgeRule
 } from '@/lib/types';
 import { 
   Send, 
@@ -36,8 +37,20 @@ import {
   ArrowLeft,
   CornerDownRight,
   Flame,
-  Zap
+  Zap,
+  Clock,
+  Wifi,
+  Cpu,
+  Gauge
 } from 'lucide-react';
+import { ChartView } from '@/components/ChartView';
+import { KnowledgeEngine } from '@/lib/knowledge/KnowledgeEngine';
+import { getMarketSegmentForSymbol } from '@/lib/marketData';
+import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { executionTelemetryLogger } from '@/lib/executionTelemetryLogger';
+import { circuitBreakerManager } from '@/lib/circuitBreakerManager';
+import { webSocketFailSafeManager } from '@/lib/webSocketFailSafeManager';
+import { apiRateLimiter } from '@/lib/apiRateLimiter';
 
 interface AgentDebateFeedProps {
   messages: AgentDebateMessage[];
@@ -79,6 +92,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
 }) => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [activeFilterRound, setActiveFilterRound] = useState<number | 'ALL'>('ALL');
+  const [channelFilter, setChannelFilter] = useState<'ALL' | 'BUY_SIDE' | 'SELL_SIDE'>('ALL');
 
   // Format price with appropriate decimals based on pair
   const formatPrice = (val?: number) => {
@@ -143,11 +157,15 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
       takeProfit: isSellBias 
         ? Number((currentPrice * 0.992).toFixed(5)) 
         : Number((currentPrice * 1.008).toFixed(5)),
+      takeProfit2: isSellBias
+        ? Number((currentPrice * 0.985).toFixed(5))
+        : Number((currentPrice * 1.015).toFixed(5)),
       stopLoss: isSellBias 
         ? Number((currentPrice * 1.004).toFixed(5)) 
         : Number((currentPrice * 0.996).toFixed(5)),
       riskRewardRatio: 2.2,
       positionSizeLots: 0.11,
+      volatilityScaledLots: 0.09,
       maxLossUsd: 150,
       projectedGainUsd: 330,
       invalidationCriteria: `${timeframe} candle close beyond stop loss`,
@@ -166,7 +184,6 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
   const directive: DebateActionableDirective = terminalNode?.directive || 'MAINTAIN_POSITION';
   const isStrategicExit = directive === 'STRATEGIC_EXIT';
   const isModifyPosition = directive === 'MODIFY_POSITION';
-  const isMaintainPosition = directive === 'MAINTAIN_POSITION';
 
   const definitiveBias = synthesis?.definitiveBias || 'BUY';
   const confluenceGrade = synthesis?.confluenceGrade || 'A';
@@ -181,125 +198,71 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
     ? 'text-amber-400 bg-amber-950/80 border-amber-600 shadow-amber-950/50'
     : 'text-emerald-400 bg-emerald-950/80 border-emerald-600 shadow-emerald-950/50';
 
-  const biasColor = isBuy 
-    ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' 
-    : isSell 
-    ? 'text-rose-400 bg-rose-500/10 border-rose-500/30' 
-    : 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+  // -------------------------------------------------------------
+  // Knowledge Base Engine: Bifurcated 525 Tech & 525 Fund Rules
+  // -------------------------------------------------------------
+  const segment = useMemo(() => getMarketSegmentForSymbol(pair), [pair]);
+  const knowledgeEngine = useMemo(() => new KnowledgeEngine(), []);
 
-  // Trajectory color: if strategic exit / reversal, trajectory stroke turns rose
-  const trajectoryStroke = isStrategicExit 
-    ? '#f43f5e' 
-    : isModifyPosition 
-    ? '#f59e0b' 
-    : isBuy 
-    ? '#10b981' 
-    : isSell 
-    ? '#f43f5e' 
-    : '#f59e0b';
+  const opposingRules = useMemo(() => {
+    return knowledgeEngine.getOpposingRules(segment, 'BUY');
+  }, [knowledgeEngine, segment]);
+
+  const livePrice = LiveMarketFeedManager.getCanonicalPrice(pair);
 
   // -------------------------------------------------------------
-  // Embedded Visual Chart Snapshot & Projected Trajectory Math
+  // Second-by-Second Live Chart Monitoring & Invalidation Engine
   // -------------------------------------------------------------
-  const chartMath = useMemo(() => {
-    const svgWidth = 800;
-    const svgHeight = 240;
-    const padLeft = 60;
-    const padRight = 135;
-    const padTop = 30;
-    const padBottom = 26;
-    const chartW = svgWidth - padLeft - padRight;
-    const chartH = svgHeight - padTop - padBottom;
+  const isChartInvalidated = useMemo(() => {
+    if (isBuy && livePrice <= thresholds.stopLoss) return true;
+    if (isSell && livePrice >= thresholds.stopLoss) return true;
+    return false;
+  }, [isBuy, isSell, livePrice, thresholds.stopLoss]);
 
-    const displayCandles = candles.length > 0 ? candles.slice(-30) : [];
-    
-    const prices: number[] = displayCandles.flatMap(c => [c.low, c.high]);
-    if (thresholds.entryPrice) prices.push(thresholds.entryPrice);
-    if (thresholds.takeProfit) prices.push(thresholds.takeProfit);
-    if (thresholds.stopLoss) prices.push(thresholds.stopLoss);
+  const invalidationReason = useMemo(() => {
+    if (isBuy && livePrice <= thresholds.stopLoss) {
+      return `Price breached stop-loss (${formatPrice(thresholds.stopLoss)}). Structural Long Invalidation Active.`;
+    }
+    if (isSell && livePrice >= thresholds.stopLoss) {
+      return `Price breached stop-loss (${formatPrice(thresholds.stopLoss)}). Structural Short Invalidation Active.`;
+    }
+    return '';
+  }, [isBuy, isSell, livePrice, thresholds.stopLoss, formatPrice]);
 
-    const minRaw = prices.length > 0 ? Math.min(...prices) : 100;
-    const maxRaw = prices.length > 0 ? Math.max(...prices) : 105;
-    const rawRange = maxRaw - minRaw || 1;
-    const minP = minRaw - rawRange * 0.05;
-    const maxP = maxRaw + rawRange * 0.05;
-    const priceSpan = maxP - minP;
+  // Bifurcated Stances & Prevailing Market Pressure Calculation
+  const buyMessages = useMemo(() => messages.filter(m => m.side === 'BUY' || m.sentiment === 'BULLISH'), [messages]);
+  const sellMessages = useMemo(() => messages.filter(m => m.side === 'SELL' || m.sentiment === 'BEARISH'), [messages]);
 
-    const getY = (price: number) => {
-      return padTop + (1 - (price - minP) / priceSpan) * chartH;
-    };
+  const totalBuyPower = opposingRules.supportingTech.length + opposingRules.supportingFund.length + (buyMessages.length * 4);
+  const totalSellPower = opposingRules.opposingTech.length + opposingRules.opposingFund.length + (sellMessages.length * 4);
+  const totalPower = Math.max(1, totalBuyPower + totalSellPower);
+  const buyPressurePercent = Math.round((totalBuyPower / totalPower) * 100);
+  const sellPressurePercent = 100 - buyPressurePercent;
 
-    const candleSpacing = displayCandles.length > 0 ? chartW / displayCandles.length : 14;
-    const candleWidth = Math.max(3, Math.min(10, Math.floor(candleSpacing * 0.65)));
+  // Secondary Take-Profit Target (TP2)
+  const takeProfit1 = thresholds.takeProfit;
+  const takeProfit2 = thresholds.takeProfit2 || (isSell
+    ? Number((thresholds.entryPrice - Math.abs(thresholds.entryPrice - thresholds.stopLoss) * 3.2).toFixed(5))
+    : Number((thresholds.entryPrice + Math.abs(thresholds.stopLoss - thresholds.entryPrice) * 3.2).toFixed(5)));
 
-    const getX = (idx: number) => {
-      return padLeft + idx * candleSpacing + candleSpacing / 2;
-    };
+  // Telemetry Summaries
+  const telemetrySummary = useMemo(() => executionTelemetryLogger.getSummary(), []);
+  const cbState = useMemo(() => circuitBreakerManager.getState(), []);
+  const failSafeStatus = useMemo(() => webSocketFailSafeManager.getStatus(), []);
 
-    const lastIdx = displayCandles.length - 1;
-    const lastCandleX = lastIdx >= 0 ? getX(lastIdx) : padLeft + chartW;
-    const lastClosePrice = displayCandles.length > 0 ? displayCandles[lastIdx].close : thresholds.entryPrice;
-    const lastCandleY = getY(lastClosePrice);
-
-    // If strategic exit, trajectory plunges or aims at stop-loss invalidation
-    const targetPrice = isStrategicExit ? thresholds.stopLoss : thresholds.takeProfit;
-    const targetY = getY(targetPrice);
-    const targetX = Math.min(svgWidth - 25, lastCandleX + 105);
-
-    const cx1 = lastCandleX + (targetX - lastCandleX) * 0.35;
-    const cy1 = lastCandleY + (targetY - lastCandleY) * 0.15;
-    const cx2 = lastCandleX + (targetX - lastCandleX) * 0.75;
-    const cy2 = targetY;
-
-    const calcBezierPointAndAngle = (t: number) => {
-      const bx = (1 - t)**3 * lastCandleX + 3*(1 - t)**2 * t * cx1 + 3*(1 - t) * t**2 * cx2 + t**3 * targetX;
-      const by = (1 - t)**3 * lastCandleY + 3*(1 - t)**2 * t * cy1 + 3*(1 - t) * t**2 * cy2 + t**3 * targetY;
-      const dx = 3*(1 - t)**2 * (cx1 - lastCandleX) + 6*(1 - t)*t * (cx2 - cx1) + 3*t**2 * (targetX - cx2);
-      const dy = 3*(1 - t)**2 * (cy1 - lastCandleY) + 6*(1 - t)*t * (cy2 - cy1) + 3*t**2 * (targetY - cy2);
-      const angle = (Math.atan2(dy, dx) * 180) / Math.PI;
-      return { x: bx, y: by, angle };
-    };
-
-    const chevron1 = calcBezierPointAndAngle(0.35);
-    const chevron2 = calcBezierPointAndAngle(0.70);
-
-    const gridLevels = [0.15, 0.4, 0.65, 0.9].map(pct => {
-      const p = maxP - pct * priceSpan;
-      return { price: p, y: getY(p) };
-    });
-
-    return {
-      svgWidth,
-      svgHeight,
-      padLeft,
-      padRight,
-      displayCandles,
-      getY,
-      getX,
-      candleWidth,
-      lastCandleX,
-      lastCandleY,
-      lastClosePrice,
-      targetX,
-      targetY,
-      targetPrice,
-      cx1,
-      cy1,
-      cx2,
-      cy2,
-      chevron1,
-      chevron2,
-      gridLevels,
-    };
-  }, [candles, thresholds, isStrategicExit]);
-
-  // Filter messages by round
+  // Filter messages by round & channel
   const filteredMessages = useMemo(() => {
-    if (activeFilterRound === 'ALL') return messages;
-    return messages.filter(m => m.round === activeFilterRound);
-  }, [messages, activeFilterRound]);
-
-  const citedRules = synthesis?.citedRules || [];
+    let list = messages;
+    if (activeFilterRound !== 'ALL') {
+      list = list.filter(m => m.round === activeFilterRound);
+    }
+    if (channelFilter === 'BUY_SIDE') {
+      list = list.filter(m => m.side === 'BUY' || m.sentiment === 'BULLISH');
+    } else if (channelFilter === 'SELL_SIDE') {
+      list = list.filter(m => m.side === 'SELL' || m.sentiment === 'BEARISH');
+    }
+    return list;
+  }, [messages, activeFilterRound, channelFilter]);
 
   return (
     <div className="bg-terminal-900 border border-terminal-border rounded-xl p-3 sm:p-5 flex flex-col space-y-4 shadow-2xl">
@@ -324,9 +287,9 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <span>•</span>
               <span>Timeframe: <strong className="text-cyan-300">{timeframe.toUpperCase()}</strong></span>
               <span>•</span>
-              <span>Chart Data: <strong className="text-indigo-300">{candles.length} Bars Ingested</strong></span>
+              <span>Live Feed: <strong className="text-emerald-400 font-bold">{formatPrice(livePrice)}</strong></span>
               <span>•</span>
-              <span>Knowledge Base: <strong className="text-amber-300">525 Technical + 525 Fundamental Rules</strong></span>
+              <span>Strategies: <strong className="text-amber-300">525 Technical + 525 Fundamental Rules</strong></span>
             </p>
           </div>
         </div>
@@ -403,326 +366,60 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         </div>
       )}
 
-      {/* Grid: Left = Visual Chart Snapshot; Right = Definitive Bias & Updated Risk-Reward */}
+      {/* ============================================================= */}
+      {/* SECTION 1: INTERACTIVE TRADINGVIEW CHART & RISK DIRECTIVES    */}
+      {/* ============================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left (7 cols): Embedded Visual Chart Snapshot */}
+        {/* Left (7 cols): Interactive TradingView Live Chart Canvas */}
         <div className="lg:col-span-7 bg-terminal-950 border border-terminal-border/80 rounded-xl p-3 flex flex-col relative overflow-hidden">
-          <div className="flex items-center justify-between pb-2 mb-1 border-b border-terminal-border/40 text-xs font-mono">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-terminal-border/40 text-xs font-mono">
             <div className="flex items-center gap-2">
               <Activity className="w-4 h-4 text-cyan-400" />
-              <span className="font-bold text-white uppercase">{pair} • {timeframe} Visual Chart Snapshot</span>
-              <span className="text-[10px] text-slate-400">({chartMath.displayCandles.length} Bars Ingested)</span>
+              <span className="font-bold text-white uppercase">{pair} • {timeframe.toUpperCase()} Interactive TradingView Chart</span>
             </div>
             <div className="flex items-center gap-2">
-              {currentScenario && (
-                <span className="text-[10px] text-amber-400 font-bold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                  SCENARIO MODULATED
-                </span>
-              )}
-              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                PROJECTED TRAJECTORY
+              <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                LIVE STREAM ACTIVE
               </span>
             </div>
           </div>
 
-          {/* SVG Canvas */}
-          <div className="w-full overflow-x-auto scrollbar-thin">
-            <svg 
-              viewBox={`0 0 ${chartMath.svgWidth} ${chartMath.svgHeight}`} 
-              className="w-full h-[210px] sm:h-[240px] select-none"
-            >
-              <defs>
-                <filter id="trajGlow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="3.5" result="coloredBlur"/>
-                  <feMerge>
-                    <feMergeNode in="coloredBlur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
-                <marker 
-                  id="trajArrowHead" 
-                  viewBox="0 0 10 10" 
-                  refX="7" 
-                  refY="5" 
-                  markerWidth="6" 
-                  markerHeight="6" 
-                  orient="auto-start-reverse"
-                >
-                  <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill={trajectoryStroke} />
-                </marker>
-              </defs>
-
-              {/* Grid Lines */}
-              {chartMath.gridLevels.map((lvl, i) => (
-                <g key={`grid-${i}`}>
-                  <line 
-                    x1={chartMath.padLeft} 
-                    y1={lvl.y} 
-                    x2={chartMath.svgWidth - chartMath.padRight + 30} 
-                    y2={lvl.y} 
-                    stroke="rgba(255, 255, 255, 0.05)" 
-                    strokeDasharray="2 3" 
-                  />
-                  <text 
-                    x={chartMath.padLeft - 6} 
-                    y={lvl.y + 3} 
-                    textAnchor="end" 
-                    fill="#64748b" 
-                    fontSize="9" 
-                    fontFamily="monospace"
-                  >
-                    {formatPrice(lvl.price)}
-                  </text>
-                </g>
-              ))}
-
-              {/* Horizontal Price Level: Take Profit */}
-              {thresholds.takeProfit && (
-                <g>
-                  <line 
-                    x1={chartMath.padLeft} 
-                    y1={chartMath.getY(thresholds.takeProfit)} 
-                    x2={chartMath.svgWidth - 15} 
-                    y2={chartMath.getY(thresholds.takeProfit)} 
-                    stroke="#10b981" 
-                    strokeWidth="1.2" 
-                    strokeDasharray="4 3" 
-                    opacity={isStrategicExit ? "0.4" : "0.85"}
-                  />
-                  <rect 
-                    x={chartMath.svgWidth - 110} 
-                    y={chartMath.getY(thresholds.takeProfit) - 9} 
-                    width="100" 
-                    height="17" 
-                    rx="3" 
-                    fill="#064e3b" 
-                    stroke="#10b981" 
-                    strokeWidth="1" 
-                    opacity={isStrategicExit ? "0.4" : "1"}
-                  />
-                  <text 
-                    x={chartMath.svgWidth - 60} 
-                    y={chartMath.getY(thresholds.takeProfit) + 3} 
-                    textAnchor="middle" 
-                    fill="#34d399" 
-                    fontSize="9.5" 
-                    fontWeight="bold" 
-                    fontFamily="monospace"
-                  >
-                    TP: {formatPrice(thresholds.takeProfit)}
-                  </text>
-                </g>
-              )}
-
-              {/* Horizontal Price Level: Entry */}
-              {thresholds.entryPrice && (
-                <g>
-                  <line 
-                    x1={chartMath.padLeft} 
-                    y1={chartMath.getY(thresholds.entryPrice)} 
-                    x2={chartMath.svgWidth - 15} 
-                    y2={chartMath.getY(thresholds.entryPrice)} 
-                    stroke="#38bdf8" 
-                    strokeWidth="1.2" 
-                    strokeDasharray="3 3" 
-                    opacity="0.75"
-                  />
-                  <rect 
-                    x={chartMath.svgWidth - 110} 
-                    y={chartMath.getY(thresholds.entryPrice) - 9} 
-                    width="100" 
-                    height="17" 
-                    rx="3" 
-                    fill="#0c4a6e" 
-                    stroke="#38bdf8" 
-                    strokeWidth="1"
-                  />
-                  <text 
-                    x={chartMath.svgWidth - 60} 
-                    y={chartMath.getY(thresholds.entryPrice) + 3} 
-                    textAnchor="middle" 
-                    fill="#7dd3fc" 
-                    fontSize="9.5" 
-                    fontWeight="bold" 
-                    fontFamily="monospace"
-                  >
-                    ENTRY: {formatPrice(thresholds.entryPrice)}
-                  </text>
-                </g>
-              )}
-
-              {/* Horizontal Price Level: Hard Stop-Loss */}
-              {thresholds.stopLoss && (
-                <g>
-                  <line 
-                    x1={chartMath.padLeft} 
-                    y1={chartMath.getY(thresholds.stopLoss)} 
-                    x2={chartMath.svgWidth - 15} 
-                    y2={chartMath.getY(thresholds.stopLoss)} 
-                    stroke="#f43f5e" 
-                    strokeWidth="1.5" 
-                    strokeDasharray="4 3" 
-                    opacity="0.95"
-                  />
-                  <rect 
-                    x={chartMath.svgWidth - 110} 
-                    y={chartMath.getY(thresholds.stopLoss) - 9} 
-                    width="100" 
-                    height="17" 
-                    rx="3" 
-                    fill="#881337" 
-                    stroke="#f43f5e" 
-                    strokeWidth="1"
-                  />
-                  <text 
-                    x={chartMath.svgWidth - 60} 
-                    y={chartMath.getY(thresholds.stopLoss) + 3} 
-                    textAnchor="middle" 
-                    fill="#fda4af" 
-                    fontSize="9.5" 
-                    fontWeight="bold" 
-                    fontFamily="monospace"
-                  >
-                    SL: {formatPrice(thresholds.stopLoss)}
-                  </text>
-                </g>
-              )}
-
-              {/* Candlesticks */}
-              {chartMath.displayCandles.map((c, i) => {
-                const x = chartMath.getX(i);
-                const isBull = c.close >= c.open;
-                const bodyTop = chartMath.getY(Math.max(c.open, c.close));
-                const bodyBottom = chartMath.getY(Math.min(c.open, c.close));
-                const bodyH = Math.max(2, bodyBottom - bodyTop);
-                const wickTop = chartMath.getY(c.high);
-                const wickBottom = chartMath.getY(c.low);
-                const candleColor = isBull ? '#10b981' : '#f43f5e';
-
-                return (
-                  <g key={`candle-${i}`}>
-                    <line 
-                      x1={x} 
-                      y1={wickTop} 
-                      x2={x} 
-                      y2={wickBottom} 
-                      stroke={candleColor} 
-                      strokeWidth="1" 
-                      opacity="0.9"
-                    />
-                    <rect 
-                      x={x - chartMath.candleWidth / 2} 
-                      y={bodyTop} 
-                      width={chartMath.candleWidth} 
-                      height={bodyH} 
-                      fill={candleColor} 
-                      rx="1"
-                    />
-                  </g>
-                );
-              })}
-
-              {/* Latest Live Tick Ingestion Point Indicator */}
-              <circle 
-                cx={chartMath.lastCandleX} 
-                cy={chartMath.lastCandleY} 
-                r="4.5" 
-                fill="#38bdf8" 
-                stroke="#fff" 
-                strokeWidth="1.5"
-              />
-              <circle 
-                cx={chartMath.lastCandleX} 
-                cy={chartMath.lastCandleY} 
-                r="8" 
-                fill="none" 
-                stroke="#38bdf8" 
-                strokeWidth="1" 
-                opacity="0.6"
-              >
-                <animate attributeName="r" values="6;13;6" dur="2s" repeatCount="indefinite" />
-                <animate attributeName="opacity" values="0.8;0.1;0.8" dur="2s" repeatCount="indefinite" />
-              </circle>
-
-              {/* PROJECTED TRAJECTORY LINE */}
-              <path 
-                d={`M ${chartMath.lastCandleX} ${chartMath.lastCandleY} C ${chartMath.cx1} ${chartMath.cy1}, ${chartMath.cx2} ${chartMath.cy2}, ${chartMath.targetX} ${chartMath.targetY}`}
-                fill="none" 
-                stroke={trajectoryStroke} 
-                strokeWidth="2.8" 
-                strokeDasharray="6 3" 
-                filter="url(#trajGlow)"
-                markerEnd="url(#trajArrowHead)"
-              />
-
-              {/* Directional Chevron Arrow 1 along trajectory (at 35% distance) */}
-              <g 
-                transform={`translate(${chartMath.chevron1.x}, ${chartMath.chevron1.y}) rotate(${chartMath.chevron1.angle})`}
-              >
-                <path 
-                  d="M -4 -3.5 L 3 0 L -4 3.5" 
-                  fill="none" 
-                  stroke={trajectoryStroke} 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                />
-              </g>
-
-              {/* Directional Chevron Arrow 2 along trajectory (at 70% distance) */}
-              <g 
-                transform={`translate(${chartMath.chevron2.x}, ${chartMath.chevron2.y}) rotate(${chartMath.chevron2.angle})`}
-              >
-                <path 
-                  d="M -4 -3.5 L 3 0 L -4 3.5" 
-                  fill="none" 
-                  stroke={trajectoryStroke} 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                />
-              </g>
-
-              {/* Waypoint Target Terminal Pin */}
-              <circle 
-                cx={chartMath.targetX} 
-                cy={chartMath.targetY} 
-                r="4.5" 
-                fill={trajectoryStroke} 
-                stroke="#fff" 
-                strokeWidth="1.5"
-              />
-              <text 
-                x={chartMath.targetX + 6} 
-                y={chartMath.targetY - 5} 
-                fill={trajectoryStroke} 
-                fontSize="8.5" 
-                fontWeight="bold" 
-                fontFamily="monospace"
-              >
-                {isStrategicExit ? '⚠️ EXIT TARGET' : '🎯 CONSENSUS TARGET'}
-              </text>
-            </svg>
+          {/* Interactive TradingView Chart Component */}
+          <div className="w-full rounded-lg overflow-hidden border border-terminal-border/60">
+            <ChartView
+              candles={candles}
+              pair={pair}
+              timeframe={timeframe}
+              entryPrice={thresholds.entryPrice}
+              stopLoss={thresholds.stopLoss}
+              takeProfit={thresholds.takeProfit}
+              signalBias={definitiveBias}
+            />
           </div>
 
-          {/* Sub-chart Live Ingestion Status Banner */}
-          <div className="mt-2 pt-2 border-t border-terminal-border/50 flex flex-wrap items-center justify-between text-[11px] font-mono text-slate-400 gap-2">
+          {/* Second-by-Second Live Monitoring of Active Chart */}
+          <div className={`mt-2.5 p-2.5 rounded-lg border flex items-center justify-between text-xs font-mono transition-colors ${
+            isChartInvalidated 
+              ? 'bg-rose-950/80 border-rose-500 text-rose-200 animate-pulse'
+              : 'bg-terminal-900 border-terminal-border text-slate-300'
+          }`}>
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              <span>Ingestion Active: <strong className="text-white">{formatPrice(chartMath.lastClosePrice)}</strong></span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span>Timeframe: <span className="text-cyan-400">{timeframe}</span></span>
-              <span>Horizon: <span className="text-indigo-300">+{thresholds.trajectoryHorizonBars} Bars</span></span>
-              <span className={isStrategicExit ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
-                Trajectory Target: {formatPrice(chartMath.targetPrice)}
+              <span className={`w-2 h-2 rounded-full ${isChartInvalidated ? 'bg-rose-400 animate-ping' : 'bg-emerald-400 animate-pulse'}`} />
+              <span className="font-bold text-[11px]">
+                {isChartInvalidated ? 'CRITICAL INVALIDATION TRIGGERED:' : 'SECOND-BY-SECOND MONITOR:'}
               </span>
+              <span className="text-[11px] opacity-90 truncate max-w-[260px]">
+                {isChartInvalidated ? invalidationReason : 'Tape resilient; active parameters strictly bounded.'}
+              </span>
+            </div>
+            <div className="text-[10px] text-slate-400 shrink-0 font-mono">
+              Live: <strong className="text-white">{formatPrice(livePrice)}</strong> | SL: <strong className="text-rose-400">{formatPrice(thresholds.stopLoss)}</strong> | TP1: <strong className="text-emerald-400">{formatPrice(takeProfit1)}</strong>
             </div>
           </div>
         </div>
 
-        {/* Right (5 cols): Actionable Directive & Updated Risk-Reward Synthesis Card */}
+        {/* Right (5 cols): Actionable Directive & Synthesized Risk Manager Report */}
         <div className="lg:col-span-5 bg-terminal-950/90 border border-terminal-border rounded-xl p-4 flex flex-col justify-between space-y-3">
           {/* Directive Header */}
           <div>
@@ -731,7 +428,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                 Actionable Consensus Directive
               </span>
               <span className="text-[10px] font-mono text-slate-400">
-                CRO Dialectical Synthesis
+                Risk Manager Gatekeeper Synthesis
               </span>
             </div>
 
@@ -779,25 +476,30 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
             </div>
           )}
 
-          {/* 4 Explicit Price Threshold Metrics */}
+          {/* Explicit Price Threshold Metrics */}
           <div className="grid grid-cols-2 gap-2 font-mono text-xs">
             {/* 1. Entry Level */}
             <div className="p-2.5 rounded-lg bg-terminal-900 border border-terminal-border">
               <span className="text-[10px] text-slate-400 block mb-0.5">1. ENTRY LEVEL</span>
               <div className="font-bold text-cyan-400 text-sm">{formatPrice(thresholds.entryPrice)}</div>
-              <span className="text-[9px] text-slate-500 block truncate">Live terminal chart close</span>
+              <span className="text-[9px] text-slate-500 block truncate">Deterministic Latched Entry</span>
             </div>
 
-            {/* 2. Profit Target */}
+            {/* 2. Profit Targets: TP1 & TP2 */}
             <div className="p-2.5 rounded-lg bg-terminal-900 border border-emerald-500/30">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-emerald-400 block mb-0.5">2. TARGET (TP)</span>
+                <span className="text-[10px] text-emerald-400 block mb-0.5">2. TARGETS (TP1/TP2)</span>
                 <span className="text-[9px] font-mono text-emerald-400/80">
-                  {isSell ? 'BELOW ENTRY' : 'ABOVE ENTRY'}
+                  {isSell ? 'BELOW' : 'ABOVE'}
                 </span>
               </div>
-              <div className="font-bold text-emerald-400 text-sm">{formatPrice(thresholds.takeProfit)}</div>
-              <span className="text-[9px] text-emerald-500/90 block truncate">
+              <div className="font-bold text-emerald-400 text-sm">
+                TP1: {formatPrice(takeProfit1)}
+              </div>
+              <div className="text-[10px] text-emerald-300/90 font-mono truncate">
+                TP2 (Runner): {formatPrice(takeProfit2)}
+              </div>
+              <span className="text-[9px] text-emerald-500/90 block truncate mt-0.5">
                 +${thresholds.projectedGainUsd} USD projected
               </span>
             </div>
@@ -818,17 +520,15 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               </span>
             </div>
 
-            {/* 4. Risk / Reward & Sizing */}
+            {/* 4. Risk / Reward & Volatility-Adjusted Sizing */}
             <div className="p-2.5 rounded-lg bg-terminal-900 border border-indigo-500/30">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-indigo-300 block mb-0.5">4. RISK / REWARD</span>
-                {isModifyPosition && (
-                  <span className="text-[9px] font-bold text-amber-400">REDUCED</span>
-                )}
+                <span className="text-[10px] text-indigo-300 block mb-0.5">4. R:R & SIZING</span>
+                <span className="text-[9px] font-bold text-emerald-400">ZERO-VETO</span>
               </div>
               <div className="font-bold text-indigo-400 text-sm">{thresholds.riskRewardRatio}:1 R:R</div>
               <span className="text-[9px] text-indigo-300/80 block truncate">
-                {thresholds.positionSizeLots} Standard Lots
+                {thresholds.positionSizeLots} Lots (Vol Scaled)
               </span>
             </div>
           </div>
@@ -873,67 +573,277 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         </div>
       </div>
 
-      {/* Cited Institutional Knowledge Base Rules Strip (525 Technical & 525 Fundamental Rules) */}
-      <div className="bg-terminal-950 border border-terminal-border/80 rounded-xl p-3">
-        <div className="flex items-center justify-between mb-2">
+      {/* ============================================================= */}
+      {/* SECTION 2: BIFURCATED BUY-SIDE VS SELL-SIDE DEBATE CHANNELS   */}
+      {/* ============================================================= */}
+      <div className="bg-terminal-950 border border-terminal-border/80 rounded-xl p-3 sm:p-4 space-y-3">
+        {/* Prevailing Market Pressure Synthesizer Header */}
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/50 pb-2.5">
           <div className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-indigo-400" />
-            <h4 className="font-bold text-xs text-white">
-              Institutional Knowledge Base Cross-Examination (525 Technical & 525 Fundamental Rules)
+            <Gauge className="w-4 h-4 text-indigo-400" />
+            <h4 className="font-bold text-xs sm:text-sm text-white">
+              Bifurcated Buy-Side vs Sell-Side Channel Matrix (525 Technical vs 525 Fundamental Strategies)
             </h4>
           </div>
-          <span className="text-[10px] font-mono text-slate-400">
-            {citedRules.length} Strategies Cited & Cross-Examined
-          </span>
+
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-slate-400">Channel View:</span>
+            <div className="flex items-center gap-1 font-mono text-[10px]">
+              {(['ALL', 'BUY_SIDE', 'SELL_SIDE'] as const).map(ch => (
+                <button
+                  key={ch}
+                  onClick={() => setChannelFilter(ch)}
+                  className={`px-2 py-0.5 rounded transition-colors ${
+                    channelFilter === ch 
+                      ? 'bg-indigo-600 text-white font-bold' 
+                      : 'bg-terminal-900 text-slate-400 hover:text-white border border-terminal-border'
+                  }`}
+                >
+                  {ch === 'ALL' ? 'SPLIT VIEW' : ch === 'BUY_SIDE' ? 'BUY CHANNEL' : 'SELL CHANNEL'}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          {citedRules.map((rule) => {
-            const isRuleBuy = rule.side === 'BUY';
-            const catBadge = rule.category === 'TECHNICAL'
-              ? 'text-cyan-400 bg-cyan-950/60 border-cyan-800'
-              : rule.category === 'FUNDAMENTAL'
-              ? 'text-purple-400 bg-purple-950/60 border-purple-800'
-              : rule.category === 'NEWS'
-              ? 'text-sky-400 bg-sky-950/60 border-sky-800'
-              : 'text-emerald-400 bg-emerald-950/60 border-emerald-800';
+        {/* Prevailing Market Pressure Gauge Bar */}
+        <div className="p-2.5 rounded-lg bg-terminal-900 border border-terminal-border space-y-1.5 font-mono text-xs">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-emerald-400 font-bold">
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>BUY-SIDE PRESSURE: {buyPressurePercent}%</span>
+            </div>
+            <div className="text-[11px] text-slate-300 font-bold uppercase">
+              {buyPressurePercent >= 55 ? (
+                <span className="text-emerald-400">Bullish Institutional Dominance</span>
+              ) : sellPressurePercent >= 55 ? (
+                <span className="text-rose-400">Bearish Institutional Dominance</span>
+              ) : (
+                <span className="text-amber-400">Consensus Equilibrium Range</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-rose-400 font-bold">
+              <span>SELL-SIDE PRESSURE: {sellPressurePercent}%</span>
+              <TrendingDown className="w-3.5 h-3.5" />
+            </div>
+          </div>
 
-            return (
-              <div 
-                key={rule.ruleId}
-                className="p-2.5 rounded-lg bg-terminal-900 border border-terminal-border hover:border-slate-600 transition-colors text-xs font-mono"
-              >
-                <div className="flex items-center justify-between gap-1.5 mb-1.5">
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${catBadge}`}>
-                    {rule.ruleId}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                      isRuleBuy 
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                    }`}>
-                      {rule.side}
-                    </span>
-                    <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
-                      {rule.winRate}% WR
+          {/* Tug-of-War Pressure Progress Bar */}
+          <div className="w-full h-2.5 rounded-full bg-slate-800 overflow-hidden flex">
+            <div 
+              className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-500" 
+              style={{ width: `${buyPressurePercent}%` }} 
+            />
+            <div 
+              className="h-full bg-gradient-to-r from-rose-400 to-rose-600 transition-all duration-500" 
+              style={{ width: `${sellPressurePercent}%` }} 
+            />
+          </div>
+        </div>
+
+        {/* Bifurcated Dual-Channel Content Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* 1. BUY-SIDE CHANNEL */}
+          {(channelFilter === 'ALL' || channelFilter === 'BUY_SIDE') && (
+            <div className="p-3 rounded-lg bg-terminal-900/90 border border-emerald-500/30 space-y-2.5">
+              <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded bg-emerald-500/20 text-emerald-400">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-xs text-emerald-400 uppercase tracking-wide">
+                      BUY-SIDE CHANNEL (BULLS)
+                    </h5>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {opposingRules.supportingTech.length} Technical & {opposingRules.supportingFund.length} Fundamental Long Rules
                     </span>
                   </div>
                 </div>
-
-                <div className="font-bold text-white text-[11px] truncate mb-1">
-                  {rule.ruleName}
-                </div>
-                <p className="text-[10px] text-slate-400 line-clamp-2 leading-relaxed font-sans">
-                  {rule.rationale}
-                </p>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30">
+                  {buyPressurePercent}% PRESSURE
+                </span>
               </div>
-            );
-          })}
+
+              {/* Top Supporting Technical Rules for Long */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-mono uppercase text-emerald-300 font-bold block">
+                  Top Technical Confluences (from 525 Technical Strategies):
+                </span>
+                <div className="space-y-1 font-mono text-xs">
+                  {opposingRules.supportingTech.slice(0, 3).map(rule => (
+                    <div key={rule.id} className="p-2 rounded bg-terminal-950 border border-emerald-500/20 text-[11px]">
+                      <div className="flex items-center justify-between text-emerald-400 font-bold">
+                        <span>{rule.id} • {rule.ruleName}</span>
+                        <span className="text-amber-300">{rule.expectedWinRate}% WR</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-sans line-clamp-1 mt-0.5">
+                        {rule.conditionDescription}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Top Supporting Fundamental Rules for Long */}
+              <div className="space-y-1.5 pt-1">
+                <span className="text-[10px] font-mono uppercase text-purple-300 font-bold block">
+                  Top Fundamental Confluences (from 525 Fundamental Strategies):
+                </span>
+                <div className="space-y-1 font-mono text-xs">
+                  {opposingRules.supportingFund.slice(0, 2).map(rule => (
+                    <div key={rule.id} className="p-2 rounded bg-terminal-950 border border-purple-500/20 text-[11px]">
+                      <div className="flex items-center justify-between text-purple-300 font-bold">
+                        <span>{rule.id} • {rule.ruleName}</span>
+                        <span className="text-amber-300">{rule.expectedWinRate}% WR</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-sans line-clamp-1 mt-0.5">
+                        {rule.conditionDescription}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 2. SELL-SIDE CHANNEL */}
+          {(channelFilter === 'ALL' || channelFilter === 'SELL_SIDE') && (
+            <div className="p-3 rounded-lg bg-terminal-900/90 border border-rose-500/30 space-y-2.5">
+              <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded bg-rose-500/20 text-rose-400">
+                    <TrendingDown className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-xs text-rose-400 uppercase tracking-wide">
+                      SELL-SIDE CHANNEL (BEARS)
+                    </h5>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {opposingRules.opposingTech.length} Technical & {opposingRules.opposingFund.length} Fundamental Short Rules
+                    </span>
+                  </div>
+                </div>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/10 text-rose-300 border border-rose-500/30">
+                  {sellPressurePercent}% PRESSURE
+                </span>
+              </div>
+
+              {/* Top Supporting Technical Rules for Short */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-mono uppercase text-rose-300 font-bold block">
+                  Top Technical Confluences (from 525 Technical Strategies):
+                </span>
+                <div className="space-y-1 font-mono text-xs">
+                  {opposingRules.opposingTech.slice(0, 3).map(rule => (
+                    <div key={rule.id} className="p-2 rounded bg-terminal-950 border border-rose-500/20 text-[11px]">
+                      <div className="flex items-center justify-between text-rose-400 font-bold">
+                        <span>{rule.id} • {rule.ruleName}</span>
+                        <span className="text-amber-300">{rule.expectedWinRate}% WR</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-sans line-clamp-1 mt-0.5">
+                        {rule.conditionDescription}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Top Supporting Fundamental Rules for Short */}
+              <div className="space-y-1.5 pt-1">
+                <span className="text-[10px] font-mono uppercase text-purple-300 font-bold block">
+                  Top Fundamental Confluences (from 525 Fundamental Strategies):
+                </span>
+                <div className="space-y-1 font-mono text-xs">
+                  {opposingRules.opposingFund.slice(0, 2).map(rule => (
+                    <div key={rule.id} className="p-2 rounded bg-terminal-950 border border-purple-500/20 text-[11px]">
+                      <div className="flex items-center justify-between text-purple-300 font-bold">
+                        <span>{rule.id} • {rule.ruleName}</span>
+                        <span className="text-amber-300">{rule.expectedWinRate}% WR</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-sans line-clamp-1 mt-0.5">
+                        {rule.conditionDescription}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Autonomous 5-Agent Multi-Round Dialectical Stream with DAG Terminal Node */}
+      {/* ============================================================= */}
+      {/* SECTION 3: SYSTEM TELEMETRY & EXECUTION PROTECTION DECK       */}
+      {/* ============================================================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 font-mono text-xs">
+        {/* 1. Execution Latency & Slippage Logger Card */}
+        <div className="p-2.5 rounded-lg bg-terminal-950 border border-terminal-border/80">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
+            <span className="text-[10px] uppercase font-bold">Execution Telemetry</span>
+            <Clock className="w-3.5 h-3.5 text-cyan-400" />
+          </div>
+          <div className="font-bold text-white text-sm">
+            {telemetrySummary.avgLatencyMs}ms <span className="text-[10px] text-slate-400 font-normal">avg latency</span>
+          </div>
+          <div className="text-[10px] text-slate-400 flex items-center justify-between mt-1">
+            <span>Slippage: <strong className="text-emerald-400">{telemetrySummary.avgSlippagePips} pips</strong></span>
+            <span>Target R:R: <strong className="text-indigo-300">{telemetrySummary.targetRRRetentionPercent}%</strong></span>
+          </div>
+        </div>
+
+        {/* 2. Institutional Circuit Breaker */}
+        <div className="p-2.5 rounded-lg bg-terminal-950 border border-terminal-border/80">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
+            <span className="text-[10px] uppercase font-bold">Circuit Breaker</span>
+            <ShieldAlert className="w-3.5 h-3.5 text-rose-400" />
+          </div>
+          <div className="font-bold text-emerald-400 text-sm flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${cbState.isTripped ? 'bg-rose-400 animate-ping' : 'bg-emerald-400'}`} />
+            <span>{cbState.isTripped ? 'HALTED' : 'NORMAL (ARMED)'}</span>
+          </div>
+          <div className="text-[10px] text-slate-400 flex items-center justify-between mt-1">
+            <span>Flash Limit: <strong>3.0%/60s</strong></span>
+            <span>Drawdown Cap: <strong>4.0%</strong></span>
+          </div>
+        </div>
+
+        {/* 3. WebSocket Fail-Safe */}
+        <div className="p-2.5 rounded-lg bg-terminal-950 border border-terminal-border/80">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
+            <span className="text-[10px] uppercase font-bold">WebSocket Fail-Safe</span>
+            <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+          </div>
+          <div className="font-bold text-emerald-400 text-sm flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400" />
+            <span>AUTO-SEVER ARMED</span>
+          </div>
+          <div className="text-[10px] text-slate-400 flex items-center justify-between mt-1">
+            <span>Drop Threshold: <strong>5000ms</strong></span>
+            <span>Autopilot: <strong>Auto-Close</strong></span>
+          </div>
+        </div>
+
+        {/* 4. Strict API Rate Limiter */}
+        <div className="p-2.5 rounded-lg bg-terminal-950 border border-terminal-border/80">
+          <div className="flex items-center justify-between text-slate-400 mb-1">
+            <span className="text-[10px] uppercase font-bold">API Rate Limiter</span>
+            <Cpu className="w-3.5 h-3.5 text-indigo-400" />
+          </div>
+          <div className="font-bold text-indigo-300 text-sm flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-indigo-400" />
+            <span>TOKEN BUCKET ACTIVE</span>
+          </div>
+          <div className="text-[10px] text-slate-400 flex items-center justify-between mt-1">
+            <span>Rate: <strong>Max 3 / 2s</strong></span>
+            <span>Debounce: <strong>400ms</strong></span>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================================================= */}
+      {/* SECTION 4: 5-AGENT MULTI-ROUND DIALECTICAL STREAM             */}
+      {/* ============================================================= */}
       <div className="bg-terminal-950 border border-terminal-border rounded-xl p-3 flex flex-col space-y-3">
         {/* Stream Filter & Round Badges */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/50 pb-2">
@@ -1002,254 +912,172 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${directiveBadgeColor}`}>
-                        {nodeDir.replace('_', ' ')}
+                      <span className={`px-2.5 py-1 rounded text-xs font-bold border ${directiveBadgeColor}`}>
+                        DIRECTIVE: {nodeDir.replace('_', ' ')}
+                      </span>
+                      <span className="px-2 py-1 rounded text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                        {node.directiveConfidence}% CONFLUENCE
                       </span>
                     </div>
                   </div>
 
-                  {/* Directive Title & Actionable Summary */}
-                  <div className="mb-3 p-3 rounded-lg bg-black/30 border border-terminal-border/60">
-                    <div className="text-xs font-bold text-white mb-1 flex items-center gap-1.5">
-                      <ArrowRight className="w-3.5 h-3.5 text-cyan-400" />
-                      <span>{node.directiveTitle}</span>
+                  {/* Synthetic Summary Paragraph */}
+                  <p className="text-xs text-slate-200 leading-relaxed font-sans mb-3 bg-black/30 p-2.5 rounded-lg border border-terminal-border/40">
+                    {node.actionableSummary}
+                  </p>
+
+                  {/* Terminal Price Targets Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mb-3">
+                    <div className="p-2 rounded bg-terminal-900 border border-terminal-border">
+                      <span className="text-[10px] text-slate-400 block">ENTRY PRICE</span>
+                      <div className="font-bold text-cyan-400">{formatPrice(node.updatedThresholds.entryPrice)}</div>
                     </div>
-                    <p className="text-xs text-slate-200 font-sans leading-relaxed">
-                      {node.actionableSummary}
-                    </p>
-                  </div>
-
-                  {/* Divergence Comparison Matrix (Baseline vs Debated Scenario) */}
-                  <div className="mb-3">
-                    <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                      <Sliders className="w-3 h-3 text-indigo-400" />
-                      <span>Divergence Evaluation from Initial Baseline</span>
+                    <div className="p-2 rounded bg-terminal-900 border border-emerald-500/30">
+                      <span className="text-[10px] text-emerald-400 block">TAKE-PROFIT</span>
+                      <div className="font-bold text-emerald-400">{formatPrice(node.updatedThresholds.takeProfit)}</div>
                     </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                      {/* 1. Bias Direction */}
-                      <div className="p-2 rounded-lg bg-terminal-900 border border-terminal-border">
-                        <span className="text-[10px] text-slate-400 block">Bias Direction</span>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-slate-400">{node.divergence.baselineBias}</span>
-                          <span className="text-slate-600">→</span>
-                          <span className={`font-bold ${
-                            node.divergence.debatedBias === node.divergence.baselineBias
-                              ? 'text-white'
-                              : 'text-amber-400'
-                          }`}>
-                            {node.divergence.debatedBias}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* 2. Confidence Delta */}
-                      <div className="p-2 rounded-lg bg-terminal-900 border border-terminal-border">
-                        <span className="text-[10px] text-slate-400 block">Confidence Score</span>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-slate-400">{node.divergence.baselineConfidence}%</span>
-                          <span className="text-slate-600">→</span>
-                          <span className={`font-bold ${
-                            node.divergence.confidenceDelta < 0 ? 'text-rose-400' : 'text-emerald-400'
-                          }`}>
-                            {node.divergence.debatedConfidence}% ({node.divergence.confidenceDelta > 0 ? '+' : ''}{node.divergence.confidenceDelta}%)
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* 3. Risk / Reward Ratio */}
-                      <div className="p-2 rounded-lg bg-terminal-900 border border-terminal-border">
-                        <span className="text-[10px] text-slate-400 block">Risk/Reward Profile</span>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-slate-400">{node.divergence.baselineRiskReward}:1</span>
-                          <span className="text-slate-600">→</span>
-                          <span className="font-bold text-indigo-300">
-                            {node.divergence.debatedRiskReward}:1
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* 4. Sizing Adjustment */}
-                      <div className="p-2 rounded-lg bg-terminal-900 border border-terminal-border">
-                        <span className="text-[10px] text-slate-400 block">Position Sizing</span>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="font-bold text-white">
-                            {node.updatedThresholds.positionSizeLots} Lots
-                          </span>
-                          {node.divergence.positionSizeAdjustmentPercent !== 0 && (
-                            <span className="text-[10px] font-bold text-amber-400">
-                              ({node.divergence.positionSizeAdjustmentPercent}%)
-                            </span>
-                          )}
-                        </div>
+                    <div className="p-2 rounded bg-terminal-900 border border-rose-500/30">
+                      <span className="text-[10px] text-rose-400 block">STOP-LOSS</span>
+                      <div className="font-bold text-rose-400">{formatPrice(node.updatedThresholds.stopLoss)}</div>
+                    </div>
+                    <div className="p-2 rounded bg-terminal-900 border border-indigo-500/30">
+                      <span className="text-[10px] text-indigo-300 block">R:R / SIZING</span>
+                      <div className="font-bold text-indigo-300">
+                        {node.updatedThresholds.riskRewardRatio}:1 ({node.updatedThresholds.positionSizeLots} L)
                       </div>
                     </div>
                   </div>
 
-                  {/* Swarm Multi-Desk Sign-Off Quotes */}
-                  <div className="p-2.5 rounded-lg bg-terminal-900/80 border border-terminal-border space-y-1.5 text-[11px] mb-3">
-                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
-                      Autonomous Swarm Multi-Desk Sign-Off:
-                    </span>
-                    <div className="text-cyan-300">
-                      • {node.swarmSignOff.technicalAnalyst}
+                  {/* Invalidation Criteria & Trajectory Banner */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded bg-terminal-900/60 border border-terminal-border/60 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-rose-300">
+                      <ShieldAlert className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                      <span><strong>Invalidation Criteria:</strong> {node.updatedThresholds.invalidationCriteria}</span>
                     </div>
-                    <div className="text-purple-300">
-                      • {node.swarmSignOff.fundamentalAnalyst}
-                    </div>
-                    <div className="text-sky-300">
-                      • {node.swarmSignOff.newsAnalyst}
-                    </div>
-                    <div className="text-amber-300">
-                      • {node.swarmSignOff.forexAnalyst}
-                    </div>
-                    <div className="text-emerald-300 font-bold">
-                      • {node.swarmSignOff.chiefRiskOfficer}
-                    </div>
-                  </div>
-
-                  {/* Terminal Action Execution Buttons */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-terminal-border/60">
-                    <div className="text-[10px] font-mono text-slate-400">
-                      Urgency: <strong className={isExit ? 'text-rose-400' : 'text-amber-400'}>{node.executionGuidance.urgency}</strong> • Action: <strong className="text-white">{node.executionGuidance.action}</strong>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isExit ? (
-                        <button
-                          onClick={onStrategicExit}
-                          className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
-                        >
-                          <AlertOctagon className="w-3.5 h-3.5" />
-                          <span>Close Active Position / Abort</span>
-                        </button>
-                      ) : isMod ? (
-                        <button
-                          onClick={() => onApplyModification && onApplyModification(node.updatedThresholds)}
-                          className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
-                        >
-                          <Sliders className="w-3.5 h-3.5" />
-                          <span>Apply Risk Modification</span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={onExecuteTrade}
-                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
-                        >
-                          <Target className="w-3.5 h-3.5" />
-                          <span>Maintain & Execute Order</span>
-                        </button>
-                      )}
-
-                      {currentScenario && (
-                        <button
-                          onClick={onClearScenario}
-                          className="px-2.5 py-1.5 bg-terminal-800 hover:bg-terminal-700 text-slate-300 rounded-lg text-xs font-mono transition-colors"
-                        >
-                          Clear Scenario
-                        </button>
-                      )}
+                    <div className="text-slate-400">
+                      Trajectory Horizon: <strong className="text-white">{node.updatedThresholds.trajectoryHorizonBars} bars</strong>
                     </div>
                   </div>
                 </div>
               );
             }
 
-            // Standard Agent Messages (Rounds 1-4)
-            const isRisk = msg.role === 'risk_manager';
+            // Standard Agent Debate Turn Message
+            const isBuyStance = msg.side === 'BUY' || msg.sentiment === 'BULLISH';
+            const isSellStance = msg.side === 'SELL' || msg.sentiment === 'BEARISH';
+            const stanceColor = isBuyStance
+              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+              : isSellStance
+              ? 'text-rose-400 bg-rose-500/10 border-rose-500/30'
+              : 'text-amber-400 bg-amber-500/10 border-amber-500/30';
+
             return (
-              <div
-                key={msg.id}
-                className={`p-3 rounded-xl border transition-all ${
-                  isRisk 
-                    ? 'bg-terminal-900/95 border-emerald-500/40 shadow-sm shadow-emerald-500/10' 
-                    : 'bg-terminal-900/60 border-terminal-border hover:border-slate-600'
-                }`}
+              <div 
+                key={msg.id} 
+                className="p-3 rounded-lg bg-terminal-900 border border-terminal-border/70 hover:border-terminal-border transition-colors space-y-2"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className={`p-1.5 rounded-lg border flex items-center justify-center shrink-0 ${msg.avatarColor}`}>
+                {/* Agent Header */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/40 pb-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1 rounded bg-terminal-950 border border-terminal-border">
                       {getRoleIcon(msg.role)}
                     </div>
-                    <div className="min-w-0">
-                      <span className="font-bold text-xs text-white block truncate">{msg.agentName}</span>
-                      <span className="text-[10px] text-slate-400 capitalize truncate block">
-                        {msg.role.replace('_', ' ')} • Round {msg.round}
-                      </span>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs text-white">{msg.agentName}</span>
+                        <span className="text-[10px] text-slate-400">({msg.role.replace('_', ' ')})</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {msg.citedRuleId && (
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-                        <CheckCircle2 className="w-2.5 h-2.5 text-indigo-400" />
-                        Rule: {msg.citedRuleId} {msg.winRate ? `(${msg.winRate}% WR)` : ''}
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                      R{msg.round}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${stanceColor}`}>
+                      {msg.side || msg.sentiment}
+                    </span>
+                    {msg.winRate && (
+                      <span className="text-[10px] text-amber-300 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                        {msg.winRate}% WR
                       </span>
                     )}
-
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      msg.sentiment === 'BULLISH'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                        : msg.sentiment === 'BEARISH'
-                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
-                        : msg.sentiment === 'CAUTION'
-                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                        : 'bg-slate-500/10 text-slate-400 border border-slate-500/30'
-                    }`}>
-                      {msg.sentiment}
-                    </span>
-                    <span className="text-[10px] text-slate-500">{msg.timestamp}</span>
                   </div>
                 </div>
 
-                <p className="text-slate-200 text-xs font-sans leading-relaxed pl-1 whitespace-pre-line">
+                {/* Agent Argument / Content */}
+                <p className="text-xs text-slate-200 leading-relaxed font-sans">
                   {msg.content}
                 </p>
+
+                {/* Cited Rule Footnote */}
+                {msg.citedRuleName && (
+                  <div className="p-1.5 rounded bg-terminal-950 border border-terminal-border/50 text-[10px] text-slate-400 flex items-center justify-between">
+                    <span className="text-indigo-300 font-bold">
+                      Rule: {msg.citedRuleId ? `${msg.citedRuleId} • ` : ''}{msg.citedRuleName}
+                    </span>
+                    {msg.strategyCategory && (
+                      <span className="text-[9px] uppercase px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                        {msg.strategyCategory}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
+      </div>
 
-        {/* Preset Scenario Injection Pills */}
-        <div className="pt-2 border-t border-terminal-border/50">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <Flame className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">
-              Inject Conditional Stress Scenario (Persistent Context Variable):
-            </span>
+      {/* ============================================================= */}
+      {/* SECTION 5: CUSTOM DIALECTICAL PROMPT & STRESS TEST SCENARIOS  */}
+      {/* ============================================================= */}
+      <div className="bg-terminal-950 border border-terminal-border rounded-xl p-3 sm:p-4 space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-cyan-400" />
+            <h4 className="font-bold text-xs text-white">
+              Stress-Test Swarm Consensus with Custom Macro or Structural Scenarios
+            </h4>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            {PRESET_SCENARIOS.map((preset) => (
-              <button
-                key={preset}
-                type="button"
-                onClick={() => handleSelectPreset(preset)}
-                disabled={isDebating}
-                className="px-2.5 py-1 rounded-md text-[11px] font-mono bg-terminal-900 hover:bg-indigo-950/60 text-slate-300 hover:text-indigo-200 border border-terminal-border hover:border-indigo-500/40 transition-colors disabled:opacity-50"
-              >
-                + {preset}
-              </button>
-            ))}
-          </div>
+          <span className="text-[10px] font-mono text-slate-400">
+            Injects real-time dialectical prompt into next round
+          </span>
         </div>
 
-        {/* Input Bar: Custom Conditional Scenario Injection */}
-        <form onSubmit={handleSubmit} className="flex items-center gap-2 pt-1">
+        {/* Preset Scenarios */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10px] font-mono text-slate-400 mr-1">Presets:</span>
+          {PRESET_SCENARIOS.map((preset) => (
+            <button
+              key={preset}
+              onClick={() => handleSelectPreset(preset)}
+              disabled={isDebating}
+              className="px-2.5 py-1 rounded-lg bg-terminal-900 hover:bg-terminal-800 disabled:opacity-50 text-[11px] font-mono text-slate-300 hover:text-white border border-terminal-border transition-colors flex items-center gap-1"
+            >
+              <span>{preset}</span>
+              <ArrowRight className="w-3 h-3 text-cyan-400" />
+            </button>
+          ))}
+        </div>
+
+        {/* Custom Input Form */}
+        <form onSubmit={handleSubmit} className="flex items-center gap-2">
           <input
             type="text"
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
-            placeholder="Inject custom scenario (e.g. 'anticipating a market reversal', 'Fed surprise 50bps rate cut', 'oil spikes 8%')..."
-            maxLength={300}
-            className="flex-1 bg-terminal-900 border border-terminal-border rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-sans"
+            disabled={isDebating}
+            placeholder="E.g. What happens if Powell signals 50bps rate cut? Or what if price sweeps previous day low?"
+            className="flex-1 bg-terminal-900 border border-terminal-border rounded-lg px-3 py-2 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500 transition-colors"
           />
           <button
             type="submit"
             disabled={!inputPrompt.trim() || isDebating}
-            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg flex items-center gap-1.5 font-mono text-xs font-bold transition-colors shrink-0"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg font-mono text-xs font-bold transition-colors flex items-center gap-1.5 shrink-0"
           >
             <Send className="w-3.5 h-3.5" />
-            <span>{isDebating ? 'DELIBERATING...' : 'INJECT SCENARIO'}</span>
+            <span>DISPATCH PROMPT</span>
           </button>
         </form>
       </div>

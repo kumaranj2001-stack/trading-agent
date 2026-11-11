@@ -53,11 +53,17 @@ import { MarketCloseFreezeBanner } from '@/components/MarketCloseFreezeBanner';
 import { AutonomousSwarmEngine, AutonomousSwarmTelemetry } from '@/lib/autonomousSwarmEngine';
 import { tradeInvalidationEngine } from '@/lib/tradeInvalidationEngine';
 import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
+import { apiRateLimiter } from '@/lib/apiRateLimiter';
+import { circuitBreakerManager, CircuitBreakerState } from '@/lib/circuitBreakerManager';
+import { executionTelemetryLogger } from '@/lib/executionTelemetryLogger';
+import { webSocketFailSafeManager } from '@/lib/webSocketFailSafeManager';
+import { AlertTriangle } from 'lucide-react';
 
 export default function Home() {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>('XAU/USD');
   const [marketSegment, setMarketSegment] = useState<MarketSegment>('METALS_COMMODITIES');
   const [timeframe, setTimeframe] = useState<TimeFrame>('1h');
+  const [circuitBreakerState, setCircuitBreakerState] = useState<CircuitBreakerState>(() => circuitBreakerManager.getState());
   const [sessionInfo, setSessionInfo] = useState<MarketSessionInfo | null>(null);
   const [isMarketFrozen, setIsMarketFrozen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<NavigationTab>('terminal');
@@ -248,11 +254,24 @@ export default function Home() {
     if (!calibratedResult.executionSignal.authorized) return;
     if (MarketSessionManager.isMarketFrozen(calibratedResult.pair)) return;
 
+    // Institutional Circuit Breaker Guard
+    if (!circuitBreakerManager.canExecuteTrade()) {
+      return;
+    }
+
+    // Strict API Rate Limiter
+    const rateCheck = apiRateLimiter.canExecuteOrder(calibratedResult.pair);
+    if (!rateCheck.allowed) {
+      return;
+    }
+
     const currentPositions = portfolioRef.current.positions;
     const alreadyOpen = currentPositions.some(p => p.symbol === calibratedResult.pair);
     if (alreadyOpen) return;
 
     const signal = calibratedResult.executionSignal;
+    apiRateLimiter.recordOrderExecution(signal.symbol);
+    const dispatchEpochMs = Date.now();
     const livePrice = LiveMarketFeedManager.getCanonicalPrice(calibratedResult.pair);
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -311,6 +330,15 @@ export default function Home() {
     });
 
     JournalStorageManager.recordTradeOpen(autoPos, calibratedResult, 'FULL_AUTOPILOT');
+    executionTelemetryLogger.logExecution({
+      symbol: signal.symbol,
+      direction: autoTradeType,
+      requestedPrice: signal.entry,
+      fillPrice: livePrice,
+      dispatchEpochMs,
+      status: 'FILLED',
+      networkTransport: 'WSS_WEBSOCKET',
+    });
     showNotification(`⚡ AUTOPILOT EXECUTED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} @ ${livePrice} (Confluence: ${calibratedResult.confluenceGrade})`);
   }, []);
 
@@ -366,8 +394,8 @@ export default function Home() {
           };
         });
 
-        // ⚡ Autonomous Emergency / Small-Profit Exit on Invalidation (FULL_AUTOPILOT)
-        if (executionModeRef.current === 'FULL_AUTOPILOT') {
+        // ⚡ Autonomous Emergency / Small-Profit Exit on Invalidation (FULL_AUTOPILOT & SEMI_AUTONOMOUS)
+        if (executionModeRef.current === 'FULL_AUTOPILOT' || executionModeRef.current === 'SEMI_AUTONOMOUS') {
           for (const pos of reevaluated) {
             if (pos.invalidation?.isInvalidated && (pos.invalidation.urgency === 'HIGH' || pos.invalidation.urgency === 'CRITICAL')) {
               setTimeout(() => {
@@ -397,6 +425,9 @@ export default function Home() {
 
     const unsubscribe = LiveMarketFeedManager.subscribe((event) => {
       if (event.pair !== selectedPair || event.timeframe !== timeframe) return;
+
+      // 0. Institutional Circuit Breaker Live Anomaly Evaluation
+      circuitBreakerManager.evaluatePriceTick(selectedPair, event.livePrice);
 
       // 1. Update chart candles with live tick in-place (visual rendering remains pristine)
       setCandles(event.candles);
@@ -431,8 +462,8 @@ export default function Home() {
           };
         });
 
-        // ⚡ Autonomous Emergency / Small-Profit Exit on Invalidation (FULL_AUTOPILOT)
-        if (executionModeRef.current === 'FULL_AUTOPILOT') {
+        // ⚡ Autonomous Emergency / Small-Profit Exit on Invalidation (FULL_AUTOPILOT & SEMI_AUTONOMOUS)
+        if (executionModeRef.current === 'FULL_AUTOPILOT' || executionModeRef.current === 'SEMI_AUTONOMOUS') {
           for (const pos of updatedPositions) {
             if (pos.invalidation?.isInvalidated && (pos.invalidation.urgency === 'HIGH' || pos.invalidation.urgency === 'CRITICAL')) {
               setTimeout(() => {
@@ -457,6 +488,33 @@ export default function Home() {
       stopTicker();
     };
   }, [selectedPair, timeframe]);
+
+  // ⚡ Circuit Breaker & WebSocket Connection Drop Fail-Safe Subscriptions
+  useEffect(() => {
+    const unsubCB = circuitBreakerManager.subscribe((st) => {
+      setCircuitBreakerState(st);
+    });
+
+    const unsubFailSafe = webSocketFailSafeManager.subscribe((status) => {
+      if (status.emergencyActionTaken && status.isConnectionLost) {
+        if (executionModeRef.current === 'FULL_AUTOPILOT' || executionModeRef.current === 'SEMI_AUTONOMOUS') {
+          // Auto-sever open positions if WebSocket heartbeat drops > 5000ms
+          setPortfolio(prev => {
+            if (prev.positions.length === 0) return prev;
+            prev.positions.forEach(pos => {
+              handleClosePosition(pos.id, 'FAILSAFE_WS_DISCONNECT', [status.reason || 'WebSocket Heartbeat Lost > 5000ms']);
+            });
+            return prev;
+          });
+        }
+      }
+    });
+
+    return () => {
+      unsubCB();
+      unsubFailSafe();
+    };
+  }, []);
 
   // Handle Pair Switch
   const handleSelectPair = (newPair: CurrencyPair) => {
@@ -638,6 +696,22 @@ export default function Home() {
     if (!consensus || !consensus.executionSignal.authorized) return;
     const signal = consensus.executionSignal;
 
+    // Institutional Circuit Breaker Guard
+    if (!circuitBreakerManager.canExecuteTrade()) {
+      const cbState = circuitBreakerManager.getState();
+      showNotification(`EXECUTION HALTED: Circuit Breaker active (${cbState.tripReason || 'Market anomaly detected'})`);
+      return;
+    }
+
+    // Strict API Rate Limiting & Token-Bucket Debouncing
+    const rateCheck = apiRateLimiter.canExecuteOrder(signal.symbol);
+    if (!rateCheck.allowed) {
+      showNotification(rateCheck.reason || 'Rate limit active: Order execution throttled.');
+      return;
+    }
+    apiRateLimiter.recordOrderExecution(signal.symbol);
+    const dispatchEpochMs = Date.now();
+
     // Strict Pre-Execution Guardrail: 500ms freshness and 0.05% price deviation tolerance
     const guardrail = LiveMarketFeedManager.verifyPreExecutionGuardrail(signal.symbol, signal.entry, 0.05, 500);
     if (!guardrail.valid) {
@@ -709,6 +783,17 @@ export default function Home() {
 
     // 📓 Persistent Trading Journal: Auto-log entry credentials, stop-loss ratios & trade parameters
     JournalStorageManager.recordTradeOpen(newPosition, consensus, executionMode);
+
+    // 📊 Log Execution Latency and Slippage Telemetry
+    executionTelemetryLogger.logExecution({
+      symbol: signal.symbol,
+      direction: tradeType,
+      requestedPrice: signal.entry,
+      fillPrice: liveEntryPrice,
+      dispatchEpochMs,
+      status: 'FILLED',
+      networkTransport: 'WSS_WEBSOCKET',
+    });
 
     showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${liveEntryPrice}`);
   };
@@ -862,6 +947,23 @@ export default function Home() {
             showNotification(frozen ? '❄️ State re-frozen.' : '🟢 State temporarily unfrozen for simulation.');
           }}
         />
+
+        {/* 🚨 Institutional Circuit Breaker Alert Banner */}
+        {circuitBreakerState.isTripped && (
+          <div className="p-3 bg-rose-950/90 border border-rose-500 rounded-lg flex items-center justify-between text-xs text-rose-200 animate-pulse">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              <span className="font-bold tracking-wider text-rose-400 font-mono">CIRCUIT BREAKER HALTED:</span>
+              <span className="font-mono">{circuitBreakerState.tripReason}</span>
+            </div>
+            <button
+              onClick={() => circuitBreakerManager.reset()}
+              className="px-3 py-1 bg-rose-800 hover:bg-rose-700 text-white rounded font-mono text-[11px] font-bold transition-colors shrink-0 ml-2"
+            >
+              RESET BREAKER
+            </button>
+          </div>
+        )}
 
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (

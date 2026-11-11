@@ -279,12 +279,22 @@ export class RiskManagerAgent extends BaseAgent {
       }
     }
 
-    // Enforce dynamic lot sizing driven strictly by the assigned confidence grade
+    // Volatility scaling: higher bandwidth / ATR scales lot size defensively, lower bandwidth normalizes sizing
+    const bandwidth = technical.indicators?.bollingerBands?.bandwidth || 0.02;
+    const volatilityMultiplier = bandwidth > 0.035 ? 0.75 : bandwidth > 0.025 ? 0.90 : 1.0;
+    if (volatilityMultiplier < 1.0) {
+      adjustmentsMade.push(
+        `Volatility Scaling: Elevated ATR/Bandwidth (${(bandwidth * 100).toFixed(2)}%) detected. Applied ${(1 - volatilityMultiplier) * 100}% volatility reduction to lot sizing.`
+      );
+    }
+
+    // Enforce dynamic lot sizing driven strictly by the assigned confidence grade & volatility
     const dynamicSizing = riskRatioController.calculateDynamicLotSize(
       assignedGrade,
       this.config.accountBalance,
       stopDistancePips,
-      isVetoTriggered
+      isVetoTriggered,
+      volatilityMultiplier
     );
 
     const lotSize = dynamicSizing.lotSize;
