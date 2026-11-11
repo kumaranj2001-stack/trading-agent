@@ -971,9 +971,16 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                           <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                           <span>MATHEMATICAL EXECUTION BLUEPRINT</span>
                         </span>
-                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/40">
-                          R:R {payload?.executionBlueprint.riskRewardRatio || 2.85}x
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {payload?.executionBlueprint.recommendedLotSize && (
+                            <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 text-[10px] font-bold border border-cyan-500/40">
+                              TIER {payload.executionBlueprint.gradingTier || payload.multiFactorConfluence?.grade || 'A'} • {payload.executionBlueprint.recommendedLotSize} LOTS
+                            </span>
+                          )}
+                          <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-bold border border-emerald-500/40">
+                            R:R {payload?.executionBlueprint.riskRewardRatio || 2.85}x
+                          </span>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">

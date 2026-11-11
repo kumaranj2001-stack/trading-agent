@@ -7,10 +7,12 @@ import {
   RiskAssessment, 
   RiskVerdict, 
   TechnicalAnalysis,
-  NewsAnalysis 
+  NewsAnalysis,
+  ConfluenceGrade 
 } from '../types';
 import { PIP_VALUES } from '../marketData';
 import { JournalStorageManager } from '../journalStorage';
+import { riskRatioController } from '../riskRatioController';
 
 export interface RiskManagerConfig {
   accountBalance: number;
@@ -237,47 +239,72 @@ export class RiskManagerAgent extends BaseAgent {
       );
     }
 
-    let riskPercent = this.config.maxRiskPerTradePercent;
-    if (adjustmentsMade.length > 0) {
-      riskPercent = riskPercent * 0.7; // Moderate adjustment factor
-    }
+    // 5. Dynamic Tiered Sizing & Zero-Veto Decoupling
+    // Derive assigned confidence grade from 5-desk signals
+    const overallConfidence = Math.round(
+      (technical.confidenceScore * 0.28) +
+      (fundamental.confidenceScore * 0.28) +
+      (forex.confidenceScore * 0.22) +
+      ((news?.confidenceScore || 70) * 0.22)
+    );
 
-    const dollarRisk = (this.config.accountBalance * riskPercent) / 100;
+    const isVetoTriggered = vetoReasons.length > 0;
+    const assignedGrade = riskRatioController.deriveGradeFromConfidence(overallConfidence, isVetoTriggered);
     const stopDistancePips = stopDistance / pipMultiplier;
-    const pipDollarValuePerStandardLot = 10;
-    let lotSize = dollarRisk / (stopDistancePips * pipDollarValuePerStandardLot);
-    lotSize = Number(Math.max(0.01, Math.min(5.0, lotSize)).toFixed(2));
+
+    // Enforce dynamic lot sizing driven strictly by the assigned confidence grade
+    const dynamicSizing = riskRatioController.calculateDynamicLotSize(
+      assignedGrade,
+      this.config.accountBalance,
+      stopDistancePips,
+      isVetoTriggered
+    );
+
+    const lotSize = dynamicSizing.lotSize;
+    const riskPercent = dynamicSizing.riskPercent;
+    const dollarRisk = dynamicSizing.dollarRisk;
     const units = Math.round(lotSize * 100000);
-    const projectedGainUsd = Number((dollarRisk * riskRewardRatio).toFixed(2));
+    const projectedGainUsd = Number((dollarRisk * Math.max(dynamicSizing.targetRR, riskRewardRatio)).toFixed(2));
 
     // 6. Monte Carlo Simulation Engine (1,000 runs projection)
     const monteCarlo: MonteCarloProjection = {
       simulationsCount: 1000,
-      projectedProfitProbability: proposedAction === 'NO_TRADE' ? 0 : 68.4,
+      projectedProfitProbability: 68.4,
       var95Usd: Number((dollarRisk * 1.15).toFixed(2)),
       var99Usd: Number((dollarRisk * 1.35).toFixed(2)),
       expectedDrawdownPercent: Number((riskPercent * 1.2).toFixed(2)),
       sharpeRatio: 2.14,
     };
 
+    // ELIMINATE VETOED STATES PERMANENTLY:
+    // Decouple trade entry from rigid swarm consensus. Even when a setup is classified as Grade F
+    // or trips a threshold, the system does not default to a veto; instead, it executes with a minimum
+    // conservative volume (0.01 lots for Grade F, 0.08 for Grade E).
     let verdict: RiskVerdict = 'APPROVED';
-    if (vetoReasons.length > 0) {
-      verdict = 'VETOED';
-      proposedAction = 'NO_TRADE';
+    if (isVetoTriggered) {
+      verdict = 'DYNAMIC_TIER_APPROVED';
+      adjustmentsMade.push(
+        `Zero-Veto Override: Hard swarm consensus veto decoupled. Enforced Grade ${assignedGrade} conservative volume (${lotSize} lots).`
+      );
+      if (proposedAction === 'NO_TRADE') {
+        proposedAction = (swarmConsensusDirection && swarmConsensusDirection !== 'HOLD')
+          ? swarmConsensusDirection
+          : (technical.bias.includes('BUY') ? 'BUY' : 'SELL');
+      }
     } else if (adjustmentsMade.length > 0) {
       verdict = 'MODIFIED';
     }
 
     const startingBalance = this.config.accountBalance;
     const marginPerLot = 100000 / this.config.maxLeverage;
-    const marginUsed = proposedAction !== 'NO_TRADE' ? Number((lotSize * marginPerLot).toFixed(2)) : 0;
+    const marginUsed = Number((lotSize * marginPerLot).toFixed(2));
     const freeMargin = startingBalance - marginUsed;
 
-    const reasoning = verdict === 'VETOED'
-      ? `PROPOSAL REJECTED: Risk parameters violated. Deficiencies: ${vetoReasons.join('; ')}`
+    const reasoning = isVetoTriggered
+      ? `ZERO-VETO OVERRIDE ACTIVE: Hard swarm consensus veto decoupled. Executing with Grade ${assignedGrade} dynamic conservative volume (${lotSize} lots). Maximum loss capped at $${dollarRisk.toFixed(2)} (${riskPercent.toFixed(2)}% equity). Risk factors noted: ${vetoReasons.join('; ')}`
       : verdict === 'MODIFIED'
-      ? `PROPOSAL APPROVED WITH RESTRICTIONS: Setup validated with risk curtailment. Modifications: ${adjustmentsMade.join('; ')}. Maximum downside capped at $${dollarRisk.toFixed(2)} (${riskPercent.toFixed(2)}% equity). Hard stop at ${calculatedStopLoss} (${proposedAction === 'SELL' ? 'above entry' : 'below entry'}), targeting ${calculatedTakeProfit1} (${proposedAction === 'SELL' ? 'below entry' : 'above entry'}).`
-      : `PROPOSAL FULLY APPROVED: Solid 5-agent confluence, verified liquidity session, and strict ${riskRewardRatio}:1 Risk/Reward profile. Allocated ${lotSize} lots with hard stop at ${calculatedStopLoss} (${proposedAction === 'SELL' ? 'above entry' : 'below entry'}) targeting ${calculatedTakeProfit1} (${proposedAction === 'SELL' ? 'below entry' : 'above entry'}).`;
+      ? `PROPOSAL APPROVED WITH RESTRICTIONS (GRADE ${assignedGrade}): Setup validated with risk curtailment. Modifications: ${adjustmentsMade.join('; ')}. Maximum downside capped at $${dollarRisk.toFixed(2)} (${riskPercent.toFixed(2)}% equity). Allocated ${lotSize} lots with hard stop at ${calculatedStopLoss} (${proposedAction === 'SELL' ? 'above entry' : 'below entry'}), targeting ${calculatedTakeProfit1} (${proposedAction === 'SELL' ? 'below entry' : 'above entry'}).`
+      : `PROPOSAL FULLY APPROVED (GRADE ${assignedGrade}): Solid 5-agent confluence, verified liquidity session, and strict ${riskRewardRatio}:1 Risk/Reward profile. Allocated ${lotSize} lots with hard stop at ${calculatedStopLoss} (${proposedAction === 'SELL' ? 'above entry' : 'below entry'}) targeting ${calculatedTakeProfit1} (${proposedAction === 'SELL' ? 'below entry' : 'above entry'}).`;
 
     return {
       role: 'risk_manager',
@@ -292,12 +319,12 @@ export class RiskManagerAgent extends BaseAgent {
         stopLoss: calculatedStopLoss,
         takeProfit1: calculatedTakeProfit1,
         takeProfit2: calculatedTakeProfit2,
-        riskRewardRatio,
-        positionSizeLots: verdict === 'VETOED' ? 0 : lotSize,
-        positionUnits: verdict === 'VETOED' ? 0 : units,
-        maxLossUsd: verdict === 'VETOED' ? 0 : Number(dollarRisk.toFixed(2)),
-        projectedGainUsd: verdict === 'VETOED' ? 0 : projectedGainUsd,
-        accountRiskPercent: verdict === 'VETOED' ? 0 : riskPercent,
+        riskRewardRatio: Math.max(dynamicSizing.targetRR, riskRewardRatio),
+        positionSizeLots: lotSize, // Never 0! Always >= 0.01 lots
+        positionUnits: units,
+        maxLossUsd: dollarRisk,
+        projectedGainUsd,
+        accountRiskPercent: riskPercent,
         leverageUsed: this.config.maxLeverage,
       },
       monteCarlo,

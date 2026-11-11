@@ -14,7 +14,8 @@ import {
   DebateScenarioContext,
   DebateDivergenceMetrics,
   DebateTerminalNode,
-  DebateActionableDirective
+  DebateActionableDirective,
+  ConfluenceGrade
 } from '../types';
 import { TechnicalAnalystAgent } from './TechnicalAnalyst';
 import { FundamentalAnalystAgent } from './FundamentalAnalyst';
@@ -24,6 +25,7 @@ import { RiskManagerAgent, RiskManagerConfig, DEFAULT_RISK_CONFIG } from './Risk
 import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, PIP_VALUES, generateCandles, getMarketSegmentForSymbol } from '../marketData';
 import { knowledgeEngine } from '../knowledge/KnowledgeEngine';
 import { JournalStorageManager } from '../journalStorage';
+import { riskRatioController } from '../riskRatioController';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -247,11 +249,13 @@ export class SwarmCoordinator {
       consensusDirection
     );
 
-    let confluenceGrade: SwarmConsensusResult['confluenceGrade'] = 'C';
-    if (risk.verdict === 'APPROVED' && overallConfidence >= 82) confluenceGrade = 'A+';
-    else if (risk.verdict === 'APPROVED' && overallConfidence >= 68) confluenceGrade = 'A';
-    else if (risk.verdict === 'MODIFIED') confluenceGrade = 'B';
-    else if (risk.verdict === 'VETOED') confluenceGrade = 'F';
+    // Dynamic Tiered Confidence Grading strictly enforcing 7 tiers (A+ down to F)
+    const isVetoOrCaution = risk.verdict === 'DYNAMIC_TIER_APPROVED';
+    const confluenceGrade: ConfluenceGrade = riskRatioController.deriveGradeFromConfidence(
+      overallConfidence,
+      hasMomentumFundamentalDivergence || isVetoOrCaution
+    );
+    const tierParams = riskRatioController.getTierParameters(confluenceGrade);
 
     // Top confluence knowledge rules
     const topConfluenceRules = [
@@ -269,18 +273,18 @@ export class SwarmCoordinator {
     if (isMetal) dynSummary = `Safe-haven bullion inflows, negative TIPS real yields, and physical vault shortages drive high momentum.`;
     else if (isOil) dynSummary = `OPEC+ compliance and geopolitical shipping routes provide structural upside support.`;
 
+    const activeDirection = consensusDirection === 'HOLD'
+      ? (technical.bias.includes('BUY') ? 'BUY' : 'SELL')
+      : consensusDirection;
+
+    const dynamicPositionLots = risk.parameters.positionSizeLots > 0 ? risk.parameters.positionSizeLots : tierParams.defaultLots;
+
     const unifiedDecision: UnifiedDecision = {
-      direction: consensusDirection,
+      direction: activeDirection,
       confidence: overallConfidence,
       confluenceGrade,
-      recommendedAction: risk.verdict === 'VETOED'
-        ? `HOLD / PASS: Setup vetoed by Risk Manager (${risk.reasoning})`
-        : consensusDirection === 'HOLD'
-        ? (hasMomentumFundamentalDivergence 
-            ? `ENTRY SUPPRESSED: Technical Momentum (${technical.bias}) diverges from Fundamental Sentiment (${fundamental.bias}). Order flow confirmation required.` 
-            : `WAIT FOR CONFLUENCE: Analyst team split, awaiting breakout validation.`)
-        : `${consensusDirection} ${risk.parameters.positionSizeLots} Standard Lots on ${pair} @ ${currentPrice}`,
-      summary: `5-Role Institutional Consensus: ${consensusDirection} (${confluenceGrade} Grade Confluence, ${overallConfidence}% Confidence Score across Technical, Fundamental, Forex, News & Risk desks).`,
+      recommendedAction: `${activeDirection} ${dynamicPositionLots} Standard Lots (Grade ${confluenceGrade} Execution) on ${pair} @ ${currentPrice}`,
+      summary: `5-Role Institutional Consensus: ${activeDirection} (${confluenceGrade} Grade Confluence, ${overallConfidence}% Confidence Score across Technical, Fundamental, Forex, News & Risk desks).`,
       coreReasons: {
         fundamental: `Macro Regime: ${fundamental.macroRegime}. Central bank policy stance (${fundamental.baseCurrencyOutlook.currency} ${fundamental.baseCurrencyOutlook.centralBankStance} @ ${fundamental.baseCurrencyOutlook.interestRate}% vs ${fundamental.quoteCurrencyOutlook.currency} ${fundamental.quoteCurrencyOutlook.centralBankStance} @ ${fundamental.quoteCurrencyOutlook.interestRate}%). Real interest rate spread: ${fundamental.realInterestRateSpread > 0 ? '+' : ''}${fundamental.realInterestRateSpread}%.`,
         newsSentiment: `Wire Pulse: ${news.marketMood.replace('_', ' ')} (${news.sentimentScore > 0 ? '+' : ''}${news.sentimentScore} sentiment). 38 premier sources actively scraped (Bloomberg, Reuters, Kitco, Fed, LBMA, WSJ, CNBC, FT). Top headline catalyst: "${news.topCatalysts[0] || 'Broad institutional wire confluence.'}".`,
@@ -369,9 +373,8 @@ export class SwarmCoordinator {
       }
     }
 
-    const orderType = isExitDirective || risk.verdict === 'VETOED' || risk.action === 'NO_TRADE' || consensusDirection === 'HOLD'
-      ? 'NONE'
-      : consensusDirection === 'SELL' ? 'SELL_MARKET' : 'BUY_MARKET';
+    // Decouple trade entry from rigid swarm vetoes: continuous execution active 24/7
+    const orderType = activeDirection === 'SELL' ? 'SELL_MARKET' : 'BUY_MARKET';
 
     return {
       pair,
@@ -379,7 +382,7 @@ export class SwarmCoordinator {
       timeframe,
       currentPrice,
       timestamp: new Date().toISOString(),
-      consensusDirection,
+      consensusDirection: activeDirection,
       overallConfidence,
       confluenceGrade,
       unifiedDecision,
@@ -401,7 +404,7 @@ export class SwarmCoordinator {
       debateTranscript: debateOutcome.transcript,
       debateSynthesis: debateOutcome.synthesis,
       executionSignal: {
-        authorized: !isExitDirective && risk.verdict !== 'VETOED' && risk.action !== 'NO_TRADE' && consensusDirection !== 'HOLD',
+        authorized: true,
         orderType,
         symbol: pair,
         lots: finalLots,
@@ -410,7 +413,9 @@ export class SwarmCoordinator {
         takeProfit: finalTakeProfit,
         riskReward: finalRiskReward,
         riskAmountUsd: finalMaxRisk,
-        status: isExitDirective ? 'VETOED' : (risk.verdict === 'VETOED' ? 'VETOED' : 'READY'),
+        status: 'READY',
+        gradingTier: confluenceGrade,
+        tierDescription: tierParams.executionPolicy,
       },
       autonomousLoopTelemetry: {
         cycleNumber: Math.max(1, SwarmCoordinator.autonomousCycleCounter),
@@ -418,7 +423,7 @@ export class SwarmCoordinator {
         latencyMs: 14,
         activeDesksCount: 5,
         autonomousCadenceSeconds: 1.5,
-        executionReadiness: !isExitDirective && risk.verdict !== 'VETOED' && risk.action !== 'NO_TRADE' && consensusDirection !== 'HOLD',
+        executionReadiness: true,
         isAutonomousLooping: true,
       },
     };
@@ -444,9 +449,9 @@ export class SwarmCoordinator {
       const risk = result.agents.risk;
 
       let status: MarketScannerOpportunity['status'] = 'MODERATE_SETUP';
-      if (risk.verdict === 'VETOED') status = 'VETOED';
-      else if (result.confluenceGrade === 'A+' || result.confluenceGrade === 'A') status = 'PRIME_SETUP';
-      else if (result.overallConfidence < 50) status = 'AVOID_NO_EDGE';
+      if (result.confluenceGrade === 'A+' || result.confluenceGrade === 'A') status = 'PRIME_SETUP';
+      else if (result.confluenceGrade === 'E' || result.confluenceGrade === 'F') status = 'DYNAMIC_CONSERVATIVE';
+      else if (result.overallConfidence < 30) status = 'AVOID_NO_EDGE';
 
       opportunities.push({
         pair,
@@ -465,7 +470,15 @@ export class SwarmCoordinator {
       });
     }
 
-    const gradeWeight = { 'A+': 5, 'A': 4, 'B': 3, 'C': 2, 'F': 1 };
+    const gradeWeight: Record<ConfluenceGrade, number> = {
+      'A+': 7,
+      'A': 6,
+      'B': 5,
+      'C': 4,
+      'D': 3,
+      'E': 2,
+      'F': 1,
+    };
     return opportunities.sort((a, b) => gradeWeight[b.grade] - gradeWeight[a.grade]);
   }
 
@@ -851,7 +864,7 @@ export class SwarmCoordinator {
       agentName: risk.agentName,
       avatarColor: 'text-emerald-400 bg-emerald-950/60 border-emerald-800',
       content: directive === 'STRATEGIC_EXIT'
-        ? `CHIEF RISK OFFICER BINDING VERDICT: PROPOSAL VETOED under Risk Governance: Injected scenario "${scenarioContext?.prompt || 'Stress Event'}" triggers structural invalidation. Opposing arguments (${techOpposeRule.id} WR: ${techOpposeRule.expectedWinRate}%) dominate. Capital preservation enforced.`
+        ? `CHIEF RISK OFFICER BINDING VERDICT: ZERO-VETO DYNAMIC SCALE-DOWN: Injected scenario "${scenarioContext?.prompt || 'Stress Event'}" prompts defensive risk arbitration. Opposing arguments (${techOpposeRule.id} WR: ${techOpposeRule.expectedWinRate}%) active. Enforcing Grade E/F conservative lot sizing (${debatedPositionSize} lots).`
         : directive === 'MODIFY_POSITION'
         ? `CHIEF RISK OFFICER BINDING VERDICT: Scenario cross-examination concluded. Opposing risk ${techOpposeRule.id} arbitrated with dynamic risk mitigation. SETUP APPROVED WITH RISK-ADJUSTED PARAMETERS:
 • Definitive Bias: ${dominantSide} (${confluenceGrade} Grade, ${debatedConfidence}% Confidence)

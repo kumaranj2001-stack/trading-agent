@@ -79,10 +79,16 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               unifiedDecision.confluenceGrade === 'A+' || unifiedDecision.confluenceGrade === 'A'
                 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
                 : unifiedDecision.confluenceGrade === 'B'
+                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50'
+                : unifiedDecision.confluenceGrade === 'C'
+                ? 'bg-blue-500/20 text-blue-300 border-blue-500/50'
+                : unifiedDecision.confluenceGrade === 'D'
                 ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                : unifiedDecision.confluenceGrade === 'E'
+                ? 'bg-orange-500/20 text-orange-300 border-orange-500/50'
                 : 'bg-rose-500/20 text-rose-300 border-rose-500/50'
             }`}>
-              GRADE {unifiedDecision.confluenceGrade}
+              GRADE {unifiedDecision.confluenceGrade} • {executionSignal.lots.toFixed(2)} LOTS
             </span>
             <span className="text-slate-400">
               Confidence: <strong className="text-cyan-400 font-bold">{unifiedDecision.confidence}%</strong>

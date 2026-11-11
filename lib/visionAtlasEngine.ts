@@ -16,13 +16,15 @@ import {
   InstitutionalOptimalEntry,
   KnowledgeRule,
   MultiFactorConfluenceReport,
-  ConfluenceFactorItem
+  ConfluenceFactorItem,
+  ConfluenceGrade
 } from './types';
 import { BASE_PRICES } from './marketData';
 import { computeTechnicalIndicators, calculateEMA, calculateRSI, calculateATR } from './indicators';
 import { realTimeNewsEngine } from './newsEngine';
 import { TECHNICAL_KNOWLEDGE_BASE } from './knowledge/technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from './knowledge/fundamentalKnowledge';
+import { riskRatioController } from './riskRatioController';
 
 // ============================================================================
 // VISION ATLAS LAB ENGINE: ADVANCED MARKET ANALYSIS & SIMULATION WORKSPACE
@@ -172,7 +174,15 @@ export class VisionAtlasLabEngine {
     );
 
     // 11. Mathematical Execution Blueprint
-    const executionBlueprint = this.calculateExecutionBlueprint(symbol, livePrice, directionalBias, atr, orderBlocks);
+    const executionBlueprint = this.calculateExecutionBlueprint(
+      symbol,
+      livePrice,
+      directionalBias,
+      atr,
+      orderBlocks,
+      multiFactorConfluence.grade,
+      multiFactorConfluence.compositeScore
+    );
 
     // 12. Seven-Step Choreographed Narration Queue
     const narrationQueue = this.generateNarrationQueue(
@@ -199,7 +209,7 @@ export class VisionAtlasLabEngine {
       generatedAt: new Date().toISOString(),
       citedTechnicalRuleIds: multiFactorConfluence.technicalStream.topMatchedRules.map(r => r.id),
       citedFundamentalModelIds: multiFactorConfluence.fundamentalStream.topMatchedRules.map(r => r.id),
-      synthesisGrade: (multiFactorConfluence.grade === 'NEUTRAL' ? 'B' : multiFactorConfluence.grade) as 'A+' | 'A' | 'B',
+      synthesisGrade: multiFactorConfluence.grade,
     };
 
     return {
@@ -811,7 +821,9 @@ export class VisionAtlasLabEngine {
     livePrice: number,
     bias: 'BULLISH' | 'BEARISH' | 'NEUTRAL',
     atr: number,
-    orderBlocks: SMCOrderBlock[]
+    orderBlocks: SMCOrderBlock[],
+    grade: ConfluenceGrade = 'A',
+    compositeScore: number = 75
   ) {
     const decimals = symbol.includes('JPY') ? 3 : 5;
     const isBuy = bias === 'BULLISH';
@@ -848,6 +860,9 @@ export class VisionAtlasLabEngine {
       riskRewardRatio = Number(((recommendedEntry - takeProfit2) / Math.max(0.0001, hardStopLoss - recommendedEntry)).toFixed(2));
     }
 
+    const dynamicSizing = riskRatioController.calculateDynamicLotSize(grade, 25000, 30, false);
+    const tierParams = riskRatioController.getTierParameters(grade);
+
     return {
       entryZoneMin,
       entryZoneMax,
@@ -857,6 +872,9 @@ export class VisionAtlasLabEngine {
       takeProfit2,
       takeProfit3,
       riskRewardRatio: isNaN(riskRewardRatio) ? 2.5 : riskRewardRatio,
+      recommendedLotSize: dynamicSizing.lotSize,
+      gradingTier: grade,
+      tierRiskPercent: tierParams.accountRiskPercent,
     };
   }
 
@@ -1259,12 +1277,14 @@ export class VisionAtlasLabEngine {
       ((techStreamConfidence * (technicalWeight / 100)) + (fundStreamConfidence * (fundamentalWeight / 100))).toFixed(1)
     );
 
-    let grade: 'A+' | 'A' | 'B' | 'C' | 'NEUTRAL' = 'A';
+    let grade: ConfluenceGrade = 'A';
     if (compositeScore >= 90) grade = 'A+';
     else if (compositeScore >= 80) grade = 'A';
     else if (compositeScore >= 70) grade = 'B';
     else if (compositeScore >= 60) grade = 'C';
-    else grade = 'NEUTRAL';
+    else if (compositeScore >= 50) grade = 'D';
+    else if (compositeScore >= 35) grade = 'E';
+    else grade = 'F';
 
     const activeSetupName = isIndianMarket
       ? (isBull ? 'NIFTY 15M ORB Breakout with FII Net Cash Inflow Squeeze (Grade A+)' : 'BANK NIFTY VWAP Breakdown with FII Derivative De-risking (Grade A)')

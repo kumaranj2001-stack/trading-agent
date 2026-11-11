@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CurrencyPair } from '@/lib/types';
+import { CurrencyPair, RiskVerdict } from '@/lib/types';
 import { SwarmCoordinator } from '@/lib/agents/SwarmCoordinator';
 import { BASE_PRICES } from '@/lib/marketData';
 
@@ -9,7 +9,7 @@ interface ScenarioResult {
   scenarioName: string;
   pair: CurrencyPair;
   action: 'BUY' | 'SELL' | 'NO_TRADE';
-  riskVerdict: 'APPROVED' | 'MODIFIED' | 'VETOED';
+  riskVerdict: RiskVerdict;
   lots: number;
   entryPrice: number;
   exitPrice: number;

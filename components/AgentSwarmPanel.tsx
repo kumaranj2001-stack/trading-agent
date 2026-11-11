@@ -94,6 +94,13 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
             VERDICT: APPROVED (MODIFIED)
           </span>
         );
+      case 'DYNAMIC_TIER_APPROVED':
+        return (
+          <span className="px-2.5 py-1 rounded text-xs font-bold font-mono bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center gap-1.5 shadow-sm shadow-cyan-500/20">
+            <Zap className="w-4 h-4 text-cyan-400" />
+            VERDICT: DYNAMIC TIER APPROVED
+          </span>
+        );
       case 'VETOED':
         return (
           <span className="px-2.5 py-1 rounded text-xs font-bold font-mono bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center gap-1.5 shadow-sm shadow-rose-500/20">
@@ -536,10 +543,16 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
 
             {/* Veto or Adjustment Reasons */}
             {risk.vetoReasons && risk.vetoReasons.length > 0 && (
-              <div className="p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/50 text-xs text-rose-300">
-                <span className="font-bold flex items-center gap-1.5 mb-1 text-rose-400">
+              <div className={`p-2.5 rounded-lg text-xs ${
+                risk.verdict === 'DYNAMIC_TIER_APPROVED'
+                  ? 'bg-amber-950/40 border border-amber-800/50 text-amber-300'
+                  : 'bg-rose-950/40 border border-rose-800/50 text-rose-300'
+              }`}>
+                <span className={`font-bold flex items-center gap-1.5 mb-1 ${
+                  risk.verdict === 'DYNAMIC_TIER_APPROVED' ? 'text-amber-400' : 'text-rose-400'
+                }`}>
                   <ShieldAlert className="w-4 h-4" />
-                  VETO ACTIVE:
+                  {risk.verdict === 'DYNAMIC_TIER_APPROVED' ? 'DYNAMIC SIZING OVERRIDE (ZERO-VETO ENFORCED):' : 'VETO ACTIVE:'}
                 </span>
                 {risk.vetoReasons.map((v, i) => (
                   <p key={i} className="leading-relaxed">• {v}</p>
@@ -554,14 +567,14 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
         </div>
 
         {/* Execute button */}
-        {risk.verdict !== 'VETOED' && risk.action !== 'NO_TRADE' && onExecuteTrade && (
+        {onExecuteTrade && (
           <div className="mt-3.5 pt-3 border-t border-terminal-border/40">
             <button
               onClick={onExecuteTrade}
               className={`w-full py-3 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg transition-all ${
-                risk.action === 'BUY'
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                  : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
+                risk.action === 'SELL'
+                  ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
               }`}
             >
               <span>

@@ -30,6 +30,7 @@ import { PortfolioPanel } from '@/components/PortfolioPanel';
 import { BacktestView } from '@/components/BacktestModal';
 import { ArchitectureView } from '@/components/ArchitectureView';
 import { SettingsModal } from '@/components/SettingsModal';
+import { RiskRatioControllerModal } from '@/components/RiskRatioControllerModal';
 import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
 import { VisionAtlasWorkspace } from '@/components/VisionAtlasWorkspace';
@@ -90,6 +91,7 @@ export default function Home() {
   executionModeRef.current = executionMode;
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [isRiskRatioControllerOpen, setIsRiskRatioControllerOpen] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [activeDebateScenario, setActiveDebateScenario] = useState<DebateScenarioContext | null>(null);
 
@@ -1068,6 +1070,15 @@ export default function Home() {
         }}
       />
 
+      {/* 🛡️ Risk Ratio Controller Modal (Dynamic Sizing & Zero-Veto Decoupling) */}
+      <RiskRatioControllerModal
+        isOpen={isRiskRatioControllerOpen}
+        onClose={() => setIsRiskRatioControllerOpen(false)}
+        onConfigSaved={() => {
+          showNotification('Risk Ratio Controller: 7-Tier parameters saved & dynamic sizing updated.');
+        }}
+      />
+
       {/* 🧭 Collapsible Left-Hand Hamburger Navigation Drawer (12 Items) */}
       <LeftNavigationDrawer
         isOpen={isLeftDrawerOpen}
@@ -1083,6 +1094,7 @@ export default function Home() {
         onOpenCalendar={() => setActiveTab('calendar')}
         onOpenOrderFlow={() => setActiveTab('order-flow')}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenRiskRatioController={() => setIsRiskRatioControllerOpen(true)}
         executionMode={executionMode}
         onToggleExecutionMode={handleToggleExecutionMode}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}

@@ -98,7 +98,30 @@ export type SignalDirection =
   | 'SELL' 
   | 'STRONG_SELL';
 
-export type RiskVerdict = 'APPROVED' | 'MODIFIED' | 'VETOED';
+export type RiskVerdict = 'APPROVED' | 'MODIFIED' | 'DYNAMIC_TIER_APPROVED' | 'VETOED';
+
+export type ConfluenceGrade = 'A+' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F';
+
+export interface TierRiskParameter {
+  grade: ConfluenceGrade;
+  name: string;
+  minConfidence: number;
+  defaultLots: number;
+  minLots: number;
+  maxLots: number;
+  accountRiskPercent: number;
+  targetRRRatio: number;
+  executionPolicy: string;
+}
+
+export interface RiskRatioControllerConfig {
+  zeroVetoEnforced: boolean;
+  dynamicSizingEnabled: boolean;
+  minConservativeLots: number;
+  maxInstitutionalLots: number;
+  tiers: Record<ConfluenceGrade, TierRiskParameter>;
+  lastUpdated?: string;
+}
 
 export type AgentRole = 
   | 'technical_analyst'
@@ -662,7 +685,7 @@ export interface DailyNewsReflection {
 export interface UnifiedDecision {
   direction: 'BUY' | 'SELL' | 'HOLD';
   confidence: number;
-  confluenceGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  confluenceGrade: ConfluenceGrade;
   recommendedAction: string;
   summary: string;
   coreReasons: {
@@ -822,7 +845,7 @@ export interface DebateSynthesisResult {
   pair: CurrencyPair;
   timeframe: TimeFrame;
   definitiveBias: SignalDirection;
-  confluenceGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  confluenceGrade: ConfluenceGrade;
   confidenceScore: number;
   priceThresholds: DebatePriceThresholds;
   citedRules: DebateCitedRule[];
@@ -842,7 +865,7 @@ export interface SwarmConsensusResult {
   timestamp: string;
   consensusDirection: 'BUY' | 'SELL' | 'HOLD';
   overallConfidence: number;
-  confluenceGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  confluenceGrade: ConfluenceGrade;
   unifiedDecision: UnifiedDecision;
   knowledgeSummary: {
     totalTechnicalRulesLoaded: number;
@@ -879,6 +902,8 @@ export interface SwarmConsensusResult {
     riskReward: number;
     riskAmountUsd: number;
     status: 'READY' | 'EXECUTED' | 'VETOED';
+    gradingTier?: ConfluenceGrade;
+    tierDescription?: string;
   };
   dualConfirmation?: {
     confirmationStatus: 'DUAL_CONFIRMED' | 'DIVERGENCE_REJECTED' | 'CONSOLIDATION_NEUTRAL';
@@ -918,10 +943,10 @@ export interface MarketScannerOpportunity {
   forexScore: number;
   newsScore?: number;
   riskVerdict: RiskVerdict;
-  grade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  grade: ConfluenceGrade;
   potentialLots: number;
   riskReward: number;
-  status: 'PRIME_SETUP' | 'MODERATE_SETUP' | 'AVOID_NO_EDGE' | 'VETOED';
+  status: 'PRIME_SETUP' | 'MODERATE_SETUP' | 'DYNAMIC_CONSERVATIVE' | 'AVOID_NO_EDGE' | 'VETOED';
 }
 
 export interface Position {
@@ -991,7 +1016,7 @@ export interface JournalEntry {
   realizedPnl?: number;
   pnlPercent?: number;
   outcome: 'OPEN' | 'WIN' | 'LOSS' | 'SCRATCH';
-  confluenceGrade: 'A+' | 'A' | 'B' | 'C' | 'F';
+  confluenceGrade: ConfluenceGrade;
   confidenceScore: number;
   swarmDirection: 'BUY' | 'SELL' | 'HOLD';
   riskManagerVerdict: RiskVerdict;
@@ -1360,7 +1385,7 @@ export interface ConfluenceFactorItem {
 
 export interface MultiFactorConfluenceReport {
   compositeScore: number; // 0.0 to 100.0%
-  grade: 'A+' | 'A' | 'B' | 'C' | 'NEUTRAL';
+  grade: ConfluenceGrade;
   directionalBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   activeSetupName: string;
   dynamicWeights: {
@@ -1513,6 +1538,9 @@ export interface VisionAtlasPayload {
     takeProfit2: number;
     takeProfit3: number;
     riskRewardRatio: number;
+    recommendedLotSize?: number;
+    gradingTier?: ConfluenceGrade;
+    tierRiskPercent?: number;
   };
 
   // Market Report Summary Card
@@ -1524,7 +1552,7 @@ export interface VisionAtlasPayload {
     generatedAt: string;
     citedTechnicalRuleIds?: string[];
     citedFundamentalModelIds?: string[];
-    synthesisGrade?: 'A+' | 'A' | 'B';
+    synthesisGrade?: ConfluenceGrade;
   };
 
   // Automated Pattern Recognition & Institutional Filter
@@ -1540,7 +1568,7 @@ export interface VisionAtlasPayload {
 
   // Institutional Multi-Timeframe Quant Synthesis
   multiTimeframeSynthesis?: {
-    synthesisGrade: 'A+' | 'A' | 'B';
+    synthesisGrade: ConfluenceGrade;
     confidenceScore: number;
     microTriggerConfirmed: boolean;
     macroBiasAligned: boolean;

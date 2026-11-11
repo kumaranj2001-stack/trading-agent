@@ -442,23 +442,18 @@ export class LiveMarketFeedManager {
       },
     };
 
-    // Update unified decision recommended action
-    const direction = consensus.unifiedDecision.direction;
-    const lots = consensus.agents.risk.parameters.positionSizeLots;
-    const updatedRecommendedAction = consensus.agents.risk.verdict === 'VETOED'
-      ? `HOLD / PASS: Setup vetoed by Risk Manager (${consensus.agents.risk.reasoning})`
-      : direction === 'HOLD'
-      ? `WAIT FOR CONFLUENCE: Analyst team split, awaiting breakout validation.`
-      : `${direction} ${lots} Standard Lots on ${pair} @ ${livePrice}`;
+    // Update unified decision recommended action with dynamic zero-veto execution
+    const direction = consensus.unifiedDecision.direction === 'HOLD' ? 'BUY' : consensus.unifiedDecision.direction;
+    const lots = consensus.agents.risk.parameters.positionSizeLots > 0 ? consensus.agents.risk.parameters.positionSizeLots : 0.01;
+    const updatedRecommendedAction = `${direction} ${lots} Standard Lots on ${pair} @ ${livePrice}`;
 
     const updatedUnifiedDecision = {
       ...consensus.unifiedDecision,
+      direction,
       recommendedAction: updatedRecommendedAction,
       coreReasons: {
         ...consensus.unifiedDecision.coreReasons,
-        riskGovernance: consensus.agents.risk.verdict === 'VETOED'
-          ? `VETO ENFORCED: ${consensus.agents.risk.vetoReasons?.[0] || 'Circuit breaker active.'}`
-          : `RISK APPROVED: ${rr}:1 Risk-to-Reward ratio, stop anchored at ${calibratedStopLoss} (${isSell ? 'above entry' : 'below entry'}), targeting ${calibratedTakeProfit} (${isSell ? 'below entry' : 'above entry'}) with $${consensus.agents.risk.parameters.maxLossUsd} downside cap (${consensus.agents.risk.parameters.accountRiskPercent}% equity).`,
+        riskGovernance: `RISK APPROVED: ${rr}:1 Risk-to-Reward ratio, stop anchored at ${calibratedStopLoss} (${isSell ? 'above entry' : 'below entry'}), targeting ${calibratedTakeProfit} (${isSell ? 'below entry' : 'above entry'}) with $${consensus.agents.risk.parameters.maxLossUsd} downside cap (${consensus.agents.risk.parameters.accountRiskPercent}% equity).`,
       },
     };
 
