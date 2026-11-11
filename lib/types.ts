@@ -931,6 +931,41 @@ export interface SwarmConsensusResult {
     executionReadiness: boolean;
     isAutonomousLooping: boolean;
   };
+  latchedState?: LatchedTradeState;
+}
+
+export interface LatchedTradeState {
+  pair: CurrencyPair;
+  isLatched: boolean;
+  latchStatus: 'LATCHED_ACTIVE' | 'UNLATCHED_INVALIDATED' | 'UNLATCHED_EXPIRED' | 'UNLATCHED_EXECUTED';
+  latchedAtEpochMs: number;
+  timeWindowExpiryEpochMs: number;
+  timeWindowMinutes: number;
+  timeRemainingSeconds: number;
+  anchoredDirection: 'BUY' | 'SELL';
+  anchoredGrade: ConfluenceGrade;
+  anchoredEntryPrice: number;
+  anchoredStopLoss: number;
+  anchoredTakeProfit: number;
+  anchoredRiskReward: number;
+  anchoredLots: number;
+  resistanceCeiling: number; // For Sell setup: upper structural invalidation ceiling
+  s1Floor: number;           // For Buy setup: lower structural invalidation floor
+  winProbabilityPercent: number; // Monte Carlo win probability (e.g. 74.5%)
+  probabilityFirstBoost: boolean; // Elevated to Grade A or B because win probability > 70%
+  invalidationLevel: number;
+  invalidationDistancePips: number;
+  invalidationTriggerReason?: string;
+  synthesisSources: {
+    fundamentalRegime: string;
+    newsSentimentScore: number;
+    technicalPocLevel: number;
+    valueAreaHigh: number;
+    valueAreaLow: number;
+    intermarketBullionYield: string;
+    monteCarloVar95Usd: number;
+    matchedRulesCount: number;
+  };
 }
 
 export interface MarketScannerOpportunity {

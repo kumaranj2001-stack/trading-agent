@@ -26,6 +26,7 @@ import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, PIP
 import { knowledgeEngine } from '../knowledge/KnowledgeEngine';
 import { JournalStorageManager } from '../journalStorage';
 import { riskRatioController } from '../riskRatioController';
+import { stateLatchingEngine } from '../stateLatchingEngine';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -251,7 +252,7 @@ export class SwarmCoordinator {
 
     // Dynamic Tiered Confidence Grading strictly enforcing 7 tiers (A+ down to F)
     const isVetoOrCaution = risk.verdict === 'DYNAMIC_TIER_APPROVED';
-    const confluenceGrade: ConfluenceGrade = riskRatioController.deriveGradeFromConfidence(
+    let confluenceGrade: ConfluenceGrade = riskRatioController.deriveGradeFromConfidence(
       overallConfidence,
       hasMomentumFundamentalDivergence || isVetoOrCaution
     );
@@ -273,7 +274,7 @@ export class SwarmCoordinator {
     if (isMetal) dynSummary = `Safe-haven bullion inflows, negative TIPS real yields, and physical vault shortages drive high momentum.`;
     else if (isOil) dynSummary = `OPEC+ compliance and geopolitical shipping routes provide structural upside support.`;
 
-    const activeDirection = consensusDirection === 'HOLD'
+    let activeDirection = consensusDirection === 'HOLD'
       ? (technical.bias.includes('BUY') ? 'BUY' : 'SELL')
       : consensusDirection;
 
@@ -335,7 +336,7 @@ export class SwarmCoordinator {
 
     const terminalDirective = debateOutcome.synthesis.terminalNode?.directive ?? 'MAINTAIN_POSITION';
     const isExitDirective = terminalDirective === 'STRATEGIC_EXIT';
-    const finalLots = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedLotSize ?? risk.parameters.positionSizeLots;
+    let finalLots = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedLotSize ?? risk.parameters.positionSizeLots;
     let finalStopLoss = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedStopLoss ?? risk.parameters.stopLoss;
     let finalTakeProfit = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedTakeProfit ?? risk.parameters.takeProfit1;
     const finalRiskReward = debateOutcome.synthesis.terminalNode?.updatedThresholds.riskRewardRatio ?? risk.parameters.riskRewardRatio;
@@ -357,26 +358,38 @@ export class SwarmCoordinator {
     else if (isSilver || isJpy || isRupee) decimals = 3;
     else if (isCopper) decimals = 4;
 
-    if (consensusDirection === 'SELL') {
-      if (finalStopLoss <= currentPrice) {
-        finalStopLoss = Number((currentPrice + Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
-      }
-      if (finalTakeProfit >= currentPrice) {
-        finalTakeProfit = Number((currentPrice - Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
-      }
-    } else if (consensusDirection === 'BUY') {
-      if (finalStopLoss >= currentPrice) {
-        finalStopLoss = Number((currentPrice - Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
-      }
-      if (finalTakeProfit <= currentPrice) {
-        finalTakeProfit = Number((currentPrice + Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
+    // ⚓ Deterministic State-Latching Protocol Check
+    const existingLatched = stateLatchingEngine.getLatchedState(pair);
+    const isStateLatched = existingLatched && stateLatchingEngine.isLatchedValid(pair, currentPrice);
+
+    if (isStateLatched && existingLatched) {
+      finalLots = existingLatched.anchoredLots;
+      finalStopLoss = existingLatched.anchoredStopLoss;
+      finalTakeProfit = existingLatched.anchoredTakeProfit;
+      confluenceGrade = existingLatched.anchoredGrade;
+      activeDirection = existingLatched.anchoredDirection;
+    } else {
+      if (consensusDirection === 'SELL') {
+        if (finalStopLoss <= currentPrice) {
+          finalStopLoss = Number((currentPrice + Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
+        }
+        if (finalTakeProfit >= currentPrice) {
+          finalTakeProfit = Number((currentPrice - Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
+        }
+      } else if (consensusDirection === 'BUY') {
+        if (finalStopLoss >= currentPrice) {
+          finalStopLoss = Number((currentPrice - Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
+        }
+        if (finalTakeProfit <= currentPrice) {
+          finalTakeProfit = Number((currentPrice + Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
+        }
       }
     }
 
     // Decouple trade entry from rigid swarm vetoes: continuous execution active 24/7
     const orderType = activeDirection === 'SELL' ? 'SELL_MARKET' : 'BUY_MARKET';
 
-    return {
+    const consensusResult: SwarmConsensusResult = {
       pair,
       marketSegment,
       timeframe,
@@ -408,10 +421,10 @@ export class SwarmCoordinator {
         orderType,
         symbol: pair,
         lots: finalLots,
-        entry: risk.parameters.entryPrice,
+        entry: existingLatched?.anchoredEntryPrice || risk.parameters.entryPrice,
         stopLoss: finalStopLoss,
         takeProfit: finalTakeProfit,
-        riskReward: finalRiskReward,
+        riskReward: existingLatched?.anchoredRiskReward || finalRiskReward,
         riskAmountUsd: finalMaxRisk,
         status: 'READY',
         gradingTier: confluenceGrade,
@@ -427,6 +440,14 @@ export class SwarmCoordinator {
         isAutonomousLooping: true,
       },
     };
+
+    // Attach or initialize the deterministic latched state
+    const finalLatched = (isStateLatched && existingLatched) 
+      ? existingLatched 
+      : stateLatchingEngine.latchConsensus(pair, consensusResult, marketCandles, 20);
+
+    consensusResult.latchedState = finalLatched;
+    return consensusResult;
   }
 
   // Multi-Pair & Multi-Market Opportunity Scanner

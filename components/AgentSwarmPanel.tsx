@@ -526,8 +526,18 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
 
               {/* Monte Carlo mini-bar */}
               {risk.monteCarlo && (
-                <div className="mt-2.5 pt-2 border-t border-terminal-border/40 flex items-center justify-between text-xs text-slate-300 font-medium">
-                  <span>Monte Carlo VaR (95%): ${risk.monteCarlo.var95Usd} • Win Prob {risk.monteCarlo.projectedProfitProbability}%</span>
+                <div className="mt-2.5 pt-2 border-t border-terminal-border/40 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300 font-medium">
+                  <div className="flex items-center gap-2">
+                    <span>Monte Carlo VaR (95%): ${risk.monteCarlo.var95Usd}</span>
+                    <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] ${
+                      risk.monteCarlo.projectedProfitProbability >= 70
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'text-slate-400'
+                    }`}>
+                      Win Prob {risk.monteCarlo.projectedProfitProbability}%
+                      {risk.monteCarlo.projectedProfitProbability >= 70 && ' (High Probability Anchor)'}
+                    </span>
+                  </div>
                   {onOpenMonteCarlo && (
                     <button
                       onClick={onOpenMonteCarlo}

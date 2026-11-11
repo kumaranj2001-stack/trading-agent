@@ -17,7 +17,10 @@ import {
   Radio,
   Snowflake,
   Lock,
-  Zap
+  Zap,
+  Anchor,
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 
 interface UnifiedDecisionBannerProps {
@@ -25,6 +28,7 @@ interface UnifiedDecisionBannerProps {
   onExecuteTrade?: () => void;
   onOpenNewsWire?: () => void;
   onOpenMonteCarlo?: () => void;
+  onForceRecalibrate?: () => void;
   isMarketFrozen?: boolean;
   sessionInfo?: MarketSessionInfo | null;
 }
@@ -34,6 +38,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   onExecuteTrade,
   onOpenNewsWire,
   onOpenMonteCarlo,
+  onForceRecalibrate,
   isMarketFrozen = false,
   sessionInfo = null,
 }) => {
@@ -184,6 +189,93 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
           <span>R:R: <strong className="text-cyan-400">{executionSignal.riskReward}:1</strong></span>
         </div>
       </div>
+
+      {/* ⚓ Deterministic State-Latch & Debounce Anchor Card */}
+      {consensus.latchedState && (
+        <div className="mt-3 p-3 rounded-xl border border-cyan-500/40 bg-gradient-to-r from-cyan-950/40 via-terminal-950 to-indigo-950/40 font-mono text-xs shadow-md">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/30 pb-2 mb-2">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 flex items-center gap-1 font-bold text-[10px]">
+                <Anchor className="w-3.5 h-3.5 text-cyan-400" />
+                <span>STATE-LATCHED ANCHOR</span>
+              </span>
+              <span className="text-white font-bold text-xs">
+                {consensus.latchedState.anchoredDirection} Setup Locked (Zero Micro-Fluctuations)
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-cyan-400" />
+                <span>Expires in {Math.floor(consensus.latchedState.timeRemainingSeconds / 60)}m {consensus.latchedState.timeRemainingSeconds % 60}s</span>
+              </span>
+              {onForceRecalibrate && (
+                <button
+                  onClick={onForceRecalibrate}
+                  className="px-2 py-0.5 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white text-[10px] flex items-center gap-1 border border-terminal-border transition-colors"
+                  title="Force re-evaluation of 5-agent swarm consensus"
+                >
+                  <RefreshCw className="w-2.5 h-2.5" />
+                  <span>Recalibrate</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] mb-2">
+            <div className="p-2 rounded bg-terminal-900/80 border border-terminal-border">
+              <span className="text-[9px] text-slate-400 uppercase block">Anchored Entry</span>
+              <strong className="text-white text-xs">{consensus.latchedState.anchoredEntryPrice}</strong>
+              <span className="text-[9px] text-emerald-400 block font-semibold">Fixed Level</span>
+            </div>
+            <div className="p-2 rounded bg-terminal-900/80 border border-terminal-border">
+              <span className="text-[9px] text-rose-400 uppercase block">Anchored Stop Loss</span>
+              <strong className="text-rose-300 text-xs">{consensus.latchedState.anchoredStopLoss}</strong>
+              <span className="text-[9px] text-slate-400 block">Strict Protection</span>
+            </div>
+            <div className="p-2 rounded bg-terminal-900/80 border border-terminal-border">
+              <span className="text-[9px] text-emerald-400 uppercase block">Anchored Target</span>
+              <strong className="text-emerald-300 text-xs">{consensus.latchedState.anchoredTakeProfit}</strong>
+              <span className="text-[9px] text-cyan-400 block font-semibold">{consensus.latchedState.anchoredRiskReward}:1 Target</span>
+            </div>
+            <div className="p-2 rounded bg-terminal-900/80 border border-terminal-border">
+              <span className="text-[9px] text-amber-400 uppercase block">
+                {consensus.latchedState.anchoredDirection === 'SELL' ? 'Resistance Ceiling' : 'S1 Support Floor'}
+              </span>
+              <strong className="text-amber-300 text-xs">
+                {consensus.latchedState.anchoredDirection === 'SELL' 
+                  ? consensus.latchedState.resistanceCeiling 
+                  : consensus.latchedState.s1Floor}
+              </strong>
+              <span className="text-[9px] text-rose-400 block font-semibold">Invalidation Level</span>
+            </div>
+          </div>
+
+          {/* Probability-First & Knowledge Base Confluence Footer */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-cyan-500/20 text-[10px] text-slate-300">
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded font-bold border ${
+                consensus.latchedState.probabilityFirstBoost
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+              }`}>
+                🎯 MONTE CARLO WIN PROB: {consensus.latchedState.winProbabilityPercent}%
+              </span>
+              {consensus.latchedState.probabilityFirstBoost && (
+                <span className="text-emerald-400 font-semibold hidden md:inline">
+                  (&gt;70% Win Prob Elevated to Grade {consensus.latchedState.anchoredGrade} — Counter-Momentum Prevented)
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 text-slate-400 text-[10px]">
+              <span>POC Anchor: <strong className="text-cyan-300">{consensus.latchedState.synthesisSources.technicalPocLevel}</strong></span>
+              <span>Wire Sentiment: <strong className="text-amber-300">{consensus.latchedState.synthesisSources.newsSentimentScore > 0 ? '+' : ''}{consensus.latchedState.synthesisSources.newsSentimentScore}%</strong></span>
+              <span>1,050+ KB Rules: <strong className="text-emerald-300">{consensus.latchedState.synthesisSources.matchedRulesCount} matched</strong></span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ⚡ Dual-Confirmation: Technical Momentum & Fundamental Sentiment Confirmation Gate */}
       {consensus.dualConfirmation && (

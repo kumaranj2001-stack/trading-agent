@@ -1,6 +1,7 @@
 import { Candle, CurrencyPair, MarketSegment, Position, SwarmConsensusResult, TimeFrame } from './types';
 import { BASE_PRICES, PIP_VALUES, getMarketSegmentForSymbol } from './marketData';
 import { MarketSessionManager } from './marketSessionManager';
+import { stateLatchingEngine } from './stateLatchingEngine';
 
 export interface MarketFeedTickEvent {
   pair: CurrencyPair;
@@ -393,67 +394,79 @@ export class LiveMarketFeedManager {
 
     const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
 
-    // Strict Single Source of Truth: Direction is derived from consensus unifiedDecision.direction
-    const isSell = consensus.unifiedDecision.direction === 'SELL';
-    const isBuy = consensus.unifiedDecision.direction === 'BUY';
+    // ⚓ DETERMINISTIC STATE-LATCHING PROTOCOL
+    // Locks in Entry, Stop-Loss, and Take-Profit once consensus is achieved,
+    // rendering the setup static and immutable until structural invalidation or window expiration.
+    let latched = stateLatchingEngine.getLatchedState(pair);
 
-    // Preserve mathematical stop and take-profit distance in pips
-    const rawStopDistance = Math.abs(consensus.executionSignal.entry - consensus.executionSignal.stopLoss);
-    const stopDistance = rawStopDistance > 0 ? rawStopDistance : 22 * pipMultiplier;
-    const rr = consensus.executionSignal.riskReward || 2.2;
-    const targetDistance = stopDistance * rr;
+    // Check structural invalidation (Resistance Ceiling / S1 Floor) against livePrice
+    if (latched && !stateLatchingEngine.isLatchedValid(pair, livePrice)) {
+      latched = null; // Unlatched due to structural invalidation
+    }
 
-    const calibratedStopLoss = isSell
-      ? Number((livePrice + stopDistance).toFixed(decimals))
-      : Number((livePrice - stopDistance).toFixed(decimals));
+    if (!latched) {
+      // Form fresh anchored setup grounded in 1,000+ institutional rules and Monte Carlo win prob
+      latched = stateLatchingEngine.latchConsensus(pair, consensus, undefined, 20);
+    }
 
-    const calibratedTakeProfit = isSell
-      ? Number((livePrice - targetDistance).toFixed(decimals))
-      : Number((livePrice + targetDistance).toFixed(decimals));
-
+    const direction = latched.anchoredDirection;
+    const isSell = direction === 'SELL';
+    const isBuy = direction === 'BUY';
     const targetOrderType = isSell ? 'SELL_MARKET' : isBuy ? 'BUY_MARKET' : 'NONE';
 
-    // Update execution signal with guaranteed mathematical consistency
+    // 🔒 ANCHORED IMMUTABLE PARAMETERS (Zero micro-fluctuation jitter)
+    const anchoredEntry = latched.anchoredEntryPrice;
+    const anchoredStopLoss = latched.anchoredStopLoss;
+    const anchoredTakeProfit = latched.anchoredTakeProfit;
+    const anchoredRiskReward = latched.anchoredRiskReward;
+    const anchoredLots = latched.anchoredLots;
+    const anchoredGrade = latched.anchoredGrade;
+
+    // Update execution signal with guaranteed anchored levels
     const updatedExecutionSignal = {
       ...consensus.executionSignal,
       orderType: consensus.executionSignal.authorized ? targetOrderType : consensus.executionSignal.orderType,
-      entry: livePrice,
-      stopLoss: calibratedStopLoss,
-      takeProfit: calibratedTakeProfit,
+      entry: anchoredEntry,
+      stopLoss: anchoredStopLoss,
+      takeProfit: anchoredTakeProfit,
+      riskReward: anchoredRiskReward,
+      lots: anchoredLots,
+      gradingTier: anchoredGrade,
     };
 
-    // Update technical analyst suggested entry and targets
+    // Update technical analyst suggested entry and targets with anchored levels
     const updatedTechnical = {
       ...consensus.agents.technical,
-      suggestedEntry: livePrice,
-      suggestedStopLoss: calibratedStopLoss,
-      suggestedTakeProfit: calibratedTakeProfit,
+      suggestedEntry: anchoredEntry,
+      suggestedStopLoss: anchoredStopLoss,
+      suggestedTakeProfit: anchoredTakeProfit,
     };
 
-    // Update risk manager parameters
+    // Update risk manager parameters with anchored levels
     const updatedRisk = {
       ...consensus.agents.risk,
       action: isSell ? ('SELL' as const) : isBuy ? ('BUY' as const) : ('NO_TRADE' as const),
       parameters: {
         ...consensus.agents.risk.parameters,
-        entryPrice: livePrice,
-        stopLoss: calibratedStopLoss,
-        takeProfit1: calibratedTakeProfit,
+        entryPrice: anchoredEntry,
+        stopLoss: anchoredStopLoss,
+        takeProfit1: anchoredTakeProfit,
+        positionSizeLots: anchoredLots,
+        riskRewardRatio: anchoredRiskReward,
       },
     };
 
-    // Update unified decision recommended action with dynamic zero-veto execution
-    const direction = consensus.unifiedDecision.direction === 'HOLD' ? 'BUY' : consensus.unifiedDecision.direction;
-    const lots = consensus.agents.risk.parameters.positionSizeLots > 0 ? consensus.agents.risk.parameters.positionSizeLots : 0.01;
-    const updatedRecommendedAction = `${direction} ${lots} Standard Lots on ${pair} @ ${livePrice}`;
+    // Update unified decision recommended action with static anchored entry
+    const updatedRecommendedAction = `${direction} ${anchoredLots} Standard Lots on ${pair} @ ${anchoredEntry}`;
 
     const updatedUnifiedDecision = {
       ...consensus.unifiedDecision,
       direction,
+      confluenceGrade: anchoredGrade,
       recommendedAction: updatedRecommendedAction,
       coreReasons: {
         ...consensus.unifiedDecision.coreReasons,
-        riskGovernance: `RISK APPROVED: ${rr}:1 Risk-to-Reward ratio, stop anchored at ${calibratedStopLoss} (${isSell ? 'above entry' : 'below entry'}), targeting ${calibratedTakeProfit} (${isSell ? 'below entry' : 'above entry'}) with $${consensus.agents.risk.parameters.maxLossUsd} downside cap (${consensus.agents.risk.parameters.accountRiskPercent}% equity).`,
+        riskGovernance: `ANCHORED RISK GOVERNANCE: ${anchoredRiskReward}:1 Risk-to-Reward ratio, stop anchored at ${anchoredStopLoss} (${isSell ? 'above entry' : 'below entry'}), targeting ${anchoredTakeProfit} (${isSell ? 'below entry' : 'above entry'}) with Monte Carlo Win Prob ${latched.winProbabilityPercent}%. Structural boundary: ${isSell ? `Resistance Ceiling at ${latched.resistanceCeiling}` : `S1 Floor at ${latched.s1Floor}`}.`,
       },
     };
 
@@ -464,10 +477,10 @@ export class LiveMarketFeedManager {
         ...updatedDebateSynthesis,
         priceThresholds: {
           ...updatedDebateSynthesis.priceThresholds,
-          entryPrice: livePrice,
-          stopLoss: calibratedStopLoss,
-          takeProfit: calibratedTakeProfit,
-          projectedPriceMove: Number((calibratedTakeProfit - livePrice).toFixed(decimals)),
+          entryPrice: anchoredEntry,
+          stopLoss: anchoredStopLoss,
+          takeProfit: anchoredTakeProfit,
+          projectedPriceMove: Number((anchoredTakeProfit - anchoredEntry).toFixed(decimals)),
         },
       };
     }
@@ -475,9 +488,12 @@ export class LiveMarketFeedManager {
     return {
       ...consensus,
       currentPrice: livePrice,
+      consensusDirection: direction,
+      confluenceGrade: anchoredGrade,
       executionSignal: updatedExecutionSignal,
       unifiedDecision: updatedUnifiedDecision,
       debateSynthesis: updatedDebateSynthesis,
+      latchedState: latched,
       agents: {
         ...consensus.agents,
         technical: updatedTechnical,

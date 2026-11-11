@@ -52,6 +52,7 @@ import { MarketSessionManager } from '@/lib/marketSessionManager';
 import { MarketCloseFreezeBanner } from '@/components/MarketCloseFreezeBanner';
 import { AutonomousSwarmEngine, AutonomousSwarmTelemetry } from '@/lib/autonomousSwarmEngine';
 import { tradeInvalidationEngine } from '@/lib/tradeInvalidationEngine';
+import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
 
 export default function Home() {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>('XAU/USD');
@@ -783,6 +784,12 @@ export default function Home() {
     showNotification(alertMsg);
   };
 
+  const handleForceRecalibrate = useCallback(() => {
+    stateLatchingEngine.forceRecalibrate(selectedPair);
+    triggerSwarm(selectedPair, timeframe, candles);
+    showNotification(`⚡ State-latch released for ${selectedPair}. Recalibrating 5-agent swarm consensus.`);
+  }, [selectedPair, timeframe, candles, triggerSwarm, showNotification]);
+
   const triggeredRules: KnowledgeRule[] = consensus ? consensus.knowledgeSummary.topConfluenceRules : [];
 
   return (
@@ -866,6 +873,7 @@ export default function Home() {
                 onExecuteTrade={handleExecuteTrade}
                 onOpenNewsWire={() => setActiveTab('wire')}
                 onOpenMonteCarlo={() => setActiveTab('var')}
+                onForceRecalibrate={handleForceRecalibrate}
                 isMarketFrozen={isMarketFrozen}
                 sessionInfo={sessionInfo}
               />
@@ -976,6 +984,7 @@ export default function Home() {
                 onExecuteTrade={handleExecuteTrade}
                 onOpenNewsWire={() => setActiveTab('wire')}
                 onOpenMonteCarlo={() => setActiveTab('var')}
+                onForceRecalibrate={handleForceRecalibrate}
                 isMarketFrozen={isMarketFrozen}
                 sessionInfo={sessionInfo}
               />
