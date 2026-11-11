@@ -12,7 +12,8 @@ import {
   Moon,
   ChevronDown,
   Snowflake,
-  Lock
+  Lock,
+  Compass
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, MarketSessionInfo, TimeFrame, NavigationTab } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
@@ -63,6 +64,8 @@ export const Header: React.FC<HeaderProps> = ({
   timeframe,
   onSelectPair,
   onSelectTimeframe,
+  activeTab,
+  setActiveTab,
   onOpenSettings,
   onOpenLeftDrawer,
   isAnalyzing,
@@ -200,6 +203,23 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="sm:hidden">NSE</span>
             </button>
           </div>
+
+          {/* Infinity Vision Technical Analysis Direct Trigger Button */}
+          {setActiveTab && (
+            <button
+              onClick={() => setActiveTab(activeTab === 'vision-atlas' ? 'terminal' : 'vision-atlas')}
+              className={`px-2.5 sm:px-3 py-1 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shrink-0 ${
+                activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab'
+                  ? 'bg-slate-100 text-slate-900 border-slate-300 font-extrabold shadow-sm'
+                  : 'bg-terminal-800 hover:bg-terminal-700 text-cyan-300 border-terminal-border hover:text-white'
+              }`}
+              title="Open Infinity Vision Technical Analysis Terminal (Exact Clone)"
+            >
+              <Compass className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden md:inline">Technical Analysis</span>
+              <span className="md:hidden">Analysis</span>
+            </button>
+          )}
 
           {/* Right: Swarm Synchronizer, Risk Settings, and Dark/Light Mode */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">

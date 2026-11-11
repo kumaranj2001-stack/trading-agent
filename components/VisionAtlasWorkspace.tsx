@@ -60,6 +60,7 @@ import { visionAtlasEngine } from '@/lib/visionAtlasEngine';
 import { BASE_PRICES, FOREX_PAIRS, METALS_COMMODITIES, INDIAN_MARKET_ASSETS } from '@/lib/marketData';
 import { TECHNICAL_KNOWLEDGE_BASE } from '@/lib/knowledge/technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from '@/lib/knowledge/fundamentalKnowledge';
+import { InfinityVisionWorkspace } from './infinity-vision/InfinityVisionWorkspace';
 
 export interface VisionAtlasWorkspaceProps {
   pair: CurrencyPair;
@@ -88,6 +89,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
 }) => {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>(initialPair);
   const [selectedTimeframe, setSelectedTimeframe] = useState<TimeFrame>(initialTf);
+  const [workspaceMode, setWorkspaceMode] = useState<'infinity-vision' | 'confluence-matrix'>('infinity-vision');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
 
   // Payload state
@@ -334,11 +336,53 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
   // Active step in narration
   const activeNarrationStep = payload?.narrationQueue[currentStepIndex];
 
+  if (workspaceMode === 'infinity-vision') {
+    return (
+      <div className="relative w-full">
+        {/* Switcher Pill to 1,050+ Strategies Matrix */}
+        <div className="absolute top-2 right-4 z-40 hidden lg:flex items-center gap-1.5">
+          <button
+            onClick={() => setWorkspaceMode('confluence-matrix')}
+            className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-slate-900/90 hover:bg-black text-cyan-300 border border-cyan-500/40 shadow-lg flex items-center gap-1 transition-all"
+            title="Switch to 1,050+ Multi-Factor Confluence Dashboard"
+          >
+            <Cpu className="w-3 h-3 text-cyan-400" />
+            <span>1,050+ MATRIX</span>
+          </button>
+        </div>
+
+        <InfinityVisionWorkspace
+          pair={selectedPair}
+          timeframe={selectedTimeframe}
+          candles={initialCandles}
+          onSelectPair={(p) => {
+            setSelectedPair(p);
+            if (onSelectPair) onSelectPair(p);
+          }}
+          onSelectTimeframe={(tf) => {
+            setSelectedTimeframe(tf);
+            if (onSelectTimeframe) onSelectTimeframe(tf);
+          }}
+          onClose={onClose}
+          onSyncToTerminal={onSyncToTerminal}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-110px)] min-h-[750px] w-full bg-terminal-950 text-slate-100 select-none overflow-hidden rounded-2xl border border-terminal-border shadow-2xl animate-fade-in">
       {/* 🧭 Top Institutional Navigation & Control Bar */}
       <div className="p-3 sm:px-4 bg-terminal-900 border-b border-terminal-border flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={() => setWorkspaceMode('infinity-vision')}
+            className="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-mono text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+            title="Switch back to Infinity Vision Terminal"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>INFINITY VISION TERMINAL</span>
+          </button>
           <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 border border-cyan-400/40 flex items-center justify-center text-white shadow-md shadow-cyan-500/20 shrink-0">
             <Compass className="w-5 h-5 text-cyan-200 animate-spin-slow" />
           </div>

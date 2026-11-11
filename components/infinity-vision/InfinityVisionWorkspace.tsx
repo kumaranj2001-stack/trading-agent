@@ -1,0 +1,252 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { CurrencyPair, TimeFrame, Candle } from '@/lib/types';
+import { InfinityVisionHeader } from './InfinityVisionHeader';
+import { InfinityVisionToolbar, ChartViewMode } from './InfinityVisionToolbar';
+import { InfinityVisionOhlcBar } from './InfinityVisionOhlcBar';
+import { InfinityVisionChart } from './InfinityVisionChart';
+import { QuantumVisionDrawer } from './QuantumVisionDrawer';
+import { LiquidityHeatmapModal } from './LiquidityHeatmapModal';
+import { IndicatorsModal } from './IndicatorsModal';
+import { ScenariosAndZonesSidebar } from './ScenariosAndZonesSidebar';
+import { MarketDnaSidebar } from './MarketDnaSidebar';
+import { VisionAtlasLabSidebar } from './VisionAtlasLabSidebar';
+import { StructureTimelineBottom } from './StructureTimelineBottom';
+import { BASE_PRICES } from '@/lib/marketData';
+
+export interface InfinityVisionWorkspaceProps {
+  pair: CurrencyPair;
+  timeframe: TimeFrame;
+  candles?: Candle[];
+  onSelectPair?: (p: CurrencyPair) => void;
+  onSelectTimeframe?: (tf: TimeFrame) => void;
+  onClose?: () => void;
+  onSyncToTerminal?: (params: {
+    symbol: CurrencyPair;
+    direction: 'BUY' | 'SELL';
+    entry: number;
+    stopLoss: number;
+    takeProfit: number;
+  }) => void;
+  onOpenJournal?: () => void;
+}
+
+export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = ({
+  pair: initialPair = 'XAU/USD',
+  timeframe: initialTf = '15m',
+  candles: initialCandles = [],
+  onSelectPair,
+  onSelectTimeframe,
+  onClose,
+  onSyncToTerminal,
+  onOpenJournal,
+}) => {
+  const [selectedPair, setSelectedPair] = useState<CurrencyPair>(initialPair);
+  const [selectedTf, setSelectedTf] = useState<any>(initialTf);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [chartViewMode, setChartViewMode] = useState<ChartViewMode>('Advanced');
+
+  // Interactive panels visibility states
+  const [isQuantumVisionOpen, setIsQuantumVisionOpen] = useState<boolean>(true);
+  const [isMarketDnaOpen, setIsMarketDnaOpen] = useState<boolean>(false);
+  const [isVisionAtlasLabOpen, setIsVisionAtlasLabOpen] = useState<boolean>(false);
+  const [isLiquidityOpen, setIsLiquidityOpen] = useState<boolean>(false);
+  const [isIndicatorsOpen, setIsIndicatorsOpen] = useState<boolean>(false);
+  const [activeRightSidebarMode, setActiveRightSidebarMode] = useState<'scenarios' | 'market_dna' | 'vision_atlas'>('scenarios');
+  const [horizonCandles, setHorizonCandles] = useState<number>(5);
+
+  // Sync pair changes
+  useEffect(() => {
+    setSelectedPair(initialPair);
+  }, [initialPair]);
+
+  // Derived price metrics
+  const currentBasePrice = BASE_PRICES[selectedPair] || 4005.88;
+  const spreadPts = selectedPair.includes('XAU') ? 17 : 2;
+  const bidPrice = currentBasePrice - (spreadPts * 0.01);
+  const askPrice = currentBasePrice + (spreadPts * 0.01);
+
+  // Toggle handlers for mutually exclusive or combinable panels
+  const handleToggleQuantumVision = () => {
+    setIsQuantumVisionOpen(prev => !prev);
+  };
+
+  const handleToggleMarketDna = () => {
+    if (activeRightSidebarMode === 'market_dna' && isMarketDnaOpen) {
+      setIsMarketDnaOpen(false);
+      setActiveRightSidebarMode('scenarios');
+    } else {
+      setIsMarketDnaOpen(true);
+      setIsVisionAtlasLabOpen(false);
+      setActiveRightSidebarMode('market_dna');
+    }
+  };
+
+  const handleToggleVisionAtlasLab = () => {
+    if (activeRightSidebarMode === 'vision_atlas' && isVisionAtlasLabOpen) {
+      setIsVisionAtlasLabOpen(false);
+      setActiveRightSidebarMode('scenarios');
+    } else {
+      setIsVisionAtlasLabOpen(true);
+      setIsMarketDnaOpen(false);
+      setActiveRightSidebarMode('vision_atlas');
+    }
+  };
+
+  const handleToggleLiquidity = () => {
+    setIsLiquidityOpen(prev => !prev);
+  };
+
+  const handleToggleIndicators = () => {
+    setIsIndicatorsOpen(prev => !prev);
+  };
+
+  const handleToggleTheme = () => {
+    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  };
+
+  return (
+    <div className={`w-full min-h-screen flex flex-col font-sans transition-colors ${
+      theme === 'light' ? 'bg-slate-100 text-slate-900' : 'bg-terminal-950 text-slate-100'
+    }`}>
+      {/* 1. Top Navigation Bar */}
+      <InfinityVisionHeader
+        activeTab="technical-analysis"
+        onSelectNavTab={(tabId) => {
+          if (tabId === 'home' && onClose) {
+            onClose();
+          }
+        }}
+        onOpenJournal={onOpenJournal}
+        userName="kumaran"
+        theme={theme}
+      />
+
+      {/* 2. Chart Control Subheader Toolbar */}
+      <InfinityVisionToolbar
+        selectedPair={selectedPair}
+        onSelectPair={(p) => {
+          setSelectedPair(p);
+          if (onSelectPair) onSelectPair(p);
+        }}
+        selectedTimeframe={selectedTf}
+        onSelectTimeframe={(tf) => {
+          setSelectedTf(tf);
+          if (onSelectTimeframe) onSelectTimeframe(tf);
+        }}
+        chartViewMode={chartViewMode}
+        onChangeChartViewMode={setChartViewMode}
+        isQuantumVisionOpen={isQuantumVisionOpen}
+        onToggleQuantumVision={handleToggleQuantumVision}
+        isMarketDnaOpen={isMarketDnaOpen}
+        onToggleMarketDna={handleToggleMarketDna}
+        isVisionAtlasLabOpen={isVisionAtlasLabOpen}
+        onToggleVisionAtlasLab={handleToggleVisionAtlasLab}
+        isLiquidityOpen={isLiquidityOpen}
+        onToggleLiquidity={handleToggleLiquidity}
+        isIndicatorsOpen={isIndicatorsOpen}
+        onToggleIndicators={handleToggleIndicators}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
+      />
+
+      {/* 3. OHLC & Real-Time Market Ticker Strip */}
+      <InfinityVisionOhlcBar
+        pair={selectedPair}
+        timeframe={selectedTf}
+        open={currentBasePrice - 2.0}
+        high={currentBasePrice + 1.77}
+        low={currentBasePrice - 6.96}
+        close={currentBasePrice}
+        changePercent={-0.06}
+        bidPrice={bidPrice}
+        askPrice={askPrice}
+        spreadPts={spreadPts}
+        isLive={true}
+        theme={theme}
+      />
+
+      {/* 4. Main Body: Central Candlestick Canvas + Right Sidebar */}
+      <div className="flex-1 flex min-h-[520px] relative overflow-hidden">
+        {/* Left Floating Quantum Vision Drawer */}
+        <QuantumVisionDrawer
+          isOpen={isQuantumVisionOpen}
+          onClose={() => setIsQuantumVisionOpen(false)}
+          horizonCandles={horizonCandles}
+          onChangeHorizon={setHorizonCandles}
+          theme={theme}
+        />
+
+        {/* Center Floating Liquidity Heatmap Window */}
+        <LiquidityHeatmapModal
+          isOpen={isLiquidityOpen}
+          onClose={() => setIsLiquidityOpen(false)}
+          pair={selectedPair}
+          timeframe={selectedTf}
+          theme={theme}
+        />
+
+        {/* Central Interactive Chart Canvas */}
+        <div className="flex-1 relative flex flex-col min-w-0 bg-white dark:bg-terminal-950 overflow-hidden">
+          <InfinityVisionChart
+            candles={initialCandles}
+            pair={selectedPair}
+            timeframe={selectedTf}
+            theme={theme}
+            showQuantumSimulation={isQuantumVisionOpen}
+            showMarketDna={isMarketDnaOpen}
+            horizonCandles={horizonCandles}
+          />
+        </div>
+
+        {/* Right Sidebar: Dynamic Mode (Scenarios & Zones vs Market DNA vs Vision Atlas Lab) */}
+        <div className={`w-[320px] lg:w-[350px] shrink-0 border-l flex flex-col transition-all ${
+          theme === 'light' 
+            ? 'bg-white border-slate-200 shadow-sm' 
+            : 'bg-terminal-950 border-terminal-border'
+        }`}>
+          {activeRightSidebarMode === 'scenarios' && (
+            <ScenariosAndZonesSidebar
+              pair={selectedPair}
+              timeframe={selectedTf}
+              theme={theme}
+              onSyncToTerminal={onSyncToTerminal}
+            />
+          )}
+
+          {activeRightSidebarMode === 'market_dna' && (
+            <MarketDnaSidebar
+              pair={selectedPair}
+              timeframe={selectedTf}
+              theme={theme}
+            />
+          )}
+
+          {activeRightSidebarMode === 'vision_atlas' && (
+            <VisionAtlasLabSidebar
+              pair={selectedPair}
+              timeframe={selectedTf}
+              theme={theme}
+              onSimulate={() => setIsQuantumVisionOpen(true)}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* 5. Bottom Panel: Structure Timeline & Sessions */}
+      <StructureTimelineBottom
+        pair={selectedPair}
+        timeframe={selectedTf}
+        theme={theme}
+      />
+
+      {/* 6. Indicators Settings Drawer */}
+      <IndicatorsModal
+        isOpen={isIndicatorsOpen}
+        onClose={() => setIsIndicatorsOpen(false)}
+        theme={theme}
+      />
+    </div>
+  );
+};

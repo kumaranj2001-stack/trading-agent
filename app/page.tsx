@@ -972,16 +972,22 @@ export default function Home() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 space-y-4">
+      <main className={`flex-1 w-full mx-auto ${
+        activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab'
+          ? 'p-0 max-w-full'
+          : 'max-w-7xl p-3 sm:p-4 space-y-4'
+      }`}>
         {/* ❄️ Global State Freeze upon Market Closure Banner */}
-        <MarketCloseFreezeBanner
-          sessionInfo={sessionInfo}
-          onToggleManualOverride={(override) => {
-            const frozen = !override && MarketSessionManager.isMarketFrozen(selectedPair);
-            setIsMarketFrozen(frozen);
-            showNotification(frozen ? '❄️ State re-frozen.' : '🟢 State temporarily unfrozen for simulation.');
-          }}
-        />
+        {activeTab !== 'vision-atlas' && (activeTab as string) !== 'vision-atlas-lab' && (
+          <MarketCloseFreezeBanner
+            sessionInfo={sessionInfo}
+            onToggleManualOverride={(override) => {
+              const frozen = !override && MarketSessionManager.isMarketFrozen(selectedPair);
+              setIsMarketFrozen(frozen);
+              showNotification(frozen ? '❄️ State re-frozen.' : '🟢 State temporarily unfrozen for simulation.');
+            }}
+          />
+        )}
 
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
