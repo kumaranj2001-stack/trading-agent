@@ -1,21 +1,49 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { PortfolioState } from '@/lib/store';
-import { TrendingUp, TrendingDown, X, Shield, Award, AlertCircle } from 'lucide-react';
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  X, 
+  Shield, 
+  Award, 
+  AlertCircle, 
+  ShieldAlert, 
+  Zap, 
+  CheckCircle2, 
+  AlertTriangle,
+  Radio,
+  ArrowRight,
+  Clock,
+  Layers,
+  ChevronDown,
+  ChevronUp
+} from 'lucide-react';
 import { Position } from '@/lib/types';
 
 interface PortfolioPanelProps {
   portfolio: PortfolioState;
   onClosePosition: (posId: string) => void;
+  executionMode?: string;
 }
 
-export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({ portfolio, onClosePosition }) => {
+export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({ 
+  portfolio, 
+  onClosePosition,
+  executionMode = 'MANUAL'
+}) => {
   const totalOpenPnl = portfolio.positions.reduce((sum, p) => sum + p.pnl, 0);
   const winTrades = portfolio.tradeHistory.filter(t => t.outcome === 'WIN').length;
   const totalClosed = portfolio.tradeHistory.length;
   const winRate = totalClosed > 0 ? ((winTrades / totalClosed) * 100).toFixed(1) : '0.0';
   const totalRealizedPnl = portfolio.tradeHistory.reduce((sum, t) => sum + t.pnl, 0);
+
+  const [expandedPositionIds, setExpandedPositionIds] = useState<Record<string, boolean>>({});
+
+  const toggleExpand = (id: string) => {
+    setExpandedPositionIds(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   return (
     <div className="bg-terminal-900 border border-terminal-border rounded-xl p-4 shadow-lg space-y-4">
@@ -64,11 +92,22 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({ portfolio, onClo
 
       {/* Active Positions */}
       <div>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
           <h4 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
             Active Market Positions ({portfolio.positions.length})
           </h4>
+          <div className="flex items-center gap-2 text-xs font-mono">
+            <span className="px-2.5 py-1 rounded bg-indigo-950/70 border border-indigo-500/40 text-indigo-300 flex items-center gap-1.5 shadow-sm">
+              <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+              <span>SECOND-BY-SECOND DUAL MONITORING: ACTIVE</span>
+            </span>
+            {executionMode === 'FULL_AUTOPILOT' && (
+              <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[11px] font-bold">
+                AUTO-EXIT ON INVALIDATION
+              </span>
+            )}
+          </div>
         </div>
 
         {portfolio.positions.length === 0 ? (
@@ -88,42 +127,191 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({ portfolio, onClo
                   <th className="p-3">Stop Loss</th>
                   <th className="p-3">Take Profit</th>
                   <th className="p-3">P&L ($)</th>
+                  <th className="p-3">Validation Health</th>
                   <th className="p-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-terminal-border/60 bg-terminal-900/60 font-medium">
-                {portfolio.positions.map((pos) => (
-                  <tr key={pos.id} className="hover:bg-terminal-800/40">
-                    <td className="p-3 font-bold text-white">{pos.symbol}</td>
-                    <td className="p-3">
-                      <span className={`px-2.5 py-0.5 rounded text-xs font-bold ${
-                        pos.type === 'BUY'
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                {portfolio.positions.map((pos) => {
+                  const inv = pos.invalidation;
+                  const isInvalid = inv?.isInvalidated;
+                  const hasProfit = pos.pnl > 0;
+                  const isExpanded = expandedPositionIds[pos.id] ?? true;
+
+                  return (
+                    <React.Fragment key={pos.id}>
+                      {/* Main Position Row */}
+                      <tr className={`hover:bg-terminal-800/40 transition-colors ${
+                        isInvalid ? 'bg-rose-950/20 border-l-4 border-l-rose-500' : 'border-l-4 border-l-emerald-500'
                       }`}>
-                        {pos.type}
-                      </span>
-                    </td>
-                    <td className="p-3 text-slate-300">{pos.lots}</td>
-                    <td className="p-3 text-slate-200">{pos.entryPrice}</td>
-                    <td className="p-3 text-slate-200">{pos.currentPrice}</td>
-                    <td className="p-3 text-rose-400">{pos.stopLoss}</td>
-                    <td className="p-3 text-emerald-400">{pos.takeProfit}</td>
-                    <td className="p-3">
-                      <span className={`font-bold ${pos.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {pos.pnl >= 0 ? '+' : ''}${pos.pnl.toFixed(2)}
-                      </span>
-                    </td>
-                    <td className="p-3 text-right">
-                      <button
-                        onClick={() => onClosePosition(pos.id)}
-                        className="px-2.5 py-1 rounded bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 text-xs font-semibold transition-colors border border-rose-600/30"
-                      >
-                        Close
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                        <td className="p-3 font-bold text-white flex items-center gap-1.5">
+                          <button
+                            onClick={() => toggleExpand(pos.id)}
+                            className="p-0.5 rounded hover:bg-terminal-800 text-slate-400 hover:text-white"
+                          >
+                            {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                          </button>
+                          <span>{pos.symbol}</span>
+                        </td>
+                        <td className="p-3">
+                          <span className={`px-2.5 py-0.5 rounded text-xs font-bold ${
+                            pos.type === 'BUY'
+                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                          }`}>
+                            {pos.type}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-300 font-mono">{pos.lots}</td>
+                        <td className="p-3 text-slate-200 font-mono">{pos.entryPrice}</td>
+                        <td className="p-3 text-slate-200 font-mono">{pos.currentPrice}</td>
+                        <td className="p-3 text-rose-400 font-mono">{pos.stopLoss}</td>
+                        <td className="p-3 text-emerald-400 font-mono">{pos.takeProfit}</td>
+                        <td className="p-3 font-mono">
+                          <span className={`font-bold ${pos.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            {pos.pnl >= 0 ? '+' : ''}${pos.pnl.toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="p-3 font-mono text-xs">
+                          {isInvalid ? (
+                            <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold flex items-center gap-1 w-fit animate-pulse">
+                              <AlertTriangle className="w-3 h-3 text-rose-400" />
+                              INVALID CRITERIA
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-semibold flex items-center gap-1 w-fit">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                              SETUP VALID
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right">
+                          <button
+                            onClick={() => onClosePosition(pos.id)}
+                            className={`px-3 py-1 rounded text-xs font-bold transition-all shadow-sm ${
+                              isInvalid
+                                ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
+                                : 'bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border'
+                            }`}
+                          >
+                            {isInvalid && hasProfit ? 'Close (Lock Profit)' : 'Close'}
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* 🛡️ Explicit Second-by-Second Technical & Fundamental Invalidation Details Bar Below Entry */}
+                      {isExpanded && (
+                        <tr className="bg-terminal-950/80 border-b border-terminal-border/80">
+                          <td colSpan={10} className="p-3">
+                            {isInvalid ? (
+                              /* INVALIDATION DETECTED CARD BELOW ENTRY */
+                              <div className="p-3 rounded-lg bg-gradient-to-r from-rose-950/50 via-terminal-900 to-amber-950/40 border border-rose-500/50 space-y-2.5 font-mono text-xs shadow-md">
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-rose-500/30 pb-2">
+                                  <div className="flex items-center gap-2">
+                                    <ShieldAlert className="w-4 h-4 text-rose-400 animate-pulse shrink-0" />
+                                    <span className="font-bold text-rose-300 uppercase tracking-wide text-xs">
+                                      INVALIDATION CRITERIA FORMED ON {pos.symbol} {pos.type} ENTRY
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-slate-400">
+                                      Checked: {inv?.lastCheckedTime || 'Just now'}
+                                    </span>
+                                    {hasProfit ? (
+                                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold text-[11px]">
+                                        SMALL PROFIT AVAILABLE (+${pos.pnl.toFixed(2)})
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold text-[11px]">
+                                        CAPITAL PRESERVATION LEVEL (-${Math.abs(pos.pnl).toFixed(2)})
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Granular Technical & Fundamental Breakdown */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+                                  {/* Technical Reasons */}
+                                  <div className="p-2.5 rounded bg-terminal-950 border border-rose-900/60 space-y-1">
+                                    <div className="text-[10px] font-bold text-cyan-400 uppercase flex items-center gap-1 mb-1">
+                                      <Layers className="w-3 h-3" />
+                                      <span>Technical Invalidation Reasons (Live Ticker):</span>
+                                    </div>
+                                    {inv?.technicalReasons && inv.technicalReasons.length > 0 ? (
+                                      inv.technicalReasons.map((tr, idx) => (
+                                        <p key={idx} className="text-slate-300 leading-snug pl-1 border-l-2 border-rose-500/60">
+                                          • {tr}
+                                        </p>
+                                      ))
+                                    ) : (
+                                      <p className="text-emerald-400">• Price structure and momentum stable.</p>
+                                    )}
+                                  </div>
+
+                                  {/* Fundamental Reasons */}
+                                  <div className="p-2.5 rounded bg-terminal-950 border border-rose-900/60 space-y-1">
+                                    <div className="text-[10px] font-bold text-amber-400 uppercase flex items-center gap-1 mb-1">
+                                      <Radio className="w-3 h-3" />
+                                      <span>Fundamental & Wire Invalidation Reasons (Live):</span>
+                                    </div>
+                                    {inv?.fundamentalReasons && inv.fundamentalReasons.length > 0 ? (
+                                      inv.fundamentalReasons.map((fr, idx) => (
+                                        <p key={idx} className="text-slate-300 leading-snug pl-1 border-l-2 border-amber-500/60">
+                                          • {fr}
+                                        </p>
+                                      ))
+                                    ) : (
+                                      <p className="text-emerald-400">• Macro news and central bank regime aligned.</p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* Urgent Recommendation & Direct Close Action */}
+                                <div className="p-2 rounded bg-rose-950/70 border border-rose-800/80 flex flex-wrap items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 text-slate-200">
+                                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                                    <span>
+                                      <strong className="text-rose-300">RECOMMENDATION TO CLOSE ENTRY:</strong>{' '}
+                                      {hasProfit
+                                        ? `Close entry immediately to secure small profit of +$${pos.pnl.toFixed(2)} before invalidation creates downside loss.`
+                                        : `Close entry immediately to cut loss at -$${Math.abs(pos.pnl).toFixed(2)} and preserve account capital.`}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() => onClosePosition(pos.id)}
+                                    className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 shrink-0"
+                                  >
+                                    <span>
+                                      {hasProfit
+                                        ? `SECURE SMALL PROFIT (+${pos.pnl.toFixed(2)})`
+                                        : `CLOSE ENTRY & PRESERVE CAPITAL`}
+                                    </span>
+                                    <ArrowRight className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              /* HEALTHY ENTRY STATUS BAR BELOW ENTRY */
+                              <div className="p-2 rounded-lg bg-emerald-950/20 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-slate-300">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                  <span>
+                                    <strong className="text-emerald-300">24/7 DUAL MONITORING ACTIVE:</strong> Both Technical Structure and Fundamental Macro Wire Feeds are aligned and supportive.
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3 text-slate-400 text-[10px]">
+                                  <span>Target R:R: <strong className="text-cyan-400">{pos.riskReward || 2.5}:1</strong></span>
+                                  <span>SL Buffer: <strong className="text-rose-400">{Math.abs(pos.currentPrice - pos.stopLoss).toFixed(4)}</strong></span>
+                                  <span>Last Checked: {inv?.lastCheckedTime || 'Active Live Loop'}</span>
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -146,7 +334,7 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({ portfolio, onClo
                 <th className="p-3">Exit</th>
                 <th className="p-3">Outcome</th>
                 <th className="p-3">P&L ($)</th>
-                <th className="p-3">Governance Verdict</th>
+                <th className="p-3">Exit Rationale & Invalidation Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-terminal-border/60 bg-terminal-900/60 font-medium">
@@ -178,8 +366,8 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({ portfolio, onClo
                     </span>
                   </td>
                   <td className="p-3 text-xs text-slate-300">
-                    <span className="px-2 py-0.5 rounded bg-terminal-800 border border-terminal-border text-xs font-semibold">
-                      {item.riskManagerVerdict}
+                    <span className="text-[11px] text-slate-300 block">
+                      {item.strategyNotes}
                     </span>
                   </td>
                 </tr>

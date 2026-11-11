@@ -27,6 +27,7 @@ import { ChartView } from '@/components/ChartView';
 import { AgentSwarmPanel } from '@/components/AgentSwarmPanel';
 import { AgentDebateFeed } from '@/components/AgentDebateFeed';
 import { PortfolioPanel } from '@/components/PortfolioPanel';
+import { ActiveEntryInvalidationBanner } from '@/components/ActiveEntryInvalidationBanner';
 import { BacktestView } from '@/components/BacktestModal';
 import { ArchitectureView } from '@/components/ArchitectureView';
 import { SettingsModal } from '@/components/SettingsModal';
@@ -46,10 +47,11 @@ import { HistoricalJournalDesk } from '@/components/HistoricalJournalDesk';
 import { JournalStorageManager } from '@/lib/journalStorage';
 import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
-import { MarketSessionInfo } from '@/lib/types';
+import { MarketSessionInfo, TradeHistoryItem } from '@/lib/types';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
 import { MarketCloseFreezeBanner } from '@/components/MarketCloseFreezeBanner';
 import { AutonomousSwarmEngine, AutonomousSwarmTelemetry } from '@/lib/autonomousSwarmEngine';
+import { tradeInvalidationEngine } from '@/lib/tradeInvalidationEngine';
 
 export default function Home() {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>('XAU/USD');
@@ -345,6 +347,38 @@ export default function Home() {
       setSwarmTelemetry(telemetry);
       BrowserStorageManager.saveConsensusResult(result);
 
+      // 🛡️ Second-by-Second Technical & Fundamental Invalidation Re-evaluation on Open Positions
+      setPortfolio(prev => {
+        if (!prev.positions || prev.positions.length === 0) return prev;
+        const reevaluated = prev.positions.map(pos => {
+          const symPrice = LiveMarketFeedManager.getCanonicalPrice(pos.symbol);
+          const symCandles = LiveMarketFeedManager.getCanonicalCandles(pos.symbol, timeframe);
+          const invStatus = tradeInvalidationEngine.evaluatePosition(
+            pos,
+            symPrice,
+            symCandles,
+            pos.symbol === result.pair ? result : null
+          );
+          return {
+            ...pos,
+            invalidation: invStatus,
+          };
+        });
+
+        // ⚡ Autonomous Emergency / Small-Profit Exit on Invalidation (FULL_AUTOPILOT)
+        if (executionModeRef.current === 'FULL_AUTOPILOT') {
+          for (const pos of reevaluated) {
+            if (pos.invalidation?.isInvalidated && (pos.invalidation.urgency === 'HIGH' || pos.invalidation.urgency === 'CRITICAL')) {
+              setTimeout(() => {
+                handleClosePosition(pos.id, 'INVALIDATION_AUTO_CLOSE', pos.invalidation?.allReasons);
+              }, 0);
+            }
+          }
+        }
+
+        return { ...prev, positions: reevaluated };
+      });
+
       // Autopilot Execution Check (0ms Human Latency)
       executeAutopilotOrder(result);
     });
@@ -372,14 +406,41 @@ export default function Home() {
       // 3. Dynamically calibrate Swarm Matrix & Unified Decision Banner
       setConsensus(prev => prev ? LiveMarketFeedManager.calibrateSwarmConsensus(prev, event.livePrice) : null);
 
-      // 4. Dynamically calibrate active position values and P&L
+      // 4. Dynamically calibrate active position values, P&L, and Second-by-Second Technical/Fundamental Invalidation
       setPortfolio(prev => {
-        const { positions: updatedPositions, totalOpenPnl, hasChanged } = 
+        const { positions: calibratedPositions, totalOpenPnl } = 
           LiveMarketFeedManager.calibratePositions(prev.positions, (sym) => {
             if (sym === selectedPair) return event.livePrice;
             return LiveMarketFeedManager.getCanonicalPrice(sym);
           });
-        if (!hasChanged) return prev;
+
+        // 🛡️ Evaluate second-by-second technical & fundamental health on every running position
+        const updatedPositions = calibratedPositions.map(pos => {
+          const symPrice = pos.symbol === selectedPair ? event.livePrice : LiveMarketFeedManager.getCanonicalPrice(pos.symbol);
+          const symCandles = pos.symbol === selectedPair ? event.candles : LiveMarketFeedManager.getCanonicalCandles(pos.symbol, timeframe);
+          const invStatus = tradeInvalidationEngine.evaluatePosition(
+            pos,
+            symPrice,
+            symCandles,
+            pos.symbol === selectedPair ? consensus : null
+          );
+          return {
+            ...pos,
+            invalidation: invStatus,
+          };
+        });
+
+        // ⚡ Autonomous Emergency / Small-Profit Exit on Invalidation (FULL_AUTOPILOT)
+        if (executionModeRef.current === 'FULL_AUTOPILOT') {
+          for (const pos of updatedPositions) {
+            if (pos.invalidation?.isInvalidated && (pos.invalidation.urgency === 'HIGH' || pos.invalidation.urgency === 'CRITICAL')) {
+              setTimeout(() => {
+                handleClosePosition(pos.id, 'INVALIDATION_AUTO_CLOSE', pos.invalidation?.allReasons);
+              }, 0);
+            }
+          }
+        }
+
         const updated = {
           ...prev,
           positions: updatedPositions,
@@ -652,7 +713,7 @@ export default function Home() {
   };
 
   // Close Position & Save to Local Browser Storage (calibrated against live chart feed)
-  const handleClosePosition = (posId: string) => {
+  const handleClosePosition = (posId: string, exitReason?: string, invalidationTriggers?: string[]) => {
     const pos = portfolio.positions.find(p => p.id === posId);
     if (!pos) return;
 
@@ -674,7 +735,12 @@ export default function Home() {
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    const historyItem = {
+    const isAutoInvalidation = exitReason === 'INVALIDATION_AUTO_CLOSE';
+    const notes = isAutoInvalidation
+      ? `⚡ Autonomous Exit on Invalidation: Closed at ${liveExitPrice}. ${finalPnl >= 0 ? `Small profit of +$${finalPnl.toFixed(2)} locked` : `Capital preserved (Loss: -$${Math.abs(finalPnl).toFixed(2)})`}. Reasons: ${invalidationTriggers?.join(' | ') || 'Technical/Fundamental Invalidation'}`
+      : `Position closed at ${liveExitPrice}. Realized P&L: $${finalPnl.toFixed(2)}.`;
+
+    const historyItem: TradeHistoryItem = {
       id: `th-${Date.now()}`,
       symbol: pos.symbol,
       type: pos.type,
@@ -688,7 +754,9 @@ export default function Home() {
       pnl: finalPnl,
       outcome: (finalPnl > 0 ? 'WIN' : finalPnl < 0 ? 'LOSS' : 'SCRATCH') as 'WIN' | 'LOSS' | 'SCRATCH',
       riskManagerVerdict: 'APPROVED' as const,
-      strategyNotes: `Position closed at ${liveExitPrice}. Realized P&L: $${finalPnl.toFixed(2)}.`,
+      strategyNotes: notes,
+      exitReason: exitReason || 'MANUAL_CLOSE',
+      invalidationTriggers: invalidationTriggers || [],
     };
 
     const updatedPortfolio = {
@@ -707,7 +775,12 @@ export default function Home() {
     // 📓 Persistent Trading Journal: Auto-log trade outcome, exit price & realized P&L
     JournalStorageManager.recordTradeClose(pos.id, liveExitPrice, finalPnl);
 
-    showNotification(`CLOSED POSITION: ${pos.symbol} @ ${liveExitPrice} | Realized P&L: ${finalPnl >= 0 ? '+' : ''}$${finalPnl.toFixed(2)}`);
+    const pnlPrefix = finalPnl >= 0 ? '+' : '';
+    const alertMsg = isAutoInvalidation
+      ? `⚡ AUTONOMOUS EXIT ON INVALIDATION: Closed ${pos.symbol} @ ${liveExitPrice} | P&L: ${pnlPrefix}$${finalPnl.toFixed(2)} (${finalPnl >= 0 ? 'Small profit secured' : 'Capital preserved'})`
+      : `CLOSED POSITION: ${pos.symbol} @ ${liveExitPrice} | Realized P&L: ${pnlPrefix}$${finalPnl.toFixed(2)}`;
+
+    showNotification(alertMsg);
   };
 
   const triggeredRules: KnowledgeRule[] = consensus ? consensus.knowledgeSummary.topConfluenceRules : [];
@@ -798,6 +871,15 @@ export default function Home() {
               />
             )}
 
+            {/* 🛡️ Active Running Entry Real-Time Invalidation Monitor */}
+            {portfolio.positions.find(p => p.symbol === selectedPair) && (
+              <ActiveEntryInvalidationBanner
+                position={portfolio.positions.find(p => p.symbol === selectedPair)}
+                onClosePosition={handleClosePosition}
+                executionMode={executionMode}
+              />
+            )}
+
             {/* Candlestick Chart (OANDA Live Streaming or Swarm Matrix) */}
             <ChartView
               candles={candles}
@@ -835,6 +917,7 @@ export default function Home() {
             <PortfolioPanel
               portfolio={portfolio}
               onClosePosition={handleClosePosition}
+              executionMode={executionMode}
             />
           </div>
         )}

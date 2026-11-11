@@ -949,6 +949,20 @@ export interface MarketScannerOpportunity {
   status: 'PRIME_SETUP' | 'MODERATE_SETUP' | 'DYNAMIC_CONSERVATIVE' | 'AVOID_NO_EDGE' | 'VETOED';
 }
 
+export interface PositionInvalidationStatus {
+  isInvalidated: boolean;
+  urgency: 'NONE' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  actionRecommended: 'HOLD_POSITION' | 'CLOSE_IMMEDIATELY' | 'TIGHTEN_STOP' | 'TAKE_SMALL_PROFIT';
+  technicalStatus: 'HEALTHY' | 'WARNING' | 'INVALIDATED';
+  fundamentalStatus: 'HEALTHY' | 'WARNING' | 'INVALIDATED';
+  technicalReasons: string[];
+  fundamentalReasons: string[];
+  allReasons: string[];
+  pnlStatus: 'IN_PROFIT' | 'BREAKEVEN' | 'IN_LOSS';
+  recommendedExitPrice: number;
+  lastCheckedTime: string;
+}
+
 export interface Position {
   id: string;
   symbol: CurrencyPair;
@@ -962,6 +976,7 @@ export interface Position {
   pnl: number;
   pnlPercent: number;
   riskReward: number;
+  invalidation?: PositionInvalidationStatus;
 }
 
 export interface TradeHistoryItem {
@@ -979,6 +994,8 @@ export interface TradeHistoryItem {
   outcome: 'WIN' | 'LOSS' | 'SCRATCH';
   riskManagerVerdict: RiskVerdict;
   strategyNotes: string;
+  exitReason?: string;
+  invalidationTriggers?: string[];
 }
 
 // ==========================================
