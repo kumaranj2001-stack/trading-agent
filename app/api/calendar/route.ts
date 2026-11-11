@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MACRO_ECONOMIC_CALENDAR } from '@/lib/marketData';
 import { MacroIndicator } from '@/lib/types';
+import { macroHistoricalArchive } from '@/lib/macroHistoricalArchive';
 
 export const runtime = 'nodejs';
 
@@ -236,8 +237,32 @@ export async function GET(req: NextRequest) {
     const impact = searchParams.get('impact')?.toUpperCase();
     const rawSearch = searchParams.get('search') || '';
     const search = rawSearch.slice(0, 100).toLowerCase().trim();
+    const isHistoricalQuery = searchParams.get('historical') === 'true';
 
-    // Ingest all enriched events with exact UTC and IST timestamps
+    // If historical archive is explicitly requested (decoupled background service)
+    if (isHistoricalQuery) {
+      const historicalEvents = macroHistoricalArchive.getHistoricalArchive({
+        region: currency,
+        impact: impact as any,
+        search,
+      });
+      const baselineMetrics = macroHistoricalArchive.getHistoricalBaselineMetrics();
+      const auditSummary = macroHistoricalArchive.getArchiveAuditSummary();
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          isHistoricalArchive: true,
+          auditSummary,
+          events: historicalEvents,
+          baselineMetrics,
+          retentionPolicy: 'Auto-purge all events older than 30 days',
+          timestamp: new Date().toISOString(),
+        },
+      });
+    }
+
+    // Ingest all enriched active events with exact UTC and IST timestamps
     let events: MacroIndicator[] = ENRICHED_MACRO_CALENDAR_DATABASE.map(buildEnrichedMacroEvent);
 
     // Apply currency/region filter
@@ -262,6 +287,7 @@ export async function GET(req: NextRequest) {
     events.sort((a, b) => (a.timestampEpochMs || 0) - (b.timestampEpochMs || 0));
 
     const highImpactCount = events.filter(e => e.impact === 'HIGH').length;
+    const historicalAudit = macroHistoricalArchive.getArchiveAuditSummary();
 
     return NextResponse.json({
       success: true,
@@ -270,6 +296,12 @@ export async function GET(req: NextRequest) {
         highImpactCount,
         events,
         nextHighImpactEvent: events.find(e => e.impact === 'HIGH') || null,
+        backgroundStorage: {
+          historical30DayBackupActive: true,
+          total30DayHistoricalEvents: historicalAudit.totalStoredEvents,
+          autoPurgeEnforced: true,
+          decoupledFromPrimaryView: true,
+        },
         serverTimeIST: new Intl.DateTimeFormat('en-US', {
           timeZone: 'Asia/Kolkata',
           day: '2-digit',

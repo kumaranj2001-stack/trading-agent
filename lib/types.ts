@@ -565,7 +565,7 @@ export interface NewsArticle {
   timestamp: number;
   sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   sentimentScore: number; // -1.0 to 1.0
-  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   relatedSymbols: string[];
   summary: string;
   category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'GLOBAL_WIRE' | 'BREAKING';
@@ -601,7 +601,7 @@ export interface NewsMemoryEntry {
   timeFormatted: string; // e.g. "17:54:12"
   sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   sentimentScore: number;
-  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   relatedSymbols: string[];
   summary: string;
   category: 'CENTRAL_BANK' | 'GEOPOLITICAL' | 'MACRO_DATA' | 'COMMODITIES_METALS' | 'FOREX' | 'INDIAN_MARKET' | 'REGULATORY_INSTITUTIONAL' | 'GLOBAL_WIRE' | 'BREAKING';
@@ -616,7 +616,7 @@ export interface ChronologicalStoryEvent {
   timestamp: number;
   headline: string;
   source: string;
-  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  impact: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
   sentimentScore: number;
   linkageNote: string;
 }
@@ -634,7 +634,7 @@ export interface NarrativeStoryThread {
   macroReflection: string;       // Structural market reflection
   executionInsight: string;      // Actionable trade execution directive
   sentimentBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
-  impactLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+  impactLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
 }
 
 export interface DailyNewsMemorySummary {
@@ -645,6 +645,57 @@ export interface DailyNewsMemorySummary {
   dominantSentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
   synthesizedKeyTakeaway: string;
   executionDirectives: string[];
+}
+
+// ==============================================================
+// 🏛️ 30-DAY HISTORICAL MACROECONOMIC ARCHIVE & BASELINE METRICS
+// ==============================================================
+export interface MacroHistoricalEvent {
+  id: string;
+  name: string;
+  region: string;
+  category: 'INFLATION' | 'CENTRAL_BANK' | 'EMPLOYMENT' | 'GROWTH' | 'COMMODITIES_RESERVES' | 'TRADE_BALANCE' | 'SURVEY';
+  impact: 'HIGH' | 'MEDIUM' | 'LOW';
+  actual: string | number;
+  forecast: string | number;
+  previous: string | number;
+  surpriseDeviation?: number;
+  volatilityImpactPips?: number;
+  timestampIso: string;
+  timestampEpochMs: number;
+  date: string;
+  timeUTC: string;
+  timeIST: string;
+  correlationAssets: string[];
+  marketReactionSummary?: string;
+}
+
+export interface HistoricalMacroBaselineMetrics {
+  eventName: string;
+  eventCount30Days: number;
+  avgVolatilityImpactPips: number;
+  maxVolatilityImpactPips: number;
+  lastSurpriseDeviation: number;
+  historicalZScore: number;
+  primaryCorrelatedAssets: string[];
+  riskRegime: 'HIGH_VOLATILITY' | 'MODERATE_VOLATILITY' | 'LOW_VOLATILITY';
+  lastUpdated: number;
+}
+
+// ==============================================================
+// ⏳ 24-HOUR ROLLING MEMORY BUFFER (ZERO LOSS ON REFRESH)
+// ==============================================================
+export interface News24HourBufferState {
+  articles: NewsArticle[];
+  lastHydrated: number;
+  totalArticlesCount: number;
+  impactBreakdown: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+  };
+  symbolBreakdown: Record<string, number>;
 }
 
 export interface StoryEventStep {

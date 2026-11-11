@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { NewsArticle, NarrativeStoryThread, NewsMemoryEntry, DailyNewsMemorySummary, CurrencyPair } from '@/lib/types';
 import { MONITORED_FINANCIAL_SOURCES, FinancialSource, realTimeNewsEngine } from '@/lib/newsEngine';
 import { NewsMemoryStorageManager } from '@/lib/newsMemoryStorage';
+import { news24HourBuffer } from '@/lib/news24HourBuffer';
 import { 
   Radio, 
   X, 
@@ -109,14 +110,15 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
   // Navigation Tabs in News Terminal
   const [activeTab, setActiveTab] = useState<'STREAM' | 'NARRATIVES' | 'MEMORIES' | 'SOURCES'>('STREAM');
   
-  // Real-time second-by-second live feed state
-  const [liveArticles, setLiveArticles] = useState<NewsArticle[]>([]);
+  // Real-time second-by-second live feed state (Hydrated directly from 24-hour memory buffer to prevent loss on refresh)
+  const [liveArticles, setLiveArticles] = useState<NewsArticle[]>(() => news24HourBuffer.getArticles());
+  const [bufferTelemetry, setBufferTelemetry] = useState(() => news24HourBuffer.getBufferStats());
   const [newFlashAlert, setNewFlashAlert] = useState<string | null>(null);
   const [sourcesList, setSourcesList] = useState<FinancialSource[]>(MONITORED_FINANCIAL_SOURCES);
 
-  // Filters & Organization Controls
+  // Filters & Organization Controls (Full High, Medium, Low Impact Coverage)
   const [selectedSourceFilter, setSelectedSourceFilter] = useState<string>('ALL');
-  const [selectedImpactFilter, setSelectedImpactFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH'>('ALL');
+  const [selectedImpactFilter, setSelectedImpactFilter] = useState<'ALL' | 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>('ALL');
   const [impactSortOrder, setImpactSortOrder] = useState<'ALL' | 'LOW_TO_HIGH' | 'HIGH_TO_LOW'>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -140,16 +142,20 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
     }
   }, [isOpen, isFullPage]);
 
-  // 2. Low-Latency Data Ingestion & Direct Server Streaming Pipeline
+  // 2. Low-Latency Data Ingestion & Direct Server Streaming Pipeline with 24h Buffer Retention
   useEffect(() => {
     if (!isOpen) return;
 
     // Load initial verified snapshot from authoritative backend
-    fetch(`/api/news?symbol=${encodeURIComponent(symbol)}&impactSort=${impactSortOrder}&category=${selectedCategory}`)
+    const impactParam = selectedImpactFilter !== 'ALL' ? `&impact=${selectedImpactFilter}` : '';
+    fetch(`/api/news?symbol=${encodeURIComponent(symbol)}&impactSort=${impactSortOrder}&category=${selectedCategory}${impactParam}`)
       .then(res => res.json())
       .then(json => {
         if (json.success && Array.isArray(json.data?.headlines) && json.data.headlines.length > 0) {
-          setLiveArticles(json.data.headlines);
+          const merged = news24HourBuffer.ingestArticles(json.data.headlines);
+          setLiveArticles(merged);
+          setBufferTelemetry(news24HourBuffer.getBufferStats());
+
           if (Array.isArray(json.data?.sources)) {
             setSourcesList(json.data.sources);
           }
@@ -157,14 +163,18 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
             setNewFlashAlert(json.data.breakingAlert.replace(/\[TICK\s*#\d+\]/gi, ''));
           }
         } else {
-          const fallbackArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol as CurrencyPair, impactSortOrder, selectedCategory);
-          setLiveArticles(fallbackArticles);
+          const fallbackArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol as CurrencyPair, impactSortOrder, selectedCategory, selectedImpactFilter);
+          const merged = news24HourBuffer.ingestArticles(fallbackArticles);
+          setLiveArticles(merged);
+          setBufferTelemetry(news24HourBuffer.getBufferStats());
           setSourcesList(realTimeNewsEngine.getMonitoredSources());
         }
       })
       .catch(() => {
-        const fallbackArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol as CurrencyPair, impactSortOrder, selectedCategory);
-        setLiveArticles(fallbackArticles);
+        const fallbackArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol as CurrencyPair, impactSortOrder, selectedCategory, selectedImpactFilter);
+        const merged = news24HourBuffer.ingestArticles(fallbackArticles);
+        setLiveArticles(merged);
+        setBufferTelemetry(news24HourBuffer.getBufferStats());
         setSourcesList(realTimeNewsEngine.getMonitoredSources());
       });
 
@@ -182,7 +192,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
     let sseActive = false;
 
     try {
-      eventSource = new EventSource(`/api/news/stream?symbol=${encodeURIComponent(symbol)}&impactSort=${impactSortOrder}&category=${selectedCategory}`);
+      eventSource = new EventSource(`/api/news/stream?symbol=${encodeURIComponent(symbol)}&impactSort=${impactSortOrder}&category=${selectedCategory}${impactParam}`);
       
       eventSource.onopen = () => {
         sseActive = true;
@@ -194,7 +204,9 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           if (payload.type === 'TICK' && payload.article) {
             const tick: NewsArticle = payload.article;
             NewsMemoryStorageManager.captureMemory(tick);
-            setLiveArticles(prev => [tick, ...prev.slice(0, 150)]);
+            news24HourBuffer.ingestTick(tick);
+            setLiveArticles(prev => [tick, ...prev.filter(a => a.id !== tick.id)].slice(0, 300));
+            setBufferTelemetry(news24HourBuffer.getBufferStats());
             setMemories(NewsMemoryStorageManager.getMemories());
             setNarrativeThreads(NewsMemoryStorageManager.getNarrativeThreads());
 
@@ -218,25 +230,27 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
     // 4. Real-time background tick pulse (instant failover guarantee if SSE unavailable)
     const tickInterval = setInterval(() => {
       if (!sseActive) {
-        const tick = realTimeNewsEngine.generateLiveWireTick(symbol as CurrencyPair);
-        NewsMemoryStorageManager.captureMemory(tick);
-        setLiveArticles(prev => [tick, ...prev.slice(0, 150)]);
+        const fallbackTick = realTimeNewsEngine.generateLiveWireTick(symbol as CurrencyPair);
+        NewsMemoryStorageManager.captureMemory(fallbackTick);
+        news24HourBuffer.ingestTick(fallbackTick);
+        setLiveArticles(prev => [fallbackTick, ...prev.filter(a => a.id !== fallbackTick.id)].slice(0, 300));
+        setBufferTelemetry(news24HourBuffer.getBufferStats());
         setMemories(NewsMemoryStorageManager.getMemories());
         setNarrativeThreads(NewsMemoryStorageManager.getNarrativeThreads());
         setSourcesList(realTimeNewsEngine.getMonitoredSources());
 
-        if (tick.impact === 'CRITICAL' && tick.isStreamingFlash) {
-          setNewFlashAlert(`[${tick.source}]: ${tick.title}`);
+        if (fallbackTick.impact === 'CRITICAL' && fallbackTick.isStreamingFlash) {
+          setNewFlashAlert(`[${fallbackTick.source}]: ${fallbackTick.title}`);
           setTimeout(() => setNewFlashAlert(null), 4500);
         }
       }
-    }, 1500);
+    }, 2500);
 
     return () => {
       if (eventSource) eventSource.close();
       clearInterval(tickInterval);
     };
-  }, [isOpen, symbol, impactSortOrder, selectedCategory]);
+  }, [isOpen, symbol, impactSortOrder, selectedCategory, selectedImpactFilter]);
 
   if (!isOpen) return null;
 
@@ -247,8 +261,12 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
       const matchSource = a.source.toLowerCase().includes(selectedSourceFilter.toLowerCase());
       if (!matchDomain && !matchSource) return false;
     }
-    if (selectedImpactFilter === 'CRITICAL' && a.impact !== 'CRITICAL') return false;
-    if (selectedImpactFilter === 'HIGH' && a.impact !== 'CRITICAL' && a.impact !== 'HIGH') return false;
+    if (selectedImpactFilter !== 'ALL') {
+      if (selectedImpactFilter === 'CRITICAL' && a.impact !== 'CRITICAL') return false;
+      if (selectedImpactFilter === 'HIGH' && a.impact !== 'HIGH' && a.impact !== 'CRITICAL') return false;
+      if (selectedImpactFilter === 'MEDIUM' && a.impact !== 'MEDIUM') return false;
+      if (selectedImpactFilter === 'LOW' && a.impact !== 'LOW') return false;
+    }
     if (selectedCategory !== 'ALL' && a.category !== selectedCategory) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -260,12 +278,12 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
     return true;
   });
 
-  // Apply market impact visual organization (Low to High or High to Low)
+  // Apply market impact visual organization (Low to High or High to Low across all levels)
   if (impactSortOrder === 'LOW_TO_HIGH') {
-    const weights: Record<string, number> = { MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
+    const weights: Record<string, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
     filteredArticles = [...filteredArticles].sort((a, b) => (weights[a.impact] || 1) - (weights[b.impact] || 1));
   } else if (impactSortOrder === 'HIGH_TO_LOW') {
-    const weights: Record<string, number> = { MEDIUM: 1, HIGH: 2, CRITICAL: 3 };
+    const weights: Record<string, number> = { LOW: 1, MEDIUM: 2, HIGH: 3, CRITICAL: 4 };
     filteredArticles = [...filteredArticles].sort((a, b) => (weights[b.impact] || 1) - (weights[a.impact] || 1));
   }
 
@@ -393,8 +411,11 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
           </div>
 
           <div className="p-2 bg-terminal-900 rounded-lg border border-terminal-border/70">
-            <span className="text-[10px] text-slate-400 block uppercase">Captured Memories</span>
-            <span className="text-emerald-400 font-bold text-sm">{memories.length || 200} Events Logged</span>
+            <span className="text-[10px] text-slate-400 block uppercase">24-Hour Memory Buffer</span>
+            <span className="text-emerald-400 font-bold text-sm flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              {bufferTelemetry.totalArticlesCount} Cached (0 Loss on Refresh)
+            </span>
           </div>
         </div>
 
@@ -529,7 +550,7 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
               </button>
 
               <div className="flex items-center bg-terminal-900 border border-terminal-border rounded-lg p-0.5">
-                {(['ALL', 'CRITICAL', 'HIGH'] as const).map(impact => (
+                {(['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const).map(impact => (
                   <button
                     key={impact}
                     onClick={() => setSelectedImpactFilter(impact)}
@@ -604,10 +625,12 @@ export const NewsWireModal: React.FC<NewsWireModalProps> = ({
                         </span>
                         <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
                           isCritical
-                            ? 'bg-rose-500/20 text-rose-400 border-rose-500/40'
+                            ? 'bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse'
                             : article.impact === 'HIGH'
                             ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-                            : 'bg-slate-700/20 text-slate-400 border-slate-700/40'
+                            : article.impact === 'MEDIUM'
+                            ? 'bg-sky-500/20 text-sky-400 border-sky-500/40'
+                            : 'bg-slate-700/40 text-slate-400 border-slate-600/40'
                         }`}>
                           {article.impact}
                         </span>

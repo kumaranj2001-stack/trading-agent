@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
   const symbol: CurrencyPair = (rawSymbol in BASE_PRICES) ? (rawSymbol as CurrencyPair) : 'XAU/USD';
   const impactSort = (searchParams.get('impactSort') || 'ALL') as 'ALL' | 'LOW_TO_HIGH' | 'HIGH_TO_LOW';
   const category = searchParams.get('category') || 'ALL';
+  const impact = searchParams.get('impact') || 'ALL';
 
   const encoder = new TextEncoder();
 
@@ -19,7 +20,7 @@ export async function GET(req: NextRequest) {
     start(controller) {
       // 1. Immediate initial verified snapshot (0ms latency)
       try {
-        const initialArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol, impactSort, category);
+        const initialArticles = realTimeNewsEngine.scrapeNewsForSymbol(symbol, impactSort, category, impact);
         const initialSynthesis = realTimeNewsEngine.synthesizeSentiment(initialArticles);
         const sources = realTimeNewsEngine.getMonitoredSources();
 

@@ -28,6 +28,7 @@ import {
 import { CurrencyPair, NewsArticle, ChronologicalStoryThread, DailyNewsReflection, NewsMemoryEntry } from '@/lib/types';
 import { MONITORED_FINANCIAL_SOURCES, realTimeNewsEngine, FinancialSource } from '@/lib/newsEngine';
 import { NewsMemoryStorage } from '@/lib/newsMemoryStorage';
+import { news24HourBuffer } from '@/lib/news24HourBuffer';
 
 export interface DedicatedNewsTerminalProps {
   isOpen: boolean;
@@ -41,7 +42,7 @@ export const DedicatedNewsTerminal: React.FC<DedicatedNewsTerminalProps> = ({
   selectedPair,
 }) => {
   const [activeTab, setActiveTab] = useState<'stream' | 'threads' | 'reflections' | 'sources'>('stream');
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
+  const [articles, setArticles] = useState<NewsArticle[]>(() => news24HourBuffer.getArticles());
   const [selectedSourceFilter, setSelectedSourceFilter] = useState<string>('ALL');
   const [streamTimerSeconds, setStreamTimerSeconds] = useState<number>(3);
   const [currentTimeStr, setCurrentTimeStr] = useState<string>('');
@@ -69,7 +70,8 @@ export const DedicatedNewsTerminal: React.FC<DedicatedNewsTerminalProps> = ({
       const res = await fetch(`/api/news?symbol=${selectedPair}`);
       const json = await res.json();
       if (json.success && Array.isArray(json.data?.headlines) && json.data.headlines.length > 0) {
-        setArticles(json.data.headlines);
+        const merged = news24HourBuffer.ingestArticles(json.data.headlines);
+        setArticles(merged);
         if (Array.isArray(json.data.sources)) {
           setSourcesList(json.data.sources);
         }
@@ -78,13 +80,15 @@ export const DedicatedNewsTerminal: React.FC<DedicatedNewsTerminalProps> = ({
         });
       } else {
         const scraped = realTimeNewsEngine.scrapeNewsForSymbol(selectedPair);
-        setArticles(scraped);
+        const merged = news24HourBuffer.ingestArticles(scraped);
+        setArticles(merged);
         setSourcesList(realTimeNewsEngine.getMonitoredSources());
         scraped.forEach((art) => NewsMemoryStorage.recordMemory(art));
       }
     } catch {
       const scraped = realTimeNewsEngine.scrapeNewsForSymbol(selectedPair);
-      setArticles(scraped);
+      const merged = news24HourBuffer.ingestArticles(scraped);
+      setArticles(merged);
       setSourcesList(realTimeNewsEngine.getMonitoredSources());
       scraped.forEach((art) => NewsMemoryStorage.recordMemory(art));
     }
