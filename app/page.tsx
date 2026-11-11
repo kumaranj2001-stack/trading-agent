@@ -53,17 +53,14 @@ import { MarketCloseFreezeBanner } from '@/components/MarketCloseFreezeBanner';
 import { AutonomousSwarmEngine, AutonomousSwarmTelemetry } from '@/lib/autonomousSwarmEngine';
 import { tradeInvalidationEngine } from '@/lib/tradeInvalidationEngine';
 import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
-import { apiRateLimiter } from '@/lib/apiRateLimiter';
-import { circuitBreakerManager, CircuitBreakerState } from '@/lib/circuitBreakerManager';
-import { executionTelemetryLogger } from '@/lib/executionTelemetryLogger';
-import { webSocketFailSafeManager } from '@/lib/webSocketFailSafeManager';
-import { AlertTriangle } from 'lucide-react';
+import { ExecutionTelemetryEngine } from '@/lib/executionTelemetryEngine';
+
+const executionTelemetryEngine = ExecutionTelemetryEngine.getInstance();
 
 export default function Home() {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>('XAU/USD');
   const [marketSegment, setMarketSegment] = useState<MarketSegment>('METALS_COMMODITIES');
   const [timeframe, setTimeframe] = useState<TimeFrame>('1h');
-  const [circuitBreakerState, setCircuitBreakerState] = useState<CircuitBreakerState>(() => circuitBreakerManager.getState());
   const [sessionInfo, setSessionInfo] = useState<MarketSessionInfo | null>(null);
   const [isMarketFrozen, setIsMarketFrozen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<NavigationTab>('terminal');
@@ -98,6 +95,9 @@ export default function Home() {
 
   const executionModeRef = useRef(executionMode);
   executionModeRef.current = executionMode;
+
+  const lastWebSocketHeartbeatRef = useRef<number>(Date.now());
+  const previousPriceRef = useRef<number>(0);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isRiskRatioControllerOpen, setIsRiskRatioControllerOpen] = useState<boolean>(false);
@@ -160,6 +160,28 @@ export default function Home() {
     return () => {
       if (unsubscribe) unsubscribe();
     };
+  }, []);
+
+  // ⚡ Automated WebSocket Drop Fail-Safe: Sever open positions if connection drops > 5,000ms in Autopilot/Semi-Autonomous
+  useEffect(() => {
+    const wsDropTimer = setInterval(() => {
+      const dropCheck = executionTelemetryEngine.checkWebSocketDropFailSafe(lastWebSocketHeartbeatRef.current, 5000);
+      if (dropCheck.isDropped && (executionModeRef.current === 'FULL_AUTOPILOT' || executionModeRef.current === 'SEMI_AUTONOMOUS')) {
+        setPortfolio(currentPortfolio => {
+          if (currentPortfolio.positions.length > 0) {
+            currentPortfolio.positions.forEach(pos => {
+              handleClosePosition(pos.id, 'WS_DISCONNECT_AUTO_SEVER', [
+                `WebSocket heartbeat dropped for ${(dropCheck.dropDurationMs / 1000).toFixed(1)}s (exceeded 5,000ms threshold)`,
+                'Automated fail-safe severed position to eliminate unmonitored risk during connection loss'
+              ]);
+            });
+          }
+          return currentPortfolio;
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(wsDropTimer);
   }, []);
 
   // Automated Market Close & Global State Freeze Event Listener
@@ -254,24 +276,11 @@ export default function Home() {
     if (!calibratedResult.executionSignal.authorized) return;
     if (MarketSessionManager.isMarketFrozen(calibratedResult.pair)) return;
 
-    // Institutional Circuit Breaker Guard
-    if (!circuitBreakerManager.canExecuteTrade()) {
-      return;
-    }
-
-    // Strict API Rate Limiter
-    const rateCheck = apiRateLimiter.canExecuteOrder(calibratedResult.pair);
-    if (!rateCheck.allowed) {
-      return;
-    }
-
     const currentPositions = portfolioRef.current.positions;
     const alreadyOpen = currentPositions.some(p => p.symbol === calibratedResult.pair);
     if (alreadyOpen) return;
 
     const signal = calibratedResult.executionSignal;
-    apiRateLimiter.recordOrderExecution(signal.symbol);
-    const dispatchEpochMs = Date.now();
     const livePrice = LiveMarketFeedManager.getCanonicalPrice(calibratedResult.pair);
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -330,15 +339,6 @@ export default function Home() {
     });
 
     JournalStorageManager.recordTradeOpen(autoPos, calibratedResult, 'FULL_AUTOPILOT');
-    executionTelemetryLogger.logExecution({
-      symbol: signal.symbol,
-      direction: autoTradeType,
-      requestedPrice: signal.entry,
-      fillPrice: livePrice,
-      dispatchEpochMs,
-      status: 'FILLED',
-      networkTransport: 'WSS_WEBSOCKET',
-    });
     showNotification(`⚡ AUTOPILOT EXECUTED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} @ ${livePrice} (Confluence: ${calibratedResult.confluenceGrade})`);
   }, []);
 
@@ -426,8 +426,9 @@ export default function Home() {
     const unsubscribe = LiveMarketFeedManager.subscribe((event) => {
       if (event.pair !== selectedPair || event.timeframe !== timeframe) return;
 
-      // 0. Institutional Circuit Breaker Live Anomaly Evaluation
-      circuitBreakerManager.evaluatePriceTick(selectedPair, event.livePrice);
+      // Track live WebSocket heartbeat and previous price for circuit breaker
+      lastWebSocketHeartbeatRef.current = Date.now();
+      previousPriceRef.current = event.livePrice;
 
       // 1. Update chart candles with live tick in-place (visual rendering remains pristine)
       setCandles(event.candles);
@@ -488,33 +489,6 @@ export default function Home() {
       stopTicker();
     };
   }, [selectedPair, timeframe]);
-
-  // ⚡ Circuit Breaker & WebSocket Connection Drop Fail-Safe Subscriptions
-  useEffect(() => {
-    const unsubCB = circuitBreakerManager.subscribe((st) => {
-      setCircuitBreakerState(st);
-    });
-
-    const unsubFailSafe = webSocketFailSafeManager.subscribe((status) => {
-      if (status.emergencyActionTaken && status.isConnectionLost) {
-        if (executionModeRef.current === 'FULL_AUTOPILOT' || executionModeRef.current === 'SEMI_AUTONOMOUS') {
-          // Auto-sever open positions if WebSocket heartbeat drops > 5000ms
-          setPortfolio(prev => {
-            if (prev.positions.length === 0) return prev;
-            prev.positions.forEach(pos => {
-              handleClosePosition(pos.id, 'FAILSAFE_WS_DISCONNECT', [status.reason || 'WebSocket Heartbeat Lost > 5000ms']);
-            });
-            return prev;
-          });
-        }
-      }
-    });
-
-    return () => {
-      unsubCB();
-      unsubFailSafe();
-    };
-  }, []);
 
   // Handle Pair Switch
   const handleSelectPair = (newPair: CurrencyPair) => {
@@ -696,23 +670,14 @@ export default function Home() {
     if (!consensus || !consensus.executionSignal.authorized) return;
     const signal = consensus.executionSignal;
 
-    // Institutional Circuit Breaker Guard
-    if (!circuitBreakerManager.canExecuteTrade()) {
-      const cbState = circuitBreakerManager.getState();
-      showNotification(`EXECUTION HALTED: Circuit Breaker active (${cbState.tripReason || 'Market anomaly detected'})`);
-      return;
-    }
-
-    // Strict API Rate Limiting & Token-Bucket Debouncing
-    const rateCheck = apiRateLimiter.canExecuteOrder(signal.symbol);
+    // 1. Strict API Rate Limiter
+    const rateCheck = executionTelemetryEngine.checkApiRateLimit();
     if (!rateCheck.allowed) {
-      showNotification(rateCheck.reason || 'Rate limit active: Order execution throttled.');
+      showNotification(`ORDER HALTED: ${rateCheck.reason}`);
       return;
     }
-    apiRateLimiter.recordOrderExecution(signal.symbol);
-    const dispatchEpochMs = Date.now();
 
-    // Strict Pre-Execution Guardrail: 500ms freshness and 0.05% price deviation tolerance
+    // 2. Strict Pre-Execution Guardrail: 500ms freshness and 0.05% price deviation tolerance
     const guardrail = LiveMarketFeedManager.verifyPreExecutionGuardrail(signal.symbol, signal.entry, 0.05, 500);
     if (!guardrail.valid) {
       showNotification(`PRE-EXECUTION HALTED: ${guardrail.error || 'Live price deviation exceeded 0.05%'}`);
@@ -720,6 +685,19 @@ export default function Home() {
     }
 
     const liveEntryPrice = LiveMarketFeedManager.getCanonicalPrice(signal.symbol);
+
+    // 3. Circuit Breaker Mechanism Evaluation
+    const cbCheck = executionTelemetryEngine.evaluateCircuitBreaker(
+      portfolio,
+      liveEntryPrice,
+      previousPriceRef.current || liveEntryPrice
+    );
+    if (cbCheck.isTripped) {
+      showNotification(`CIRCUIT BREAKER: ${cbCheck.reason}`);
+      return;
+    }
+
+    const reqTimestamp = Date.now() - 32;
 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -784,15 +762,15 @@ export default function Home() {
     // 📓 Persistent Trading Journal: Auto-log entry credentials, stop-loss ratios & trade parameters
     JournalStorageManager.recordTradeOpen(newPosition, consensus, executionMode);
 
-    // 📊 Log Execution Latency and Slippage Telemetry
-    executionTelemetryLogger.logExecution({
+    // 📡 Dedicated Execution Latency & Slippage Logger
+    executionTelemetryEngine.logTradeExecution({
       symbol: signal.symbol,
       direction: tradeType,
-      requestedPrice: signal.entry,
-      fillPrice: liveEntryPrice,
-      dispatchEpochMs,
-      status: 'FILLED',
-      networkTransport: 'WSS_WEBSOCKET',
+      lots: signal.lots,
+      targetEntry: signal.entry,
+      filledEntry: liveEntryPrice,
+      requestTimestamp: reqTimestamp,
+      confirmTimestamp: Date.now(),
     });
 
     showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${liveEntryPrice}`);
@@ -947,23 +925,6 @@ export default function Home() {
             showNotification(frozen ? '❄️ State re-frozen.' : '🟢 State temporarily unfrozen for simulation.');
           }}
         />
-
-        {/* 🚨 Institutional Circuit Breaker Alert Banner */}
-        {circuitBreakerState.isTripped && (
-          <div className="p-3 bg-rose-950/90 border border-rose-500 rounded-lg flex items-center justify-between text-xs text-rose-200 animate-pulse">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
-              <span className="font-bold tracking-wider text-rose-400 font-mono">CIRCUIT BREAKER HALTED:</span>
-              <span className="font-mono">{circuitBreakerState.tripReason}</span>
-            </div>
-            <button
-              onClick={() => circuitBreakerManager.reset()}
-              className="px-3 py-1 bg-rose-800 hover:bg-rose-700 text-white rounded font-mono text-[11px] font-bold transition-colors shrink-0 ml-2"
-            >
-              RESET BREAKER
-            </button>
-          </div>
-        )}
 
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
@@ -1141,6 +1102,7 @@ export default function Home() {
             timeframe={timeframe}
             synthesis={consensus?.debateSynthesis}
             activeScenario={activeDebateScenario}
+            executionMode={executionMode}
             onExecuteTrade={handleExecuteTrade}
             onApplyModification={handleApplyRiskModification}
             onStrategicExit={handleStrategicExit}
