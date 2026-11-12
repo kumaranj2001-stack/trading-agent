@@ -274,9 +274,42 @@ export class SwarmCoordinator {
     if (isMetal) dynSummary = `Safe-haven bullion inflows, negative TIPS real yields, and physical vault shortages drive high momentum.`;
     else if (isOil) dynSummary = `OPEC+ compliance and geopolitical shipping routes provide structural upside support.`;
 
-    let activeDirection = consensusDirection === 'HOLD'
-      ? (technical.bias.includes('BUY') ? 'BUY' : 'SELL')
-      : consensusDirection;
+    // 5-Desk Bias Synthesis & Directional Parity Protocol:
+    // Calculates net desk conviction across Technical, Fundamental, News, Forex & Risk.
+    // Permanently eradicates the logical conflict where a setup is labeled Long while desks show Sell bias.
+    const techBiasVal = technical.bias.includes('BUY') ? 1.5 : technical.bias.includes('SELL') ? -1.5 : 0;
+    const fundBiasVal = fundamental.bias.includes('BUY') ? 1.5 : fundamental.bias.includes('SELL') ? -1.5 : 0;
+    const newsBiasVal = news.bias.includes('BUY') ? 1.0 : news.bias.includes('SELL') ? -1.0 : 0;
+    const fxBiasVal = forex.bias.includes('BUY') ? 1.0 : forex.bias.includes('SELL') ? -1.0 : 0;
+    const riskBiasVal = risk.action === 'BUY' ? 1.0 : risk.action === 'SELL' ? -1.0 : 0;
+    const totalBiasConviction = techBiasVal + fundBiasVal + newsBiasVal + fxBiasVal + riskBiasVal;
+
+    let activeDirection: 'BUY' | 'SELL';
+    if (consensusDirection === 'HOLD') {
+      if (sellScore > buyScore || totalBiasConviction < 0) {
+        activeDirection = 'SELL';
+      } else if (buyScore > sellScore || totalBiasConviction > 0) {
+        activeDirection = 'BUY';
+      } else {
+        activeDirection = technical.bias.includes('SELL') ? 'SELL' : 'BUY';
+      }
+    } else {
+      activeDirection = consensusDirection;
+    }
+
+    // Absolute Logical Consistency Invariant:
+    // If Fundamental and News desks or Technical desk maintain a strong sell posture,
+    // the setup can NEVER be labeled Long (BUY)!
+    const isOverwhelminglySell = (fundamental.bias.includes('SELL') && (news.bias.includes('SELL') || technical.bias.includes('SELL'))) ||
+                                 technical.bias === 'STRONG_SELL' || fundamental.bias === 'STRONG_SELL';
+    const isOverwhelminglyBuy = (fundamental.bias.includes('BUY') && (news.bias.includes('BUY') || technical.bias.includes('BUY'))) ||
+                                technical.bias === 'STRONG_BUY' || fundamental.bias === 'STRONG_BUY';
+
+    if (isOverwhelminglySell && !isOverwhelminglyBuy) {
+      activeDirection = 'SELL';
+    } else if (isOverwhelminglyBuy && !isOverwhelminglySell) {
+      activeDirection = 'BUY';
+    }
 
     const dynamicPositionLots = risk.parameters.positionSizeLots > 0 ? risk.parameters.positionSizeLots : tierParams.defaultLots;
 
@@ -316,7 +349,7 @@ export class SwarmCoordinator {
       risk,
       marketSegment,
       marketCandles,
-      consensusDirection,
+      activeDirection,
       confluenceGrade,
       overallConfidence,
       scenarioContext
@@ -369,14 +402,14 @@ export class SwarmCoordinator {
       confluenceGrade = existingLatched.anchoredGrade;
       activeDirection = existingLatched.anchoredDirection;
     } else {
-      if (consensusDirection === 'SELL') {
+      if (activeDirection === 'SELL') {
         if (finalStopLoss <= currentPrice) {
           finalStopLoss = Number((currentPrice + Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
         }
         if (finalTakeProfit >= currentPrice) {
           finalTakeProfit = Number((currentPrice - Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
         }
-      } else if (consensusDirection === 'BUY') {
+      } else if (activeDirection === 'BUY') {
         if (finalStopLoss >= currentPrice) {
           finalStopLoss = Number((currentPrice - Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
         }
@@ -535,7 +568,7 @@ export class SwarmCoordinator {
     else if (isSilver || isJpy || isRupee) decimals = 3;
     else if (isCopper) decimals = 4;
 
-    const dominantSide: 'BUY' | 'SELL' = (consensusDirection === 'SELL' || risk.action === 'SELL') ? 'SELL' : 'BUY';
+    const dominantSide: 'BUY' | 'SELL' = consensusDirection === 'SELL' ? 'SELL' : 'BUY';
     const opposingSide: 'BUY' | 'SELL' = dominantSide === 'BUY' ? 'SELL' : 'BUY';
 
     // Baseline Metrics Anchor

@@ -1,4 +1,5 @@
 import { LiveMarketFeedManager, WebSocketMarketTelemetry } from './liveMarketFeed';
+import { MarketSessionManager } from './marketSessionManager';
 import { Position } from './types';
 
 export interface FailSafeStatus {
@@ -33,7 +34,7 @@ export class WebSocketFailSafeManager {
 
   private listeners: Set<FailSafeListener> = new Set();
   private disconnectTimer: NodeJS.Timeout | null = null;
-  private readonly maxAllowedDisconnectMs = 5000; // 5 seconds threshold
+  private readonly maxAllowedDisconnectMs = 15000; // 15 seconds institutional tolerance threshold
 
   private constructor() {
     this.initMonitoring();
@@ -71,6 +72,16 @@ export class WebSocketFailSafeManager {
       const now = Date.now();
       const telemetry = LiveMarketFeedManager.getWebSocketTelemetry();
       const timeSinceLastTick = now - (telemetry.lastTickTimestamp || now);
+
+      if (telemetry.isConnected && timeSinceLastTick <= this.maxAllowedDisconnectMs) {
+        if (this.status.isConnectionLost) {
+          this.status.isConnectionLost = false;
+          this.status.disconnectDurationMs = 0;
+          this.status.emergencyActionTaken = false;
+          this.notify();
+        }
+        return;
+      }
 
       if (!telemetry.isConnected || timeSinceLastTick > this.maxAllowedDisconnectMs) {
         const duration = Math.max(timeSinceLastTick, now - this.status.lastHeartbeatTimestamp);

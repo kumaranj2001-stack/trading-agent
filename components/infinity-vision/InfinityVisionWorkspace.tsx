@@ -14,6 +14,7 @@ import { VisionAtlasLabSidebar } from './VisionAtlasLabSidebar';
 import { StructureTimelineBottom } from './StructureTimelineBottom';
 import { BASE_PRICES } from '@/lib/marketData';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { MarketSessionManager } from '@/lib/marketSessionManager';
 import { visionSystemLogger } from '@/lib/visionSystemLogger';
 
 export interface InfinityVisionWorkspaceProps {
@@ -130,16 +131,18 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
 
     // 2. Subscribe to WebSocket telemetry for drop / latency interruption handling
     const unsubTel = LiveMarketFeedManager.subscribeWebSocketTelemetry((tel) => {
-      const isStale = (Date.now() - tel.lastTickTimestamp) > 4000;
+      const session = MarketSessionManager.getMarketSessionInfo(selectedPair);
+      const isStale = !session.isFrozen && ((Date.now() - tel.lastTickTimestamp) > 20000);
       setIsInterrupted(!tel.isConnected || isStale);
       if (tel.latencyMs) setLiveLatencyMs(tel.latencyMs);
     });
 
     const staleTimer = setInterval(() => {
       const tel = LiveMarketFeedManager.getWebSocketTelemetry();
-      const isStale = (Date.now() - tel.lastTickTimestamp) > 4000;
+      const session = MarketSessionManager.getMarketSessionInfo(selectedPair);
+      const isStale = !session.isFrozen && ((Date.now() - tel.lastTickTimestamp) > 20000);
       setIsInterrupted(!tel.isConnected || isStale);
-    }, 1000);
+    }, 2000);
 
     return () => {
       unsubscribe();

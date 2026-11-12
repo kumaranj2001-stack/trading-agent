@@ -241,31 +241,43 @@ export class LiveMarketFeedManager {
 
     const session = MarketSessionManager.getMarketSessionInfo(pair);
 
-    // ❄️ Global State Freeze: If market is closed, immediately lock state and suppress ticker jitter
+    // ❄️ Global State Freeze: If market is closed, maintain active heartbeat and stream telemetry while locking price
     if (session.isFrozen) {
       const key = `${this.currentPair}_${this.currentTimeframe}`;
       const candles = this.canonicalCandles.get(key) || [];
-      if (candles.length > 0) {
-        const lastCandle = candles[candles.length - 1];
-        const lockedPrice = lastCandle.close;
-        MarketSessionManager.setFrozenPrice(this.currentPair, lockedPrice);
-        const base = BASE_PRICES[this.currentPair] || lockedPrice;
-        const change24h = Number((((lockedPrice - base) / base) * 100).toFixed(2));
-        
-        const frozenEvent: MarketFeedTickEvent = {
-          pair: this.currentPair,
-          timeframe: this.currentTimeframe,
-          livePrice: lockedPrice,
-          candle: lastCandle,
-          candles,
-          change24h,
-          timestamp: this.lastTickTimestamp,
-          isFrozen: true,
-          sourceProtocol: 'WSS_WEBSOCKET',
-          latencyMs: 12,
-        };
-        this.listeners.forEach(fn => fn(frozenEvent));
-      }
+      const lastCandle = candles.length > 0 ? candles[candles.length - 1] : null;
+      const lockedPrice = lastCandle ? lastCandle.close : (BASE_PRICES[this.currentPair] || 1.0);
+      MarketSessionManager.setFrozenPrice(this.currentPair, lockedPrice);
+      const base = BASE_PRICES[this.currentPair] || lockedPrice;
+      const change24h = Number((((lockedPrice - base) / base) * 100).toFixed(2));
+
+      const broadcastFrozenHeartbeat = () => {
+        this.lastTickTimestamp = Date.now();
+        this.updateWsTelemetry({
+          isConnected: true,
+          status: 'LIVE_STREAMING',
+          latencyMs: 10,
+        });
+
+        if (lastCandle) {
+          const frozenEvent: MarketFeedTickEvent = {
+            pair: this.currentPair,
+            timeframe: this.currentTimeframe,
+            livePrice: lockedPrice,
+            candle: lastCandle,
+            candles,
+            change24h,
+            timestamp: this.lastTickTimestamp,
+            isFrozen: true,
+            sourceProtocol: 'WSS_WEBSOCKET',
+            latencyMs: 10,
+          };
+          this.listeners.forEach(fn => fn(frozenEvent));
+        }
+      };
+
+      broadcastFrozenHeartbeat();
+      this.activeTicker = setInterval(broadcastFrozenHeartbeat, 2500);
 
       return () => {
         this.stopLiveFeed();
@@ -394,14 +406,13 @@ export class LiveMarketFeedManager {
 
     const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
 
-    // ⚓ DETERMINISTIC STATE-LATCHING PROTOCOL
-    // Locks in Entry, Stop-Loss, and Take-Profit once consensus is achieved,
-    // rendering the setup static and immutable until structural invalidation or window expiration.
+    // ⚓ DETERMINISTIC STATE-LATCHING PROTOCOL & REAL-TIME LIQUIDITY INTEGRATION
+    // Anchors structural invalidation boundaries while dynamically pulling live quotes without delay
     let latched = stateLatchingEngine.getLatchedState(pair);
 
-    // Check structural invalidation (Resistance Ceiling / S1 Floor) against livePrice
-    if (latched && !stateLatchingEngine.isLatchedValid(pair, livePrice)) {
-      latched = null; // Unlatched due to structural invalidation
+    // Check structural invalidation (Resistance Ceiling / S1 Floor, Drift & Consensus Flip) against livePrice
+    if (latched && !stateLatchingEngine.isLatchedValid(pair, livePrice, consensus.consensusDirection)) {
+      latched = null; // Unlatched due to structural invalidation or consensus shift
     }
 
     if (!latched) {
@@ -409,55 +420,89 @@ export class LiveMarketFeedManager {
       latched = stateLatchingEngine.latchConsensus(pair, consensus, undefined, 20);
     }
 
+    // Directional Parity Protocol: Ensure direction strictly matches active multi-desk consensus and debate bias
+    let definitiveDirection: 'BUY' | 'SELL';
+    if (consensus.debateSynthesis?.definitiveBias === 'SELL' || consensus.unifiedDecision?.direction === 'SELL' || consensus.consensusDirection === 'SELL') {
+      definitiveDirection = 'SELL';
+    } else if (consensus.debateSynthesis?.definitiveBias === 'BUY' || consensus.unifiedDecision?.direction === 'BUY' || consensus.consensusDirection === 'BUY') {
+      definitiveDirection = 'BUY';
+    } else {
+      definitiveDirection = latched.anchoredDirection;
+    }
+
+    // If consensus shifted direction relative to old latch, release and re-latch in fresh direction
+    if (latched.anchoredDirection !== definitiveDirection) {
+      stateLatchingEngine.releaseLatch(pair, `Directional synchronization: Swarm definitive bias is ${definitiveDirection}`);
+      latched = stateLatchingEngine.latchConsensus(pair, { ...consensus, consensusDirection: definitiveDirection }, undefined, 20);
+    }
+
     const direction = latched.anchoredDirection;
     const isSell = direction === 'SELL';
     const isBuy = direction === 'BUY';
     const targetOrderType = isSell ? 'SELL_MARKET' : isBuy ? 'BUY_MARKET' : 'NONE';
 
-    // 🔒 ANCHORED IMMUTABLE PARAMETERS (Zero micro-fluctuation jitter)
-    const anchoredEntry = latched.anchoredEntryPrice;
-    const anchoredStopLoss = latched.anchoredStopLoss;
-    const anchoredTakeProfit = latched.anchoredTakeProfit;
+    // 🌊 DYNAMIC REAL-TIME ENTRY & LEVEL PARITY:
+    // Candidate entry tracks the authoritative live feed quote without delay or stale caching.
+    const liveEntryPrice = Number(livePrice.toFixed(decimals));
+
+    // Calculate verified structural stop and target distances anchored by the swarm
+    const anchoredStopDistance = Math.abs(latched.anchoredEntryPrice - latched.anchoredStopLoss);
+    const anchoredTargetDistance = Math.abs(latched.anchoredTakeProfit - latched.anchoredEntryPrice);
+
+    // Fallbacks if distances were zero or degenerate
+    const minDistance = pipMultiplier * 15;
+    const effectiveStopDist = anchoredStopDistance > 0 ? anchoredStopDistance : minDistance;
+    const effectiveTargetDist = anchoredTargetDistance > 0 ? anchoredTargetDistance : (effectiveStopDist * (latched.anchoredRiskReward || 2));
+
+    // Calculate dynamic Stop Loss and Take Profit strictly aligned to liveEntryPrice
+    const dynamicStopLoss = isSell
+      ? Number((liveEntryPrice + effectiveStopDist).toFixed(decimals))
+      : Number((liveEntryPrice - effectiveStopDist).toFixed(decimals));
+
+    const dynamicTakeProfit = isSell
+      ? Number((liveEntryPrice - effectiveTargetDist).toFixed(decimals))
+      : Number((liveEntryPrice + effectiveTargetDist).toFixed(decimals));
+
     const anchoredRiskReward = latched.anchoredRiskReward;
     const anchoredLots = latched.anchoredLots;
     const anchoredGrade = latched.anchoredGrade;
 
-    // Update execution signal with guaranteed anchored levels
+    // Update execution signal with guaranteed live-feed synchronized levels
     const updatedExecutionSignal = {
       ...consensus.executionSignal,
       orderType: consensus.executionSignal.authorized ? targetOrderType : consensus.executionSignal.orderType,
-      entry: anchoredEntry,
-      stopLoss: anchoredStopLoss,
-      takeProfit: anchoredTakeProfit,
+      entry: liveEntryPrice,
+      stopLoss: dynamicStopLoss,
+      takeProfit: dynamicTakeProfit,
       riskReward: anchoredRiskReward,
       lots: anchoredLots,
       gradingTier: anchoredGrade,
     };
 
-    // Update technical analyst suggested entry and targets with anchored levels
+    // Update technical analyst suggested entry and targets with live synchronized levels
     const updatedTechnical = {
       ...consensus.agents.technical,
-      suggestedEntry: anchoredEntry,
-      suggestedStopLoss: anchoredStopLoss,
-      suggestedTakeProfit: anchoredTakeProfit,
+      suggestedEntry: liveEntryPrice,
+      suggestedStopLoss: dynamicStopLoss,
+      suggestedTakeProfit: dynamicTakeProfit,
     };
 
-    // Update risk manager parameters with anchored levels
+    // Update risk manager parameters with live synchronized levels
     const updatedRisk = {
       ...consensus.agents.risk,
       action: isSell ? ('SELL' as const) : isBuy ? ('BUY' as const) : ('NO_TRADE' as const),
       parameters: {
         ...consensus.agents.risk.parameters,
-        entryPrice: anchoredEntry,
-        stopLoss: anchoredStopLoss,
-        takeProfit1: anchoredTakeProfit,
+        entryPrice: liveEntryPrice,
+        stopLoss: dynamicStopLoss,
+        takeProfit1: dynamicTakeProfit,
         positionSizeLots: anchoredLots,
         riskRewardRatio: anchoredRiskReward,
       },
     };
 
-    // Update unified decision recommended action with static anchored entry
-    const updatedRecommendedAction = `${direction} ${anchoredLots} Standard Lots on ${pair} @ ${anchoredEntry}`;
+    // Update unified decision recommended action with live synchronized entry
+    const updatedRecommendedAction = `${direction} ${anchoredLots} Standard Lots on ${pair} @ ${liveEntryPrice}`;
 
     const updatedUnifiedDecision = {
       ...consensus.unifiedDecision,
@@ -466,7 +511,7 @@ export class LiveMarketFeedManager {
       recommendedAction: updatedRecommendedAction,
       coreReasons: {
         ...consensus.unifiedDecision.coreReasons,
-        riskGovernance: `ANCHORED RISK GOVERNANCE: ${anchoredRiskReward}:1 Risk-to-Reward ratio, stop anchored at ${anchoredStopLoss} (${isSell ? 'above entry' : 'below entry'}), targeting ${anchoredTakeProfit} (${isSell ? 'below entry' : 'above entry'}) with Monte Carlo Win Prob ${latched.winProbabilityPercent}%. Structural boundary: ${isSell ? `Resistance Ceiling at ${latched.resistanceCeiling}` : `S1 Floor at ${latched.s1Floor}`}.`,
+        riskGovernance: `REAL-TIME LIQUIDITY RISK GOVERNANCE: ${anchoredRiskReward}:1 Risk-to-Reward ratio, stop anchored at ${dynamicStopLoss} (${isSell ? 'above entry' : 'below entry'}), targeting ${dynamicTakeProfit} (${isSell ? 'below entry' : 'above entry'}) with Monte Carlo Win Prob ${latched.winProbabilityPercent}%. Structural boundary: ${isSell ? `Resistance Ceiling at ${latched.resistanceCeiling}` : `S1 Floor at ${latched.s1Floor}`}.`,
       },
     };
 
@@ -475,12 +520,13 @@ export class LiveMarketFeedManager {
     if (updatedDebateSynthesis && updatedDebateSynthesis.priceThresholds) {
       updatedDebateSynthesis = {
         ...updatedDebateSynthesis,
+        definitiveBias: direction,
         priceThresholds: {
           ...updatedDebateSynthesis.priceThresholds,
-          entryPrice: anchoredEntry,
-          stopLoss: anchoredStopLoss,
-          takeProfit: anchoredTakeProfit,
-          projectedPriceMove: Number((anchoredTakeProfit - anchoredEntry).toFixed(decimals)),
+          entryPrice: liveEntryPrice,
+          stopLoss: dynamicStopLoss,
+          takeProfit: dynamicTakeProfit,
+          projectedPriceMove: Number((dynamicTakeProfit - liveEntryPrice).toFixed(decimals)),
         },
       };
     }

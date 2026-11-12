@@ -902,6 +902,12 @@ export default function Home() {
       : `CLOSED POSITION: ${pos.symbol} @ ${liveExitPrice} | Realized P&L: ${pnlPrefix}$${finalPnl.toFixed(2)}`;
 
     showNotification(alertMsg);
+
+    // Real-Time Liquidity Re-Synchronization: Release stale latched credentials and trigger fresh setup derivation
+    stateLatchingEngine.releaseLatch(pos.symbol, 'Position Closed: Setup reset to synchronize with live market liquidity');
+    if (pos.symbol === selectedPair) {
+      triggerSwarm(selectedPair, timeframe, candles);
+    }
   };
 
   const handleForceRecalibrate = useCallback(() => {

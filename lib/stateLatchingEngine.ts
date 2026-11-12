@@ -96,11 +96,22 @@ export class StateLatchingEngine {
 
   /**
    * Checks whether an existing latched setup is still active and valid against live price.
-   * If price breaks beyond Resistance Ceiling or S1 Floor, releases the latch.
+   * If price breaks beyond Resistance Ceiling or S1 Floor, or if live consensus flips, releases the latch.
    */
-  public isLatchedValid(pair: CurrencyPair, currentPrice: number): boolean {
+  public isLatchedValid(pair: CurrencyPair, currentPrice: number, currentConsensusDirection?: string): boolean {
     const state = this.getLatchedState(pair);
     if (!state || !state.isLatched) return false;
+
+    // 0. Check Consensus Bias Flip: If live multi-desk consensus flipped opposing the latched state, invalidate immediately
+    if (currentConsensusDirection && (currentConsensusDirection === 'BUY' || currentConsensusDirection === 'SELL')) {
+      if (currentConsensusDirection !== state.anchoredDirection) {
+        this.releaseLatch(
+          pair,
+          `Consensus Invalidation: Live swarm bias shifted to ${currentConsensusDirection} (opposing previous ${state.anchoredDirection} latch). Purged stale setup.`
+        );
+        return false;
+      }
+    }
 
     // 1. Check Structural Invalidation Criteria
     if (state.anchoredDirection === 'SELL') {
@@ -121,6 +132,16 @@ export class StateLatchingEngine {
         );
         return false;
       }
+    }
+
+    // 2. Parity Drift Invalidation: If price moved > 0.35% from initial anchor, unlatch to prevent stale orders
+    const priceDrift = Math.abs(currentPrice - state.anchoredEntryPrice) / state.anchoredEntryPrice;
+    if (priceDrift > 0.0035) {
+      this.releaseLatch(
+        pair,
+        `Parity Drift Invalidation: Market moved ${(priceDrift * 100).toFixed(2)}% from anchored price (${state.anchoredEntryPrice}). Real-time recalibration required.`
+      );
+      return false;
     }
 
     return true;
@@ -155,7 +176,18 @@ export class StateLatchingEngine {
 
     const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
     const livePrice = consensus.currentPrice;
-    const direction = consensus.unifiedDecision.direction === 'HOLD' ? 'BUY' : consensus.unifiedDecision.direction;
+    let direction: 'BUY' | 'SELL';
+    if (consensus.unifiedDecision.direction === 'SELL' || consensus.consensusDirection === 'SELL') {
+      direction = 'SELL';
+    } else if (consensus.unifiedDecision.direction === 'BUY' || consensus.consensusDirection === 'BUY') {
+      direction = 'BUY';
+    } else {
+      const synth = consensus.debateSynthesis?.definitiveBias || '';
+      const tech = consensus.agents?.technical?.bias || '';
+      const fund = consensus.agents?.fundamental?.bias || '';
+      const isBearish = synth.includes('SELL') || tech.includes('SELL') || fund.includes('SELL');
+      direction = isBearish ? 'SELL' : 'BUY';
+    }
     const isSell = direction === 'SELL';
 
     // 1. Synthesize Structural Levels from Technical Desk (Resistance Ceiling & S1 Floor)
