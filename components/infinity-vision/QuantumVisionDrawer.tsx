@@ -64,7 +64,7 @@ export const QuantumVisionDrawer: React.FC<QuantumVisionDrawerProps> = ({
   };
 
   return (
-    <div className={`absolute top-2 left-2 z-30 w-[310px] sm:w-[330px] max-h-[calc(100%-20px)] overflow-y-auto rounded-xl border shadow-2xl backdrop-blur-md select-none transition-all ${
+    <div className={`absolute top-2 left-2 z-30 w-[94vw] sm:w-[330px] max-w-[340px] max-h-[calc(100%-20px)] overflow-y-auto rounded-xl border shadow-2xl backdrop-blur-md select-none transition-all ${
       isLight 
         ? 'bg-white/95 border-slate-300 text-slate-800' 
         : 'bg-terminal-950/95 border-terminal-border text-slate-100'

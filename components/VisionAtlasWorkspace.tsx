@@ -69,6 +69,7 @@ export interface VisionAtlasWorkspaceProps {
   onSelectPair?: (pair: CurrencyPair) => void;
   onSelectTimeframe?: (tf: TimeFrame) => void;
   onClose?: () => void;
+  onOpenJournal?: () => void;
   onSyncToTerminal?: (params: {
     symbol: CurrencyPair;
     direction: 'BUY' | 'SELL';
@@ -85,6 +86,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
   onSelectPair,
   onSelectTimeframe,
   onClose,
+  onOpenJournal,
   onSyncToTerminal,
 }) => {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>(initialPair);
@@ -364,6 +366,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
             if (onSelectTimeframe) onSelectTimeframe(tf);
           }}
           onClose={onClose}
+          onOpenJournal={onOpenJournal}
           onSyncToTerminal={onSyncToTerminal}
         />
       </div>

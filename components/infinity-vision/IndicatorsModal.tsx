@@ -115,7 +115,7 @@ export const IndicatorsModal: React.FC<IndicatorsModalProps> = ({
   ];
 
   return (
-    <div className={`fixed inset-y-0 right-0 z-50 w-[350px] sm:w-[390px] shadow-2xl border-l flex flex-col select-none backdrop-blur-md transition-all ${
+    <div className={`fixed inset-y-0 right-0 z-50 w-[340px] sm:w-[390px] max-w-[96vw] shadow-2xl border-l flex flex-col select-none backdrop-blur-md transition-all ${
       isLight 
         ? 'bg-white/98 border-slate-300 text-slate-800' 
         : 'bg-terminal-950/98 border-terminal-border text-slate-100'
@@ -338,8 +338,135 @@ export const IndicatorsModal: React.FC<IndicatorsModalProps> = ({
                 </div>
               )}
 
+              {/* Order Blocks */}
+              {isOpenSection && cat.id === 'order_blocks' && (
+                <div className="p-3 border-t border-slate-200 dark:border-terminal-border bg-slate-50/50 dark:bg-terminal-900/40 space-y-2.5 text-xs">
+                  {[
+                    { key: 'ob_fresh', label: 'Fresh Order Blocks (Unmitigated)' },
+                    { key: 'ob_mitigated', label: 'Mitigated Order Blocks' },
+                    { key: 'ob_breaker', label: 'Breaker Blocks (Failed OB)' },
+                    { key: 'ob_rejection', label: 'Rejection Blocks (Long wicks)' },
+                  ].map(item => (
+                    <div key={item.key} className="flex items-center justify-between">
+                      <span className="text-slate-700 dark:text-slate-300 text-[11px]">{item.label}</span>
+                      <button
+                        onClick={() => toggleItem(item.key)}
+                        className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
+                          toggles[item.key] ? 'bg-slate-800 dark:bg-cyan-600' : 'bg-slate-300 dark:bg-terminal-800'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                          toggles[item.key] ? 'translate-x-4' : 'translate-x-0'
+                        }`} />
+                      </button>
+                    </div>
+                  ))}
+                  <div className="pt-1 text-[10px] text-slate-500 font-mono">Min. volume displacement: 1.5x ATR</div>
+                </div>
+              )}
+
+              {/* Fair Value Gaps */}
+              {isOpenSection && cat.id === 'fair_value_gaps' && (
+                <div className="p-3 border-t border-slate-200 dark:border-terminal-border bg-slate-50/50 dark:bg-terminal-900/40 space-y-2.5 text-xs">
+                  {[
+                    { key: 'fvg_fresh', label: 'Fresh Fair Value Gaps (FVG)' },
+                    { key: 'fvg_inversion', label: 'Inversion FVG (Passed through)' },
+                    { key: 'fvg_mitigated', label: 'Consequent Encroachment (0.50)' },
+                  ].map(item => (
+                    <div key={item.key} className="flex items-center justify-between">
+                      <span className="text-slate-700 dark:text-slate-300 text-[11px]">{item.label}</span>
+                      <button
+                        onClick={() => toggleItem(item.key)}
+                        className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
+                          toggles[item.key] ? 'bg-slate-800 dark:bg-cyan-600' : 'bg-slate-300 dark:bg-terminal-800'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                          toggles[item.key] ? 'translate-x-4' : 'translate-x-0'
+                        }`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Liquidity */}
+              {isOpenSection && cat.id === 'liquidity' && (
+                <div className="p-3 border-t border-slate-200 dark:border-terminal-border bg-slate-50/50 dark:bg-terminal-900/40 space-y-2.5 text-xs">
+                  {[
+                    { key: 'liq_sweep', label: 'Liquidity Sweep Markers' },
+                    { key: 'liq_pools', label: 'Buy-Side & Sell-Side Pools' },
+                    { key: 'liq_equal', label: 'Equal Highs / Equal Lows (EQH/EQL)' },
+                  ].map(item => (
+                    <div key={item.key} className="flex items-center justify-between">
+                      <span className="text-slate-700 dark:text-slate-300 text-[11px]">{item.label}</span>
+                      <button
+                        onClick={() => toggleItem(item.key)}
+                        className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
+                          toggles[item.key] ? 'bg-slate-800 dark:bg-cyan-600' : 'bg-slate-300 dark:bg-terminal-800'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                          toggles[item.key] ? 'translate-x-4' : 'translate-x-0'
+                        }`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Fibonacci */}
+              {isOpenSection && cat.id === 'fibonacci' && (
+                <div className="p-3 border-t border-slate-200 dark:border-terminal-border bg-slate-50/50 dark:bg-terminal-900/40 space-y-2.5 text-xs">
+                  {[
+                    { key: 'fib_retracement', label: '0.618 - 0.705 - 0.786 OTE Box' },
+                    { key: 'fib_extensions', label: '1.272 & 1.618 Extensions' },
+                  ].map(item => (
+                    <div key={item.key} className="flex items-center justify-between">
+                      <span className="text-slate-700 dark:text-slate-300 text-[11px]">{item.label}</span>
+                      <button
+                        onClick={() => toggleItem(item.key)}
+                        className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
+                          toggles[item.key] ? 'bg-slate-800 dark:bg-cyan-600' : 'bg-slate-300 dark:bg-terminal-800'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                          toggles[item.key] ? 'translate-x-4' : 'translate-x-0'
+                        }`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Analysis Zones */}
+              {isOpenSection && cat.id === 'analysis_zones' && (
+                <div className="p-3 border-t border-slate-200 dark:border-terminal-border bg-slate-50/50 dark:bg-terminal-900/40 space-y-2.5 text-xs">
+                  {[
+                    { key: 'zones_danger', label: 'Danger Zone (Invalidation ceiling)' },
+                    { key: 'zones_caution', label: 'Caution Zone (Mixed structure)' },
+                    { key: 'zones_entry', label: 'Entry Zone (High confluence)' },
+                    { key: 'zones_safe', label: 'Safe Zone (Protected low)' },
+                  ].map(item => (
+                    <div key={item.key} className="flex items-center justify-between">
+                      <span className="text-slate-700 dark:text-slate-300 text-[11px]">{item.label}</span>
+                      <button
+                        onClick={() => toggleItem(item.key)}
+                        className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
+                          toggles[item.key] ? 'bg-slate-800 dark:bg-cyan-600' : 'bg-slate-300 dark:bg-terminal-800'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                          toggles[item.key] ? 'translate-x-4' : 'translate-x-0'
+                        }`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               {/* Generic fallback content for other categories */}
-              {isOpenSection && cat.id !== 'market_structure' && (
+              {isOpenSection && !['market_structure', 'order_blocks', 'fair_value_gaps', 'liquidity', 'fibonacci', 'analysis_zones'].includes(cat.id) && (
                 <div className="p-3 border-t border-slate-200 dark:border-terminal-border bg-slate-50/50 dark:bg-terminal-900/40 space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="text-slate-700 dark:text-slate-300 text-[11px]">Enabled on chart</span>

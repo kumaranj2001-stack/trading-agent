@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Sparkles, 
   Search, 
@@ -13,7 +13,9 @@ import {
   Compass,
   CheckCircle2,
   TrendingUp,
-  Cpu
+  Cpu,
+  Menu,
+  X
 } from 'lucide-react';
 
 export interface InfinityVisionHeaderProps {
@@ -34,6 +36,7 @@ export const InfinityVisionHeader: React.FC<InfinityVisionHeaderProps> = ({
   theme = 'light',
 }) => {
   const isLight = theme === 'light';
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   const navItems = [
     { id: 'home', label: 'Home' },
@@ -153,8 +156,46 @@ export const InfinityVisionHeader: React.FC<InfinityVisionHeaderProps> = ({
             </div>
             <span className="text-xs truncate max-w-[90px]">{userName}</span>
           </div>
+
+          {/* Mobile Navigation Hamburger */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-1.5 rounded-lg border border-slate-300 dark:border-terminal-border text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-terminal-900"
+            title="Navigation Menu"
+          >
+            {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Slide-down Navigation Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden border-t border-slate-200 dark:border-terminal-border p-3 space-y-1 bg-white/95 dark:bg-terminal-950/95 backdrop-blur-md">
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  if (item.action) {
+                    item.action();
+                  } else {
+                    onSelectNavTab(item.id);
+                  }
+                }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-xs font-semibold transition-all ${
+                  isActive
+                    ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-white font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-terminal-900'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </header>
   );
 };

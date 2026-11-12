@@ -35,7 +35,7 @@ export const LiquidityHeatmapModal: React.FC<LiquidityHeatmapModalProps> = ({
   ];
 
   return (
-    <div className={`absolute top-12 left-1/2 -translate-x-1/2 z-40 w-[380px] sm:w-[420px] max-h-[85vh] overflow-y-auto rounded-xl border shadow-2xl backdrop-blur-md select-none transition-all ${
+    <div className={`absolute top-12 left-1/2 -translate-x-1/2 z-40 w-[94vw] sm:w-[420px] max-w-[430px] max-h-[85vh] overflow-y-auto rounded-xl border shadow-2xl backdrop-blur-md select-none transition-all ${
       isLight 
         ? 'bg-white/98 border-slate-300 text-slate-800' 
         : 'bg-terminal-950/98 border-terminal-border text-slate-100'

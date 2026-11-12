@@ -12,7 +12,8 @@ import {
   Settings, 
   Sun, 
   Moon,
-  ChevronDown
+  ChevronDown,
+  Layers
 } from 'lucide-react';
 import { CurrencyPair, TimeFrame } from '@/lib/types';
 import { FOREX_PAIRS, METALS_COMMODITIES, INDIAN_MARKET_ASSETS } from '@/lib/marketData';
@@ -36,6 +37,8 @@ export interface InfinityVisionToolbarProps {
   onToggleLiquidity: () => void;
   isIndicatorsOpen: boolean;
   onToggleIndicators: () => void;
+  isMobileSidebarOpen?: boolean;
+  onToggleMobileSidebar?: () => void;
   theme?: 'light' | 'dark';
   onToggleTheme?: () => void;
   onTakeScreenshot?: () => void;
@@ -60,6 +63,8 @@ export const InfinityVisionToolbar: React.FC<InfinityVisionToolbarProps> = ({
   onToggleLiquidity,
   isIndicatorsOpen,
   onToggleIndicators,
+  isMobileSidebarOpen = false,
+  onToggleMobileSidebar,
   theme = 'light',
   onToggleTheme,
   onTakeScreenshot,
@@ -244,6 +249,24 @@ export const InfinityVisionToolbar: React.FC<InfinityVisionToolbarProps> = ({
           <Droplets className="w-3.5 h-3.5 text-blue-500" />
           <span>LIQUIDITY</span>
         </button>
+
+        {/* Mobile Right Sidebar Toggle (Zones & DNA) */}
+        {onToggleMobileSidebar && (
+          <button
+            onClick={onToggleMobileSidebar}
+            className={`lg:hidden flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold border transition-colors ${
+              isMobileSidebarOpen
+                ? 'bg-slate-900 text-white border-slate-900'
+                : isLight
+                ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                : 'bg-terminal-800 border-terminal-border text-slate-200'
+            }`}
+            title="Toggle Right Side Panel"
+          >
+            <Layers className="w-3.5 h-3.5 text-cyan-500" />
+            <span>Zones</span>
+          </button>
+        )}
 
         {/* Quick Tools: Theme Toggle, Screenshot */}
         <div className="flex items-center gap-1 pl-1 border-l border-slate-300 dark:border-terminal-border">

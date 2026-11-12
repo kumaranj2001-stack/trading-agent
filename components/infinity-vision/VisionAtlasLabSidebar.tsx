@@ -150,6 +150,44 @@ export const VisionAtlasLabSidebar: React.FC<VisionAtlasLabSidebarProps> = ({
               <div className="bg-rose-500 h-full" style={{ width: '53%' }} />
             </div>
           </div>
+
+          {/* Possible Reaction Zones */}
+          <div className="pt-2 border-t border-slate-200 dark:border-terminal-border space-y-1">
+            <span className="text-[10px] font-bold text-slate-500 uppercase block font-sans">Possible reaction zones</span>
+            <div className="space-y-1 text-[11px] font-mono">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  <span className="text-slate-700 dark:text-slate-300">Sell-limit zone</span>
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">4001.70 - 4002.40</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-amber-700" />
+                  <span className="text-slate-700 dark:text-slate-300">Sell-limit zone 2</span>
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">4010.14 - 4012.72</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-500" />
+                  <span className="text-slate-700 dark:text-slate-300">Sell-side liquidity</span>
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">3999.67 - 4000.55</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-blue-700" />
+                  <span className="text-slate-700 dark:text-slate-300">Buy-limit zone</span>
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white">3989.97 - 3996.36</span>
+              </div>
+            </div>
+            <p className="text-[9px] text-slate-400 italic pt-1 font-sans">
+              Entry areas, invalidation and targets appear only when a sweep, a structure confirmation and enough history agree.
+            </p>
+          </div>
         </div>
 
         {/* Market Analysis & Explanation Form */}

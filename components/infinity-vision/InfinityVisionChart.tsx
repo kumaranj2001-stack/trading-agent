@@ -23,6 +23,8 @@ export interface InfinityVisionChartProps {
   showQuantumSimulation?: boolean;
   showMarketDna?: boolean;
   showIndicatorsOverlay?: boolean;
+  chartType?: 'Candles' | 'Line';
+  showPatternOnChart?: boolean;
   horizonCandles?: number;
   onSelectZone?: (zoneName: string) => void;
 }
@@ -48,6 +50,8 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   showQuantumSimulation = true,
   showMarketDna = true,
   showIndicatorsOverlay = true,
+  chartType = 'Candles',
+  showPatternOnChart = true,
   horizonCandles = 5,
   onSelectZone,
 }) => {
@@ -112,17 +116,24 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   const plotWidth = dimensions.width - chartPadding.left - chartPadding.right;
   const plotHeight = dimensions.height - chartPadding.top - chartPadding.bottom;
 
+  const isXau = pair.includes('XAU');
+  const priceDecimals = pair.includes('JPY') ? 3 : (pair.includes('USD') && !isXau) ? 5 : 2;
+
   const minPrice = useMemo(() => {
     const minC = Math.min(...safeCandles.map(c => c.low));
-    return minC - 10;
+    const maxC = Math.max(...safeCandles.map(c => c.high));
+    const pad = Math.max((maxC - minC) * 0.18, minC * 0.002);
+    return minC - pad;
   }, [safeCandles]);
 
   const maxPrice = useMemo(() => {
+    const minC = Math.min(...safeCandles.map(c => c.low));
     const maxC = Math.max(...safeCandles.map(c => c.high));
-    return maxC + 15;
+    const pad = Math.max((maxC - minC) * 0.18, minC * 0.002);
+    return maxC + pad;
   }, [safeCandles]);
 
-  const priceRange = Math.max(maxPrice - minPrice, 1);
+  const priceRange = Math.max(maxPrice - minPrice, 0.0001);
 
   const priceToY = (price: number) => {
     return chartPadding.top + plotHeight - ((price - minPrice) / priceRange) * plotHeight;
@@ -144,65 +155,137 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   const lastCandleX = getCandleX(safeCandles.length - 1);
   const lastCandleY = priceToY(lastCandle.close);
 
-  // Fibonacci Retracements Anchor Levels (From high 4092 down to 4024)
-  const fibLevels = useMemo(() => [
-    { label: 'Fib 1.618', price: 4092.15, ratio: '1.618' },
-    { label: 'Fib 1.272', price: 4078.10, ratio: '1.272' },
-    { label: 'Fib 0.786', price: 4057.61, ratio: '0.786' },
-    { label: 'Fib 0.618', price: 4051.10, ratio: '0.618' },
-    { label: 'Fib 0.5 (EQ)', price: 4046.02, ratio: '0.50' },
-    { label: 'Fib 0.382', price: 4040.94, ratio: '0.382' },
-    { label: 'Fib 0.236', price: 4034.66, ratio: '0.236' },
-    { label: 'Fib 0', price: 4024.40, ratio: '0.00' },
-    { label: 'SSL - 50%', price: 4020.00, ratio: 'SSL' },
-  ], []);
+  // Fibonacci Retracements Anchor Levels
+  const fibLevels = useMemo(() => {
+    if (isXau) {
+      return [
+        { label: 'Fib 1.618', price: 4092.15, ratio: '1.618' },
+        { label: 'Fib 1.272', price: 4078.10, ratio: '1.272' },
+        { label: 'Fib 0.786', price: 4057.61, ratio: '0.786' },
+        { label: 'Fib 0.618', price: 4051.10, ratio: '0.618' },
+        { label: 'Fib 0.5 (EQ)', price: 4046.02, ratio: '0.50' },
+        { label: 'Fib 0.382', price: 4040.94, ratio: '0.382' },
+        { label: 'Fib 0.236', price: 4034.66, ratio: '0.236' },
+        { label: 'Fib 0', price: 4024.40, ratio: '0.00' },
+        { label: 'SSL - 50%', price: 4020.00, ratio: 'SSL' },
+      ];
+    }
+    const hi = Math.max(...safeCandles.map(c => c.high));
+    const lo = Math.min(...safeCandles.map(c => c.low));
+    const span = hi - lo;
+    return [
+      { label: 'Fib 1.618', price: Number((lo + span * 1.618).toFixed(priceDecimals)), ratio: '1.618' },
+      { label: 'Fib 1.272', price: Number((lo + span * 1.272).toFixed(priceDecimals)), ratio: '1.272' },
+      { label: 'Fib 0.786', price: Number((lo + span * 0.786).toFixed(priceDecimals)), ratio: '0.786' },
+      { label: 'Fib 0.618', price: Number((lo + span * 0.618).toFixed(priceDecimals)), ratio: '0.618' },
+      { label: 'Fib 0.5 (EQ)', price: Number((lo + span * 0.50).toFixed(priceDecimals)), ratio: '0.50' },
+      { label: 'Fib 0.382', price: Number((lo + span * 0.382).toFixed(priceDecimals)), ratio: '0.382' },
+      { label: 'Fib 0.236', price: Number((lo + span * 0.236).toFixed(priceDecimals)), ratio: '0.236' },
+      { label: 'Fib 0', price: Number(lo.toFixed(priceDecimals)), ratio: '0.00' },
+    ];
+  }, [isXau, safeCandles, priceDecimals]);
 
   // Analysis Reference Zones (Horizontal highlighted bands)
-  const analysisZones = useMemo(() => [
-    {
-      name: 'DANGER ZONE',
-      min: 4067.18,
-      max: 4073.67,
-      color: 'rgba(239, 68, 68, 0.12)',
-      borderColor: 'rgba(239, 68, 68, 0.4)',
-      textColor: '#ef4444',
-      badgeBg: 'rgba(239, 68, 68, 0.9)',
-    },
-    {
-      name: 'CAUTION ZONE',
-      min: 4052.81,
-      max: 4067.16,
-      color: 'rgba(245, 158, 11, 0.10)',
-      borderColor: 'rgba(245, 158, 11, 0.35)',
-      textColor: '#f59e0b',
-      badgeBg: 'rgba(245, 158, 11, 0.9)',
-    },
-    {
-      name: 'ENTRY ZONE',
-      min: 4050.28,
-      max: 4052.61,
-      color: 'rgba(14, 165, 233, 0.14)',
-      borderColor: 'rgba(14, 165, 233, 0.5)',
-      textColor: '#0284c7',
-      badgeBg: 'rgba(2, 132, 199, 0.9)',
-    },
-    {
-      name: 'SAFE ZONE',
-      min: 4047.02,
-      max: 4050.28,
-      color: 'rgba(16, 185, 129, 0.12)',
-      borderColor: 'rgba(16, 185, 129, 0.4)',
-      textColor: '#10b981',
-      badgeBg: 'rgba(16, 185, 129, 0.9)',
-    },
-  ], []);
+  const analysisZones = useMemo(() => {
+    if (isXau) {
+      return [
+        {
+          name: 'DANGER ZONE',
+          min: 4067.18,
+          max: 4073.67,
+          color: 'rgba(239, 68, 68, 0.12)',
+          borderColor: 'rgba(239, 68, 68, 0.4)',
+          textColor: '#ef4444',
+          badgeBg: 'rgba(239, 68, 68, 0.9)',
+        },
+        {
+          name: 'CAUTION ZONE',
+          min: 4052.81,
+          max: 4067.16,
+          color: 'rgba(245, 158, 11, 0.10)',
+          borderColor: 'rgba(245, 158, 11, 0.35)',
+          textColor: '#f59e0b',
+          badgeBg: 'rgba(245, 158, 11, 0.9)',
+        },
+        {
+          name: 'ENTRY ZONE',
+          min: 4050.28,
+          max: 4052.61,
+          color: 'rgba(14, 165, 233, 0.14)',
+          borderColor: 'rgba(14, 165, 233, 0.5)',
+          textColor: '#0284c7',
+          badgeBg: 'rgba(2, 132, 199, 0.9)',
+        },
+        {
+          name: 'SAFE ZONE',
+          min: 4047.02,
+          max: 4050.28,
+          color: 'rgba(16, 185, 129, 0.12)',
+          borderColor: 'rgba(16, 185, 129, 0.4)',
+          textColor: '#10b981',
+          badgeBg: 'rgba(16, 185, 129, 0.9)',
+        },
+      ];
+    }
+    const hi = Math.max(...safeCandles.map(c => c.high));
+    const lo = Math.min(...safeCandles.map(c => c.low));
+    const span = hi - lo;
+    return [
+      {
+        name: 'DANGER ZONE',
+        min: Number((lo + span * 0.9).toFixed(priceDecimals)),
+        max: Number((lo + span * 1.1).toFixed(priceDecimals)),
+        color: 'rgba(239, 68, 68, 0.12)',
+        borderColor: 'rgba(239, 68, 68, 0.4)',
+        textColor: '#ef4444',
+        badgeBg: 'rgba(239, 68, 68, 0.9)',
+      },
+      {
+        name: 'CAUTION ZONE',
+        min: Number((lo + span * 0.75).toFixed(priceDecimals)),
+        max: Number((lo + span * 0.9).toFixed(priceDecimals)),
+        color: 'rgba(245, 158, 11, 0.10)',
+        borderColor: 'rgba(245, 158, 11, 0.35)',
+        textColor: '#f59e0b',
+        badgeBg: 'rgba(245, 158, 11, 0.9)',
+      },
+      {
+        name: 'ENTRY ZONE',
+        min: Number((lo + span * 0.618).toFixed(priceDecimals)),
+        max: Number((lo + span * 0.75).toFixed(priceDecimals)),
+        color: 'rgba(14, 165, 233, 0.14)',
+        borderColor: 'rgba(14, 165, 233, 0.5)',
+        textColor: '#0284c7',
+        badgeBg: 'rgba(2, 132, 199, 0.9)',
+      },
+      {
+        name: 'SAFE ZONE',
+        min: Number((lo + span * 0.5).toFixed(priceDecimals)),
+        max: Number((lo + span * 0.618).toFixed(priceDecimals)),
+        color: 'rgba(16, 185, 129, 0.12)',
+        borderColor: 'rgba(16, 185, 129, 0.4)',
+        textColor: '#10b981',
+        badgeBg: 'rgba(16, 185, 129, 0.9)',
+      },
+    ];
+  }, [isXau, safeCandles, priceDecimals]);
 
   // Order Blocks
-  const orderBlocks = useMemo(() => [
-    { name: 'OB - Fresh', min: 4075.00, max: 4082.00, type: 'BEARISH' },
-    { name: 'Mitigation 1', min: 4048.00, max: 4052.00, type: 'MITIGATED' },
-    { name: 'Mitigation 2', min: 4044.00, max: 4047.00, type: 'MITIGATED' },
-  ], []);
+  const orderBlocks = useMemo(() => {
+    if (isXau) {
+      return [
+        { name: 'OB - Fresh', min: 4075.00, max: 4082.00, type: 'BEARISH' },
+        { name: 'Mitigation 1', min: 4048.00, max: 4052.00, type: 'MITIGATED' },
+        { name: 'Mitigation 2', min: 4044.00, max: 4047.00, type: 'MITIGATED' },
+      ];
+    }
+    const hi = Math.max(...safeCandles.map(c => c.high));
+    const span = hi - Math.min(...safeCandles.map(c => c.low));
+    return [
+      { name: 'OB - Fresh', min: Number((hi - span * 0.05).toFixed(priceDecimals)), max: Number(hi.toFixed(priceDecimals)), type: 'BEARISH' },
+      { name: 'Mitigation 1', min: Number((hi - span * 0.25).toFixed(priceDecimals)), max: Number((hi - span * 0.2).toFixed(priceDecimals)), type: 'MITIGATED' },
+    ];
+  }, [isXau, safeCandles, priceDecimals]);
 
   // Future Simulated Fan Paths (Quantum Vision projection)
   const projectionPoints = useMemo(() => {
@@ -725,7 +808,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
         {/* ================================================================= */}
         {/* 5. MARKET DNA HISTORICAL TWIN GHOST CANDLES */}
         {/* ================================================================= */}
-        {showMarketDna && (
+        {showMarketDna && showPatternOnChart && (
           <g opacity="0.45">
             {ghostCandles.map((gc, i) => {
               const yOpen = priceToY(gc.open);
@@ -765,44 +848,69 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
         )}
 
         {/* ================================================================= */}
-        {/* 6. REAL-TIME INSTITUTIONAL CANDLESTICKS */}
+        {/* 6. REAL-TIME INSTITUTIONAL CANDLESTICKS OR LINE CHART */}
         {/* ================================================================= */}
-        {safeCandles.map((c, i) => {
-          const x = getCandleX(i);
-          const yOpen = priceToY(c.open);
-          const yClose = priceToY(c.close);
-          const yHigh = priceToY(c.high);
-          const yLow = priceToY(c.low);
-          const isUp = c.close >= c.open;
-          const bodyTop = Math.min(yOpen, yClose);
-          const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1.5);
-          const candleColor = isUp ? '#16a34a' : '#dc2626';
+        {chartType === 'Line' ? (
+          <g>
+            <path
+              d={safeCandles.reduce((acc, c, i) => {
+                const x = getCandleX(i);
+                const y = priceToY(c.close);
+                return `${acc} ${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+              }, '')}
+              fill="none"
+              stroke="#0284c7"
+              strokeWidth="2.5"
+            />
+            {/* Area fill */}
+            <path
+              d={`${safeCandles.reduce((acc, c, i) => {
+                const x = getCandleX(i);
+                const y = priceToY(c.close);
+                return `${acc} ${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+              }, '')} L ${getCandleX(safeCandles.length - 1)} ${dimensions.height - chartPadding.bottom} L ${getCandleX(0)} ${dimensions.height - chartPadding.bottom} Z`}
+              fill="url(#fanGradient)"
+              opacity="0.5"
+            />
+          </g>
+        ) : (
+          safeCandles.map((c, i) => {
+            const x = getCandleX(i);
+            const yOpen = priceToY(c.open);
+            const yClose = priceToY(c.close);
+            const yHigh = priceToY(c.high);
+            const yLow = priceToY(c.low);
+            const isUp = c.close >= c.open;
+            const bodyTop = Math.min(yOpen, yClose);
+            const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1.5);
+            const candleColor = isUp ? '#16a34a' : '#dc2626';
 
-          return (
-            <g key={c.timestamp || i}>
-              {/* High/Low Wick */}
-              <line
-                x1={x}
-                y1={yHigh}
-                x2={x}
-                y2={yLow}
-                stroke={candleColor}
-                strokeWidth="1.2"
-              />
-              {/* Real Body */}
-              <rect
-                x={x - candleWidth / 2}
-                y={bodyTop}
-                width={candleWidth}
-                height={bodyHeight}
-                fill={candleColor}
-                stroke={candleColor}
-                strokeWidth="0.8"
-                rx={0.5}
-              />
-            </g>
-          );
-        })}
+            return (
+              <g key={c.timestamp || i}>
+                {/* High/Low Wick */}
+                <line
+                  x1={x}
+                  y1={yHigh}
+                  x2={x}
+                  y2={yLow}
+                  stroke={candleColor}
+                  strokeWidth="1.2"
+                />
+                {/* Real Body */}
+                <rect
+                  x={x - candleWidth / 2}
+                  y={bodyTop}
+                  width={candleWidth}
+                  height={bodyHeight}
+                  fill={candleColor}
+                  stroke={candleColor}
+                  strokeWidth="0.8"
+                  rx={0.5}
+                />
+              </g>
+            );
+          })
+        )}
 
         {/* ================================================================= */}
         {/* 7. CURRENT LIVE PRICE LINE & BADGE */}

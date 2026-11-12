@@ -46,6 +46,9 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   const [selectedTf, setSelectedTf] = useState<any>(initialTf);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [chartViewMode, setChartViewMode] = useState<ChartViewMode>('Advanced');
+  const [chartType, setChartType] = useState<'Candles' | 'Line'>('Candles');
+  const [showPatternOnChart, setShowPatternOnChart] = useState<boolean>(true);
+  const [isMobileRightSidebarOpen, setIsMobileRightSidebarOpen] = useState<boolean>(false);
 
   // Interactive panels visibility states
   const [isQuantumVisionOpen, setIsQuantumVisionOpen] = useState<boolean>(true);
@@ -80,6 +83,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
       setIsMarketDnaOpen(true);
       setIsVisionAtlasLabOpen(false);
       setActiveRightSidebarMode('market_dna');
+      setIsMobileRightSidebarOpen(true);
     }
   };
 
@@ -91,6 +95,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
       setIsVisionAtlasLabOpen(true);
       setIsMarketDnaOpen(false);
       setActiveRightSidebarMode('vision_atlas');
+      setIsMobileRightSidebarOpen(true);
     }
   };
 
@@ -147,6 +152,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
         onToggleLiquidity={handleToggleLiquidity}
         isIndicatorsOpen={isIndicatorsOpen}
         onToggleIndicators={handleToggleIndicators}
+        isMobileSidebarOpen={isMobileRightSidebarOpen}
+        onToggleMobileSidebar={() => setIsMobileRightSidebarOpen(!isMobileRightSidebarOpen)}
         theme={theme}
         onToggleTheme={handleToggleTheme}
       />
@@ -196,16 +203,30 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
             theme={theme}
             showQuantumSimulation={isQuantumVisionOpen}
             showMarketDna={isMarketDnaOpen}
+            chartType={chartType}
+            showPatternOnChart={showPatternOnChart}
             horizonCandles={horizonCandles}
           />
         </div>
 
-        {/* Right Sidebar: Dynamic Mode (Scenarios & Zones vs Market DNA vs Vision Atlas Lab) */}
-        <div className={`w-[320px] lg:w-[350px] shrink-0 border-l flex flex-col transition-all ${
+        {/* Right Sidebar: Desktop (inline) or Mobile Drawer */}
+        <div className={`
+          ${isMobileRightSidebarOpen ? 'fixed inset-y-0 right-0 z-40 w-[320px] sm:w-[350px] shadow-2xl flex' : 'hidden lg:flex'}
+          lg:static w-[320px] lg:w-[350px] shrink-0 border-l flex flex-col transition-all ${
           theme === 'light' 
             ? 'bg-white border-slate-200 shadow-sm' 
             : 'bg-terminal-950 border-terminal-border'
         }`}>
+          {/* Mobile Close Button */}
+          <div className="lg:hidden p-2 flex justify-end border-b border-slate-200 dark:border-terminal-border">
+            <button
+              onClick={() => setIsMobileRightSidebarOpen(false)}
+              className="px-2.5 py-1 text-xs font-bold rounded bg-slate-100 dark:bg-terminal-900 border border-slate-300 dark:border-terminal-border"
+            >
+              Close Panel ✕
+            </button>
+          </div>
+
           {activeRightSidebarMode === 'scenarios' && (
             <ScenariosAndZonesSidebar
               pair={selectedPair}
@@ -220,6 +241,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
               pair={selectedPair}
               timeframe={selectedTf}
               theme={theme}
+              onTogglePatternOnChart={setShowPatternOnChart}
+              onToggleChartMode={setChartType}
             />
           )}
 

@@ -1065,6 +1065,7 @@ export default function Home() {
             onSelectPair={handleSelectPair}
             onSelectTimeframe={handleSelectTimeframe}
             onClose={() => setActiveTab('terminal')}
+            onOpenJournal={() => setActiveTab('journals')}
             onSyncToTerminal={(params) => {
               handleSelectPair(params.symbol);
               setActiveTab('terminal');
