@@ -98,15 +98,15 @@ export const Header: React.FC<HeaderProps> = ({
   return (
     <header className="border-b border-terminal-border bg-terminal-900/95 backdrop-blur-md sticky top-0 z-40 w-full transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 space-y-2">
-        {/* Row 1: Left 3-Dot Drawer Button, Brand, Market Scope Switcher & Header Controls */}
-        <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-2.5 sm:gap-3 w-full min-w-0">
+        {/* Row 1: Brand & Nav Controls (Responsive Split across Mobile & Desktop) */}
+        <div className="flex items-center justify-between gap-2.5 sm:gap-3 w-full min-w-0">
           {/* Left: Attached completely to the left - Three-dot drawer button + Brand */}
-          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
             {/* Hamburger / Navigation Desk Three-Dot Trigger */}
             <button
               onClick={onOpenLeftDrawer}
               className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors flex items-center justify-center shrink-0 active:scale-95 shadow-sm group"
-              title="Open Navigation Menu (Terminal, Knowledge, Vision Atlas Lab, Agent, Five-Agent Debate, Role, Journals, Wire with 38 Feeds, Macro Calendar, Macro Intelligence, Scanner, VAR, Journals, Firebase)"
+              title="Open Navigation Menu"
               aria-label="Open Navigation Menu"
             >
               <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
@@ -120,7 +120,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="min-w-0">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="font-bold text-white tracking-wider text-xs sm:text-sm md:text-base truncate">
-                  QRI TRADER <span className="text-cyan-400 font-mono">//</span> 5-AGENT SWARM
+                  QRI TRADER <span className="text-cyan-400 font-mono">//</span> <span className="hidden xs:inline">5-AGENT SWARM</span>
                 </span>
                 {confluenceGrade && (
                   <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded font-bold border shrink-0 ${
@@ -134,7 +134,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 )}
               </div>
-              <div className="hidden xs:flex items-center gap-2 text-[11px]">
+              <div className="hidden sm:flex items-center gap-2 text-[11px]">
                 <span className={`inline-block w-2 h-2 rounded-full ${
                   isMarketFrozen ? 'bg-sky-400' : 'bg-emerald-400 animate-pulse'
                 }`}></span>
@@ -143,9 +143,9 @@ export const Header: React.FC<HeaderProps> = ({
                 }`}>
                   {isMarketFrozen ? `❄️ STATE FROZEN (${sessionInfo?.statusLabel || activeSession})` : activeSession}
                 </span>
-                <span className="text-sky-400/90 font-medium hidden sm:inline">• 38 NEWS WIRES</span>
-                <span className="text-cyan-400/80 hidden md:inline font-medium">• 1,050+ RULES</span>
-                <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-cyan-300 border border-indigo-500/40 text-[10px] font-mono font-bold hidden lg:flex items-center gap-1">
+                <span className="text-sky-400/90 font-medium hidden md:inline">• 38 NEWS WIRES</span>
+                <span className="text-cyan-400/80 hidden lg:inline font-medium">• 1,050+ RULES</span>
+                <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-cyan-300 border border-indigo-500/40 text-[10px] font-mono font-bold hidden xl:flex items-center gap-1">
                   <Zap className="w-2.5 h-2.5 text-cyan-400 animate-pulse" />
                   <span>24/7 AUTONOMOUS SWARM</span>
                 </span>
@@ -153,105 +153,102 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Middle: Market Scope Selector: Forex vs Metals/Commodities vs Indian Market */}
-          <div className="flex items-center bg-terminal-950 p-1 rounded-lg border border-terminal-border text-xs sm:text-sm shrink-0">
-            <button
-              onClick={() => {
-                onSelectMarketSegment('FOREX');
-                onSelectPair('EUR/USD');
-              }}
-              className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
-                marketSegment === 'FOREX'
-                  ? 'bg-cyan-600 text-white font-bold shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Globe className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              <span className="hidden sm:inline">Forex</span>
-              <span className="sm:hidden">FX</span>
-            </button>
+          {/* Desktop Middle: Market Scope Selector & Technical Analysis */}
+          <div className="hidden md:flex items-center gap-2">
+            <div className="flex items-center bg-terminal-950 p-1 rounded-lg border border-terminal-border text-xs sm:text-sm shrink-0">
+              <button
+                onClick={() => {
+                  onSelectMarketSegment('FOREX');
+                  onSelectPair('EUR/USD');
+                }}
+                className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
+                  marketSegment === 'FOREX'
+                    ? 'bg-cyan-600 text-white font-bold shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Forex</span>
+              </button>
 
-            <button
-              onClick={() => {
-                onSelectMarketSegment('METALS_COMMODITIES');
-                onSelectPair('XAU/USD');
-              }}
-              className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
-                marketSegment === 'METALS_COMMODITIES'
-                  ? 'bg-amber-500 text-black font-extrabold shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Coins className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-              <span className="hidden sm:inline">Metals & Oil</span>
-              <span className="sm:hidden">Gold/Oil</span>
-            </button>
+              <button
+                onClick={() => {
+                  onSelectMarketSegment('METALS_COMMODITIES');
+                  onSelectPair('XAU/USD');
+                }}
+                className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
+                  marketSegment === 'METALS_COMMODITIES'
+                    ? 'bg-amber-500 text-black font-extrabold shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Coins className="w-3.5 h-3.5" />
+                <span>Metals & Oil</span>
+              </button>
 
-            <button
-              onClick={() => {
-                onSelectMarketSegment('INDIAN_MARKET');
-                onSelectPair('NIFTY 50');
-              }}
-              className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
-                marketSegment === 'INDIAN_MARKET'
-                  ? 'bg-orange-600 text-white font-bold shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <span>🇮🇳</span>
-              <span className="hidden sm:inline">NSE India</span>
-              <span className="sm:hidden">NSE</span>
-            </button>
+              <button
+                onClick={() => {
+                  onSelectMarketSegment('INDIAN_MARKET');
+                  onSelectPair('NIFTY 50');
+                }}
+                className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
+                  marketSegment === 'INDIAN_MARKET'
+                    ? 'bg-orange-600 text-white font-bold shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <span>🇮🇳</span>
+                <span>NSE India</span>
+              </button>
+            </div>
+
+            {/* Infinity Vision Technical Analysis Direct Trigger Button */}
+            {setActiveTab && (
+              <button
+                onClick={() => setActiveTab(activeTab === 'vision-atlas' ? 'terminal' : 'vision-atlas')}
+                className={`px-2.5 sm:px-3 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shrink-0 ${
+                  activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab'
+                    ? 'bg-slate-100 text-slate-900 border-slate-300 font-extrabold shadow-sm'
+                    : 'bg-terminal-800 hover:bg-terminal-700 text-cyan-300 border-terminal-border hover:text-white'
+                }`}
+                title="Open Infinity Vision Technical Analysis Terminal"
+              >
+                <Compass className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Technical Analysis</span>
+              </button>
+            )}
           </div>
-
-          {/* Infinity Vision Technical Analysis Direct Trigger Button */}
-          {setActiveTab && (
-            <button
-              onClick={() => setActiveTab(activeTab === 'vision-atlas' ? 'terminal' : 'vision-atlas')}
-              className={`px-2.5 sm:px-3 py-1 rounded-lg border text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shrink-0 ${
-                activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab'
-                  ? 'bg-slate-100 text-slate-900 border-slate-300 font-extrabold shadow-sm'
-                  : 'bg-terminal-800 hover:bg-terminal-700 text-cyan-300 border-terminal-border hover:text-white'
-              }`}
-              title="Open Infinity Vision Technical Analysis Terminal (Exact Clone)"
-            >
-              <Compass className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden md:inline">Technical Analysis</span>
-              <span className="md:hidden">Analysis</span>
-            </button>
-          )}
 
           {/* Right: Swarm Synchronizer, Risk Settings, and Dark/Light Mode */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={onTriggerAnalysis}
               disabled={isAnalyzing}
-              className={`px-2.5 sm:px-3.5 py-1.5 rounded-lg font-mono text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all shadow-md ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-mono text-xs font-semibold flex items-center gap-1 sm:gap-1.5 transition-all shadow-md shrink-0 ${
                 isAnalyzing
                   ? 'bg-terminal-700 text-slate-400 cursor-not-allowed'
                   : 'bg-gradient-to-r from-cyan-600 via-indigo-600 to-cyan-600 hover:from-cyan-500 hover:to-indigo-500 text-white shadow-cyan-500/20 active:scale-95'
               }`}
-              title="24/7 Autonomous Multi-Agent Swarm continuously looping second-by-second across 5 desks. Click to force-pulse now."
+              title="24/7 Autonomous Multi-Agent Swarm continuously looping across 5 desks"
             >
               <Zap className={`w-3.5 h-3.5 ${isAnalyzing ? 'animate-spin' : 'text-cyan-300 animate-pulse'}`} />
               <span className="hidden sm:inline">
                 {isAnalyzing ? 'PULSING SWARM...' : `24/7 SWARM ACTIVE${cycleNumber ? ` (#${cycleNumber})` : ''}`}
               </span>
-              <span className="sm:hidden xs:inline">
-                {isAnalyzing ? '...' : `24/7 AUTO${cycleNumber ? ` #${cycleNumber}` : ''}`}
+              <span className="sm:hidden text-[11px] font-bold">
+                {isAnalyzing ? '...' : 'PULSE'}
               </span>
-              <span className="xs:hidden">{isAnalyzing ? '...' : '24/7'}</span>
             </button>
 
             {onToggleFreeze && (
               <button
                 onClick={onToggleFreeze}
-                className={`p-1.5 sm:p-2 rounded-lg border transition-colors flex items-center gap-1 shadow-sm ${
+                className={`p-1.5 sm:p-2 rounded-lg border transition-colors flex items-center gap-1 shadow-sm shrink-0 ${
                   isMarketFrozen 
                     ? 'bg-sky-950/80 border-sky-500/60 text-sky-300 hover:bg-sky-900' 
                     : 'bg-terminal-800 hover:bg-terminal-700 border-terminal-border text-slate-300'
                 }`}
-                title={isMarketFrozen ? 'Global State Frozen upon Market Close (Click to simulate live)' : 'Simulate Market Close State Freeze'}
+                title={isMarketFrozen ? 'Global State Frozen upon Market Close' : 'Simulate Market Close State Freeze'}
                 aria-label="Toggle Global State Freeze"
               >
                 <Snowflake className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isMarketFrozen ? 'text-sky-300 animate-pulse' : 'text-slate-400'}`} />
@@ -264,7 +261,7 @@ export const Header: React.FC<HeaderProps> = ({
             {onOpenSettings && (
               <button
                 onClick={onOpenSettings}
-                className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors shadow-sm"
+                className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors shadow-sm shrink-0"
                 title="Configure Risk & Settings"
                 aria-label="Settings"
               >
@@ -275,7 +272,7 @@ export const Header: React.FC<HeaderProps> = ({
             {onToggleTheme && (
               <button
                 onClick={onToggleTheme}
-                className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 shadow-sm"
+                className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 border border-terminal-border text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 shadow-sm shrink-0"
                 title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
                 aria-label="Toggle Theme Mode"
               >
@@ -290,6 +287,70 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             )}
           </div>
+        </div>
+
+        {/* Mobile Sub-Row: Market Scope Selector & Technical Analysis (Visible on <md screens) */}
+        <div className="flex md:hidden items-center justify-between gap-2 w-full pt-1 border-t border-terminal-border/40">
+          <div className="flex items-center bg-terminal-950 p-1 rounded-lg border border-terminal-border text-xs flex-1 justify-around">
+            <button
+              onClick={() => {
+                onSelectMarketSegment('FOREX');
+                onSelectPair('EUR/USD');
+              }}
+              className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+                marketSegment === 'FOREX'
+                  ? 'bg-cyan-600 text-white font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Globe className="w-3 h-3" />
+              <span>Forex</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onSelectMarketSegment('METALS_COMMODITIES');
+                onSelectPair('XAU/USD');
+              }}
+              className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+                marketSegment === 'METALS_COMMODITIES'
+                  ? 'bg-amber-500 text-black font-extrabold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Coins className="w-3 h-3" />
+              <span>Metals</span>
+            </button>
+
+            <button
+              onClick={() => {
+                onSelectMarketSegment('INDIAN_MARKET');
+                onSelectPair('NIFTY 50');
+              }}
+              className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
+                marketSegment === 'INDIAN_MARKET'
+                  ? 'bg-orange-600 text-white font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <span>🇮🇳</span>
+              <span>NSE</span>
+            </button>
+          </div>
+
+          {setActiveTab && (
+            <button
+              onClick={() => setActiveTab(activeTab === 'vision-atlas' ? 'terminal' : 'vision-atlas')}
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold flex items-center gap-1 transition-all shadow-sm shrink-0 ${
+                activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab'
+                  ? 'bg-slate-100 text-slate-900 border-slate-300 font-extrabold shadow-sm'
+                  : 'bg-terminal-800 hover:bg-terminal-700 text-cyan-300 border-terminal-border hover:text-white'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Analysis</span>
+            </button>
+          )}
         </div>
 
         {/* Row 2: REDESIGNED STREAMLINED AREA
@@ -338,16 +399,16 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* Timeframe Selector in New Layout */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold hidden sm:inline shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 overflow-x-auto max-w-full">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-semibold hidden md:inline shrink-0">
               TIMEFRAME:
             </span>
-            <div className="flex items-center bg-terminal-900 p-0.5 rounded-lg border border-terminal-border shadow-inner">
+            <div className="flex items-center bg-terminal-900 p-0.5 rounded-lg border border-terminal-border shadow-inner overflow-x-auto scrollbar-none touch-pan-x">
               {TIMEFRAMES.map((tf) => (
                 <button
                   key={tf}
                   onClick={() => onSelectTimeframe(tf)}
-                  className={`px-2 sm:px-2.5 py-1 rounded-md text-xs font-mono font-bold transition-all ${
+                  className={`px-1.5 xs:px-2 sm:px-2.5 py-1 rounded-md text-[11px] sm:text-xs font-mono font-bold transition-all shrink-0 ${
                     timeframe === tf
                       ? 'bg-gradient-to-r from-cyan-600 to-indigo-600 text-white shadow-sm shadow-cyan-500/20'
                       : 'text-slate-400 hover:text-white hover:bg-terminal-800'

@@ -48,43 +48,43 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
   return (
     <div className="bg-terminal-900 border border-terminal-border rounded-xl p-4 shadow-lg space-y-4">
       {/* Account Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
-        <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
-          <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Account Balance</span>
-          <span className="text-white font-bold text-base">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 text-sm">
+        <div className="bg-terminal-950 p-2.5 sm:p-3 rounded-lg border border-terminal-border min-w-0">
+          <span className="text-slate-400 block text-[11px] sm:text-xs font-semibold uppercase mb-1 truncate">Account Balance</span>
+          <span className="text-white font-bold text-sm sm:text-base block truncate">
             ${portfolio.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         </div>
 
-        <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
-          <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Net Equity</span>
-          <span className="text-white font-bold text-base">
+        <div className="bg-terminal-950 p-2.5 sm:p-3 rounded-lg border border-terminal-border min-w-0">
+          <span className="text-slate-400 block text-[11px] sm:text-xs font-semibold uppercase mb-1 truncate">Net Equity</span>
+          <span className="text-white font-bold text-sm sm:text-base block truncate">
             ${(portfolio.balance + totalOpenPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         </div>
 
-        <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
-          <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Free Margin</span>
-          <span className="text-cyan-400 font-bold text-base">
+        <div className="bg-terminal-950 p-2.5 sm:p-3 rounded-lg border border-terminal-border min-w-0">
+          <span className="text-slate-400 block text-[11px] sm:text-xs font-semibold uppercase mb-1 truncate">Free Margin</span>
+          <span className="text-cyan-400 font-bold text-sm sm:text-base block truncate">
             ${portfolio.freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         </div>
 
-        <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
-          <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Open P&L</span>
-          <span className={`font-bold text-base ${totalOpenPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+        <div className="bg-terminal-950 p-2.5 sm:p-3 rounded-lg border border-terminal-border min-w-0">
+          <span className="text-slate-400 block text-[11px] sm:text-xs font-semibold uppercase mb-1 truncate">Open P&L</span>
+          <span className={`font-bold text-sm sm:text-base block truncate ${totalOpenPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {totalOpenPnl >= 0 ? '+' : ''}${totalOpenPnl.toFixed(2)}
           </span>
         </div>
 
-        <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
-          <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Win Rate</span>
-          <span className="text-emerald-400 font-bold text-base">{winRate}%</span>
+        <div className="bg-terminal-950 p-2.5 sm:p-3 rounded-lg border border-terminal-border min-w-0">
+          <span className="text-slate-400 block text-[11px] sm:text-xs font-semibold uppercase mb-1 truncate">Win Rate</span>
+          <span className="text-emerald-400 font-bold text-sm sm:text-base block truncate">{winRate}%</span>
         </div>
 
-        <div className="bg-terminal-950 p-3 rounded-lg border border-terminal-border">
-          <span className="text-slate-400 block text-xs font-semibold uppercase mb-1">Realized Profit</span>
-          <span className={`font-bold text-base ${totalRealizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+        <div className="bg-terminal-950 p-2.5 sm:p-3 rounded-lg border border-terminal-border min-w-0">
+          <span className="text-slate-400 block text-[11px] sm:text-xs font-semibold uppercase mb-1 truncate">Realized Profit</span>
+          <span className={`font-bold text-sm sm:text-base block truncate ${totalRealizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
             {totalRealizedPnl >= 0 ? '+' : ''}${totalRealizedPnl.toFixed(2)}
           </span>
         </div>
@@ -115,20 +115,20 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
             No active positions open. Trigger the Swarm to analyze setups and execute authorized trades.
           </div>
         ) : (
-          <div className="overflow-x-auto border border-terminal-border rounded-lg">
-            <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto scrollbar-thin touch-pan-x border border-terminal-border rounded-lg">
+            <table className="w-full text-left text-sm min-w-[750px]">
               <thead className="bg-terminal-950 text-slate-400 border-b border-terminal-border text-xs uppercase font-semibold">
                 <tr>
-                  <th className="p-3">Symbol</th>
-                  <th className="p-3">Side</th>
-                  <th className="p-3">Lots</th>
-                  <th className="p-3">Entry</th>
-                  <th className="p-3">Current</th>
-                  <th className="p-3">Stop Loss</th>
-                  <th className="p-3">Take Profit</th>
-                  <th className="p-3">P&L ($)</th>
-                  <th className="p-3">Validation Health</th>
-                  <th className="p-3 text-right">Action</th>
+                  <th className="p-3 whitespace-nowrap">Symbol</th>
+                  <th className="p-3 whitespace-nowrap">Side</th>
+                  <th className="p-3 whitespace-nowrap">Lots</th>
+                  <th className="p-3 whitespace-nowrap">Entry</th>
+                  <th className="p-3 whitespace-nowrap">Current</th>
+                  <th className="p-3 whitespace-nowrap">Stop Loss</th>
+                  <th className="p-3 whitespace-nowrap">Take Profit</th>
+                  <th className="p-3 whitespace-nowrap">P&L ($)</th>
+                  <th className="p-3 whitespace-nowrap">Validation Health</th>
+                  <th className="p-3 text-right whitespace-nowrap">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-terminal-border/60 bg-terminal-900/60 font-medium">
@@ -144,7 +144,7 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
                       <tr className={`hover:bg-terminal-800/40 transition-colors ${
                         isInvalid ? 'bg-rose-950/20 border-l-4 border-l-rose-500' : 'border-l-4 border-l-emerald-500'
                       }`}>
-                        <td className="p-3 font-bold text-white flex items-center gap-1.5">
+                        <td className="p-3 font-bold text-white flex items-center gap-1.5 whitespace-nowrap">
                           <button
                             onClick={() => toggleExpand(pos.id)}
                             className="p-0.5 rounded hover:bg-terminal-800 text-slate-400 hover:text-white"
@@ -153,7 +153,7 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
                           </button>
                           <span>{pos.symbol}</span>
                         </td>
-                        <td className="p-3">
+                        <td className="p-3 whitespace-nowrap">
                           <span className={`px-2.5 py-0.5 rounded text-xs font-bold ${
                             pos.type === 'BUY'
                               ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
@@ -162,17 +162,17 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
                             {pos.type}
                           </span>
                         </td>
-                        <td className="p-3 text-slate-300 font-mono">{pos.lots}</td>
-                        <td className="p-3 text-slate-200 font-mono">{pos.entryPrice}</td>
-                        <td className="p-3 text-slate-200 font-mono">{pos.currentPrice}</td>
-                        <td className="p-3 text-rose-400 font-mono">{pos.stopLoss}</td>
-                        <td className="p-3 text-emerald-400 font-mono">{pos.takeProfit}</td>
-                        <td className="p-3 font-mono">
+                        <td className="p-3 text-slate-300 font-mono whitespace-nowrap">{pos.lots}</td>
+                        <td className="p-3 text-slate-200 font-mono whitespace-nowrap">{pos.entryPrice}</td>
+                        <td className="p-3 text-slate-200 font-mono whitespace-nowrap">{pos.currentPrice}</td>
+                        <td className="p-3 text-rose-400 font-mono whitespace-nowrap">{pos.stopLoss}</td>
+                        <td className="p-3 text-emerald-400 font-mono whitespace-nowrap">{pos.takeProfit}</td>
+                        <td className="p-3 font-mono whitespace-nowrap">
                           <span className={`font-bold ${pos.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                             {pos.pnl >= 0 ? '+' : ''}${pos.pnl.toFixed(2)}
                           </span>
                         </td>
-                        <td className="p-3 font-mono text-xs">
+                        <td className="p-3 font-mono text-xs whitespace-nowrap">
                           {isInvalid ? (
                             <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold flex items-center gap-1 w-fit animate-pulse">
                               <AlertTriangle className="w-3 h-3 text-rose-400" />
@@ -185,7 +185,7 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
                             </span>
                           )}
                         </td>
-                        <td className="p-3 text-right">
+                        <td className="p-3 text-right whitespace-nowrap">
                           <button
                             onClick={() => onClosePosition(pos.id)}
                             className={`px-3 py-1 rounded text-xs font-bold transition-all shadow-sm ${

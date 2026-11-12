@@ -1023,6 +1023,7 @@ export default function Home() {
               takeProfit={consensus?.agents.risk.parameters.takeProfit1}
               entryPrice={consensus?.agents.risk.parameters.entryPrice}
               signalBias={consensus?.agents.technical.bias}
+              theme={theme}
             />
 
             {/* 📓 Active Pre-Trade Historical Journal Loss Review & Guardrails Desk */}
@@ -1071,6 +1072,8 @@ export default function Home() {
               setActiveTab('terminal');
               showNotification(`VISION ATLAS SYNCED: ${params.direction} on ${params.symbol} loaded into Terminal.`);
             }}
+            theme={theme}
+            onToggleTheme={handleToggleTheme}
           />
         )}
 
@@ -1174,6 +1177,7 @@ export default function Home() {
             onClearScenario={handleClearDebateScenario}
             isDebating={isDebating}
             onBackToTerminal={() => setActiveTab('terminal')}
+            theme={theme}
           />
         )}
 

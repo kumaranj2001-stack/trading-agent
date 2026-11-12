@@ -40,23 +40,23 @@ export const ActiveEntryInvalidationBanner: React.FC<ActiveEntryInvalidationBann
         : 'bg-gradient-to-r from-emerald-950/40 via-terminal-950 to-terminal-950 border-emerald-500/40 shadow-emerald-950/20'
     }`}>
       {/* Header Row */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/80 pb-2.5 mb-2.5">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-terminal-border/80 pb-2.5 mb-2.5">
+        <div className="flex items-center gap-2 min-w-0">
           {isInvalid ? (
-            <div className="p-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/50 animate-pulse">
+            <div className="p-1 rounded bg-rose-500/20 text-rose-400 border border-rose-500/50 animate-pulse shrink-0">
               <ShieldAlert className="w-4 h-4" />
             </div>
           ) : (
-            <div className="p-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/50">
+            <div className="p-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 shrink-0">
               <CheckCircle2 className="w-4 h-4" />
             </div>
           )}
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-white text-xs sm:text-sm">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="font-bold text-white text-xs sm:text-sm truncate">
                 RUNNING ENTRY: {position.symbol} {position.type} ({position.lots} Lots @ {position.entryPrice})
               </span>
-              <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+              <span className={`px-2 py-0.5 rounded text-[11px] font-bold shrink-0 ${
                 isProfit ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
               }`}>
                 P&L: {pnlFormatted}
@@ -65,7 +65,7 @@ export const ActiveEntryInvalidationBanner: React.FC<ActiveEntryInvalidationBann
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <span className="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 text-[10px] flex items-center gap-1">
             <Zap className="w-3 h-3 text-cyan-400 animate-pulse" />
             <span>24/7 DUAL MONITOR (1s TICK)</span>
@@ -132,7 +132,7 @@ export const ActiveEntryInvalidationBanner: React.FC<ActiveEntryInvalidationBann
               {onClosePosition && (
                 <button
                   onClick={() => onClosePosition(position.id)}
-                  className="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-lg active:scale-95 shrink-0"
+                  className="w-full sm:w-auto px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-lg active:scale-95 shrink-0"
                 >
                   <span>
                     {isProfit ? `CLOSE NOW & LOCK ${pnlFormatted}` : `CLOSE ENTRY & PRESERVE CAPITAL`}

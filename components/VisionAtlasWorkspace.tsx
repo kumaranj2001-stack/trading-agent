@@ -77,6 +77,8 @@ export interface VisionAtlasWorkspaceProps {
     stopLoss: number;
     takeProfit: number;
   }) => void;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
 export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
@@ -88,6 +90,8 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
   onClose,
   onOpenJournal,
   onSyncToTerminal,
+  theme = 'dark',
+  onToggleTheme,
 }) => {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>(initialPair);
   const [selectedTimeframe, setSelectedTimeframe] = useState<TimeFrame>(initialTf);
@@ -373,6 +377,8 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
           onClose={onClose}
           onOpenJournal={onOpenJournal}
           onSyncToTerminal={onSyncToTerminal}
+          theme={theme}
+          onToggleTheme={onToggleTheme}
         />
       </div>
     );

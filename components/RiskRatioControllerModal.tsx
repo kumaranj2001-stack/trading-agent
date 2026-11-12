@@ -211,14 +211,14 @@ export const RiskRatioControllerModal: React.FC<RiskRatioControllerModalProps> =
         </div>
 
         {/* Zero-Veto Decoupling Banner */}
-        <div className="px-4 py-2.5 bg-gradient-to-r from-amber-950/40 via-terminal-900 to-emerald-950/40 border-b border-terminal-border/80 flex items-center justify-between gap-3 shrink-0 text-xs">
+        <div className="px-4 py-2.5 bg-gradient-to-r from-amber-950/40 via-terminal-900 to-emerald-950/40 border-b border-terminal-border/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 text-xs">
           <div className="flex items-center gap-2 text-slate-300">
             <Zap className="w-4 h-4 text-amber-400 shrink-0" />
             <span>
               <strong className="text-amber-300">Zero-Veto Decoupling Active:</strong> Low-confidence setups (Grade F / E) automatically execute with conservative scout volume (0.01 - 0.08 lots) rather than halting or vetoing execution.
             </span>
           </div>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
             <button
               type="button"
               onClick={() => handleApplyPreset('institutional')}

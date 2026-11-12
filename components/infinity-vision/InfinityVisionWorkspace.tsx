@@ -31,6 +31,8 @@ export interface InfinityVisionWorkspaceProps {
     takeProfit: number;
   }) => void;
   onOpenJournal?: () => void;
+  theme?: 'dark' | 'light';
+  onToggleTheme?: () => void;
 }
 
 export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = ({
@@ -42,10 +44,25 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   onClose,
   onSyncToTerminal,
   onOpenJournal,
+  theme: propTheme,
+  onToggleTheme,
 }) => {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>(initialPair);
   const [selectedTf, setSelectedTf] = useState<TimeFrame>(initialTf);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (propTheme) return propTheme;
+    if (typeof window !== 'undefined') {
+      const saved = (localStorage.getItem('qri_theme') || localStorage.getItem('apex_theme')) as 'dark' | 'light' | null;
+      if (saved === 'dark' || saved === 'light') return saved;
+    }
+    return 'dark';
+  });
+
+  useEffect(() => {
+    if (propTheme && (propTheme === 'light' || propTheme === 'dark')) {
+      setTheme(propTheme);
+    }
+  }, [propTheme]);
   const [chartViewMode, setChartViewMode] = useState<ChartViewMode>('Advanced');
   const [chartType, setChartType] = useState<'Candles' | 'Line'>('Candles');
   const [showPatternOnChart, setShowPatternOnChart] = useState<boolean>(true);
@@ -276,7 +293,16 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   };
 
   const handleToggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(nextTheme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('qri_theme', nextTheme);
+      document.documentElement.classList.remove('dark', 'light');
+      document.documentElement.classList.add(nextTheme);
+    }
+    if (onToggleTheme) {
+      onToggleTheme();
+    }
   };
 
   return (

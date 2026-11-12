@@ -68,18 +68,18 @@ export const InfinityVisionOhlcBar: React.FC<InfinityVisionOhlcBarProps> = ({
   const formattedDate = dateStr || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) + ' UTC';
 
   return (
-    <div className={`w-full px-3.5 py-1.5 border-b text-[11px] font-mono flex flex-wrap items-center justify-between gap-x-4 gap-y-1 select-none transition-colors ${
+    <div className={`w-full px-3 sm:px-4 py-1.5 border-b text-[11px] font-mono flex flex-wrap items-center justify-between gap-x-3 sm:gap-x-4 gap-y-1.5 select-none transition-colors min-w-0 ${
       isLight 
         ? 'bg-white border-slate-200 text-slate-700' 
         : 'bg-terminal-950 border-terminal-border text-slate-300'
     }`}>
       {/* Left: Ticker, State, OHLC */}
-      <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-        <span className="font-black text-slate-900 dark:text-white uppercase tracking-wider">
+      <div className="flex items-center gap-2 sm:gap-3 flex-wrap min-w-0">
+        <span className="font-black text-slate-900 dark:text-white uppercase tracking-wider shrink-0">
           {cleanPair} · {timeframe} · <span className="font-normal text-slate-500">Live Tick</span>
         </span>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <span>O: <strong className="font-bold text-slate-900 dark:text-white">{fmt(open)}</strong></span>
           <span>H: <strong className="font-bold text-slate-900 dark:text-white">{fmt(high)}</strong></span>
           <span>L: <strong className="font-bold text-slate-900 dark:text-white">{fmt(low)}</strong></span>
@@ -91,8 +91,8 @@ export const InfinityVisionOhlcBar: React.FC<InfinityVisionOhlcBarProps> = ({
           </span>
         </div>
 
-        <span className="text-slate-400">·</span>
-        <span className="text-slate-500">{formattedDate}</span>
+        <span className="text-slate-400 hidden sm:inline">·</span>
+        <span className="text-slate-500 hidden sm:inline">{formattedDate}</span>
       </div>
 
       {/* Right: Bid / Ask / Spread / Live Status */}

@@ -121,7 +121,7 @@ export const InfinityVisionToolbar: React.FC<InfinityVisionToolbarProps> = ({
         </div>
 
         {/* Timeframe Pills */}
-        <div className={`flex items-center p-0.5 rounded-lg border text-[11px] font-semibold ${
+        <div className={`flex items-center p-0.5 rounded-lg border text-[11px] font-semibold overflow-x-auto scrollbar-none touch-pan-x max-w-full ${
           isLight ? 'bg-white border-slate-200' : 'bg-terminal-950 border-terminal-border'
         }`}>
           {TIMEFRAMES.map((tf) => {
@@ -130,7 +130,7 @@ export const InfinityVisionToolbar: React.FC<InfinityVisionToolbarProps> = ({
               <button
                 key={tf}
                 onClick={() => onSelectTimeframe(tf)}
-                className={`px-2 py-0.5 rounded transition-all ${
+                className={`px-2 py-0.5 rounded transition-all shrink-0 ${
                   isActive
                     ? isLight
                       ? 'bg-slate-200 text-slate-900 font-bold shadow-xs'

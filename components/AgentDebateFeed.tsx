@@ -68,6 +68,7 @@ interface AgentDebateFeedProps {
   onClearScenario?: () => void;
   isDebating?: boolean;
   onBackToTerminal?: () => void;
+  theme?: 'dark' | 'light';
 }
 
 const PRESET_SCENARIOS = [
@@ -92,6 +93,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
   onClearScenario,
   isDebating = false,
   onBackToTerminal,
+  theme = 'dark',
 }) => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [activeFilterRound, setActiveFilterRound] = useState<number | 'ALL'>('ALL');
@@ -432,7 +434,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
 
           {/* Interactive TradingView Widget */}
           <div className="w-full h-[360px] rounded-lg overflow-hidden border border-terminal-border/60 bg-black">
-            <OandaTradingViewChart symbol={pair} theme="dark" height={360} />
+            <OandaTradingViewChart symbol={pair} timeframe={timeframe} theme={theme} height={360} containerIdPrefix="debate" />
           </div>
 
           {/* Second-by-Second Invalidation & WebSocket Fail-Safe Health Strip */}

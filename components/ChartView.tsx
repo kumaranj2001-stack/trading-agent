@@ -15,6 +15,7 @@ interface ChartViewProps {
   takeProfit?: number;
   entryPrice?: number;
   signalBias?: SignalDirection;
+  theme?: 'dark' | 'light';
 }
 
 export const ChartView: React.FC<ChartViewProps> = ({
@@ -26,6 +27,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   takeProfit,
   entryPrice,
   signalBias,
+  theme = 'dark',
 }) => {
   const [chartMode, setChartMode] = useState<'ALGO_SWARM' | 'OANDA_LIVE'>('OANDA_LIVE');
   const [showIndicators, setShowIndicators] = useState(true);
@@ -174,7 +176,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
 
       {/* View 1: Real OANDA / TradingView Live Advanced Chart */}
       {chartMode === 'OANDA_LIVE' && (
-        <OandaTradingViewChart symbol={pair} timeframe={timeframe} height={460} containerIdPrefix="terminal" />
+        <OandaTradingViewChart symbol={pair} timeframe={timeframe} height={460} containerIdPrefix="terminal" theme={theme} />
       )}
 
       {/* View 2: Apex Swarm Algorithmic SVG Candlestick Chart */}

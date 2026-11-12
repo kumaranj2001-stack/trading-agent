@@ -111,39 +111,39 @@ export const HistoricalJournalDesk: React.FC<HistoricalJournalDeskProps> = ({
       </div>
 
       {/* Grid of Key Pre-Trade Verification Metrics */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
-        <div className="bg-terminal-950 p-2.5 rounded-lg border border-terminal-border">
-          <span className="text-slate-400 text-[10px] uppercase block font-sans">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs font-mono">
+        <div className="bg-terminal-950 p-2.5 rounded-lg border border-terminal-border min-w-0">
+          <span className="text-slate-400 text-[10px] uppercase block font-sans truncate">
             {selectedPair} Track Record
           </span>
           <div className="flex items-baseline gap-1.5 mt-0.5">
             <span className={`text-base font-bold ${symbolStats.winRate >= 50 ? 'text-emerald-400' : 'text-amber-400'}`}>
               {symbolStats.winRate}%
             </span>
-            <span className="text-slate-400 text-[11px]">
+            <span className="text-slate-400 text-[11px] truncate">
               ({symbolStats.wins}W / {symbolStats.losses}L)
             </span>
           </div>
-          <span className="text-[10px] text-slate-400 block font-sans mt-0.5">
+          <span className="text-[10px] text-slate-400 block font-sans mt-0.5 truncate">
             Net P&L: <strong className={symbolStats.netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
               {symbolStats.netPnl >= 0 ? '+' : ''}${symbolStats.netPnl.toFixed(2)}
             </strong>
           </span>
         </div>
 
-        <div className="bg-terminal-950 p-2.5 rounded-lg border border-terminal-border">
-          <span className="text-slate-400 text-[10px] uppercase block font-sans">
+        <div className="bg-terminal-950 p-2.5 rounded-lg border border-terminal-border min-w-0">
+          <span className="text-slate-400 text-[10px] uppercase block font-sans truncate">
             Knowledge Base Operative Rules
           </span>
           <div className="flex items-baseline gap-1.5 mt-0.5">
             <span className="text-base font-bold text-indigo-400">
               {totalOperativeRules}
             </span>
-            <span className="text-slate-400 text-[10px]">
+            <span className="text-slate-400 text-[10px] truncate">
               (1,050 + {dynamicRules.length})
             </span>
           </div>
-          <span className="text-[10px] text-indigo-300 block font-sans mt-0.5">
+          <span className="text-[10px] text-indigo-300 block font-sans mt-0.5 truncate">
             {dynamicRules.length > 0 ? `Rule #${latestRule?.failureAudit.ruleIndex || 1051} Active` : 'Baseline Active'}
           </span>
         </div>

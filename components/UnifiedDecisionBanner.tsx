@@ -136,11 +136,11 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
         </div>
 
         {/* Action Button */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           {executionSignal.authorized && onExecuteTrade && (
             isMarketFrozen ? (
               <div 
-                className="px-3.5 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 bg-sky-950/80 border border-sky-600/50 text-sky-300 cursor-not-allowed shadow-md"
+                className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 bg-sky-950/80 border border-sky-600/50 text-sky-300 cursor-not-allowed shadow-md"
                 title={`Market Closed (${sessionInfo?.statusLabel || 'State Frozen'}). Trading resumes: ${sessionInfo?.nextOpenFormatted || 'next session'}`}
               >
                 <Lock className="w-3.5 h-3.5 text-sky-400" />
@@ -149,7 +149,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             ) : (
               <button
                 onClick={onExecuteTrade}
-                className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all shadow-lg active:scale-95 ${
+                className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${
                   isBuy
                     ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
                     : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
@@ -168,7 +168,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
           {onOpenNewsWire && (
             <button
               onClick={onOpenNewsWire}
-              className="px-3 py-2 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-sky-300 font-mono text-xs flex items-center gap-1.5 transition-colors"
+              className="w-full sm:w-auto px-3 py-2 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-sky-300 font-mono text-xs flex items-center justify-center gap-1.5 transition-colors"
             >
               <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
               <span>38 Sources Wire</span>
