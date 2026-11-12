@@ -41,6 +41,8 @@ export class TradeInvalidationEngine {
 
     const technicalReasons: string[] = [];
     const fundamentalReasons: string[] = [];
+    let structuralOverrideTriggered = false;
+    let chochBreakdownDetected = false;
 
     // ------------------------------------------------------------------------
     // 1. Technical Analysis Invalidation Checks (Second-by-Second)
@@ -65,14 +67,16 @@ export class TradeInvalidationEngine {
       const minRecentLow = Math.min(...recentLows);
       const maxRecentHigh = Math.max(...recentHighs);
 
-      // (A) Structural Break of Swing Levels (CHoCH / BOS Invalidation)
-      if (isBuy && livePrice < minRecentLow) {
-        technicalReasons.push(
-          `Market Structure Violation: Price fell below recent swing low (${minRecentLow.toFixed(4)}), indicating bearish displacement against long position.`
-        );
-      } else if (isSell && livePrice > maxRecentHigh) {
-        technicalReasons.push(
-          `Market Structure Violation: Price broke above recent swing high (${maxRecentHigh.toFixed(4)}), indicating bullish expansion against short position.`
+      // (A) Paramount Structural Override: Confirmed Change of Character (CHoCH) or Market Structure Breakdown
+      const smcStructure = consensus?.agents?.technical?.smartMoneyConcepts?.structure || '';
+      const chochDetected = (isBuy && (livePrice < minRecentLow || smcStructure.includes('BEARISH_CHOCH') || smcStructure.includes('CHoCH_BEAR'))) ||
+                            (isSell && (livePrice > maxRecentHigh || smcStructure.includes('BULLISH_CHOCH') || smcStructure.includes('CHoCH_BULL')));
+
+      if (chochDetected) {
+        structuralOverrideTriggered = true;
+        chochBreakdownDetected = true;
+        technicalReasons.unshift(
+          `⚡ PARAMOUNT STRUCTURAL OVERRIDE: Confirmed Change of Character (CHoCH) / Structure Breakdown on execution timeframe (${isBuy ? `Price ${livePrice} breached swing low ${minRecentLow.toFixed(4)}` : `Price ${livePrice} breached swing high ${maxRecentHigh.toFixed(4)}`}). Overriding initial 5-pip buffer; immediate market close mandated to protect accumulated equity.`
         );
       }
 
@@ -114,7 +118,13 @@ export class TradeInvalidationEngine {
     // (D) Stop Distance Adverse Proximity (Capital Preservation Warning)
     const isGold = position.symbol === 'XAU/USD';
     const isJpy = position.symbol.includes('JPY');
+    const isIndian = position.symbol.includes('NIFTY') || position.symbol === 'RELIANCE' || position.symbol === 'TCS';
     const pipVal = PIP_VALUES[position.symbol] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
+    
+    let decimals = 5;
+    if (isIndian || isGold) decimals = 2;
+    else if (isJpy) decimals = 3;
+
     const stopDistance = Math.abs(position.entryPrice - position.stopLoss);
     
     if (stopDistance > 0) {
@@ -125,6 +135,60 @@ export class TradeInvalidationEngine {
       if (adverseDistance > stopDistance * 0.65) {
         technicalReasons.push(
           `Adverse Capital Drawdown: Position has absorbed ${((adverseDistance / stopDistance) * 100).toFixed(0)}% of the protective stop threshold.`
+        );
+      }
+    }
+
+    // (E) Automated Breakeven Trailing Stop Supervision (1:1 R:R Threshold)
+    const initialRiskDistance = Math.abs(position.entryPrice - (position.initialStopLoss || position.stopLoss));
+    const unrealizedGainDistance = isBuy
+      ? livePrice - position.entryPrice
+      : position.entryPrice - livePrice;
+
+    const initialRiskPips = Number((initialRiskDistance / pipVal).toFixed(1));
+    const unrealizedGainPips = Number((unrealizedGainDistance / pipVal).toFixed(1));
+
+    let isBreakevenLocked = position.isBreakevenLocked || false;
+    let trailedStopLoss = position.stopLoss;
+
+    // Once unrealized gains reach or exceed 1:1 threshold, lock in Breakeven Stop
+    if (unrealizedGainDistance >= initialRiskDistance && initialRiskDistance > 0 && !isBreakevenLocked) {
+      isBreakevenLocked = true;
+      const breakevenBuffer = 1 * pipVal; // 1 pip beyond entry to guarantee commission/spread coverage
+      const newStop = isBuy
+        ? Number((position.entryPrice + breakevenBuffer).toFixed(decimals))
+        : Number((position.entryPrice - breakevenBuffer).toFixed(decimals));
+      
+      trailedStopLoss = newStop;
+      position.stopLoss = newStop;
+      position.isBreakevenLocked = true;
+      position.trailingStopActive = true;
+      technicalReasons.push(
+        `🛡️ TELEMETRY SUPERVISION: 1:1 Risk-to-Reward threshold achieved (+${unrealizedGainPips} pips). Stop Loss trailed to Breakeven (${newStop}) to eliminate downside risk and lock equity.`
+      );
+    }
+
+    // (F) Real-Time Target Compression during Confidence Decay
+    let targetCompressed = position.targetCompressed || false;
+    let compressedTakeProfit = position.takeProfit;
+
+    if (consensus && !targetCompressed) {
+      const entryConf = position.confidenceAtEntry || 78;
+      const liveConf = consensus.overallConfidence;
+      const confidenceDecay = entryConf - liveConf;
+
+      if (confidenceDecay >= 8) {
+        targetCompressed = true;
+        const remainingDistance = Math.abs(position.takeProfit - livePrice);
+        compressedTakeProfit = isBuy
+          ? Number((livePrice + remainingDistance * 0.50).toFixed(decimals))
+          : Number((livePrice - remainingDistance * 0.50).toFixed(decimals));
+
+        position.takeProfit = compressedTakeProfit;
+        position.targetCompressed = true;
+        position.compressionReason = `Confidence decayed from ${entryConf}% to ${liveConf}%. Target compressed by 50% to ${compressedTakeProfit} to secure profit immediately.`;
+        technicalReasons.push(
+          `⚡ TARGET COMPRESSION: Confidence decayed by ${confidenceDecay}% pts. Take profit dynamically compressed to ${compressedTakeProfit} to harvest equity before reversal.`
         );
       }
     }
@@ -196,11 +260,11 @@ export class TradeInvalidationEngine {
     const totalReasons = allReasons.length;
 
     // Condition for invalidation:
-    // Any structural break, or at least 1 fundamental + 1 technical reason, or 2+ technical reasons
-    const isInvalidated = totalReasons >= 2 || fundamentalReasons.length >= 1 || technicalReasons.length >= 2;
+    // Structural override, or at least 1 fundamental + 1 technical reason, or 2+ technical reasons
+    const isInvalidated = structuralOverrideTriggered || totalReasons >= 2 || fundamentalReasons.length >= 1 || technicalReasons.length >= 2;
 
     let urgency: PositionInvalidationStatus['urgency'] = 'NONE';
-    if (totalReasons >= 3) {
+    if (structuralOverrideTriggered || totalReasons >= 3) {
       urgency = 'CRITICAL';
     } else if (isInvalidated) {
       urgency = 'HIGH';
@@ -209,7 +273,7 @@ export class TradeInvalidationEngine {
     }
 
     const technicalStatus: PositionInvalidationStatus['technicalStatus'] =
-      technicalReasons.length >= 2 ? 'INVALIDATED' : technicalReasons.length === 1 ? 'WARNING' : 'HEALTHY';
+      structuralOverrideTriggered || technicalReasons.length >= 2 ? 'INVALIDATED' : technicalReasons.length === 1 ? 'WARNING' : 'HEALTHY';
 
     const fundamentalStatus: PositionInvalidationStatus['fundamentalStatus'] =
       fundamentalReasons.length >= 1 ? 'INVALIDATED' : 'HEALTHY';
@@ -218,7 +282,9 @@ export class TradeInvalidationEngine {
       position.pnl > 0.5 ? 'IN_PROFIT' : position.pnl < -0.5 ? 'IN_LOSS' : 'BREAKEVEN';
 
     let actionRecommended: PositionInvalidationStatus['actionRecommended'] = 'HOLD_POSITION';
-    if (isInvalidated) {
+    if (structuralOverrideTriggered) {
+      actionRecommended = 'CLOSE_IMMEDIATELY';
+    } else if (isInvalidated) {
       if (pnlStatus === 'IN_PROFIT') {
         actionRecommended = 'TAKE_SMALL_PROFIT';
       } else {
@@ -240,6 +306,14 @@ export class TradeInvalidationEngine {
       pnlStatus,
       recommendedExitPrice: livePrice,
       lastCheckedTime: new Date().toLocaleTimeString(),
+      structuralOverrideTriggered,
+      chochBreakdownDetected,
+      isBreakevenLocked,
+      trailedStopLoss,
+      targetCompressed,
+      compressedTakeProfit,
+      unrealizedGainPips,
+      initialRiskPips,
     };
   }
 }

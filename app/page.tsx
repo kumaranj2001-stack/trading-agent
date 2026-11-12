@@ -338,10 +338,16 @@ export default function Home() {
       currentPrice: livePrice,
       stopLoss: autoStopLoss,
       takeProfit: autoTakeProfit,
+      initialStopLoss: autoStopLoss,
+      initialTakeProfit: autoTakeProfit,
       openTime: timeStr,
       pnl: 0,
       pnlPercent: 0,
       riskReward: signal.riskReward,
+      isBreakevenLocked: false,
+      trailingStopActive: false,
+      targetCompressed: false,
+      confidenceAtEntry: calibratedResult.overallConfidence || 80,
     };
 
     const marginNeeded = (signal.lots * 100000) / 30;
@@ -514,16 +520,31 @@ export default function Home() {
             symCandles,
             pos.symbol === selectedPair ? consensus : null
           );
+
+          // Real-time parameter sync: Breakeven lock & Target compression
+          const isBreakeven = invStatus.isBreakevenLocked || pos.isBreakevenLocked;
+          const isCompressed = invStatus.targetCompressed || pos.targetCompressed;
+
           return {
             ...pos,
+            stopLoss: invStatus.trailedStopLoss || pos.stopLoss,
+            takeProfit: invStatus.compressedTakeProfit || pos.takeProfit,
+            isBreakevenLocked: isBreakeven,
+            trailingStopActive: isBreakeven,
+            targetCompressed: isCompressed,
+            structuralOverrideTriggered: invStatus.structuralOverrideTriggered,
             invalidation: invStatus,
           };
         });
 
-        // ⚡ Autonomous Emergency / Small-Profit Exit on Invalidation (FULL_AUTOPILOT & SEMI_AUTONOMOUS)
+        // ⚡ Paramount Structural Override & Invalidation Exit (FULL_AUTOPILOT & SEMI_AUTONOMOUS)
         if (executionModeRef.current === 'FULL_AUTOPILOT' || executionModeRef.current === 'SEMI_AUTONOMOUS') {
           for (const pos of updatedPositions) {
-            if (pos.invalidation?.isInvalidated && (pos.invalidation.urgency === 'HIGH' || pos.invalidation.urgency === 'CRITICAL')) {
+            if (pos.invalidation?.structuralOverrideTriggered) {
+              setTimeout(() => {
+                handleClosePosition(pos.id, 'PARAMOUNT_STRUCTURAL_OVERRIDE', pos.invalidation?.allReasons);
+              }, 0);
+            } else if (pos.invalidation?.isInvalidated && (pos.invalidation.urgency === 'HIGH' || pos.invalidation.urgency === 'CRITICAL')) {
               setTimeout(() => {
                 handleClosePosition(pos.id, 'INVALIDATION_AUTO_CLOSE', pos.invalidation?.allReasons);
               }, 0);
@@ -817,10 +838,16 @@ export default function Home() {
       currentPrice: liveEntryPrice,
       stopLoss: executionStopLoss,
       takeProfit: executionTakeProfit,
+      initialStopLoss: executionStopLoss,
+      initialTakeProfit: executionTakeProfit,
       openTime: timeStr,
       pnl: 0,
       pnlPercent: 0,
       riskReward: signal.riskReward,
+      isBreakevenLocked: false,
+      trailingStopActive: false,
+      targetCompressed: false,
+      confidenceAtEntry: consensus.overallConfidence || 80,
     };
 
     const marginUsedForTrade = (executionLots * 100000) / 30;

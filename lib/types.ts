@@ -1050,6 +1050,14 @@ export interface PositionInvalidationStatus {
   pnlStatus: 'IN_PROFIT' | 'BREAKEVEN' | 'IN_LOSS';
   recommendedExitPrice: number;
   lastCheckedTime: string;
+  structuralOverrideTriggered?: boolean;
+  chochBreakdownDetected?: boolean;
+  isBreakevenLocked?: boolean;
+  trailedStopLoss?: number;
+  targetCompressed?: boolean;
+  compressedTakeProfit?: number;
+  unrealizedGainPips?: number;
+  initialRiskPips?: number;
 }
 
 export interface Position {
@@ -1066,6 +1074,14 @@ export interface Position {
   pnlPercent: number;
   riskReward: number;
   invalidation?: PositionInvalidationStatus;
+  initialStopLoss?: number;
+  initialTakeProfit?: number;
+  isBreakevenLocked?: boolean;
+  trailingStopActive?: boolean;
+  targetCompressed?: boolean;
+  compressionReason?: string;
+  structuralOverrideTriggered?: boolean;
+  confidenceAtEntry?: number;
 }
 
 export interface TradeHistoryItem {

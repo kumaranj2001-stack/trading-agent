@@ -167,22 +167,90 @@ export class RiskManagerAgent extends BaseAgent {
 
     const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
 
-    let stopDistance = Math.abs(currentPrice - technical.suggestedStopLoss);
-    if (stopDistance < 12 * pipMultiplier) {
-      stopDistance = 22 * pipMultiplier;
+    // 4. Invalidation / Stop Loss & Dynamic Take Profit Calculation
+    // Dynamic Risk Calculator: Enforces initial Stop Loss anchored at a tight baseline of 5 pips beyond structural invalidation point.
+    let structuralPoint = currentPrice;
+    let stopDistance: number;
+    let calculatedStopLoss: number;
+
+    if (proposedAction === 'BUY') {
+      // For BUY setups: structural invalidation is keySupport / S1 floor
+      structuralPoint = (technical.keySupport && technical.keySupport < currentPrice)
+        ? technical.keySupport
+        : Number((currentPrice - 15 * pipMultiplier).toFixed(decimals));
+      
+      // Stop Loss anchored strictly 5 pips beyond structural invalidation point
+      calculatedStopLoss = Number((structuralPoint - 5 * pipMultiplier).toFixed(decimals));
+      stopDistance = Number((currentPrice - calculatedStopLoss).toFixed(decimals));
+      if (stopDistance <= 0) {
+        stopDistance = 5 * pipMultiplier;
+        calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
+      }
       adjustmentsMade.push(
-        `Technical suggested stop was too tight (< 12 pips). Recalibrated stop distance to 22 pips (${(stopDistance / pipMultiplier).toFixed(0)} pips) beyond structural volatility envelope.`
+        `Dynamic Risk Calculator: Initial Stop Loss anchored tightly at ${calculatedStopLoss} (5 pips beyond structural support ${structuralPoint}).`
       );
+    } else if (proposedAction === 'SELL') {
+      // For SELL setups: structural invalidation is keyResistance / ceiling
+      structuralPoint = (technical.keyResistance && technical.keyResistance > currentPrice)
+        ? technical.keyResistance
+        : Number((currentPrice + 15 * pipMultiplier).toFixed(decimals));
+      
+      // Stop Loss anchored strictly 5 pips beyond structural invalidation point
+      calculatedStopLoss = Number((structuralPoint + 5 * pipMultiplier).toFixed(decimals));
+      stopDistance = Number((calculatedStopLoss - currentPrice).toFixed(decimals));
+      if (stopDistance <= 0) {
+        stopDistance = 5 * pipMultiplier;
+        calculatedStopLoss = Number((currentPrice + stopDistance).toFixed(decimals));
+      }
+      adjustmentsMade.push(
+        `Dynamic Risk Calculator: Initial Stop Loss anchored tightly at ${calculatedStopLoss} (5 pips beyond structural resistance ${structuralPoint}).`
+      );
+    } else {
+      stopDistance = 20 * pipMultiplier;
+      calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
     }
 
-    const targetDistance = stopDistance * 2.2;
-    let calculatedStopLoss: number;
+    // Dynamic Take Profit Ceiling: Hard-floored minimum of 10 pips during scalp regimes
+    // up to target bandwidths of 100 to 500 pips during high-conviction macro expansions.
+    const overallConfidenceScore = Math.round(
+      (technical.confidenceScore * 0.40) +
+      (fundamental.confidenceScore * 0.35) +
+      ((news?.confidenceScore || 70) * 0.15) +
+      (forex.confidenceScore * 0.10)
+    );
+
+    const isHighConvictionMacro = overallConfidenceScore >= 80 || 
+      (fundamental.macroRegime && (fundamental.macroRegime.includes('Expansion') || fundamental.macroRegime.includes('Tightening'))) ||
+      pair === 'XAU/USD' || pair === 'WTI_CRUDE';
+    const isLowConvictionScalp = overallConfidenceScore < 72;
+
+    let targetDistance = stopDistance * 2.0;
+
+    if (isLowConvictionScalp) {
+      // Hard-floored minimum of 10 pips for scalp regimes
+      const scalpDistance = Math.max(10 * pipMultiplier, stopDistance * 1.5);
+      targetDistance = Math.max(10 * pipMultiplier, Math.min(25 * pipMultiplier, scalpDistance));
+      adjustmentsMade.push(
+        `Regime Adaptive Target: Scalp / low-conviction regime (${overallConfidenceScore}% conf). Target locked to hard-floored ${(targetDistance / pipMultiplier).toFixed(0)} pips (min 10-pip floor).`
+      );
+    } else if (isHighConvictionMacro) {
+      // Scales dynamically from 100 to 500 pips during macro-driven trend expansions
+      const expansionMultiplier = overallConfidenceScore >= 88 ? 5.5 : 4.0;
+      const macroDistance = stopDistance * expansionMultiplier;
+      targetDistance = Math.max(100 * pipMultiplier, Math.min(500 * pipMultiplier, macroDistance));
+      adjustmentsMade.push(
+        `Regime Adaptive Target: High-conviction macro expansion (${overallConfidenceScore}% conf). Target scaled up to ${(targetDistance / pipMultiplier).toFixed(0)} pips (bandwidth 100-500 pips).`
+      );
+    } else {
+      // Standard balanced regime
+      targetDistance = Math.max(30 * pipMultiplier, Math.min(90 * pipMultiplier, stopDistance * 2.5));
+    }
+
     let calculatedTakeProfit1: number;
     let calculatedTakeProfit2: number;
 
     if (proposedAction === 'SELL') {
       // 🎯 FOR SHORT / SELL: Stop Loss MUST be strictly ABOVE entry, Target MUST be strictly BELOW entry
-      calculatedStopLoss = Number((currentPrice + stopDistance).toFixed(decimals));
       calculatedTakeProfit1 = Number((currentPrice - targetDistance).toFixed(decimals));
       calculatedTakeProfit2 = Number((currentPrice - targetDistance * 1.5).toFixed(decimals));
 
@@ -198,7 +266,6 @@ export class RiskManagerAgent extends BaseAgent {
       }
     } else if (proposedAction === 'BUY') {
       // 🎯 FOR LONG / BUY: Stop Loss MUST be strictly BELOW entry, Target MUST be strictly ABOVE entry
-      calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
       calculatedTakeProfit1 = Number((currentPrice + targetDistance).toFixed(decimals));
       calculatedTakeProfit2 = Number((currentPrice + targetDistance * 1.5).toFixed(decimals));
 
@@ -213,9 +280,16 @@ export class RiskManagerAgent extends BaseAgent {
         calculatedTakeProfit2 = Number((currentPrice + Math.abs(targetDistance * 1.5)).toFixed(decimals));
       }
     } else {
-      calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
       calculatedTakeProfit1 = Number((currentPrice + targetDistance).toFixed(decimals));
       calculatedTakeProfit2 = Number((currentPrice + targetDistance * 1.5).toFixed(decimals));
+    }
+
+    // Conditional Execution: Strict Verification of Confidence Threshold
+    const VERIFIED_CONFIDENCE_THRESHOLD = 68;
+    if (overallConfidenceScore < VERIFIED_CONFIDENCE_THRESHOLD && proposedAction !== 'NO_TRADE') {
+      vetoReasons.push(
+        `Confidence threshold verification failed: Swarm consensus confidence (${overallConfidenceScore}%) falls below verified institutional threshold (${VERIFIED_CONFIDENCE_THRESHOLD}%). Trade execution blocked by Risk Governance.`
+      );
     }
 
     const riskRewardRatio = Number((targetDistance / stopDistance).toFixed(2));
