@@ -971,12 +971,8 @@ export default function Home() {
         sessionInfo={sessionInfo}
       />
 
-      {/* Main Content Area */}
-      <main className={`flex-1 w-full mx-auto ${
-        activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab'
-          ? 'p-0 max-w-full'
-          : 'max-w-7xl p-3 sm:p-4 space-y-4'
-      }`}>
+      {/* Main Content Area: Strictly constrained within Header's exact max-w-7xl footprint */}
+      <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-4 space-y-4">
         {/* ❄️ Global State Freeze upon Market Closure Banner */}
         {activeTab !== 'vision-atlas' && (activeTab as string) !== 'vision-atlas-lab' && (
           <MarketCloseFreezeBanner

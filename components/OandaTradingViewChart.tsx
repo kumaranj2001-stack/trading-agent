@@ -11,6 +11,7 @@ export interface OandaTradingViewChartProps {
   theme?: 'dark' | 'light';
   height?: number;
   containerIdPrefix?: string;
+  hideHeader?: boolean;
 }
 
 const getTimeframeInterval = (tf?: string): string => {
@@ -33,6 +34,7 @@ function OandaTradingViewChartComponent({
   theme = 'dark',
   height = 460,
   containerIdPrefix = 'oanda',
+  hideHeader = false,
 }: OandaTradingViewChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadError, setLoadError] = useState(false);
@@ -126,23 +128,25 @@ function OandaTradingViewChartComponent({
   };
 
   return (
-    <div className="w-full bg-terminal-950 rounded-xl overflow-hidden border border-terminal-border/80 shadow-xl">
-      <div className="flex flex-wrap items-center justify-between px-3 py-1.5 bg-terminal-900 border-b border-terminal-border text-xs font-mono gap-1">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="text-white font-bold text-[11px] sm:text-xs">OANDA / TRADINGVIEW LIVE FEED</span>
-          <span className="text-slate-400 text-[10px] sm:text-[11px] hidden xs:inline">• {tvSymbol}</span>
-          <span className="px-1.5 py-0.2 rounded bg-terminal-800 text-cyan-300 text-[10px] font-bold border border-terminal-border">
-            {timeframe.toUpperCase()}
-          </span>
+    <div className={`w-full ${hideHeader ? 'h-full bg-terminal-950' : 'bg-terminal-950 rounded-xl overflow-hidden border border-terminal-border/80 shadow-xl'}`}>
+      {!hideHeader && (
+        <div className="flex flex-wrap items-center justify-between px-3 py-1.5 bg-terminal-900 border-b border-terminal-border text-xs font-mono gap-1">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-white font-bold text-[11px] sm:text-xs">OANDA / TRADINGVIEW LIVE FEED</span>
+            <span className="text-slate-400 text-[10px] sm:text-[11px] hidden xs:inline">• {tvSymbol}</span>
+            <span className="px-1.5 py-0.2 rounded bg-terminal-800 text-cyan-300 text-[10px] font-bold border border-terminal-border">
+              {timeframe.toUpperCase()}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] sm:text-[10px] text-cyan-400 uppercase tracking-widest flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+              STREAMING
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[9px] sm:text-[10px] text-cyan-400 uppercase tracking-widest flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-            STREAMING
-          </span>
-        </div>
-      </div>
+      )}
 
       {loadError ? (
         <div className="h-72 sm:h-[460px] flex flex-col items-center justify-center p-6 text-center text-xs font-mono text-slate-400 space-y-3">
