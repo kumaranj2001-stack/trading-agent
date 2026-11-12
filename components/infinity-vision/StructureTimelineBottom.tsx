@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Clock, 
   RotateCcw, 
@@ -9,9 +9,11 @@ import {
   Layers, 
   Bell, 
   ShieldCheck, 
-  Database 
+  Database,
+  Radio
 } from 'lucide-react';
 import { CurrencyPair } from '@/lib/types';
+import { visionSystemLogger, VisionLogEntry } from '@/lib/visionSystemLogger';
 
 export interface StructureTimelineBottomProps {
   pair: CurrencyPair;
@@ -26,8 +28,16 @@ export const StructureTimelineBottom: React.FC<StructureTimelineBottomProps> = (
 }) => {
   const isLight = theme === 'light';
   const cleanPair = pair.replace('/', '');
-  const [activeTab, setActiveTab] = useState<'timeline' | 'sessions' | 'alerts' | 'validation' | 'account'>('timeline');
+  const [activeTab, setActiveTab] = useState<'timeline' | 'telemetry' | 'sessions' | 'alerts' | 'validation' | 'account'>('timeline');
   const [isExpanded, setIsExpanded] = useState<boolean>(true);
+  const [telemetryLogs, setTelemetryLogs] = useState<VisionLogEntry[]>(() => visionSystemLogger.getRecentLogs());
+
+  useEffect(() => {
+    const unsub = visionSystemLogger.subscribe(() => {
+      setTelemetryLogs([...visionSystemLogger.getRecentLogs()]);
+    });
+    return () => unsub();
+  }, []);
 
   const timelineEvents = [
     { time: '11 Nov 22:15', symbol: cleanPair, tf: '15M', event: 'Sell-side liquidity swept - New York session low', price: '4013.56', tagColor: 'text-amber-600 dark:text-amber-400' },
@@ -48,6 +58,7 @@ export const StructureTimelineBottom: React.FC<StructureTimelineBottomProps> = (
         <div className="flex items-center overflow-x-auto no-scrollbar font-semibold">
           {[
             { id: 'timeline', label: 'Structure Timeline' },
+            { id: 'telemetry', label: 'Vision Telemetry' },
             { id: 'sessions', label: 'Sessions' },
             { id: 'alerts', label: 'Alerts' },
             { id: 'validation', label: 'Validation' },
@@ -108,6 +119,68 @@ export const StructureTimelineBottom: React.FC<StructureTimelineBottomProps> = (
                 ))}
               </tbody>
             </table>
+          )}
+
+          {activeTab === 'telemetry' && (
+            <div className="w-full">
+              {telemetryLogs.length === 0 ? (
+                <div className="p-3 text-slate-500 text-xs">
+                  Streaming telemetry active. Awaiting first live market snapshot...
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 dark:border-terminal-border text-[10px] text-slate-500 font-sans uppercase">
+                      <th className="py-1.5 px-3">Time</th>
+                      <th className="py-1.5 px-3">Symbol</th>
+                      <th className="py-1.5 px-3">Price</th>
+                      <th className="py-1.5 px-3">Quantum Bias</th>
+                      <th className="py-1.5 px-3">DNA Similarity</th>
+                      <th className="py-1.5 px-3">Criteria Score</th>
+                      <th className="py-1.5 px-3 text-right">Verdict</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-terminal-border/60">
+                    {telemetryLogs.slice(-10).reverse().map((log) => {
+                      const isHighConf = log.verdict === 'HIGH_CONFIDENCE_ENTRY_TRIGGERED';
+                      return (
+                        <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-terminal-900/40 transition-colors">
+                          <td className="py-1.5 px-3 text-slate-500">{log.timestampFormatted}</td>
+                          <td className="py-1.5 px-3 font-bold text-slate-900 dark:text-white">{log.pair} ({log.timeframe})</td>
+                          <td className="py-1.5 px-3 font-mono">{log.livePrice.toFixed(2)}</td>
+                          <td className="py-1.5 px-3">
+                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                              log.quantumVisionBias === 'BULLISH' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'
+                            }`}>
+                              {log.quantumVisionBias} ({log.quantumVisionBias === 'BULLISH' ? log.bullishProbability : log.bearishProbability}%)
+                            </span>
+                          </td>
+                          <td className="py-1.5 px-3 text-amber-600 dark:text-amber-400 font-bold">
+                            {log.marketDnaPrint.similarityScore}%
+                          </td>
+                          <td className="py-1.5 px-3">
+                            <span className="font-bold text-cyan-600 dark:text-cyan-400">
+                              {log.thresholdCriteria.score}/5 MET
+                            </span>
+                          </td>
+                          <td className="py-1.5 px-3 text-right font-bold">
+                            {isHighConf ? (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-white text-[9px]">
+                                HIGH CONFIDENCE ENTRY
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-[10px]">
+                                MONITORING SETUP
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
           )}
 
           {activeTab === 'sessions' && (

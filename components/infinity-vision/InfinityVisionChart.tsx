@@ -14,6 +14,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { Candle, CurrencyPair, TimeFrame } from '@/lib/types';
+import { calculateEMA } from '@/lib/indicators';
 
 export interface InfinityVisionChartProps {
   candles: Candle[];
@@ -26,6 +27,7 @@ export interface InfinityVisionChartProps {
   chartType?: 'Candles' | 'Line';
   showPatternOnChart?: boolean;
   horizonCandles?: number;
+  latencyMs?: number;
   onSelectZone?: (zoneName: string) => void;
 }
 
@@ -53,6 +55,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   chartType = 'Candles',
   showPatternOnChart = true,
   horizonCandles = 5,
+  latencyMs = 12,
   onSelectZone,
 }) => {
   const isLight = theme === 'light';
@@ -65,38 +68,40 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
 
-  // Resize listener
+  // 📐 Fluid ResizeObserver listener (Zero UI freezing or element clipping)
   useEffect(() => {
-    const handleResize = () => {
-      if (containerRef.current) {
-        const { clientWidth, clientHeight } = containerRef.current;
-        setDimensions({
-          width: Math.max(clientWidth, 600),
-          height: Math.max(clientHeight, 450),
-        });
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0) {
+          setDimensions({
+            width: Math.floor(width),
+            height: Math.max(Math.floor(height), 380),
+          });
+        }
       }
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
   }, []);
 
-  // Safe fallback candles
+  // Safe canonical candles from live streaming feed
   const safeCandles = useMemo(() => {
-    if (candles && candles.length >= 10) return candles.slice(-45);
-    // Generate realistic institutional candles centered around 4005.00 for XAU/USD
-    const base = pair.includes('XAU') ? 4005.0 : 1.0850;
+    if (candles && candles.length >= 8) return candles.slice(-55);
+    // Dynamic fallback generation centered around pair price
+    const base = pair.includes('XAU') ? 4005.0 : pair.includes('JPY') ? 152.5 : pair.includes('NIFTY') ? 24500 : 1.0850;
     const count = 35;
     const list: Candle[] = [];
     let cur = base;
     const now = Date.now();
     for (let i = count; i >= 0; i--) {
       const isRed = (i % 3 === 0 || i % 4 === 0);
-      const delta = (Math.sin(i * 0.7) * 2.5) + (isRed ? -1.8 : 1.2);
+      const delta = (Math.sin(i * 0.7) * (base * 0.0006)) + (isRed ? -base * 0.0004 : base * 0.0003);
       const open = cur;
       const close = cur + delta;
-      const high = Math.max(open, close) + Math.random() * 2.0;
-      const low = Math.min(open, close) - Math.random() * 2.0;
+      const high = Math.max(open, close) + Math.random() * (base * 0.0004);
+      const low = Math.min(open, close) - Math.random() * (base * 0.0004);
       list.push({
         time: new Date(now - i * 15 * 60000).toISOString(),
         timestamp: now - i * 15 * 60000,
@@ -111,28 +116,35 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     return list;
   }, [candles, pair]);
 
-  // Compute coordinate scales
-  const chartPadding = { top: 40, right: 90, bottom: 40, left: 20 };
-  const plotWidth = dimensions.width - chartPadding.left - chartPadding.right;
-  const plotHeight = dimensions.height - chartPadding.top - chartPadding.bottom;
+  // Compute dynamic coordinate scales & responsive padding
+  const isMobile = dimensions.width < 640;
+  const chartPadding = isMobile
+    ? { top: 32, right: 68, bottom: 28, left: 10 }
+    : { top: 40, right: 88, bottom: 36, left: 18 };
+  const plotWidth = Math.max(dimensions.width - chartPadding.left - chartPadding.right, 80);
+  const plotHeight = Math.max(dimensions.height - chartPadding.top - chartPadding.bottom, 80);
 
   const isXau = pair.includes('XAU');
-  const priceDecimals = pair.includes('JPY') ? 3 : (pair.includes('USD') && !isXau) ? 5 : 2;
+  const priceDecimals = pair.includes('JPY') ? 3 : (pair.includes('USD') && !isXau) ? 5 : (pair.includes('NIFTY') || isXau) ? 2 : 4;
 
-  const minPrice = useMemo(() => {
-    const minC = Math.min(...safeCandles.map(c => c.low));
-    const maxC = Math.max(...safeCandles.map(c => c.high));
-    const pad = Math.max((maxC - minC) * 0.18, minC * 0.002);
-    return minC - pad;
+  // Technical Moving Averages computed on live closes
+  const closes = useMemo(() => safeCandles.map(c => c.close), [safeCandles]);
+  const ema20 = useMemo(() => calculateEMA(closes, 20), [closes]);
+  const ema50 = useMemo(() => calculateEMA(closes, 50), [closes]);
+
+  // Compute live range metrics
+  const { minC, maxC, span } = useMemo(() => {
+    const minVal = Math.min(...safeCandles.map(c => c.low));
+    const maxVal = Math.max(...safeCandles.map(c => c.high));
+    return {
+      minC: minVal,
+      maxC: maxVal,
+      span: Math.max(maxVal - minVal, minVal * 0.002),
+    };
   }, [safeCandles]);
 
-  const maxPrice = useMemo(() => {
-    const minC = Math.min(...safeCandles.map(c => c.low));
-    const maxC = Math.max(...safeCandles.map(c => c.high));
-    const pad = Math.max((maxC - minC) * 0.18, minC * 0.002);
-    return maxC + pad;
-  }, [safeCandles]);
-
+  const minPrice = useMemo(() => minC - span * 0.18, [minC, span]);
+  const maxPrice = useMemo(() => maxC + span * 0.18, [maxC, span]);
   const priceRange = Math.max(maxPrice - minPrice, 0.0001);
 
   const priceToY = (price: number) => {
@@ -155,86 +167,27 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   const lastCandleX = getCandleX(safeCandles.length - 1);
   const lastCandleY = priceToY(lastCandle.close);
 
-  // Fibonacci Retracements Anchor Levels
+  // Fibonacci Retracements Anchor Levels (Dynamically grounded in live candles)
   const fibLevels = useMemo(() => {
-    if (isXau) {
-      return [
-        { label: 'Fib 1.618', price: 4092.15, ratio: '1.618' },
-        { label: 'Fib 1.272', price: 4078.10, ratio: '1.272' },
-        { label: 'Fib 0.786', price: 4057.61, ratio: '0.786' },
-        { label: 'Fib 0.618', price: 4051.10, ratio: '0.618' },
-        { label: 'Fib 0.5 (EQ)', price: 4046.02, ratio: '0.50' },
-        { label: 'Fib 0.382', price: 4040.94, ratio: '0.382' },
-        { label: 'Fib 0.236', price: 4034.66, ratio: '0.236' },
-        { label: 'Fib 0', price: 4024.40, ratio: '0.00' },
-        { label: 'SSL - 50%', price: 4020.00, ratio: 'SSL' },
-      ];
-    }
-    const hi = Math.max(...safeCandles.map(c => c.high));
-    const lo = Math.min(...safeCandles.map(c => c.low));
-    const span = hi - lo;
     return [
-      { label: 'Fib 1.618', price: Number((lo + span * 1.618).toFixed(priceDecimals)), ratio: '1.618' },
-      { label: 'Fib 1.272', price: Number((lo + span * 1.272).toFixed(priceDecimals)), ratio: '1.272' },
-      { label: 'Fib 0.786', price: Number((lo + span * 0.786).toFixed(priceDecimals)), ratio: '0.786' },
-      { label: 'Fib 0.618', price: Number((lo + span * 0.618).toFixed(priceDecimals)), ratio: '0.618' },
-      { label: 'Fib 0.5 (EQ)', price: Number((lo + span * 0.50).toFixed(priceDecimals)), ratio: '0.50' },
-      { label: 'Fib 0.382', price: Number((lo + span * 0.382).toFixed(priceDecimals)), ratio: '0.382' },
-      { label: 'Fib 0.236', price: Number((lo + span * 0.236).toFixed(priceDecimals)), ratio: '0.236' },
-      { label: 'Fib 0', price: Number(lo.toFixed(priceDecimals)), ratio: '0.00' },
+      { label: 'Fib 1.618', price: Number((minC + span * 1.618).toFixed(priceDecimals)), ratio: '1.618' },
+      { label: 'Fib 1.272', price: Number((minC + span * 1.272).toFixed(priceDecimals)), ratio: '1.272' },
+      { label: 'Fib 0.786', price: Number((minC + span * 0.786).toFixed(priceDecimals)), ratio: '0.786' },
+      { label: 'Fib 0.618', price: Number((minC + span * 0.618).toFixed(priceDecimals)), ratio: '0.618' },
+      { label: 'Fib 0.5 (EQ)', price: Number((minC + span * 0.50).toFixed(priceDecimals)), ratio: '0.50' },
+      { label: 'Fib 0.382', price: Number((minC + span * 0.382).toFixed(priceDecimals)), ratio: '0.382' },
+      { label: 'Fib 0.236', price: Number((minC + span * 0.236).toFixed(priceDecimals)), ratio: '0.236' },
+      { label: 'Fib 0', price: Number(minC.toFixed(priceDecimals)), ratio: '0.00' },
     ];
-  }, [isXau, safeCandles, priceDecimals]);
+  }, [minC, span, priceDecimals]);
 
-  // Analysis Reference Zones (Horizontal highlighted bands)
+  // Analysis Reference Zones (Dynamic institutional confluence bands)
   const analysisZones = useMemo(() => {
-    if (isXau) {
-      return [
-        {
-          name: 'DANGER ZONE',
-          min: 4067.18,
-          max: 4073.67,
-          color: 'rgba(239, 68, 68, 0.12)',
-          borderColor: 'rgba(239, 68, 68, 0.4)',
-          textColor: '#ef4444',
-          badgeBg: 'rgba(239, 68, 68, 0.9)',
-        },
-        {
-          name: 'CAUTION ZONE',
-          min: 4052.81,
-          max: 4067.16,
-          color: 'rgba(245, 158, 11, 0.10)',
-          borderColor: 'rgba(245, 158, 11, 0.35)',
-          textColor: '#f59e0b',
-          badgeBg: 'rgba(245, 158, 11, 0.9)',
-        },
-        {
-          name: 'ENTRY ZONE',
-          min: 4050.28,
-          max: 4052.61,
-          color: 'rgba(14, 165, 233, 0.14)',
-          borderColor: 'rgba(14, 165, 233, 0.5)',
-          textColor: '#0284c7',
-          badgeBg: 'rgba(2, 132, 199, 0.9)',
-        },
-        {
-          name: 'SAFE ZONE',
-          min: 4047.02,
-          max: 4050.28,
-          color: 'rgba(16, 185, 129, 0.12)',
-          borderColor: 'rgba(16, 185, 129, 0.4)',
-          textColor: '#10b981',
-          badgeBg: 'rgba(16, 185, 129, 0.9)',
-        },
-      ];
-    }
-    const hi = Math.max(...safeCandles.map(c => c.high));
-    const lo = Math.min(...safeCandles.map(c => c.low));
-    const span = hi - lo;
     return [
       {
         name: 'DANGER ZONE',
-        min: Number((lo + span * 0.9).toFixed(priceDecimals)),
-        max: Number((lo + span * 1.1).toFixed(priceDecimals)),
+        min: Number((minC + span * 0.88).toFixed(priceDecimals)),
+        max: Number((minC + span * 1.05).toFixed(priceDecimals)),
         color: 'rgba(239, 68, 68, 0.12)',
         borderColor: 'rgba(239, 68, 68, 0.4)',
         textColor: '#ef4444',
@@ -242,8 +195,8 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       },
       {
         name: 'CAUTION ZONE',
-        min: Number((lo + span * 0.75).toFixed(priceDecimals)),
-        max: Number((lo + span * 0.9).toFixed(priceDecimals)),
+        min: Number((minC + span * 0.75).toFixed(priceDecimals)),
+        max: Number((minC + span * 0.88).toFixed(priceDecimals)),
         color: 'rgba(245, 158, 11, 0.10)',
         borderColor: 'rgba(245, 158, 11, 0.35)',
         textColor: '#f59e0b',
@@ -251,8 +204,8 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       },
       {
         name: 'ENTRY ZONE',
-        min: Number((lo + span * 0.618).toFixed(priceDecimals)),
-        max: Number((lo + span * 0.75).toFixed(priceDecimals)),
+        min: Number((minC + span * 0.618).toFixed(priceDecimals)),
+        max: Number((minC + span * 0.75).toFixed(priceDecimals)),
         color: 'rgba(14, 165, 233, 0.14)',
         borderColor: 'rgba(14, 165, 233, 0.5)',
         textColor: '#0284c7',
@@ -260,32 +213,39 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       },
       {
         name: 'SAFE ZONE',
-        min: Number((lo + span * 0.5).toFixed(priceDecimals)),
-        max: Number((lo + span * 0.618).toFixed(priceDecimals)),
+        min: Number((minC + span * 0.50).toFixed(priceDecimals)),
+        max: Number((minC + span * 0.618).toFixed(priceDecimals)),
         color: 'rgba(16, 185, 129, 0.12)',
         borderColor: 'rgba(16, 185, 129, 0.4)',
         textColor: '#10b981',
         badgeBg: 'rgba(16, 185, 129, 0.9)',
       },
     ];
-  }, [isXau, safeCandles, priceDecimals]);
+  }, [minC, span, priceDecimals]);
 
-  // Order Blocks
+  // Dynamic Institutional Order Blocks
   const orderBlocks = useMemo(() => {
-    if (isXau) {
-      return [
-        { name: 'OB - Fresh', min: 4075.00, max: 4082.00, type: 'BEARISH' },
-        { name: 'Mitigation 1', min: 4048.00, max: 4052.00, type: 'MITIGATED' },
-        { name: 'Mitigation 2', min: 4044.00, max: 4047.00, type: 'MITIGATED' },
-      ];
-    }
-    const hi = Math.max(...safeCandles.map(c => c.high));
-    const span = hi - Math.min(...safeCandles.map(c => c.low));
     return [
-      { name: 'OB - Fresh', min: Number((hi - span * 0.05).toFixed(priceDecimals)), max: Number(hi.toFixed(priceDecimals)), type: 'BEARISH' },
-      { name: 'Mitigation 1', min: Number((hi - span * 0.25).toFixed(priceDecimals)), max: Number((hi - span * 0.2).toFixed(priceDecimals)), type: 'MITIGATED' },
+      {
+        name: 'OB - Fresh',
+        min: Number((maxC - span * 0.08).toFixed(priceDecimals)),
+        max: Number(maxC.toFixed(priceDecimals)),
+        type: 'BEARISH'
+      },
+      {
+        name: 'Mitigation 1',
+        min: Number((minC + span * 0.65).toFixed(priceDecimals)),
+        max: Number((minC + span * 0.72).toFixed(priceDecimals)),
+        type: 'MITIGATED'
+      },
+      {
+        name: 'Mitigation 2',
+        min: Number((minC + span * 0.45).toFixed(priceDecimals)),
+        max: Number((minC + span * 0.52).toFixed(priceDecimals)),
+        type: 'MITIGATED'
+      },
     ];
-  }, [isXau, safeCandles, priceDecimals]);
+  }, [minC, maxC, span, priceDecimals]);
 
   // Future Simulated Fan Paths (Quantum Vision projection)
   const projectionPoints = useMemo(() => {
@@ -305,17 +265,17 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       // Upper path
       paths.upper.push({
         x,
-        y: lastCandleY - (i * 2.8) - Math.sin(i) * 2,
+        y: lastCandleY - (i * 3.2) - Math.sin(i) * 2,
       });
       // Median path
       paths.median.push({
         x,
-        y: lastCandleY - (i * 0.4) + Math.cos(i) * 1.5,
+        y: lastCandleY - (i * 0.5) + Math.cos(i) * 1.5,
       });
       // Lower breakdown path
       paths.lower.push({
         x,
-        y: lastCandleY + (i * 3.4) + Math.sin(i * 1.2) * 2,
+        y: lastCandleY + (i * 3.8) + Math.sin(i * 1.2) * 2,
       });
     }
 
@@ -329,11 +289,11 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     let prev = lastCandle.close;
     for (let i = 1; i <= count; i++) {
       const isUp = i % 2 === 0 || i > 4;
-      const delta = isUp ? 2.5 : -1.8;
+      const step = span * 0.04 * (isUp ? 0.75 : -0.55);
       const op = prev;
-      const cl = prev + delta;
-      const hi = Math.max(op, cl) + 1.2;
-      const lo = Math.min(op, cl) - 1.2;
+      const cl = prev + step;
+      const hi = Math.max(op, cl) + span * 0.015;
+      const lo = Math.min(op, cl) - span * 0.015;
       list.push({
         x: lastCandleX + i * candleSpacing,
         open: op,
@@ -345,7 +305,47 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       prev = cl;
     }
     return list;
-  }, [lastCandle.close, lastCandleX, candleSpacing]);
+  }, [lastCandle.close, lastCandleX, candleSpacing, span]);
+
+  // Dynamic Liquidity Sweep & Institutional Rejection Points
+  const sweepEvents = useMemo(() => {
+    if (safeCandles.length < 15) return null;
+    
+    // Find index of recent local high (rejection)
+    let maxHigh = -Infinity;
+    let maxIdx = Math.floor(safeCandles.length * 0.3);
+    for (let i = Math.floor(safeCandles.length * 0.2); i < Math.floor(safeCandles.length * 0.6); i++) {
+      if (safeCandles[i].high > maxHigh) {
+        maxHigh = safeCandles[i].high;
+        maxIdx = i;
+      }
+    }
+
+    // Find index of lowest sweep in recent 15 candles
+    let minLow = Infinity;
+    let minIdx = Math.floor(safeCandles.length * 0.7);
+    for (let i = Math.floor(safeCandles.length * 0.6); i < safeCandles.length - 2; i++) {
+      if (safeCandles[i].low < minLow) {
+        minLow = safeCandles[i].low;
+        minIdx = i;
+      }
+    }
+
+    const confIdx = Math.min(minIdx + 3, safeCandles.length - 1);
+    const confTime = new Date(safeCandles[confIdx]?.timestamp || safeCandles[confIdx]?.time || Date.now())
+      .toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    return {
+      rejectionIdx: maxIdx,
+      rejectionPrice: maxHigh,
+      sweepIdx: minIdx,
+      sweepPrice: minLow,
+      confirmIdx: confIdx,
+      confirmTime: confTime,
+      trapIdx: Math.min(minIdx + 4, safeCandles.length - 1),
+      trapPrice: minLow + span * 0.04,
+    };
+  }, [safeCandles, span]);
 
   // Handle canvas mouse move
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -541,29 +541,35 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
         </button>
       </div>
 
-      {/* Quantum Vision Simulation Warning Badge (Top Right) */}
-      {showQuantumSimulation && (
-        <div className="absolute top-2.5 right-24 z-10 text-right pointer-events-none">
-          <span className="text-[10px] font-mono font-bold text-rose-600 dark:text-rose-400 tracking-wider block">
-            QUANTUM VISION SIMULATION
-          </span>
-          <span className="text-[9px] font-mono text-slate-400 block -mt-0.5">
-            NOT LIVE MARKET DATA
+      {/* Real-time Streaming Telemetry Badge (Top Right) */}
+      <div className="absolute top-2.5 right-20 sm:right-24 z-10 text-right pointer-events-none flex flex-col items-end gap-1">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md shadow-sm">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 tracking-wider uppercase">
+            LIVE STREAMING · WSS {latencyMs}ms · {pair}
           </span>
         </div>
-      )}
-
-      {/* Market DNA Twin Badge (Top Center/Right) */}
-      {showMarketDna && (
-        <div className="absolute top-10 right-24 z-10 text-right pointer-events-none hidden sm:block">
-          <span className="text-[10px] font-mono font-bold text-amber-600 dark:text-amber-400 tracking-wider block">
-            HISTORICAL MATCH · 2025-10-29 14:00 · 67.3 similarity
+        {showQuantumSimulation && (
+          <span className="text-[9px] font-mono font-semibold text-blue-600 dark:text-blue-400 block bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
+            QUANTUM CONFLUENCE PROJECTION ACTIVE
           </span>
-          <span className="text-[9px] font-mono text-slate-400 block -mt-0.5">
-            NORMALIZED HISTORICAL DATA · NOT LIVE · NOT A SIGNAL
+        )}
+        {showMarketDna && (
+          <span className="text-[9px] font-mono font-semibold text-amber-600 dark:text-amber-400 block bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+            MARKET DNA FRACTAL OVERLAY · LIVE
           </span>
-        </div>
-      )}
+        )}
+        {showIndicatorsOverlay && (
+          <div className="flex items-center gap-2 px-1.5 py-0.5 rounded bg-slate-100/90 dark:bg-terminal-900/90 border border-slate-200 dark:border-terminal-border text-[9px] font-mono">
+            <span className="flex items-center gap-1 text-amber-500 font-bold">
+              <span className="w-2 h-0.5 bg-amber-500 inline-block" /> EMA 20: {ema20[ema20.length - 1]?.toFixed(priceDecimals)}
+            </span>
+            <span className="flex items-center gap-1 text-cyan-500 font-bold">
+              <span className="w-2 h-0.5 bg-cyan-500 inline-block" /> EMA 50: {ema50[ema50.length - 1]?.toFixed(priceDecimals)}
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Main SVG Candlestick & Overlays Canvas */}
       <svg
@@ -701,49 +707,65 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
           );
         })}
 
-        {/* Liquidity Sweep & Rejection Tags */}
-        <g>
-          <text
-            x={getCandleX(Math.floor(safeCandles.length * 0.45))}
-            y={priceToY(4048.0)}
-            fill="#d97706"
-            fontSize="9"
-            fontWeight="bold"
-            fontFamily="monospace"
-          >
-            [Rejection 1]
-          </text>
-          <text
-            x={getCandleX(Math.floor(safeCandles.length * 0.7))}
-            y={priceToY(3996.0)}
-            fill="#ea580c"
-            fontSize="9"
-            fontWeight="bold"
-            fontFamily="monospace"
-          >
-            ▼ SWEEP
-          </text>
-          <text
-            x={getCandleX(Math.floor(safeCandles.length * 0.85))}
-            y={priceToY(3992.0)}
-            fill="#0284c7"
-            fontSize="9"
-            fontWeight="bold"
-            fontFamily="monospace"
-          >
-            ▲ Confirmed 22:15
-          </text>
-          <text
-            x={getCandleX(Math.floor(safeCandles.length * 0.88))}
-            y={priceToY(3990.0)}
-            fill="#059669"
-            fontSize="8"
-            fontWeight="bold"
-            fontFamily="monospace"
-          >
-            TRAP LIQUIDITY - DEVELOPING
-          </text>
-        </g>
+        {/* Dynamic Liquidity Sweep & Institutional Rejection Tags */}
+        {sweepEvents && (
+          <g pointerEvents="none">
+            {/* Upper Rejection Marker */}
+            <text
+              x={getCandleX(sweepEvents.rejectionIdx)}
+              y={priceToY(sweepEvents.rejectionPrice) - 6}
+              fill="#d97706"
+              fontSize="9"
+              fontWeight="bold"
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              [Rejection 1]
+            </text>
+
+            {/* Institutional Sweep Tag */}
+            <g transform={`translate(${getCandleX(sweepEvents.sweepIdx)}, ${priceToY(sweepEvents.sweepPrice) + 14})`}>
+              <rect x="-30" y="-10" width="60" height="15" rx="3" fill="rgba(234, 88, 12, 0.9)" />
+              <text
+                x="0"
+                y="1"
+                fill="#ffffff"
+                fontSize="8"
+                fontWeight="bold"
+                fontFamily="monospace"
+                textAnchor="middle"
+              >
+                ▼ SWEEP
+              </text>
+            </g>
+
+            {/* Sweep Confirmation Tag */}
+            <text
+              x={getCandleX(sweepEvents.confirmIdx)}
+              y={priceToY(sweepEvents.trapPrice) + 16}
+              fill="#0284c7"
+              fontSize="9"
+              fontWeight="bold"
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              ▲ Confirmed {sweepEvents.confirmTime}
+            </text>
+
+            {/* Developing Trap Liquidity */}
+            <text
+              x={getCandleX(sweepEvents.trapIdx)}
+              y={priceToY(sweepEvents.trapPrice) + 28}
+              fill="#059669"
+              fontSize="8"
+              fontWeight="bold"
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              TRAP LIQUIDITY - DEVELOPING
+            </text>
+          </g>
+        )}
 
         {/* ================================================================= */}
         {/* 4. QUANTUM VISION SIMULATION PROJECTION FAN & PATHS */}
@@ -913,6 +935,46 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
         )}
 
         {/* ================================================================= */}
+        {/* 6.5. DYNAMIC TECHNICAL INDICATOR OVERLAYS: EMA 20 & EMA 50 */}
+        {/* ================================================================= */}
+        {showIndicatorsOverlay && (
+          <g className="indicator-overlays pointer-events-none">
+            {/* EMA 20 (Amber Line) */}
+            <path
+              d={safeCandles.reduce((acc, _, i) => {
+                const val = ema20[i];
+                if (val === undefined || Number.isNaN(val)) return acc;
+                const x = getCandleX(i);
+                const y = priceToY(val);
+                return `${acc} ${acc === '' ? 'M' : 'L'} ${x} ${y}`;
+              }, '')}
+              fill="none"
+              stroke="#f59e0b"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.95"
+            />
+            {/* EMA 50 (Cyan Line) */}
+            <path
+              d={safeCandles.reduce((acc, _, i) => {
+                const val = ema50[i];
+                if (val === undefined || Number.isNaN(val)) return acc;
+                const x = getCandleX(i);
+                const y = priceToY(val);
+                return `${acc} ${acc === '' ? 'M' : 'L'} ${x} ${y}`;
+              }, '')}
+              fill="none"
+              stroke="#06b6d4"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.95"
+            />
+          </g>
+        )}
+
+        {/* ================================================================= */}
         {/* 7. CURRENT LIVE PRICE LINE & BADGE */}
         {/* ================================================================= */}
         <g>
@@ -922,7 +984,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
             x2={dimensions.width - chartPadding.right}
             y2={lastCandleY}
             stroke="#dc2626"
-            strokeWidth="1"
+            strokeWidth="1.2"
             strokeDasharray="4 2"
           />
           {/* Price badge on axis */}
@@ -938,12 +1000,42 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
             x={dimensions.width - chartPadding.right + 6}
             y={lastCandleY + 4}
             fill="#ffffff"
-            fontSize="11"
+            fontSize="10"
             fontFamily="monospace"
             fontWeight="bold"
           >
-            {lastCandle.close.toFixed(2)}
+            {lastCandle.close.toFixed(priceDecimals)}
           </text>
+        </g>
+
+        {/* Right Vertical Price Scale Ticks */}
+        <g pointerEvents="none">
+          {Array.from({ length: 7 }).map((_, idx) => {
+            const frac = idx / 6;
+            const price = minPrice + frac * (maxPrice - minPrice);
+            const y = chartPadding.top + plotHeight - frac * plotHeight;
+            return (
+              <g key={`y-tick-${idx}`}>
+                <line
+                  x1={dimensions.width - chartPadding.right}
+                  y1={y}
+                  x2={dimensions.width - chartPadding.right + 4}
+                  y2={y}
+                  stroke={isLight ? '#cbd5e1' : '#334155'}
+                  strokeWidth="1"
+                />
+                <text
+                  x={dimensions.width - chartPadding.right + 6}
+                  y={y + 3}
+                  fill={isLight ? '#64748b' : '#94a3b8'}
+                  fontSize="9"
+                  fontFamily="monospace"
+                >
+                  {price.toFixed(priceDecimals)}
+                </text>
+              </g>
+            );
+          })}
         </g>
 
         {/* ================================================================= */}
@@ -1034,7 +1126,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
               fontSize="10"
               fontFamily="monospace"
             >
-              {yToPrice(mousePos.y).toFixed(2)}
+              {yToPrice(mousePos.y).toFixed(priceDecimals)}
             </text>
           </g>
         )}

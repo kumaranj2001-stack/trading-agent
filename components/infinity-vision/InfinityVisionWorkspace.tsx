@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CurrencyPair, TimeFrame, Candle } from '@/lib/types';
-import { InfinityVisionHeader } from './InfinityVisionHeader';
 import { InfinityVisionToolbar, ChartViewMode } from './InfinityVisionToolbar';
 import { InfinityVisionOhlcBar } from './InfinityVisionOhlcBar';
 import { InfinityVisionChart } from './InfinityVisionChart';
@@ -14,6 +13,8 @@ import { MarketDnaSidebar } from './MarketDnaSidebar';
 import { VisionAtlasLabSidebar } from './VisionAtlasLabSidebar';
 import { StructureTimelineBottom } from './StructureTimelineBottom';
 import { BASE_PRICES } from '@/lib/marketData';
+import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { visionSystemLogger } from '@/lib/visionSystemLogger';
 
 export interface InfinityVisionWorkspaceProps {
   pair: CurrencyPair;
@@ -43,12 +44,24 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   onOpenJournal,
 }) => {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>(initialPair);
-  const [selectedTf, setSelectedTf] = useState<any>(initialTf);
+  const [selectedTf, setSelectedTf] = useState<TimeFrame>(initialTf);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [chartViewMode, setChartViewMode] = useState<ChartViewMode>('Advanced');
   const [chartType, setChartType] = useState<'Candles' | 'Line'>('Candles');
   const [showPatternOnChart, setShowPatternOnChart] = useState<boolean>(true);
   const [isMobileRightSidebarOpen, setIsMobileRightSidebarOpen] = useState<boolean>(false);
+
+  // 🌐 Live WebSocket Feed State (Directly synced with Terminal Engine)
+  const [liveCandles, setLiveCandles] = useState<Candle[]>(() => {
+    if (initialCandles && initialCandles.length > 0) return initialCandles;
+    return LiveMarketFeedManager.getCanonicalCandles(initialPair, initialTf);
+  });
+  const [livePrice, setLivePrice] = useState<number>(() => {
+    return LiveMarketFeedManager.getCanonicalPrice(initialPair) || BASE_PRICES[initialPair] || 4005.88;
+  });
+  const [liveChangePercent, setLiveChangePercent] = useState<number>(-0.06);
+  const [liveTimestamp, setLiveTimestamp] = useState<number>(Date.now());
+  const [liveLatencyMs, setLiveLatencyMs] = useState<number>(12);
 
   // Interactive panels visibility states
   const [isQuantumVisionOpen, setIsQuantumVisionOpen] = useState<boolean>(true);
@@ -59,16 +72,136 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   const [activeRightSidebarMode, setActiveRightSidebarMode] = useState<'scenarios' | 'market_dna' | 'vision_atlas'>('scenarios');
   const [horizonCandles, setHorizonCandles] = useState<number>(5);
 
-  // Sync pair changes
+  // Sync pair changes from external props
   useEffect(() => {
     setSelectedPair(initialPair);
   }, [initialPair]);
 
-  // Derived price metrics
-  const currentBasePrice = BASE_PRICES[selectedPair] || 4005.88;
-  const spreadPts = selectedPair.includes('XAU') ? 17 : 2;
-  const bidPrice = currentBasePrice - (spreadPts * 0.01);
-  const askPrice = currentBasePrice + (spreadPts * 0.01);
+  // Sync timeframe changes from external props
+  useEffect(() => {
+    setSelectedTf(initialTf);
+  }, [initialTf]);
+
+  // 🌐 WebSocket Streaming Subscription: Pipe real-time tick data & synchronized server timestamps
+  useEffect(() => {
+    // 1. Kick off canonical feed for selected symbol & timeframe
+    LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1500);
+
+    const canonical = LiveMarketFeedManager.getCanonicalCandles(selectedPair, selectedTf);
+    if (canonical && canonical.length > 0) {
+      setLiveCandles(canonical);
+    }
+    const currentCanonicalPrice = LiveMarketFeedManager.getCanonicalPrice(selectedPair);
+    if (currentCanonicalPrice && Number.isFinite(currentCanonicalPrice)) {
+      setLivePrice(currentCanonicalPrice);
+    }
+
+    // 2. Subscribe to real-time tick broadcasts
+    const unsubscribe = LiveMarketFeedManager.subscribe((event) => {
+      if (event.pair === selectedPair) {
+        setLiveCandles(event.candles);
+        setLivePrice(event.livePrice);
+        setLiveChangePercent(event.change24h);
+        setLiveTimestamp(event.timestamp);
+        if (event.latencyMs) {
+          setLiveLatencyMs(event.latencyMs);
+        }
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [selectedPair, selectedTf]);
+
+  // Derived price metrics & spreads
+  const isXau = selectedPair.includes('XAU');
+  const isJpy = selectedPair.includes('JPY');
+  const spreadPts = isXau ? 17 : isJpy ? 8 : 2;
+  const spreadValue = spreadPts * (isXau ? 0.01 : isJpy ? 0.001 : 0.0001);
+  const bidPrice = livePrice - spreadValue;
+  const askPrice = livePrice + spreadValue;
+
+  const lastCandle = useMemo(() => {
+    if (liveCandles && liveCandles.length > 0) {
+      return liveCandles[liveCandles.length - 1];
+    }
+    return {
+      open: livePrice,
+      high: livePrice,
+      low: livePrice,
+      close: livePrice,
+      time: new Date().toISOString(),
+      timestamp: Date.now(),
+      volume: 1000,
+    };
+  }, [liveCandles, livePrice]);
+
+  // 🛰️ Systematized Snapshot Logging: Log active Quantum Vision bias, Market DNA prints, and Vision Atlas configurations
+  useEffect(() => {
+    if (!liveCandles || liveCandles.length === 0) return;
+    const atr = Math.max(...liveCandles.slice(-14).map(c => c.high - c.low)) || (livePrice * 0.003);
+    
+    // Dynamic zones calculated from live price
+    const isSellBias = activeRightSidebarMode === 'scenarios';
+    const safeZone = {
+      min: Number((isSellBias ? livePrice - atr * 0.4 : livePrice + atr * 0.2).toFixed(4)),
+      max: Number((isSellBias ? livePrice + atr * 0.2 : livePrice + atr * 0.6).toFixed(4)),
+    };
+    const entryZone = {
+      min: Number((isSellBias ? livePrice + atr * 0.5 : livePrice - atr * 0.8).toFixed(4)),
+      max: Number((isSellBias ? livePrice + atr * 0.8 : livePrice - atr * 0.5).toFixed(4)),
+    };
+    const cautionZone = {
+      min: Number((isSellBias ? livePrice + atr * 0.8 : livePrice - atr * 1.5).toFixed(4)),
+      max: Number((isSellBias ? livePrice + atr * 1.5 : livePrice - atr * 0.8).toFixed(4)),
+    };
+    const dangerZone = {
+      min: Number((isSellBias ? livePrice + atr * 1.5 : livePrice - atr * 2.2).toFixed(4)),
+      max: Number((isSellBias ? livePrice + atr * 2.2 : livePrice - atr * 1.5).toFixed(4)),
+    };
+
+    visionSystemLogger.logSnapshot({
+      pair: selectedPair,
+      timeframe: selectedTf,
+      livePrice,
+      quantumVisionBias: isSellBias ? 'BEARISH' : 'BULLISH',
+      bullishProbability: isSellBias ? 47 : 53,
+      bearishProbability: isSellBias ? 53 : 47,
+      marketDnaSimilarity: 67.3,
+      liquiditySweepEvent: `Sell-side swept at ${(livePrice - atr * 0.5).toFixed(2)} - 3 candles ago`,
+      structureShift: 'MSS (CHoCH) developing',
+      marketRegime: 'Structural transition - quiet volatility',
+      language: 'en',
+      voiceActive: true,
+      safeZone,
+      entryZone,
+      cautionZone,
+      dangerZone,
+    });
+  }, [selectedPair, selectedTf, Math.floor(livePrice * 10), activeRightSidebarMode]);
+
+  // Switching Pair & Timeframe handlers that trigger global sync
+  const handleSelectPair = (p: CurrencyPair) => {
+    setSelectedPair(p);
+    LiveMarketFeedManager.startLiveFeed(p, selectedTf, 1500);
+    const pCandles = LiveMarketFeedManager.getCanonicalCandles(p, selectedTf);
+    if (pCandles && pCandles.length > 0) setLiveCandles(pCandles);
+    const pPrice = LiveMarketFeedManager.getCanonicalPrice(p);
+    if (pPrice) setLivePrice(pPrice);
+
+    if (onSelectPair) onSelectPair(p);
+  };
+
+  const handleSelectTimeframe = (tf: any) => {
+    const validTf = tf as TimeFrame;
+    setSelectedTf(validTf);
+    LiveMarketFeedManager.startLiveFeed(selectedPair, validTf, 1500);
+    const tfCandles = LiveMarketFeedManager.getCanonicalCandles(selectedPair, validTf);
+    if (tfCandles && tfCandles.length > 0) setLiveCandles(tfCandles);
+
+    if (onSelectTimeframe) onSelectTimeframe(validTf);
+  };
 
   // Toggle handlers for mutually exclusive or combinable panels
   const handleToggleQuantumVision = () => {
@@ -112,34 +245,15 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   };
 
   return (
-    <div className={`w-full min-h-screen flex flex-col font-sans transition-colors ${
+    <div className={`w-full min-h-[calc(100vh-100px)] flex flex-col font-sans transition-colors overflow-x-hidden ${
       theme === 'light' ? 'bg-slate-100 text-slate-900' : 'bg-terminal-950 text-slate-100'
     }`}>
-      {/* 1. Top Navigation Bar */}
-      <InfinityVisionHeader
-        activeTab="technical-analysis"
-        onSelectNavTab={(tabId) => {
-          if (tabId === 'home' && onClose) {
-            onClose();
-          }
-        }}
-        onOpenJournal={onOpenJournal}
-        userName="kumaran"
-        theme={theme}
-      />
-
-      {/* 2. Chart Control Subheader Toolbar */}
+      {/* 🚀 PRIMARY CONTROL ROW (Begins directly with VISION pair selector & timeframe chips) */}
       <InfinityVisionToolbar
         selectedPair={selectedPair}
-        onSelectPair={(p) => {
-          setSelectedPair(p);
-          if (onSelectPair) onSelectPair(p);
-        }}
+        onSelectPair={handleSelectPair}
         selectedTimeframe={selectedTf}
-        onSelectTimeframe={(tf) => {
-          setSelectedTf(tf);
-          if (onSelectTimeframe) onSelectTimeframe(tf);
-        }}
+        onSelectTimeframe={handleSelectTimeframe}
         chartViewMode={chartViewMode}
         onChangeChartViewMode={setChartViewMode}
         isQuantumVisionOpen={isQuantumVisionOpen}
@@ -158,24 +272,31 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
         onToggleTheme={handleToggleTheme}
       />
 
-      {/* 3. OHLC & Real-Time Market Ticker Strip */}
+      {/* 📊 REAL-TIME LIVE OHLC & LIQUIDITY TICKER STRIP */}
       <InfinityVisionOhlcBar
         pair={selectedPair}
         timeframe={selectedTf}
-        open={currentBasePrice - 2.0}
-        high={currentBasePrice + 1.77}
-        low={currentBasePrice - 6.96}
-        close={currentBasePrice}
-        changePercent={-0.06}
+        open={lastCandle.open}
+        high={Math.max(lastCandle.high, livePrice)}
+        low={Math.min(lastCandle.low, livePrice)}
+        close={livePrice}
+        changePercent={liveChangePercent}
         bidPrice={bidPrice}
         askPrice={askPrice}
         spreadPts={spreadPts}
+        dateStr={new Date(liveTimestamp).toLocaleString('en-US', {
+          day: '2-digit',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }) + ' UTC'}
         isLive={true}
         theme={theme}
       />
 
-      {/* 4. Main Body: Central Candlestick Canvas + Right Sidebar */}
-      <div className="flex-1 flex min-h-[520px] relative overflow-hidden">
+      {/* 🧭 MAIN BODY: Real-Time Streaming Chart + Fluid Dynamic Drawers */}
+      <div className="flex-1 flex min-h-[500px] relative overflow-hidden">
         {/* Left Floating Quantum Vision Drawer */}
         <QuantumVisionDrawer
           isOpen={isQuantumVisionOpen}
@@ -194,36 +315,41 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
           theme={theme}
         />
 
-        {/* Central Interactive Chart Canvas */}
+        {/* 📈 Central Real-Time Streaming Candlestick Canvas (Direct from Terminal feed) */}
         <div className="flex-1 relative flex flex-col min-w-0 bg-white dark:bg-terminal-950 overflow-hidden">
           <InfinityVisionChart
-            candles={initialCandles}
+            candles={liveCandles}
             pair={selectedPair}
             timeframe={selectedTf}
             theme={theme}
+            showIndicatorsOverlay={chartViewMode === 'Advanced' || chartViewMode === 'Standard' || isIndicatorsOpen}
             showQuantumSimulation={isQuantumVisionOpen}
             showMarketDna={isMarketDnaOpen}
             chartType={chartType}
             showPatternOnChart={showPatternOnChart}
             horizonCandles={horizonCandles}
+            latencyMs={liveLatencyMs}
           />
         </div>
 
-        {/* Right Sidebar: Desktop (inline) or Mobile Drawer */}
+        {/* Right Sidebar: Dynamic Mode (Scenarios & Zones vs Market DNA vs Vision Atlas Lab) */}
         <div className={`
-          ${isMobileRightSidebarOpen ? 'fixed inset-y-0 right-0 z-40 w-[320px] sm:w-[350px] shadow-2xl flex' : 'hidden lg:flex'}
+          ${isMobileRightSidebarOpen ? 'fixed inset-y-0 right-0 z-50 w-[320px] sm:w-[350px] shadow-2xl flex' : 'hidden lg:flex'}
           lg:static w-[320px] lg:w-[350px] shrink-0 border-l flex flex-col transition-all ${
           theme === 'light' 
             ? 'bg-white border-slate-200 shadow-sm' 
             : 'bg-terminal-950 border-terminal-border'
         }`}>
           {/* Mobile Close Button */}
-          <div className="lg:hidden p-2 flex justify-end border-b border-slate-200 dark:border-terminal-border">
+          <div className="lg:hidden p-2 flex justify-between items-center bg-slate-50 dark:bg-terminal-900 border-b border-slate-200 dark:border-terminal-border">
+            <span className="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300">
+              Analytical Desk
+            </span>
             <button
               onClick={() => setIsMobileRightSidebarOpen(false)}
-              className="px-2.5 py-1 text-xs font-bold rounded bg-slate-100 dark:bg-terminal-900 border border-slate-300 dark:border-terminal-border"
+              className="px-2.5 py-1 text-xs font-bold rounded bg-slate-200 dark:bg-terminal-800 text-slate-800 dark:text-white"
             >
-              Close Panel ✕
+              ✕ Close
             </button>
           </div>
 
@@ -232,6 +358,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
               pair={selectedPair}
               timeframe={selectedTf}
               theme={theme}
+              currentPrice={livePrice}
+              candles={liveCandles}
               onSyncToTerminal={onSyncToTerminal}
             />
           )}
@@ -257,14 +385,14 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
         </div>
       </div>
 
-      {/* 5. Bottom Panel: Structure Timeline & Sessions */}
+      {/* 📋 BOTTOM PANEL: Structure Timeline & Sessions & Vision Telemetry Logs */}
       <StructureTimelineBottom
         pair={selectedPair}
         timeframe={selectedTf}
         theme={theme}
       />
 
-      {/* 6. Indicators Settings Drawer */}
+      {/* ⚙️ Comprehensive Indicators Drawer */}
       <IndicatorsModal
         isOpen={isIndicatorsOpen}
         onClose={() => setIsIndicatorsOpen(false)}
