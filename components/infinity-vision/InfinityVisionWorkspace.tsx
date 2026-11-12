@@ -57,14 +57,15 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
     return LiveMarketFeedManager.getCanonicalCandles(initialPair, initialTf);
   });
   const [livePrice, setLivePrice] = useState<number>(() => {
-    return LiveMarketFeedManager.getCanonicalPrice(initialPair) || BASE_PRICES[initialPair] || 4005.88;
+    return LiveMarketFeedManager.getCanonicalPrice(initialPair) || BASE_PRICES[initialPair] || 4074.90;
   });
   const [liveChangePercent, setLiveChangePercent] = useState<number>(-0.06);
   const [liveTimestamp, setLiveTimestamp] = useState<number>(Date.now());
   const [liveLatencyMs, setLiveLatencyMs] = useState<number>(12);
+  const [isInterrupted, setIsInterrupted] = useState<boolean>(false);
 
   // Interactive panels visibility states
-  const [isQuantumVisionOpen, setIsQuantumVisionOpen] = useState<boolean>(true);
+  const [isQuantumVisionOpen, setIsQuantumVisionOpen] = useState<boolean>(false);
   const [isMarketDnaOpen, setIsMarketDnaOpen] = useState<boolean>(false);
   const [isVisionAtlasLabOpen, setIsVisionAtlasLabOpen] = useState<boolean>(false);
   const [isLiquidityOpen, setIsLiquidityOpen] = useState<boolean>(false);
@@ -75,6 +76,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   // Sync pair changes from external props
   useEffect(() => {
     setSelectedPair(initialPair);
+    const cp = LiveMarketFeedManager.getCanonicalPrice(initialPair);
+    if (cp && Number.isFinite(cp)) setLivePrice(cp);
   }, [initialPair]);
 
   // Sync timeframe changes from external props
@@ -82,21 +85,20 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
     setSelectedTf(initialTf);
   }, [initialTf]);
 
-  // 🌐 WebSocket Streaming Subscription: Pipe real-time tick data & synchronized server timestamps
+  // Sync candles from external props (Terminal parent state)
   useEffect(() => {
-    // 1. Kick off canonical feed for selected symbol & timeframe
-    LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1500);
-
-    const canonical = LiveMarketFeedManager.getCanonicalCandles(selectedPair, selectedTf);
-    if (canonical && canonical.length > 0) {
-      setLiveCandles(canonical);
+    if (initialCandles && initialCandles.length > 0) {
+      setLiveCandles(initialCandles);
+      const latest = initialCandles[initialCandles.length - 1];
+      if (latest && Number.isFinite(latest.close)) {
+        setLivePrice(latest.close);
+      }
     }
-    const currentCanonicalPrice = LiveMarketFeedManager.getCanonicalPrice(selectedPair);
-    if (currentCanonicalPrice && Number.isFinite(currentCanonicalPrice)) {
-      setLivePrice(currentCanonicalPrice);
-    }
+  }, [initialCandles]);
 
-    // 2. Subscribe to real-time tick broadcasts
+  // 🌐 WebSocket Streaming Subscription & Interruption Telemetry
+  useEffect(() => {
+    // 1. Subscribe to canonical tick broadcasts for the selected pair
     const unsubscribe = LiveMarketFeedManager.subscribe((event) => {
       if (event.pair === selectedPair) {
         setLiveCandles(event.candles);
@@ -109,18 +111,51 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
       }
     });
 
+    // 2. Subscribe to WebSocket telemetry for drop / latency interruption handling
+    const unsubTel = LiveMarketFeedManager.subscribeWebSocketTelemetry((tel) => {
+      const isStale = (Date.now() - tel.lastTickTimestamp) > 4000;
+      setIsInterrupted(!tel.isConnected || isStale);
+      if (tel.latencyMs) setLiveLatencyMs(tel.latencyMs);
+    });
+
+    const staleTimer = setInterval(() => {
+      const tel = LiveMarketFeedManager.getWebSocketTelemetry();
+      const isStale = (Date.now() - tel.lastTickTimestamp) > 4000;
+      setIsInterrupted(!tel.isConnected || isStale);
+    }, 1000);
+
     return () => {
       unsubscribe();
+      unsubTel();
+      clearInterval(staleTimer);
     };
   }, [selectedPair, selectedTf]);
 
-  // Derived price metrics & spreads
-  const isXau = selectedPair.includes('XAU');
+  const handleReconnect = () => {
+    LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1500);
+    setIsInterrupted(false);
+  };
+
+  // Derived price metrics & spreads calculated with exact decimal parity
+  const isIndianIndex = selectedPair === 'NIFTY 50' || selectedPair === 'BANK NIFTY';
+  const isIndianStock = selectedPair === 'RELIANCE' || selectedPair === 'TCS' || selectedPair === 'HDFC BANK' || selectedPair === 'INFY';
+  const isGold = selectedPair === 'XAU/USD';
+  const isSilver = selectedPair === 'XAG/USD';
+  const isPlatinum = selectedPair === 'XPT/USD';
+  const isCopper = selectedPair === 'COPPER';
+  const isOil = selectedPair === 'WTI_CRUDE' || selectedPair === 'BRENT_CRUDE';
   const isJpy = selectedPair.includes('JPY');
-  const spreadPts = isXau ? 17 : isJpy ? 8 : 2;
-  const spreadValue = spreadPts * (isXau ? 0.01 : isJpy ? 0.001 : 0.0001);
-  const bidPrice = livePrice - spreadValue;
-  const askPrice = livePrice + spreadValue;
+  const isRupee = selectedPair.includes('/INR');
+
+  let decimalCount = 5;
+  if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil) decimalCount = 2;
+  else if (isSilver || isJpy || isRupee) decimalCount = 3;
+  else if (isCopper) decimalCount = 4;
+
+  const spreadPts = isGold ? 17 : isIndianIndex ? 5 : isJpy ? 8 : isSilver ? 3 : 2;
+  const spreadValue = spreadPts * (isGold ? 0.05 : isIndianIndex ? 0.05 : isJpy ? 0.001 : 0.0001);
+  const bidPrice = Number((livePrice - spreadValue).toFixed(decimalCount));
+  const askPrice = Number((livePrice + spreadValue).toFixed(decimalCount));
 
   const lastCandle = useMemo(() => {
     if (liveCandles && liveCandles.length > 0) {
@@ -289,9 +324,12 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
           month: 'short',
           hour: '2-digit',
           minute: '2-digit',
+          second: '2-digit',
           hour12: false,
         }) + ' UTC'}
-        isLive={true}
+        isLive={!isInterrupted}
+        latencyMs={liveLatencyMs}
+        isInterrupted={isInterrupted}
         theme={theme}
       />
 
@@ -315,8 +353,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
           theme={theme}
         />
 
-        {/* 📈 Central Real-Time Streaming Candlestick Canvas (Direct from Terminal feed) */}
-        <div className="flex-1 relative flex flex-col min-w-0 bg-white dark:bg-terminal-950 overflow-hidden">
+        {/* 📈 Central Real-Time Streaming Chart Container (Direct TradingView & Confluence Encapsulation) */}
+        <div className="flex-1 p-2 sm:p-3 relative flex flex-col min-w-0 min-h-0 bg-slate-100 dark:bg-terminal-950/60 overflow-hidden">
           <InfinityVisionChart
             candles={liveCandles}
             pair={selectedPair}
@@ -329,6 +367,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
             showPatternOnChart={showPatternOnChart}
             horizonCandles={horizonCandles}
             latencyMs={liveLatencyMs}
+            isInterrupted={isInterrupted}
+            onReconnect={handleReconnect}
           />
         </div>
 

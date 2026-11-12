@@ -1,25 +1,45 @@
 'use client';
 
 import React, { useEffect, useRef, useState, memo } from 'react';
-import { CurrencyPair } from '@/lib/types';
+import { CurrencyPair, TimeFrame } from '@/lib/types';
 import { OANDA_TRADINGVIEW_MAP } from '@/lib/marketData';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 
-interface OandaTradingViewChartProps {
+export interface OandaTradingViewChartProps {
   symbol: CurrencyPair;
+  timeframe?: TimeFrame | string;
   theme?: 'dark' | 'light';
   height?: number;
+  containerIdPrefix?: string;
 }
+
+const getTimeframeInterval = (tf?: string): string => {
+  if (!tf) return '60';
+  const lower = tf.toLowerCase();
+  if (lower === '1m') return '1';
+  if (lower === '5m') return '5';
+  if (lower === '15m') return '15';
+  if (lower === '30m') return '30';
+  if (lower === '1h') return '60';
+  if (lower === '4h') return '240';
+  if (lower === '1d') return 'D';
+  if (lower === '1w') return 'W';
+  return '60';
+};
 
 function OandaTradingViewChartComponent({
   symbol,
+  timeframe = '1h',
   theme = 'dark',
   height = 460,
+  containerIdPrefix = 'oanda',
 }: OandaTradingViewChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadError, setLoadError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [retryNonce, setRetryNonce] = useState(0);
   const tvSymbol = OANDA_TRADINGVIEW_MAP[symbol] || 'OANDA:EURUSD';
+  const interval = getTimeframeInterval(timeframe);
 
   useEffect(() => {
     let isMounted = true;
@@ -38,12 +58,12 @@ function OandaTradingViewChartComponent({
           new (window as any).TradingView.widget({
             autosize: true,
             symbol: tvSymbol,
-            interval: '60',
+            interval: interval,
             timezone: 'Asia/Kolkata',
-            theme: 'dark',
+            theme: theme === 'light' ? 'light' : 'dark',
             style: '1',
             locale: 'en',
-            toolbar_bg: '#090d16',
+            toolbar_bg: theme === 'light' ? '#f8fafc' : '#090d16',
             enable_publishing: false,
             allow_symbol_change: true,
             container_id: containerRef.current.id,
@@ -95,9 +115,15 @@ function OandaTradingViewChartComponent({
         containerRef.current.innerHTML = '';
       }
     };
-  }, [tvSymbol, theme]);
+  }, [tvSymbol, theme, interval, retryNonce]);
 
-  const sanitizedId = `tv_widget_${tvSymbol.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  const sanitizedId = `tv_widget_${containerIdPrefix}_${tvSymbol.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+  const handleRetry = () => {
+    setLoadError(false);
+    setIsLoading(true);
+    setRetryNonce(prev => prev + 1);
+  };
 
   return (
     <div className="w-full bg-terminal-950 rounded-xl overflow-hidden border border-terminal-border/80 shadow-xl">
@@ -106,10 +132,16 @@ function OandaTradingViewChartComponent({
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span className="text-white font-bold text-[11px] sm:text-xs">OANDA / TRADINGVIEW LIVE FEED</span>
           <span className="text-slate-400 text-[10px] sm:text-[11px] hidden xs:inline">• {tvSymbol}</span>
+          <span className="px-1.5 py-0.2 rounded bg-terminal-800 text-cyan-300 text-[10px] font-bold border border-terminal-border">
+            {timeframe.toUpperCase()}
+          </span>
         </div>
-        <span className="text-[9px] sm:text-[10px] text-cyan-400 uppercase tracking-widest">
-          STREAMING
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[9px] sm:text-[10px] text-cyan-400 uppercase tracking-widest flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+            STREAMING
+          </span>
+        </div>
       </div>
 
       {loadError ? (
@@ -119,6 +151,13 @@ function OandaTradingViewChartComponent({
             External TradingView widget is unable to connect (offline or blocked by ad-blocker). 
             You can still switch to the algorithmic <strong className="text-indigo-400">Apex Swarm Matrix</strong> chart above.
           </p>
+          <button
+            onClick={handleRetry}
+            className="px-3 py-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-cyan-400 border border-terminal-border flex items-center gap-1.5 font-bold transition-all"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>Retry Loading Widget</span>
+          </button>
         </div>
       ) : (
         <div

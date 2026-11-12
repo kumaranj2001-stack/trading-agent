@@ -11,10 +11,15 @@ import {
   Maximize2,
   TrendingDown,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  MonitorPlay,
+  LayoutGrid,
+  RefreshCw
 } from 'lucide-react';
 import { Candle, CurrencyPair, TimeFrame } from '@/lib/types';
 import { calculateEMA } from '@/lib/indicators';
+import { OandaTradingViewChart } from '../OandaTradingViewChart';
 
 export interface InfinityVisionChartProps {
   candles: Candle[];
@@ -28,6 +33,8 @@ export interface InfinityVisionChartProps {
   showPatternOnChart?: boolean;
   horizonCandles?: number;
   latencyMs?: number;
+  isInterrupted?: boolean;
+  onReconnect?: () => void;
   onSelectZone?: (zoneName: string) => void;
 }
 
@@ -56,11 +63,14 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   showPatternOnChart = true,
   horizonCandles = 5,
   latencyMs = 12,
+  isInterrupted = false,
+  onReconnect,
   onSelectZone,
 }) => {
   const isLight = theme === 'light';
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 900, height: 560 });
+  const [chartMode, setChartMode] = useState<'OANDA_LIVE' | 'QUANTUM_MATRIX'>('OANDA_LIVE');
   const [activeTool, setActiveTool] = useState<DrawingTool>('crosshair');
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -448,135 +458,216 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   return (
     <div 
       ref={containerRef}
-      className={`relative w-full h-full flex-1 flex flex-col select-none overflow-hidden transition-colors ${
-        isLight ? 'bg-white' : 'bg-terminal-950'
+      className={`w-full h-full flex flex-col rounded-xl overflow-hidden border shadow-xl transition-colors select-none ${
+        isLight ? 'bg-white border-slate-200' : 'bg-terminal-950 border-terminal-border/80'
       }`}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
     >
-      {/* Floating Drawing Toolbar (Top Center) */}
-      <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 p-1 rounded-lg bg-white/95 dark:bg-terminal-900/95 border border-slate-300 dark:border-terminal-border shadow-md backdrop-blur-sm">
-        <button
-          onClick={() => setActiveTool('crosshair')}
-          className={`p-1.5 rounded transition-all ${
-            activeTool === 'crosshair' 
-              ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
-              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
-          }`}
-          title="Crosshair Cursor"
-        >
-          <Crosshair className="w-3.5 h-3.5" />
-        </button>
-
-        <button
-          onClick={() => setActiveTool('trendline')}
-          className={`p-1.5 rounded transition-all ${
-            activeTool === 'trendline' 
-              ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
-              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
-          }`}
-          title="Trendline Tool"
-        >
-          <Minus className="w-3.5 h-3.5 -rotate-45" />
-        </button>
-
-        <button
-          onClick={() => setActiveTool('horizontal')}
-          className={`p-1.5 rounded transition-all ${
-            activeTool === 'horizontal' 
-              ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
-              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
-          }`}
-          title="Horizontal Line"
-        >
-          <Minus className="w-3.5 h-3.5" />
-        </button>
-
-        <button
-          onClick={() => setActiveTool('rectangle')}
-          className={`p-1.5 rounded transition-all ${
-            activeTool === 'rectangle' 
-              ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
-              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
-          }`}
-          title="Order Block / Zone Rectangle"
-        >
-          <Square className="w-3.5 h-3.5" />
-        </button>
-
-        <button
-          onClick={() => setActiveTool('fib')}
-          className={`p-1.5 rounded transition-all ${
-            activeTool === 'fib' 
-              ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
-              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
-          }`}
-          title="Fibonacci Retracement Grid"
-        >
-          <Sliders className="w-3.5 h-3.5" />
-        </button>
-
-        <button
-          onClick={() => setActiveTool('text')}
-          className={`p-1.5 rounded transition-all ${
-            activeTool === 'text' 
-              ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
-              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
-          }`}
-          title="Text Annotation"
-        >
-          <Type className="w-3.5 h-3.5" />
-        </button>
-
-        <div className="w-[1px] h-4 bg-slate-300 dark:bg-terminal-border mx-0.5" />
-
-        <button
-          onClick={clearAllDrawings}
-          className="p-1.5 rounded text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all"
-          title="Clear User Drawings"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Real-time Streaming Telemetry Badge (Top Right) */}
-      <div className="absolute top-2.5 right-20 sm:right-24 z-10 text-right pointer-events-none flex flex-col items-end gap-1">
-        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 backdrop-blur-md shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[10px] font-mono font-bold text-emerald-600 dark:text-emerald-400 tracking-wider uppercase">
-            LIVE STREAMING · WSS {latencyMs}ms · {pair}
-          </span>
-        </div>
-        {showQuantumSimulation && (
-          <span className="text-[9px] font-mono font-semibold text-blue-600 dark:text-blue-400 block bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20">
-            QUANTUM CONFLUENCE PROJECTION ACTIVE
-          </span>
-        )}
-        {showMarketDna && (
-          <span className="text-[9px] font-mono font-semibold text-amber-600 dark:text-amber-400 block bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
-            MARKET DNA FRACTAL OVERLAY · LIVE
-          </span>
-        )}
-        {showIndicatorsOverlay && (
-          <div className="flex items-center gap-2 px-1.5 py-0.5 rounded bg-slate-100/90 dark:bg-terminal-900/90 border border-slate-200 dark:border-terminal-border text-[9px] font-mono">
-            <span className="flex items-center gap-1 text-amber-500 font-bold">
-              <span className="w-2 h-0.5 bg-amber-500 inline-block" /> EMA 20: {ema20[ema20.length - 1]?.toFixed(priceDecimals)}
-            </span>
-            <span className="flex items-center gap-1 text-cyan-500 font-bold">
-              <span className="w-2 h-0.5 bg-cyan-500 inline-block" /> EMA 50: {ema50[ema50.length - 1]?.toFixed(priceDecimals)}
+      {/* 🧭 Framed Container Header Bar (Mirrors Terminal ChartView layout) */}
+      <div className={`flex flex-wrap items-center justify-between px-3.5 py-2.5 border-b font-mono text-xs gap-2 shrink-0 ${
+        isLight ? 'bg-slate-50 border-slate-200' : 'bg-terminal-900 border-terminal-border'
+      }`}>
+        {/* Left: Symbol & Timeframe badge & Mode switcher */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-wide">{pair}</span>
+            <span className="px-2 py-0.5 rounded bg-slate-200 dark:bg-terminal-800 text-slate-700 dark:text-cyan-300 text-[10px] sm:text-[11px] font-bold border border-slate-300 dark:border-terminal-border">
+              {timeframe.toUpperCase()}
             </span>
           </div>
-        )}
+
+          <div className="flex items-center bg-slate-200 dark:bg-terminal-950 p-0.5 rounded-lg border border-slate-300 dark:border-terminal-border text-[11px]">
+            <button
+              onClick={() => setChartMode('OANDA_LIVE')}
+              className={`px-2.5 py-1 rounded flex items-center gap-1.5 font-bold transition-all ${
+                chartMode === 'OANDA_LIVE'
+                  ? 'bg-cyan-600 text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <MonitorPlay className="w-3.5 h-3.5" />
+              <span>OANDA Live Feed</span>
+            </button>
+            <button
+              onClick={() => setChartMode('QUANTUM_MATRIX')}
+              className={`px-2.5 py-1 rounded flex items-center gap-1.5 font-bold transition-all ${
+                chartMode === 'QUANTUM_MATRIX'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Quantum Confluence Overlay</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Right: Live Stream Telemetry & Interruption Status */}
+        <div className="flex items-center gap-2">
+          {isInterrupted ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-500 font-bold text-[10px] animate-pulse">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              <span>STREAM INTERRUPTED</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>LIVE STREAMING · WSS {latencyMs}ms</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Main SVG Candlestick & Overlays Canvas */}
-      <svg
-        width={dimensions.width}
-        height={dimensions.height}
-        className="w-full h-full cursor-crosshair"
-      >
+      {/* ⚠️ Interruption & Latency Degradation Banner */}
+      {isInterrupted && (
+        <div className="mx-3 mt-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 font-mono text-xs flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-amber-500 animate-pulse" />
+            <span>DATA STREAM INTERRUPTED: Market stream connection dropped or latency high ({latencyMs}ms). Stale data halted to protect execution integrity.</span>
+          </div>
+          {onReconnect && (
+            <button 
+              onClick={onReconnect}
+              className="px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-200 font-bold border border-amber-500/40 flex items-center gap-1"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>Reconnect Stream</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Main Chart Body */}
+      <div className="flex-1 relative w-full h-full min-h-[460px] overflow-hidden">
+        {chartMode === 'OANDA_LIVE' ? (
+          <div className="w-full h-full p-2">
+            <OandaTradingViewChart 
+              symbol={pair} 
+              timeframe={timeframe} 
+              height={Math.max(dimensions.height - 110, 440)} 
+              containerIdPrefix="vision" 
+              theme={theme}
+            />
+          </div>
+        ) : (
+          <div 
+            className="relative w-full h-full flex flex-col"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+          >
+            {/* Docked Sub-Toolbar for Quantum Matrix (No floating elements) */}
+            <div className={`flex flex-wrap items-center justify-between px-3 py-1.5 border-b text-xs font-mono gap-2 shrink-0 ${
+              isLight ? 'bg-slate-100 border-slate-200' : 'bg-terminal-900/80 border-terminal-border'
+            }`}>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setActiveTool('crosshair')}
+                  className={`p-1.5 rounded transition-all ${
+                    activeTool === 'crosshair' 
+                      ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
+                  }`}
+                  title="Crosshair Cursor"
+                >
+                  <Crosshair className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setActiveTool('trendline')}
+                  className={`p-1.5 rounded transition-all ${
+                    activeTool === 'trendline' 
+                      ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
+                  }`}
+                  title="Trendline Tool"
+                >
+                  <Minus className="w-3.5 h-3.5 -rotate-45" />
+                </button>
+                <button
+                  onClick={() => setActiveTool('horizontal')}
+                  className={`p-1.5 rounded transition-all ${
+                    activeTool === 'horizontal' 
+                      ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
+                  }`}
+                  title="Horizontal Line"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setActiveTool('rectangle')}
+                  className={`p-1.5 rounded transition-all ${
+                    activeTool === 'rectangle' 
+                      ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
+                  }`}
+                  title="Order Block / Zone Rectangle"
+                >
+                  <Square className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setActiveTool('fib')}
+                  className={`p-1.5 rounded transition-all ${
+                    activeTool === 'fib' 
+                      ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
+                  }`}
+                  title="Fibonacci Retracement Grid"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setActiveTool('text')}
+                  className={`p-1.5 rounded transition-all ${
+                    activeTool === 'text' 
+                      ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
+                  }`}
+                  title="Text Annotation"
+                >
+                  <Type className="w-3.5 h-3.5" />
+                </button>
+                <div className="w-[1px] h-4 bg-slate-300 dark:bg-terminal-border mx-0.5" />
+                <button
+                  onClick={clearAllDrawings}
+                  className="p-1.5 rounded text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all"
+                  title="Clear User Drawings"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Status indicator badges docked in the sub-toolbar */}
+              <div className="flex items-center gap-2">
+                {showQuantumSimulation && (
+                  <span className="text-[9px] font-mono font-semibold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
+                    QUANTUM PROJECTION ACTIVE
+                  </span>
+                )}
+                {showMarketDna && (
+                  <span className="text-[9px] font-mono font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                    MARKET DNA FRACTAL ACTIVE
+                  </span>
+                )}
+                {showIndicatorsOverlay && (
+                  <div className="flex items-center gap-2 px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-terminal-800/80 text-[9px] font-mono">
+                    <span className="flex items-center gap-1 text-amber-500 font-bold">
+                      <span className="w-2 h-0.5 bg-amber-500 inline-block" /> EMA 20: {ema20[ema20.length - 1]?.toFixed(priceDecimals)}
+                    </span>
+                    <span className="flex items-center gap-1 text-cyan-500 font-bold">
+                      <span className="w-2 h-0.5 bg-cyan-500 inline-block" /> EMA 50: {ema50[ema50.length - 1]?.toFixed(priceDecimals)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Main SVG Candlestick & Overlays Canvas */}
+            <svg
+              width={dimensions.width}
+              height={Math.max(dimensions.height - 110, 380)}
+              className="w-full h-full cursor-crosshair"
+            >
         <defs>
           {/* Subtle grid pattern */}
           <pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -1154,6 +1245,9 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
           );
         })}
       </svg>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

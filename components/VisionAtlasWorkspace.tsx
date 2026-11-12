@@ -131,6 +131,11 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
     setSelectedPair(initialPair);
   }, [initialPair]);
 
+  // Update timeframe if parent changes
+  useEffect(() => {
+    setSelectedTimeframe(initialTf);
+  }, [initialTf]);
+
   // Low-latency Real-Time Streaming Pipeline (WebSocket / SSE Ingestion)
   useEffect(() => {
     setIsLoading(true);

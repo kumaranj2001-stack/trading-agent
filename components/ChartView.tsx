@@ -174,7 +174,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
 
       {/* View 1: Real OANDA / TradingView Live Advanced Chart */}
       {chartMode === 'OANDA_LIVE' && (
-        <OandaTradingViewChart symbol={pair} height={460} />
+        <OandaTradingViewChart symbol={pair} timeframe={timeframe} height={460} containerIdPrefix="terminal" />
       )}
 
       {/* View 2: Apex Swarm Algorithmic SVG Candlestick Chart */}
