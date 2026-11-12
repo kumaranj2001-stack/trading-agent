@@ -18,8 +18,7 @@ import {
   RefreshCw,
   ZoomIn,
   ZoomOut,
-  RotateCcw,
-  Move
+  RotateCcw
 } from 'lucide-react';
 import { Candle, CurrencyPair, TimeFrame } from '@/lib/types';
 import { calculateEMA } from '@/lib/indicators';
@@ -47,10 +46,10 @@ export type DrawingTool = 'crosshair' | 'trendline' | 'horizontal' | 'rectangle'
 interface DrawnElement {
   id: string;
   type: 'line' | 'horizontal' | 'rectangle' | 'text';
-  vx1: number;
-  vy1: number;
-  vx2?: number;
-  vy2?: number;
+  x1: number;
+  y1: number;
+  x2?: number;
+  y2?: number;
   text?: string;
   color?: string;
 }
@@ -73,19 +72,9 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 }) => {
   const isLight = theme === 'light';
   const containerRef = useRef<HTMLDivElement>(null);
-  const svgWrapperRef = useRef<HTMLDivElement>(null);
-
-  // Rigid deterministic dimensions initialized synchronously to prevent mount layout jump
-  const [dimensions, setDimensions] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const estimatedW = Math.min(window.innerWidth - 380, 1100);
-      return { width: Math.max(estimatedW, 360), height: 560 };
-    }
-    return { width: 920, height: 560 };
-  });
-
-  // Default to QUANTUM_MATRIX so high-fidelity institutional chart renders instantaneously
-  const [chartMode, setChartMode] = useState<'OANDA_LIVE' | 'QUANTUM_MATRIX'>('QUANTUM_MATRIX');
+  const chartWrapperRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 880, height: 540 });
+  const [chartMode, setChartMode] = useState<'OANDA_LIVE' | 'QUANTUM_MATRIX'>('OANDA_LIVE');
   const [activeTool, setActiveTool] = useState<DrawingTool>('crosshair');
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -93,64 +82,39 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
 
-  // 🎯 Calibrated Pinned Focal Point Zoom & Pan State
-  const [zoom, setZoom] = useState<number>(1.0);
-  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  // 🔍 Institutional Pinned Focal Zoom & Pan Engine State
+  const [zoomLevel, setZoomLevel] = useState<number>(1.0);
+  const [panOffset, setPanOffset] = useState<number>(0);
   const [isPanning, setIsPanning] = useState<boolean>(false);
-  const panStartRef = useRef<{ mouseX: number; mouseY: number; initialOffsetX: number; initialOffsetY: number } | null>(null);
+  const panStartRef = useRef<{ startX: number; startPan: number } | null>(null);
 
-  // Touch gesture state for responsive mobile/tablet interactions
-  const touchStartRef = useRef<{
-    mode: 'pan' | 'pinch' | null;
-    startX: number;
-    startY: number;
-    initOffsetX: number;
-    initOffsetY: number;
-    initDistance: number;
-    initZoom: number;
-    midpointX: number;
-    midpointY: number;
-  }>({
-    mode: null,
-    startX: 0,
-    startY: 0,
-    initOffsetX: 0,
-    initOffsetY: 0,
-    initDistance: 0,
-    initZoom: 1,
-    midpointX: 0,
-    midpointY: 0,
-  });
-
-  // Responsive padding configuration
-  const isMobile = dimensions.width < 640;
-  const chartPadding = useMemo(() => {
-    return isMobile
-      ? { top: 32, right: 72, bottom: 30, left: 12 }
-      : { top: 38, right: 90, bottom: 36, left: 18 };
-  }, [isMobile]);
-
-  const plotWidth = Math.max(dimensions.width - chartPadding.left - chartPadding.right, 80);
-  const plotHeight = Math.max(dimensions.height - chartPadding.top - chartPadding.bottom, 80);
-
-  // Measure container synchronously on mount and observe size changes rigidly
+  // 📐 Rigid constraint ResizeObserver listener with state-locking (Zero layout shifting)
   useEffect(() => {
     if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      setDimensions({
-        width: Math.floor(rect.width),
-        height: Math.max(Math.floor(rect.height), 420),
-      });
-    }
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { width, height } = containerRef.current.getBoundingClientRect();
+        if (width > 0 && height > 0) {
+          setDimensions(prev => {
+            const w = Math.floor(width);
+            const h = Math.max(Math.floor(height), 460);
+            if (prev.width === w && prev.height === h) return prev;
+            return { width: w, height: h };
+          });
+        }
+      }
+    };
+    updateDimensions();
 
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         if (width > 0 && height > 0) {
-          setDimensions({
-            width: Math.floor(width),
-            height: Math.max(Math.floor(height), 420),
+          setDimensions(prev => {
+            const w = Math.floor(width);
+            const h = Math.max(Math.floor(height), 460);
+            if (prev.width === w && prev.height === h) return prev;
+            return { width: w, height: h };
           });
         }
       }
@@ -159,40 +123,46 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     return () => ro.disconnect();
   }, []);
 
-  const isXau = pair.includes('XAU');
-  const priceDecimals = pair.includes('JPY') ? 3 : (pair.includes('USD') && !isXau) ? 5 : (pair.includes('NIFTY') || isXau) ? 2 : 4;
-
-  // 🛡️ Safe canonical candles: zero Math.random() fallback to prevent layout shifting
+  // Safe canonical candles from live streaming feed
   const safeCandles = useMemo(() => {
     if (candles && candles.length >= 8) return candles.slice(-55);
-    // Deterministic fallback generation centered around pair price
+    // Dynamic fallback generation centered around pair price
     const base = pair.includes('XAU') ? 4005.0 : pair.includes('JPY') ? 152.5 : pair.includes('NIFTY') ? 24500 : 1.0850;
     const count = 35;
     const list: Candle[] = [];
     let cur = base;
-    const now = 1731369600000;
+    const now = Date.now();
     for (let i = count; i >= 0; i--) {
       const isRed = (i % 3 === 0 || i % 4 === 0);
       const delta = (Math.sin(i * 0.7) * (base * 0.0006)) + (isRed ? -base * 0.0004 : base * 0.0003);
       const open = cur;
       const close = cur + delta;
-      const wickH = Math.abs(Math.sin(i * 1.3)) * (base * 0.00035);
-      const wickL = Math.abs(Math.cos(i * 1.7)) * (base * 0.00035);
-      const high = Math.max(open, close) + wickH;
-      const low = Math.min(open, close) - wickL;
+      const high = Math.max(open, close) + Math.random() * (base * 0.0004);
+      const low = Math.min(open, close) - Math.random() * (base * 0.0004);
       list.push({
         time: new Date(now - i * 15 * 60000).toISOString(),
         timestamp: now - i * 15 * 60000,
-        open: Number(open.toFixed(priceDecimals)),
-        high: Number(high.toFixed(priceDecimals)),
-        low: Number(low.toFixed(priceDecimals)),
-        close: Number(close.toFixed(priceDecimals)),
-        volume: 1200 + Math.floor(Math.abs(Math.sin(i)) * 2500),
+        open,
+        high,
+        low,
+        close,
+        volume: 1200 + Math.floor(Math.random() * 3000),
       });
       cur = close;
     }
     return list;
-  }, [candles, pair, priceDecimals]);
+  }, [candles, pair]);
+
+  // Compute dynamic coordinate scales & responsive padding
+  const isMobile = dimensions.width < 640;
+  const chartPadding = isMobile
+    ? { top: 32, right: 68, bottom: 28, left: 10 }
+    : { top: 40, right: 88, bottom: 36, left: 18 };
+  const plotWidth = Math.max(dimensions.width - chartPadding.left - chartPadding.right, 80);
+  const plotHeight = Math.max(dimensions.height - chartPadding.top - chartPadding.bottom, 80);
+
+  const isXau = pair.includes('XAU');
+  const priceDecimals = pair.includes('JPY') ? 3 : (pair.includes('USD') && !isXau) ? 5 : (pair.includes('NIFTY') || isXau) ? 2 : 4;
 
   // Technical Moving Averages computed on live closes
   const closes = useMemo(() => safeCandles.map(c => c.close), [safeCandles]);
@@ -210,305 +180,80 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     };
   }, [safeCandles]);
 
-  const baseMinPrice = useMemo(() => minC - span * 0.18, [minC, span]);
-  const baseMaxPrice = useMemo(() => maxC + span * 0.18, [maxC, span]);
-  const basePriceRange = Math.max(baseMaxPrice - baseMinPrice, 0.0001);
+  const minPrice = useMemo(() => minC - span * 0.18, [minC, span]);
+  const maxPrice = useMemo(() => maxC + span * 0.18, [maxC, span]);
+  const priceRange = Math.max(maxPrice - minPrice, 0.0001);
 
-  // 🧭 Precision Coordinate Mapping: Calibrated for pinned focal zoom & panning
-  const priceToY = useCallback((price: number) => {
-    const baseFrac = (price - baseMinPrice) / basePriceRange;
-    const virtualY = plotHeight - baseFrac * plotHeight;
-    return chartPadding.top + virtualY * zoom + panOffset.y;
-  }, [baseMinPrice, basePriceRange, plotHeight, chartPadding.top, zoom, panOffset.y]);
+  const priceToY = (price: number) => {
+    return chartPadding.top + plotHeight - ((price - minPrice) / priceRange) * plotHeight;
+  };
 
-  const yToPrice = useCallback((y: number) => {
-    const virtualY = (y - chartPadding.top - panOffset.y) / zoom;
-    const frac = (plotHeight - virtualY) / plotHeight;
-    return baseMinPrice + frac * basePriceRange;
-  }, [baseMinPrice, basePriceRange, plotHeight, chartPadding.top, zoom, panOffset.y]);
+  const yToPrice = (y: number) => {
+    const frac = (chartPadding.top + plotHeight - y) / plotHeight;
+    return minPrice + frac * priceRange;
+  };
 
-  const candleSpacing = plotWidth / (safeCandles.length + 10);
-  const candleWidth = Math.max(candleSpacing * 0.65 * zoom, 2.5);
+  const baseSpacing = Math.max(plotWidth / (safeCandles.length + 10), 10);
+  const candleSpacing = baseSpacing * zoomLevel;
+  const candleWidth = Math.max(candleSpacing * 0.68, 3.5);
 
-  const getCandleX = useCallback((index: number) => {
-    const virtualX = index * candleSpacing + candleSpacing / 2;
-    return chartPadding.left + virtualX * zoom + panOffset.x;
-  }, [candleSpacing, chartPadding.left, zoom, panOffset.x]);
+  const getCandleX = (index: number) => {
+    return chartPadding.left + panOffset + index * candleSpacing + candleSpacing / 2;
+  };
+
+  // 🔍 Mathematically Pinned Focal Zoom Function
+  const handleZoom = useCallback((factor: number, focalClientX?: number) => {
+    setZoomLevel((prevZoom) => {
+      const nextZoom = Math.max(0.5, Math.min(3.5, Number((prevZoom * factor).toFixed(3))));
+      if (nextZoom === prevZoom) return prevZoom;
+
+      const rect = chartWrapperRef.current?.getBoundingClientRect();
+      const clientX = focalClientX !== undefined ? focalClientX : (rect ? rect.left + rect.width / 2 : chartPadding.left + plotWidth / 2);
+      const mouseX = rect ? clientX - rect.left : clientX;
+
+      setPanOffset((prevPan) => {
+        const focalX = mouseX - chartPadding.left - prevPan;
+        const newPan = mouseX - chartPadding.left - focalX * (nextZoom / prevZoom);
+
+        const totalContentWidth = safeCandles.length * (baseSpacing * nextZoom);
+        const minPan = plotWidth - totalContentWidth - 80;
+        const maxPan = 80;
+        return Math.max(minPan, Math.min(maxPan, newPan));
+      });
+
+      return nextZoom;
+    });
+  }, [chartPadding.left, plotWidth, safeCandles.length, baseSpacing]);
+
+  const handleResetZoom = useCallback(() => {
+    setZoomLevel(1.0);
+    setPanOffset(0);
+  }, []);
+
+  // 🎯 Non-passive Wheel Event Listener (Zero browser scroll stutter or jumping)
+  useEffect(() => {
+    const el = chartWrapperRef.current;
+    if (!el) return;
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const factor = e.deltaY < 0 ? 1.15 : 0.87;
+      handleZoom(factor, e.clientX);
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+    };
+  }, [handleZoom]);
 
   const lastCandle = safeCandles[safeCandles.length - 1] || { close: 4005.88, high: 4007.65, low: 3998.92 };
   const lastCandleX = getCandleX(safeCandles.length - 1);
   const lastCandleY = priceToY(lastCandle.close);
 
-  // 🔬 Non-passive Wheel Listener for Mathematically Pinned Focal Point Zoom
-  useEffect(() => {
-    const el = svgWrapperRef.current;
-    if (!el) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const rect = el.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      const plotMouseX = mouseX - chartPadding.left;
-      const plotMouseY = mouseY - chartPadding.top;
-
-      const factor = e.deltaY < 0 ? 1.12 : 0.893;
-
-      setZoom((prevZoom) => {
-        const newZoom = Math.min(Math.max(prevZoom * factor, 0.5), 4.5);
-        if (newZoom === prevZoom) return prevZoom;
-
-        const scaleRatio = newZoom / prevZoom;
-
-        setPanOffset((prevPan) => {
-          // Mathematical Invariant for Pinned Focal Point under Cursor:
-          // newOffset = plotMouse * (1 - scaleRatio) + prevOffset * scaleRatio
-          const newOffsetX = plotMouseX * (1 - scaleRatio) + prevPan.x * scaleRatio;
-          const newOffsetY = plotMouseY * (1 - scaleRatio) + prevPan.y * scaleRatio;
-          return { x: newOffsetX, y: newOffsetY };
-        });
-
-        return newZoom;
-      });
-    };
-
-    el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
-  }, [chartPadding.left, chartPadding.top]);
-
-  // Zoom control buttons handlers (Focal point centered in view)
-  const handleZoomIn = () => {
-    const factor = 1.25;
-    const plotCenterX = plotWidth / 2;
-    const plotCenterY = plotHeight / 2;
-    setZoom((prevZoom) => {
-      const newZoom = Math.min(prevZoom * factor, 4.5);
-      const ratio = newZoom / prevZoom;
-      setPanOffset(prevPan => ({
-        x: plotCenterX * (1 - ratio) + prevPan.x * ratio,
-        y: plotCenterY * (1 - ratio) + prevPan.y * ratio,
-      }));
-      return newZoom;
-    });
-  };
-
-  const handleZoomOut = () => {
-    const factor = 0.8;
-    const plotCenterX = plotWidth / 2;
-    const plotCenterY = plotHeight / 2;
-    setZoom((prevZoom) => {
-      const newZoom = Math.max(prevZoom * factor, 0.5);
-      const ratio = newZoom / prevZoom;
-      setPanOffset(prevPan => ({
-        x: plotCenterX * (1 - ratio) + prevPan.x * ratio,
-        y: plotCenterY * (1 - ratio) + prevPan.y * ratio,
-      }));
-      return newZoom;
-    });
-  };
-
-  const handleResetZoomPan = () => {
-    setZoom(1.0);
-    setPanOffset({ x: 0, y: 0 });
-  };
-
-  // Touch gesture handlers for mobile / tablet responsiveness
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (e.touches.length === 1) {
-      const t = e.touches[0];
-      touchStartRef.current = {
-        mode: 'pan',
-        startX: t.clientX,
-        startY: t.clientY,
-        initOffsetX: panOffset.x,
-        initOffsetY: panOffset.y,
-        initDistance: 0,
-        initZoom: zoom,
-        midpointX: 0,
-        midpointY: 0,
-      };
-      setIsPanning(true);
-    } else if (e.touches.length === 2) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      const rect = e.currentTarget.getBoundingClientRect();
-      const midX = (t1.clientX + t2.clientX) / 2 - rect.left;
-      const midY = (t1.clientY + t2.clientY) / 2 - rect.top;
-      touchStartRef.current = {
-        mode: 'pinch',
-        startX: 0,
-        startY: 0,
-        initOffsetX: panOffset.x,
-        initOffsetY: panOffset.y,
-        initDistance: dist,
-        initZoom: zoom,
-        midpointX: midX,
-        midpointY: midY,
-      };
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartRef.current.mode === 'pan' && e.touches.length === 1) {
-      const t = e.touches[0];
-      const dx = t.clientX - touchStartRef.current.startX;
-      const dy = t.clientY - touchStartRef.current.startY;
-      setPanOffset({
-        x: touchStartRef.current.initOffsetX + dx,
-        y: touchStartRef.current.initOffsetY + dy,
-      });
-    } else if (touchStartRef.current.mode === 'pinch' && e.touches.length === 2) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      if (touchStartRef.current.initDistance > 0) {
-        const factor = currentDist / touchStartRef.current.initDistance;
-        const targetZoom = Math.min(Math.max(touchStartRef.current.initZoom * factor, 0.5), 4.5);
-        const scaleRatio = targetZoom / zoom;
-        const plotMidX = touchStartRef.current.midpointX - chartPadding.left;
-        const plotMidY = touchStartRef.current.midpointY - chartPadding.top;
-
-        setPanOffset(prevPan => ({
-          x: plotMidX * (1 - scaleRatio) + prevPan.x * scaleRatio,
-          y: plotMidY * (1 - scaleRatio) + prevPan.y * scaleRatio,
-        }));
-        setZoom(targetZoom);
-      }
-    }
-  };
-
-  const handleTouchEnd = () => {
-    touchStartRef.current.mode = null;
-    setIsPanning(false);
-  };
-
-  // Mouse pan & draw event listeners
-  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.button !== 0 && e.button !== 1) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    if (activeTool === 'crosshair' || e.button === 1 || e.shiftKey) {
-      setIsPanning(true);
-      panStartRef.current = {
-        mouseX: e.clientX,
-        mouseY: e.clientY,
-        initialOffsetX: panOffset.x,
-        initialOffsetY: panOffset.y,
-      };
-    } else {
-      setIsDrawing(true);
-      setDrawStart({ x, y });
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setMousePos({ x, y });
-
-    if (isPanning && panStartRef.current) {
-      const dx = e.clientX - panStartRef.current.mouseX;
-      const dy = e.clientY - panStartRef.current.mouseY;
-      setPanOffset({
-        x: panStartRef.current.initialOffsetX + dx,
-        y: panStartRef.current.initialOffsetY + dy,
-      });
-      return;
-    }
-
-    // Locate nearest candle under cursor
-    const relX = (x - chartPadding.left - panOffset.x) / zoom;
-    const index = Math.round((relX - candleSpacing / 2) / candleSpacing);
-    if (index >= 0 && index < safeCandles.length) {
-      setHoveredCandle(safeCandles[index]);
-    } else {
-      setHoveredCandle(null);
-    }
-  };
-
-  const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isPanning) {
-      setIsPanning(false);
-      panStartRef.current = null;
-    }
-
-    if (!isDrawing || !drawStart) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setIsDrawing(false);
-
-    // Virtual coordinates invariant to zoom and pan
-    const vx1 = (drawStart.x - chartPadding.left - panOffset.x) / zoom;
-    const vy1 = (drawStart.y - chartPadding.top - panOffset.y) / zoom;
-    const vx2 = (x - chartPadding.left - panOffset.x) / zoom;
-    const vy2 = (y - chartPadding.top - panOffset.y) / zoom;
-
-    if (activeTool === 'horizontal') {
-      setDrawnElements(prev => [
-        ...prev,
-        {
-          id: `line-${Date.now()}`,
-          type: 'horizontal',
-          vx1: 0,
-          vy1,
-          vx2: plotWidth,
-          vy2,
-          color: '#3b82f6',
-        },
-      ]);
-    } else if (activeTool === 'rectangle') {
-      setDrawnElements(prev => [
-        ...prev,
-        {
-          id: `rect-${Date.now()}`,
-          type: 'rectangle',
-          vx1: Math.min(vx1, vx2),
-          vy1: Math.min(vy1, vy2),
-          vx2: Math.max(vx1, vx2),
-          vy2: Math.max(vy1, vy2),
-          color: 'rgba(59, 130, 246, 0.2)',
-        },
-      ]);
-    } else if (activeTool === 'trendline') {
-      setDrawnElements(prev => [
-        ...prev,
-        {
-          id: `trend-${Date.now()}`,
-          type: 'line',
-          vx1,
-          vy1,
-          vx2,
-          vy2,
-          color: '#10b981',
-        },
-      ]);
-    }
-    setDrawStart(null);
-  };
-
-  const handleMouseLeave = () => {
-    setMousePos(null);
-    setHoveredCandle(null);
-    if (isPanning) {
-      setIsPanning(false);
-      panStartRef.current = null;
-    }
-    if (isDrawing) setIsDrawing(false);
-  };
-
-  const clearAllDrawings = () => {
-    setDrawnElements([]);
-  };
-
-  // Fibonacci Retracements Anchor Levels
+  // Fibonacci Retracements Anchor Levels (Dynamically grounded in live candles)
   const fibLevels = useMemo(() => {
     return [
       { label: 'Fib 1.618', price: Number((minC + span * 1.618).toFixed(priceDecimals)), ratio: '1.618' },
@@ -522,7 +267,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     ];
   }, [minC, span, priceDecimals]);
 
-  // Analysis Reference Zones
+  // Analysis Reference Zones (Dynamic institutional confluence bands)
   const analysisZones = useMemo(() => {
     return [
       {
@@ -564,7 +309,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     ];
   }, [minC, span, priceDecimals]);
 
-  // Order Blocks
+  // Dynamic Institutional Order Blocks
   const orderBlocks = useMemo(() => {
     return [
       {
@@ -588,7 +333,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     ];
   }, [minC, maxC, span, priceDecimals]);
 
-  // Quantum Vision Projection Points
+  // Future Simulated Fan Paths (Quantum Vision projection)
   const projectionPoints = useMemo(() => {
     const steps = 7;
     const paths = {
@@ -601,38 +346,33 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     paths.median.push({ x: lastCandleX, y: lastCandleY });
     paths.lower.push({ x: lastCandleX, y: lastCandleY });
 
-    const stepSpacing = candleSpacing * zoom;
     for (let i = 1; i <= steps; i++) {
-      const x = lastCandleX + i * stepSpacing;
+      const x = lastCandleX + i * candleSpacing;
+      // Upper path
       paths.upper.push({
         x,
-        y: lastCandleY - ((i * 3.2) + Math.sin(i) * 2) * zoom,
+        y: lastCandleY - (i * 3.2) - Math.sin(i) * 2,
       });
+      // Median path
       paths.median.push({
         x,
-        y: lastCandleY - ((i * 0.5) - Math.cos(i) * 1.5) * zoom,
+        y: lastCandleY - (i * 0.5) + Math.cos(i) * 1.5,
       });
+      // Lower breakdown path
       paths.lower.push({
         x,
-        y: lastCandleY + ((i * 3.8) + Math.sin(i * 1.2) * 2) * zoom,
+        y: lastCandleY + (i * 3.8) + Math.sin(i * 1.2) * 2,
       });
     }
 
     return paths;
-  }, [lastCandleX, lastCandleY, candleSpacing, zoom]);
+  }, [lastCandleX, lastCandleY, candleSpacing]);
 
-  const fanPolygonPoints = useMemo(() => {
-    const upperStr = projectionPoints.upper.map(p => `${p.x},${p.y}`).join(' ');
-    const lowerReversed = [...projectionPoints.lower].reverse().map(p => `${p.x},${p.y}`).join(' ');
-    return `${upperStr} ${lowerReversed}`;
-  }, [projectionPoints]);
-
-  // Market DNA Historical Twin Ghost Candles
+  // Market DNA Projected Ghost Candles (Faded historical twin projection)
   const ghostCandles = useMemo(() => {
     const list: Array<{ x: number; open: number; close: number; high: number; low: number; isUp: boolean }> = [];
     const count = 8;
     let prev = lastCandle.close;
-    const stepSpacing = candleSpacing * zoom;
     for (let i = 1; i <= count; i++) {
       const isUp = i % 2 === 0 || i > 4;
       const step = span * 0.04 * (isUp ? 0.75 : -0.55);
@@ -641,7 +381,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       const hi = Math.max(op, cl) + span * 0.015;
       const lo = Math.min(op, cl) - span * 0.015;
       list.push({
-        x: lastCandleX + i * stepSpacing,
+        x: lastCandleX + i * candleSpacing,
         open: op,
         close: cl,
         high: hi,
@@ -651,11 +391,13 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       prev = cl;
     }
     return list;
-  }, [lastCandle.close, lastCandleX, candleSpacing, zoom, span]);
+  }, [lastCandle.close, lastCandleX, candleSpacing, span]);
 
-  // Sweep Events
+  // Dynamic Liquidity Sweep & Institutional Rejection Points
   const sweepEvents = useMemo(() => {
     if (safeCandles.length < 15) return null;
+    
+    // Find index of recent local high (rejection)
     let maxHigh = -Infinity;
     let maxIdx = Math.floor(safeCandles.length * 0.3);
     for (let i = Math.floor(safeCandles.length * 0.2); i < Math.floor(safeCandles.length * 0.6); i++) {
@@ -665,6 +407,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       }
     }
 
+    // Find index of lowest sweep in recent 15 candles
     let minLow = Infinity;
     let minIdx = Math.floor(safeCandles.length * 0.7);
     for (let i = Math.floor(safeCandles.length * 0.6); i < safeCandles.length - 2; i++) {
@@ -690,14 +433,131 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     };
   }, [safeCandles, span]);
 
+  // Handle canvas mouse move with drag-panning & candle tracking
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = chartWrapperRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setMousePos({ x, y });
+
+    // Handle horizontal dragging pan when crosshair tool is active
+    if (isPanning && panStartRef.current) {
+      const deltaX = e.clientX - panStartRef.current.startX;
+      const newPan = panStartRef.current.startPan + deltaX;
+      const totalContentWidth = safeCandles.length * candleSpacing;
+      const minPan = plotWidth - totalContentWidth - 80;
+      const maxPan = 80;
+      setPanOffset(Math.max(minPan, Math.min(maxPan, newPan)));
+      return;
+    }
+
+    // Find nearest candle with panOffset and candleSpacing taken into account
+    const relX = x - chartPadding.left - panOffset;
+    const index = Math.round(relX / candleSpacing);
+    if (index >= 0 && index < safeCandles.length) {
+      setHoveredCandle(safeCandles[index]);
+    } else {
+      setHoveredCandle(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setMousePos(null);
+    setHoveredCandle(null);
+    setIsPanning(false);
+    panStartRef.current = null;
+    if (isDrawing) setIsDrawing(false);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (activeTool === 'crosshair') {
+      setIsPanning(true);
+      panStartRef.current = { startX: e.clientX, startPan: panOffset };
+      return;
+    }
+    const rect = chartWrapperRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setIsDrawing(true);
+    setDrawStart({ x, y });
+  };
+
+  const handleMouseUp = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isPanning) {
+      setIsPanning(false);
+      panStartRef.current = null;
+    }
+    if (!isDrawing || !drawStart) return;
+    const rect = chartWrapperRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setIsDrawing(false);
+
+    if (activeTool === 'horizontal') {
+      setDrawnElements(prev => [
+        ...prev,
+        {
+          id: `line-${Date.now()}`,
+          type: 'horizontal',
+          x1: chartPadding.left,
+          y1: drawStart.y,
+          x2: dimensions.width - chartPadding.right,
+          y2: drawStart.y,
+          color: '#3b82f6',
+        },
+      ]);
+    } else if (activeTool === 'rectangle') {
+      setDrawnElements(prev => [
+        ...prev,
+        {
+          id: `rect-${Date.now()}`,
+          type: 'rectangle',
+          x1: Math.min(drawStart.x, x),
+          y1: Math.min(drawStart.y, y),
+          x2: Math.max(drawStart.x, x),
+          y2: Math.max(drawStart.y, y),
+          color: 'rgba(59, 130, 246, 0.2)',
+        },
+      ]);
+    } else if (activeTool === 'trendline') {
+      setDrawnElements(prev => [
+        ...prev,
+        {
+          id: `trend-${Date.now()}`,
+          type: 'line',
+          x1: drawStart.x,
+          y1: drawStart.y,
+          x2: x,
+          y2: y,
+          color: '#10b981',
+        },
+      ]);
+    }
+    setDrawStart(null);
+  };
+
+  const clearAllDrawings = () => {
+    setDrawnElements([]);
+  };
+
+  // SVG Fan Polygon Coordinates for Quantum Vision
+  const fanPolygonPoints = useMemo(() => {
+    const upperStr = projectionPoints.upper.map(p => `${p.x},${p.y}`).join(' ');
+    const lowerReversed = [...projectionPoints.lower].reverse().map(p => `${p.x},${p.y}`).join(' ');
+    return `${upperStr} ${lowerReversed}`;
+  }, [projectionPoints]);
+
   return (
     <div 
       ref={containerRef}
-      className={`w-full h-full flex flex-col rounded-xl overflow-hidden border shadow-xl select-none ${
+      className={`w-full h-full flex flex-col rounded-xl overflow-hidden border shadow-xl transition-colors select-none ${
         isLight ? 'bg-white border-slate-200' : 'bg-terminal-950 border-terminal-border/80'
       }`}
     >
-      {/* 🧭 Framed Header Bar */}
+      {/* 🧭 Framed Container Header Bar (Mirrors Terminal ChartView layout) */}
       <div className={`flex flex-wrap items-center justify-between px-3.5 py-2.5 border-b font-mono text-xs gap-2 shrink-0 ${
         isLight ? 'bg-slate-50 border-slate-200' : 'bg-terminal-900 border-terminal-border'
       }`}>
@@ -712,19 +572,8 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
           <div className="flex items-center bg-slate-200 dark:bg-terminal-950 p-0.5 rounded-lg border border-slate-300 dark:border-terminal-border text-[11px]">
             <button
-              onClick={() => setChartMode('QUANTUM_MATRIX')}
-              className={`px-2.5 py-1 rounded flex items-center gap-1.5 font-bold transition-colors ${
-                chartMode === 'QUANTUM_MATRIX'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Quantum Confluence Overlay</span>
-            </button>
-            <button
               onClick={() => setChartMode('OANDA_LIVE')}
-              className={`px-2.5 py-1 rounded flex items-center gap-1.5 font-bold transition-colors ${
+              className={`px-2.5 py-1 rounded flex items-center gap-1.5 font-bold transition-all ${
                 chartMode === 'OANDA_LIVE'
                   ? 'bg-cyan-600 text-white shadow-xs'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
@@ -733,10 +582,21 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
               <MonitorPlay className="w-3.5 h-3.5" />
               <span>OANDA Live Feed</span>
             </button>
+            <button
+              onClick={() => setChartMode('QUANTUM_MATRIX')}
+              className={`px-2.5 py-1 rounded flex items-center gap-1.5 font-bold transition-all ${
+                chartMode === 'QUANTUM_MATRIX'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Quantum Confluence Overlay</span>
+            </button>
           </div>
         </div>
 
-        {/* Right: Live Stream Telemetry & Status */}
+        {/* Right: Live Stream Telemetry & Interruption Status */}
         <div className="flex items-center gap-2">
           {isInterrupted ? (
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-500 font-bold text-[10px] animate-pulse">
@@ -752,7 +612,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
         </div>
       </div>
 
-      {/* ⚠️ Stream Interruption Notice */}
+      {/* ⚠️ Interruption & Latency Degradation Banner */}
       {isInterrupted && (
         <div className="mx-3 mt-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 font-mono text-xs flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -772,50 +632,45 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       )}
 
       {/* Main Chart Body */}
-      <div className="flex-1 relative w-full h-full min-h-[460px] overflow-hidden">
+      <div className="flex-1 relative w-full h-[520px] sm:h-[560px] overflow-hidden">
         {chartMode === 'OANDA_LIVE' ? (
           <div className="w-full h-full p-2">
             <OandaTradingViewChart 
               symbol={pair} 
               timeframe={timeframe} 
-              height={Math.max(dimensions.height - 110, 440)} 
+              height={500} 
               containerIdPrefix="vision" 
               theme={theme}
-              hideHeader={true}
             />
           </div>
         ) : (
           <div 
-            ref={svgWrapperRef}
+            ref={chartWrapperRef}
             className="relative w-full h-full flex flex-col"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
           >
-            {/* Docked Sub-Toolbar with Drawing & Pinned Zoom Controls */}
+            {/* Docked Sub-Toolbar for Quantum Matrix (No floating elements) */}
             <div className={`flex flex-wrap items-center justify-between px-3 py-1.5 border-b text-xs font-mono gap-2 shrink-0 ${
               isLight ? 'bg-slate-100 border-slate-200' : 'bg-terminal-900/80 border-terminal-border'
             }`}>
-              {/* Left Drawing Tools */}
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setActiveTool('crosshair')}
-                  className={`p-1.5 rounded transition-colors ${
+                  className={`p-1.5 rounded transition-all ${
                     activeTool === 'crosshair' 
                       ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
                       : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
                   }`}
-                  title="Crosshair & Pan Mode (Drag to Pan)"
+                  title="Crosshair & Drag-Pan Tool"
                 >
                   <Crosshair className="w-3.5 h-3.5" />
                 </button>
                 <button
                   onClick={() => setActiveTool('trendline')}
-                  className={`p-1.5 rounded transition-colors ${
+                  className={`p-1.5 rounded transition-all ${
                     activeTool === 'trendline' 
                       ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
                       : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
@@ -826,7 +681,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTool('horizontal')}
-                  className={`p-1.5 rounded transition-colors ${
+                  className={`p-1.5 rounded transition-all ${
                     activeTool === 'horizontal' 
                       ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
                       : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
@@ -837,7 +692,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTool('rectangle')}
-                  className={`p-1.5 rounded transition-colors ${
+                  className={`p-1.5 rounded transition-all ${
                     activeTool === 'rectangle' 
                       ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
                       : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
@@ -848,7 +703,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTool('fib')}
-                  className={`p-1.5 rounded transition-colors ${
+                  className={`p-1.5 rounded transition-all ${
                     activeTool === 'fib' 
                       ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
                       : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
@@ -859,7 +714,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTool('text')}
-                  className={`p-1.5 rounded transition-colors ${
+                  className={`p-1.5 rounded transition-all ${
                     activeTool === 'text' 
                       ? 'bg-slate-200 dark:bg-terminal-800 text-slate-900 dark:text-cyan-400 font-bold' 
                       : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-terminal-800'
@@ -871,57 +726,57 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                 <div className="w-[1px] h-4 bg-slate-300 dark:bg-terminal-border mx-0.5" />
                 <button
                   onClick={clearAllDrawings}
-                  className="p-1.5 rounded text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                  className="p-1.5 rounded text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-all"
                   title="Clear User Drawings"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
+              </div>
 
-                {/* 🔍 Calibrated Zoom & Pan Controls Docked in Sub-Toolbar */}
-                <div className="w-[1px] h-4 bg-slate-300 dark:bg-terminal-border mx-1" />
-                <div className="flex items-center gap-1 bg-slate-200/80 dark:bg-terminal-800/80 p-0.5 rounded-lg border border-slate-300 dark:border-terminal-border">
+              {/* Center/Right: Zoom & Scale Controls + Indicators */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* 🔍 Institutional Pinned Focal Zoom Toolbar */}
+                <div className="flex items-center gap-1 bg-slate-200/90 dark:bg-terminal-800/90 p-0.5 rounded-lg border border-slate-300 dark:border-terminal-border text-xs">
                   <button
-                    onClick={handleZoomIn}
-                    className="p-1 rounded text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-terminal-700 transition-colors"
-                    title="Zoom In (or Wheel Up)"
+                    onClick={() => handleZoom(1.18)}
+                    className="p-1 rounded hover:bg-slate-300 dark:hover:bg-terminal-700 text-slate-700 dark:text-slate-300 transition-colors"
+                    title="Zoom In (Wheel Up)"
+                    aria-label="Zoom In"
                   >
                     <ZoomIn className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={handleZoomOut}
-                    className="p-1 rounded text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-terminal-700 transition-colors"
-                    title="Zoom Out (or Wheel Down)"
+                    onClick={() => handleZoom(0.85)}
+                    className="p-1 rounded hover:bg-slate-300 dark:hover:bg-terminal-700 text-slate-700 dark:text-slate-300 transition-colors"
+                    title="Zoom Out (Wheel Down)"
+                    aria-label="Zoom Out"
                   >
                     <ZoomOut className="w-3.5 h-3.5" />
                   </button>
                   <button
-                    onClick={handleResetZoomPan}
-                    className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-cyan-600 dark:text-cyan-400 hover:bg-slate-300 dark:hover:bg-terminal-700 transition-colors flex items-center gap-1"
-                    title="Reset Zoom & Pan (1:1) / Double-click chart"
+                    onClick={handleResetZoom}
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold hover:bg-slate-300 dark:hover:bg-terminal-700 flex items-center gap-1 transition-colors ${
+                      zoomLevel !== 1.0 || panOffset !== 0 ? 'text-cyan-600 dark:text-cyan-400 font-extrabold' : 'text-slate-500'
+                    }`}
+                    title="Reset Zoom & Pan (1:1)"
                   >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>{Math.round(zoom * 100)}%</span>
+                    <RotateCcw className="w-2.5 h-2.5" />
+                    <span>{(zoomLevel * 100).toFixed(0)}%</span>
                   </button>
                 </div>
-              </div>
 
-              {/* Status indicator badges docked in the sub-toolbar */}
-              <div className="flex items-center gap-2">
-                <span className="hidden xl:inline text-[9px] font-mono text-slate-500 dark:text-slate-400">
-                  Wheel: Pinned Zoom · Drag: Pan · Dbl-Click: Reset
-                </span>
                 {showQuantumSimulation && (
                   <span className="text-[9px] font-mono font-semibold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">
-                    QUANTUM PROJECTION ACTIVE
+                    QUANTUM PROJECTION
                   </span>
                 )}
                 {showMarketDna && (
                   <span className="text-[9px] font-mono font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-                    MARKET DNA FRACTAL ACTIVE
+                    MARKET DNA
                   </span>
                 )}
                 {showIndicatorsOverlay && (
-                  <div className="flex items-center gap-2 px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-terminal-800/80 text-[9px] font-mono">
+                  <div className="hidden sm:flex items-center gap-2 px-1.5 py-0.5 rounded bg-slate-200/80 dark:bg-terminal-800/80 text-[9px] font-mono">
                     <span className="flex items-center gap-1 text-amber-500 font-bold">
                       <span className="w-2 h-0.5 bg-amber-500 inline-block" /> EMA 20: {ema20[ema20.length - 1]?.toFixed(priceDecimals)}
                     </span>
@@ -933,30 +788,13 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
               </div>
             </div>
 
-            {/* Main SVG Candlestick & Overlays Canvas with Strict Boundary Clipping */}
+            {/* Main SVG Candlestick & Overlays Canvas */}
             <svg
               width={dimensions.width}
               height={Math.max(dimensions.height - 110, 380)}
-              className={`w-full h-full ${
-                isPanning 
-                  ? 'cursor-grabbing' 
-                  : activeTool === 'crosshair' 
-                    ? 'cursor-grab' 
-                    : 'cursor-crosshair'
-              }`}
-              onDoubleClick={handleResetZoomPan}
+              className={`w-full h-full ${activeTool === 'crosshair' ? (isPanning ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-crosshair'}`}
             >
               <defs>
-                {/* Rigid Plot Area Clip Path to prevent element bleeding onto price/time scales */}
-                <clipPath id="chartPlotClip">
-                  <rect 
-                    x={chartPadding.left} 
-                    y={chartPadding.top} 
-                    width={plotWidth} 
-                    height={plotHeight} 
-                  />
-                </clipPath>
-
                 {/* Subtle grid pattern */}
                 <pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
                   <path 
@@ -972,551 +810,583 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                   <stop offset="0%" stopColor="rgba(59, 130, 246, 0.25)" />
                   <stop offset="100%" stopColor="rgba(99, 102, 241, 0.08)" />
                 </linearGradient>
+
+                {/* Institutional Plot Area Clipping - prevents candles & indicators from overflowing axes during zoom & pan */}
+                <clipPath id="chartPlotClip">
+                  <rect 
+                    x={chartPadding.left} 
+                    y={chartPadding.top} 
+                    width={plotWidth} 
+                    height={plotHeight} 
+                  />
+                </clipPath>
               </defs>
 
-              {/* Background Grid */}
-              <rect width={dimensions.width} height={dimensions.height} fill="url(#gridPattern)" />
+        {/* Background Grid */}
+        <rect width={dimensions.width} height={dimensions.height} fill="url(#gridPattern)" />
 
-              {/* ================================================================= */}
-              {/* CLIPPED FINANCIAL GRAPHICS (Candles, Zones, Projections, Drawings) */}
-              {/* ================================================================= */}
-              <g clipPath="url(#chartPlotClip)">
-                {/* 1. SHADED ANALYSIS REFERENCE ZONES */}
-                {analysisZones.map((zone) => {
-                  const yTop = priceToY(zone.max);
-                  const yBottom = priceToY(zone.min);
-                  const h = Math.max(yBottom - yTop, 2);
+        {/* ================================================================= */}
+        {/* 1. SHADED ANALYSIS REFERENCE ZONES (DANGER, CAUTION, ENTRY, SAFE) */}
+        {/* ================================================================= */}
+        {analysisZones.map((zone) => {
+          const yTop = priceToY(zone.max);
+          const yBottom = priceToY(zone.min);
+          const h = Math.max(yBottom - yTop, 2);
 
-                  return (
-                    <g key={zone.name} className="cursor-pointer" onClick={() => onSelectZone && onSelectZone(zone.name)}>
-                      <rect
-                        x={chartPadding.left}
-                        y={yTop}
-                        width={plotWidth}
-                        height={h}
-                        fill={zone.color}
-                        stroke={zone.borderColor}
-                        strokeWidth="1"
-                        strokeDasharray="4 2"
-                      />
-                    </g>
-                  );
-                })}
+          return (
+            <g key={zone.name} className="cursor-pointer" onClick={() => onSelectZone && onSelectZone(zone.name)}>
+              <rect
+                x={chartPadding.left}
+                y={yTop}
+                width={plotWidth}
+                height={h}
+                fill={zone.color}
+                stroke={zone.borderColor}
+                strokeWidth="1"
+                strokeDasharray="4 2"
+              />
+              {/* Zone Tag & Price Range on the right */}
+              <rect
+                x={dimensions.width - chartPadding.right + 2}
+                y={yTop + 2}
+                width={86}
+                height={16}
+                rx={3}
+                fill={zone.badgeBg}
+              />
+              <text
+                x={dimensions.width - chartPadding.right + 6}
+                y={yTop + 14}
+                fill="#ffffff"
+                fontSize="9"
+                fontWeight="bold"
+                fontFamily="monospace"
+              >
+                {zone.name.split(' ')[0]} {zone.min.toFixed(0)}
+              </text>
+            </g>
+          );
+        })}
 
-                {/* 2. FIBONACCI RETRACEMENT HORIZONTAL LEVELS */}
-                {fibLevels.map((fib) => {
-                  const y = priceToY(fib.price);
-                  return (
-                    <g key={fib.label}>
-                      <line
-                        x1={chartPadding.left}
-                        y1={y}
-                        x2={dimensions.width - chartPadding.right}
-                        y2={y}
-                        stroke={isLight ? 'rgba(148, 163, 184, 0.5)' : 'rgba(71, 85, 105, 0.4)'}
-                        strokeWidth="1"
-                        strokeDasharray="3 3"
-                      />
-                      <text
-                        x={chartPadding.left + 8}
-                        y={y - 4}
-                        fill={isLight ? '#64748b' : '#94a3b8'}
-                        fontSize="9"
-                        fontFamily="monospace"
-                        fontWeight="bold"
-                      >
-                        {fib.label} ({fib.ratio})
-                      </text>
-                    </g>
-                  );
-                })}
+        {/* ================================================================= */}
+        {/* 2. FIBONACCI RETRACEMENT HORIZONTAL LEVELS */}
+        {/* ================================================================= */}
+        {fibLevels.map((fib) => {
+          const y = priceToY(fib.price);
+          if (y < chartPadding.top || y > dimensions.height - chartPadding.bottom) return null;
 
-                {/* 3. ORDER BLOCKS & LIQUIDITY SWEEPS */}
-                {orderBlocks.map((ob, idx) => {
-                  const yTop = priceToY(ob.max);
-                  const yBottom = priceToY(ob.min);
-                  const h = Math.max(yBottom - yTop, 3);
+          return (
+            <g key={fib.label}>
+              <line
+                x1={chartPadding.left}
+                y1={y}
+                x2={dimensions.width - chartPadding.right}
+                y2={y}
+                stroke={isLight ? 'rgba(148, 163, 184, 0.5)' : 'rgba(71, 85, 105, 0.4)'}
+                strokeWidth="1"
+                strokeDasharray="3 3"
+              />
+              <text
+                x={dimensions.width - chartPadding.right - 4}
+                y={y - 3}
+                textAnchor="end"
+                fill={isLight ? '#64748b' : '#94a3b8'}
+                fontSize="9"
+                fontFamily="monospace"
+                fontWeight="bold"
+              >
+                {fib.label} - {fib.price.toFixed(2)}
+              </text>
+            </g>
+          );
+        })}
 
-                  return (
-                    <g key={idx}>
-                      <rect
-                        x={chartPadding.left + 30}
-                        y={yTop}
-                        width={plotWidth - 60}
-                        height={h}
-                        fill={isLight ? 'rgba(100, 116, 139, 0.15)' : 'rgba(51, 65, 85, 0.3)'}
-                        stroke={isLight ? '#94a3b8' : '#475569'}
-                        strokeWidth="1"
-                      />
-                      <text
-                        x={chartPadding.left + 36}
-                        y={yTop + 11}
-                        fill={isLight ? '#475569' : '#cbd5e1'}
-                        fontSize="9"
-                        fontFamily="sans-serif"
-                        fontWeight="bold"
-                      >
-                        {ob.name}
-                      </text>
-                    </g>
-                  );
-                })}
+        {/* ================================================================= */}
+        {/* 3. CLIPPED PLOT AREA: ORDER BLOCKS, SWEEPS, CANDLES, INDICATORS */}
+        {/* ================================================================= */}
+        <g clipPath="url(#chartPlotClip)">
+        {orderBlocks.map((ob, idx) => {
+          const yTop = priceToY(ob.max);
+          const yBottom = priceToY(ob.min);
+          const h = Math.max(yBottom - yTop, 3);
 
-                {/* Dynamic Liquidity Sweep & Institutional Rejection Tags */}
-                {sweepEvents && (
-                  <g pointerEvents="none">
-                    <text
-                      x={getCandleX(sweepEvents.rejectionIdx)}
-                      y={priceToY(sweepEvents.rejectionPrice) - 6}
-                      fill="#d97706"
-                      fontSize="9"
-                      fontWeight="bold"
-                      fontFamily="monospace"
-                      textAnchor="middle"
-                    >
-                      [Rejection 1]
-                    </text>
+          return (
+            <g key={idx}>
+              <rect
+                x={chartPadding.left + 60}
+                y={yTop}
+                width={plotWidth - 120}
+                height={h}
+                fill={isLight ? 'rgba(100, 116, 139, 0.15)' : 'rgba(51, 65, 85, 0.3)'}
+                stroke={isLight ? '#94a3b8' : '#475569'}
+                strokeWidth="1"
+              />
+              <text
+                x={chartPadding.left + 65}
+                y={yTop + 11}
+                fill={isLight ? '#475569' : '#cbd5e1'}
+                fontSize="9"
+                fontFamily="sans-serif"
+                fontWeight="bold"
+              >
+                {ob.name}
+              </text>
+            </g>
+          );
+        })}
 
-                    <g transform={`translate(${getCandleX(sweepEvents.sweepIdx)}, ${priceToY(sweepEvents.sweepPrice) + 14})`}>
-                      <rect x="-30" y="-10" width="60" height="15" rx="3" fill="rgba(234, 88, 12, 0.9)" />
-                      <text
-                        x="0"
-                        y="1"
-                        fill="#ffffff"
-                        fontSize="8"
-                        fontWeight="bold"
-                        fontFamily="monospace"
-                        textAnchor="middle"
-                      >
-                        ▼ SWEEP
-                      </text>
-                    </g>
+        {/* Dynamic Liquidity Sweep & Institutional Rejection Tags */}
+        {sweepEvents && (
+          <g pointerEvents="none">
+            {/* Upper Rejection Marker */}
+            <text
+              x={getCandleX(sweepEvents.rejectionIdx)}
+              y={priceToY(sweepEvents.rejectionPrice) - 6}
+              fill="#d97706"
+              fontSize="9"
+              fontWeight="bold"
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              [Rejection 1]
+            </text>
 
-                    <text
-                      x={getCandleX(sweepEvents.confirmIdx)}
-                      y={priceToY(sweepEvents.trapPrice) + 16}
-                      fill="#0284c7"
-                      fontSize="9"
-                      fontWeight="bold"
-                      fontFamily="monospace"
-                      textAnchor="middle"
-                    >
-                      ▲ Confirmed {sweepEvents.confirmTime}
-                    </text>
+            {/* Institutional Sweep Tag */}
+            <g transform={`translate(${getCandleX(sweepEvents.sweepIdx)}, ${priceToY(sweepEvents.sweepPrice) + 14})`}>
+              <rect x="-30" y="-10" width="60" height="15" rx="3" fill="rgba(234, 88, 12, 0.9)" />
+              <text
+                x="0"
+                y="1"
+                fill="#ffffff"
+                fontSize="8"
+                fontWeight="bold"
+                fontFamily="monospace"
+                textAnchor="middle"
+              >
+                ▼ SWEEP
+              </text>
+            </g>
 
-                    <text
-                      x={getCandleX(sweepEvents.trapIdx)}
-                      y={priceToY(sweepEvents.trapPrice) + 28}
-                      fill="#059669"
-                      fontSize="8"
-                      fontWeight="bold"
-                      fontFamily="monospace"
-                      textAnchor="middle"
-                    >
-                      TRAP LIQUIDITY - DEVELOPING
-                    </text>
-                  </g>
-                )}
+            {/* Sweep Confirmation Tag */}
+            <text
+              x={getCandleX(sweepEvents.confirmIdx)}
+              y={priceToY(sweepEvents.trapPrice) + 16}
+              fill="#0284c7"
+              fontSize="9"
+              fontWeight="bold"
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              ▲ Confirmed {sweepEvents.confirmTime}
+            </text>
 
-                {/* 4. QUANTUM VISION SIMULATION PROJECTION FAN & PATHS */}
-                {showQuantumSimulation && (
-                  <g>
-                    <polygon
-                      points={fanPolygonPoints}
-                      fill="url(#fanGradient)"
-                      stroke="rgba(59, 130, 246, 0.4)"
-                      strokeWidth="1"
-                      strokeDasharray="2 2"
-                    />
-                    <path
-                      d={projectionPoints.upper.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
-                      fill="none"
-                      stroke="#3b82f6"
-                      strokeWidth="1.5"
-                      strokeDasharray="3 2"
-                    />
-                    <path
-                      d={projectionPoints.median.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
-                      fill="none"
-                      stroke="#6366f1"
-                      strokeWidth="1.2"
-                      strokeDasharray="2 2"
-                    />
-                    <path
-                      d={projectionPoints.lower.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
-                      fill="none"
-                      stroke="#1e3a8a"
-                      strokeWidth="2"
-                    />
-                    <text
-                      x={projectionPoints.upper[projectionPoints.upper.length - 1].x + 4}
-                      y={projectionPoints.upper[projectionPoints.upper.length - 1].y + 3}
-                      fill="#2563eb"
-                      fontSize="9"
-                      fontFamily="monospace"
-                      fontWeight="bold"
-                    >
-                      Bullish Path (38%)
-                    </text>
-                    <text
-                      x={projectionPoints.lower[projectionPoints.lower.length - 1].x + 4}
-                      y={projectionPoints.lower[projectionPoints.lower.length - 1].y + 3}
-                      fill="#1e3a8a"
-                      fontSize="9"
-                      fontFamily="monospace"
-                      fontWeight="bold"
-                    >
-                      Support Breakdown (32%)
-                    </text>
-                  </g>
-                )}
+            {/* Developing Trap Liquidity */}
+            <text
+              x={getCandleX(sweepEvents.trapIdx)}
+              y={priceToY(sweepEvents.trapPrice) + 28}
+              fill="#059669"
+              fontSize="8"
+              fontWeight="bold"
+              fontFamily="monospace"
+              textAnchor="middle"
+            >
+              TRAP LIQUIDITY - DEVELOPING
+            </text>
+          </g>
+        )}
 
-                {/* 5. MARKET DNA HISTORICAL TWIN GHOST CANDLES */}
-                {showMarketDna && showPatternOnChart && (
-                  <g opacity="0.45">
-                    {ghostCandles.map((gc, i) => {
-                      const yOpen = priceToY(gc.open);
-                      const yClose = priceToY(gc.close);
-                      const yHigh = priceToY(gc.high);
-                      const yLow = priceToY(gc.low);
-                      const bodyTop = Math.min(yOpen, yClose);
-                      const bodyHeight = Math.max(Math.abs(yClose - yOpen), 2);
-                      const color = gc.isUp ? '#10b981' : '#ef4444';
+        {/* ================================================================= */}
+        {/* 4. QUANTUM VISION SIMULATION PROJECTION FAN & PATHS */}
+        {/* ================================================================= */}
+        {showQuantumSimulation && (
+          <g>
+            {/* Shaded Probability Cone */}
+            <polygon
+              points={fanPolygonPoints}
+              fill="url(#fanGradient)"
+              stroke="rgba(59, 130, 246, 0.4)"
+              strokeWidth="1"
+              strokeDasharray="2 2"
+            />
+            {/* Upper Path Line */}
+            <path
+              d={projectionPoints.upper.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
+              fill="none"
+              stroke="#3b82f6"
+              strokeWidth="1.5"
+              strokeDasharray="3 2"
+            />
+            {/* Median Path Line */}
+            <path
+              d={projectionPoints.median.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
+              fill="none"
+              stroke="#6366f1"
+              strokeWidth="1.2"
+              strokeDasharray="2 2"
+            />
+            {/* Lower Breakdown Path Line */}
+            <path
+              d={projectionPoints.lower.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
+              fill="none"
+              stroke="#1e3a8a"
+              strokeWidth="2"
+            />
+            {/* Path Target Labels */}
+            <text
+              x={projectionPoints.upper[projectionPoints.upper.length - 1].x + 4}
+              y={projectionPoints.upper[projectionPoints.upper.length - 1].y + 3}
+              fill="#2563eb"
+              fontSize="9"
+              fontFamily="monospace"
+              fontWeight="bold"
+            >
+              Bullish Path (38%)
+            </text>
+            <text
+              x={projectionPoints.lower[projectionPoints.lower.length - 1].x + 4}
+              y={projectionPoints.lower[projectionPoints.lower.length - 1].y + 3}
+              fill="#1e3a8a"
+              fontSize="9"
+              fontFamily="monospace"
+              fontWeight="bold"
+            >
+              Support Breakdown (32%)
+            </text>
+          </g>
+        )}
 
-                      return (
-                        <g key={`ghost-${i}`}>
-                          <line
-                            x1={gc.x}
-                            y1={yHigh}
-                            x2={gc.x}
-                            y2={yLow}
-                            stroke={color}
-                            strokeWidth="1"
-                            strokeDasharray="2 1"
-                          />
-                          <rect
-                            x={gc.x - candleWidth / 2}
-                            y={bodyTop}
-                            width={candleWidth}
-                            height={bodyHeight}
-                            fill={gc.isUp ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}
-                            stroke={color}
-                            strokeWidth="1"
-                          />
-                        </g>
-                      );
-                    })}
-                  </g>
-                )}
+        {/* ================================================================= */}
+        {/* 5. MARKET DNA HISTORICAL TWIN GHOST CANDLES */}
+        {/* ================================================================= */}
+        {showMarketDna && showPatternOnChart && (
+          <g opacity="0.45">
+            {ghostCandles.map((gc, i) => {
+              const yOpen = priceToY(gc.open);
+              const yClose = priceToY(gc.close);
+              const yHigh = priceToY(gc.high);
+              const yLow = priceToY(gc.low);
+              const bodyTop = Math.min(yOpen, yClose);
+              const bodyHeight = Math.max(Math.abs(yClose - yOpen), 2);
+              const color = gc.isUp ? '#10b981' : '#ef4444';
 
-                {/* 6. REAL-TIME INSTITUTIONAL CANDLESTICKS OR LINE CHART */}
-                {chartType === 'Line' ? (
-                  <g>
-                    <path
-                      d={safeCandles.reduce((acc, c, i) => {
-                        const x = getCandleX(i);
-                        const y = priceToY(c.close);
-                        return `${acc} ${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                      }, '')}
-                      fill="none"
-                      stroke="#0284c7"
-                      strokeWidth="2.5"
-                    />
-                    <path
-                      d={`${safeCandles.reduce((acc, c, i) => {
-                        const x = getCandleX(i);
-                        const y = priceToY(c.close);
-                        return `${acc} ${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-                      }, '')} L ${getCandleX(safeCandles.length - 1)} ${dimensions.height - chartPadding.bottom} L ${getCandleX(0)} ${dimensions.height - chartPadding.bottom} Z`}
-                      fill="url(#fanGradient)"
-                      opacity="0.5"
-                    />
-                  </g>
-                ) : (
-                  safeCandles.map((c, i) => {
-                    const x = getCandleX(i);
-                    const yOpen = priceToY(c.open);
-                    const yClose = priceToY(c.close);
-                    const yHigh = priceToY(c.high);
-                    const yLow = priceToY(c.low);
-                    const isUp = c.close >= c.open;
-                    const bodyTop = Math.min(yOpen, yClose);
-                    const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1.5);
-                    const candleColor = isUp ? '#16a34a' : '#dc2626';
+              return (
+                <g key={`ghost-${i}`}>
+                  {/* Wick */}
+                  <line
+                    x1={gc.x}
+                    y1={yHigh}
+                    x2={gc.x}
+                    y2={yLow}
+                    stroke={color}
+                    strokeWidth="1"
+                    strokeDasharray="2 1"
+                  />
+                  {/* Body */}
+                  <rect
+                    x={gc.x - candleWidth / 2}
+                    y={bodyTop}
+                    width={candleWidth}
+                    height={bodyHeight}
+                    fill={gc.isUp ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'}
+                    stroke={color}
+                    strokeWidth="1"
+                  />
+                </g>
+              );
+            })}
+          </g>
+        )}
 
-                    return (
-                      <g key={c.timestamp || i}>
-                        {/* High/Low Wick */}
-                        <line
-                          x1={x}
-                          y1={yHigh}
-                          x2={x}
-                          y2={yLow}
-                          stroke={candleColor}
-                          strokeWidth="1.2"
-                        />
-                        {/* Real Body */}
-                        <rect
-                          x={x - candleWidth / 2}
-                          y={bodyTop}
-                          width={candleWidth}
-                          height={bodyHeight}
-                          fill={candleColor}
-                          stroke={candleColor}
-                          strokeWidth="0.8"
-                          rx={0.5}
-                        />
-                      </g>
-                    );
-                  })
-                )}
+        {/* ================================================================= */}
+        {/* 6. REAL-TIME INSTITUTIONAL CANDLESTICKS OR LINE CHART */}
+        {/* ================================================================= */}
+        {chartType === 'Line' ? (
+          <g>
+            <path
+              d={safeCandles.reduce((acc, c, i) => {
+                const x = getCandleX(i);
+                const y = priceToY(c.close);
+                return `${acc} ${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+              }, '')}
+              fill="none"
+              stroke="#0284c7"
+              strokeWidth="2.5"
+            />
+            {/* Area fill */}
+            <path
+              d={`${safeCandles.reduce((acc, c, i) => {
+                const x = getCandleX(i);
+                const y = priceToY(c.close);
+                return `${acc} ${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+              }, '')} L ${getCandleX(safeCandles.length - 1)} ${dimensions.height - chartPadding.bottom} L ${getCandleX(0)} ${dimensions.height - chartPadding.bottom} Z`}
+              fill="url(#fanGradient)"
+              opacity="0.5"
+            />
+          </g>
+        ) : (
+          safeCandles.map((c, i) => {
+            const x = getCandleX(i);
+            const yOpen = priceToY(c.open);
+            const yClose = priceToY(c.close);
+            const yHigh = priceToY(c.high);
+            const yLow = priceToY(c.low);
+            const isUp = c.close >= c.open;
+            const bodyTop = Math.min(yOpen, yClose);
+            const bodyHeight = Math.max(Math.abs(yClose - yOpen), 1.5);
+            const candleColor = isUp ? '#16a34a' : '#dc2626';
 
-                {/* 6.5. DYNAMIC TECHNICAL INDICATOR OVERLAYS: EMA 20 & EMA 50 */}
-                {showIndicatorsOverlay && (
-                  <g className="indicator-overlays pointer-events-none">
-                    <path
-                      d={safeCandles.reduce((acc, _, i) => {
-                        const val = ema20[i];
-                        if (val === undefined || Number.isNaN(val)) return acc;
-                        const x = getCandleX(i);
-                        const y = priceToY(val);
-                        return `${acc} ${acc === '' ? 'M' : 'L'} ${x} ${y}`;
-                      }, '')}
-                      fill="none"
-                      stroke="#f59e0b"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      opacity="0.95"
-                    />
-                    <path
-                      d={safeCandles.reduce((acc, _, i) => {
-                        const val = ema50[i];
-                        if (val === undefined || Number.isNaN(val)) return acc;
-                        const x = getCandleX(i);
-                        const y = priceToY(val);
-                        return `${acc} ${acc === '' ? 'M' : 'L'} ${x} ${y}`;
-                      }, '')}
-                      fill="none"
-                      stroke="#06b6d4"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      opacity="0.95"
-                    />
-                  </g>
-                )}
-
-                {/* 7. CURRENT LIVE PRICE LINE IN PLOT */}
+            return (
+              <g key={c.timestamp || i}>
+                {/* High/Low Wick */}
                 <line
-                  x1={chartPadding.left}
-                  y1={lastCandleY}
-                  x2={dimensions.width - chartPadding.right}
-                  y2={lastCandleY}
-                  stroke="#dc2626"
+                  x1={x}
+                  y1={yHigh}
+                  x2={x}
+                  y2={yLow}
+                  stroke={candleColor}
                   strokeWidth="1.2"
-                  strokeDasharray="4 2"
                 />
-
-                {/* 8. USER DRAWN ELEMENTS (Pinned in virtual plot coordinates) */}
-                {drawnElements.map((el) => {
-                  const x1 = chartPadding.left + el.vx1 * zoom + panOffset.x;
-                  const y1 = chartPadding.top + el.vy1 * zoom + panOffset.y;
-                  const x2 = el.vx2 !== undefined ? chartPadding.left + el.vx2 * zoom + panOffset.x : x1;
-                  const y2 = el.vy2 !== undefined ? chartPadding.top + el.vy2 * zoom + panOffset.y : y1;
-
-                  if (el.type === 'horizontal') {
-                    return (
-                      <line
-                        key={el.id}
-                        x1={chartPadding.left}
-                        y1={y1}
-                        x2={dimensions.width - chartPadding.right}
-                        y2={y1}
-                        stroke={el.color || '#3b82f6'}
-                        strokeWidth="2"
-                      />
-                    );
-                  }
-                  if (el.type === 'rectangle') {
-                    return (
-                      <rect
-                        key={el.id}
-                        x={Math.min(x1, x2)}
-                        y={Math.min(y1, y2)}
-                        width={Math.abs(x2 - x1)}
-                        height={Math.abs(y2 - y1)}
-                        fill={el.color || 'rgba(59, 130, 246, 0.2)'}
-                        stroke="#3b82f6"
-                        strokeWidth="1.5"
-                      />
-                    );
-                  }
-                  if (el.type === 'line') {
-                    return (
-                      <line
-                        key={el.id}
-                        x1={x1}
-                        y1={y1}
-                        x2={x2}
-                        y2={y2}
-                        stroke={el.color || '#10b981'}
-                        strokeWidth="2"
-                      />
-                    );
-                  }
-                  return null;
-                })}
-              </g>
-
-              {/* ================================================================= */}
-              {/* UNCLIPPED AXES & BADGES: Right Vertical Price Axis & Bottom Time */}
-              {/* ================================================================= */}
-
-              {/* Analysis Reference Zones Badges on Right Margin */}
-              {analysisZones.map((zone) => {
-                const yTop = priceToY(zone.max);
-                if (yTop < chartPadding.top - 12 || yTop > dimensions.height - chartPadding.bottom + 8) return null;
-                return (
-                  <g key={`badge-${zone.name}`}>
-                    <rect
-                      x={dimensions.width - chartPadding.right + 2}
-                      y={yTop + 2}
-                      width={chartPadding.right - 4}
-                      height={16}
-                      rx={3}
-                      fill={zone.badgeBg}
-                    />
-                    <text
-                      x={dimensions.width - chartPadding.right + 6}
-                      y={yTop + 13}
-                      fill="#ffffff"
-                      fontSize="9"
-                      fontWeight="bold"
-                      fontFamily="monospace"
-                    >
-                      {zone.name.split(' ')[0]} {zone.min.toFixed(0)}
-                    </text>
-                  </g>
-                );
-              })}
-
-              {/* Current Live Price Badge on Axis */}
-              <g>
+                {/* Real Body */}
                 <rect
-                  x={dimensions.width - chartPadding.right}
-                  y={lastCandleY - 10}
-                  width={chartPadding.right - 2}
-                  height={20}
-                  rx={3}
-                  fill="#dc2626"
+                  x={x - candleWidth / 2}
+                  y={bodyTop}
+                  width={candleWidth}
+                  height={bodyHeight}
+                  fill={candleColor}
+                  stroke={candleColor}
+                  strokeWidth="0.8"
+                  rx={0.5}
+                />
+              </g>
+            );
+          })
+        )}
+
+        {/* ================================================================= */}
+        {/* 6.5. DYNAMIC TECHNICAL INDICATOR OVERLAYS: EMA 20 & EMA 50 */}
+        {/* ================================================================= */}
+        {showIndicatorsOverlay && (
+          <g className="indicator-overlays pointer-events-none">
+            {/* EMA 20 (Amber Line) */}
+            <path
+              d={safeCandles.reduce((acc, _, i) => {
+                const val = ema20[i];
+                if (val === undefined || Number.isNaN(val)) return acc;
+                const x = getCandleX(i);
+                const y = priceToY(val);
+                return `${acc} ${acc === '' ? 'M' : 'L'} ${x} ${y}`;
+              }, '')}
+              fill="none"
+              stroke="#f59e0b"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.95"
+            />
+            {/* EMA 50 (Cyan Line) */}
+            <path
+              d={safeCandles.reduce((acc, _, i) => {
+                const val = ema50[i];
+                if (val === undefined || Number.isNaN(val)) return acc;
+                const x = getCandleX(i);
+                const y = priceToY(val);
+                return `${acc} ${acc === '' ? 'M' : 'L'} ${x} ${y}`;
+              }, '')}
+              fill="none"
+              stroke="#06b6d4"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              opacity="0.95"
+            />
+          </g>
+        )}
+        </g>
+
+        {/* ================================================================= */}
+        {/* 7. CURRENT LIVE PRICE LINE & BADGE */}
+        {/* ================================================================= */}
+        <g>
+          <line
+            x1={chartPadding.left}
+            y1={lastCandleY}
+            x2={dimensions.width - chartPadding.right}
+            y2={lastCandleY}
+            stroke="#dc2626"
+            strokeWidth="1.2"
+            strokeDasharray="4 2"
+          />
+          {/* Price badge on axis */}
+          <rect
+            x={dimensions.width - chartPadding.right}
+            y={lastCandleY - 10}
+            width={chartPadding.right - 4}
+            height={20}
+            rx={3}
+            fill="#dc2626"
+          />
+          <text
+            x={dimensions.width - chartPadding.right + 6}
+            y={lastCandleY + 4}
+            fill="#ffffff"
+            fontSize="10"
+            fontFamily="monospace"
+            fontWeight="bold"
+          >
+            {lastCandle.close.toFixed(priceDecimals)}
+          </text>
+        </g>
+
+        {/* Right Vertical Price Scale Ticks */}
+        <g pointerEvents="none">
+          {Array.from({ length: 7 }).map((_, idx) => {
+            const frac = idx / 6;
+            const price = minPrice + frac * (maxPrice - minPrice);
+            const y = chartPadding.top + plotHeight - frac * plotHeight;
+            return (
+              <g key={`y-tick-${idx}`}>
+                <line
+                  x1={dimensions.width - chartPadding.right}
+                  y1={y}
+                  x2={dimensions.width - chartPadding.right + 4}
+                  y2={y}
+                  stroke={isLight ? '#cbd5e1' : '#334155'}
+                  strokeWidth="1"
                 />
                 <text
-                  x={dimensions.width - chartPadding.right + 5}
-                  y={lastCandleY + 4}
-                  fill="#ffffff"
-                  fontSize="10"
+                  x={dimensions.width - chartPadding.right + 6}
+                  y={y + 3}
+                  fill={isLight ? '#64748b' : '#94a3b8'}
+                  fontSize="9"
                   fontFamily="monospace"
-                  fontWeight="bold"
                 >
-                  {lastCandle.close.toFixed(priceDecimals)}
+                  {price.toFixed(priceDecimals)}
                 </text>
               </g>
+            );
+          })}
+        </g>
 
-              {/* Right Vertical Dynamic Price Scale Ticks */}
-              <g pointerEvents="none">
-                {Array.from({ length: 7 }).map((_, idx) => {
-                  const frac = idx / 6;
-                  const y = chartPadding.top + plotHeight - frac * plotHeight;
-                  const price = yToPrice(y);
-                  return (
-                    <g key={`y-tick-${idx}`}>
-                      <line
-                        x1={dimensions.width - chartPadding.right}
-                        y1={y}
-                        x2={dimensions.width - chartPadding.right + 4}
-                        y2={y}
-                        stroke={isLight ? '#cbd5e1' : '#334155'}
-                        strokeWidth="1"
-                      />
-                      <text
-                        x={dimensions.width - chartPadding.right + 6}
-                        y={y + 3}
-                        fill={isLight ? '#64748b' : '#94a3b8'}
-                        fontSize="9"
-                        fontFamily="monospace"
-                      >
-                        {price.toFixed(priceDecimals)}
-                      </text>
-                    </g>
-                  );
-                })}
-              </g>
+        {/* ================================================================= */}
+        {/* 8. USER DRAWN ELEMENTS */}
+        {/* ================================================================= */}
+        <g clipPath="url(#chartPlotClip)">
+        {drawnElements.map((el) => {
+          if (el.type === 'horizontal') {
+            return (
+              <line
+                key={el.id}
+                x1={el.x1}
+                y1={el.y1}
+                x2={el.x2 || dimensions.width}
+                y2={el.y1}
+                stroke={el.color || '#3b82f6'}
+                strokeWidth="2"
+              />
+            );
+          }
+          if (el.type === 'rectangle') {
+            return (
+              <rect
+                key={el.id}
+                x={el.x1}
+                y={el.y1}
+                width={Math.abs((el.x2 || el.x1) - el.x1)}
+                height={Math.abs((el.y2 || el.y1) - el.y1)}
+                fill={el.color || 'rgba(59, 130, 246, 0.2)'}
+                stroke="#3b82f6"
+                strokeWidth="1.5"
+              />
+            );
+          }
+          if (el.type === 'line') {
+            return (
+              <line
+                key={el.id}
+                x1={el.x1}
+                y1={el.y1}
+                x2={el.x2 || el.x1}
+                y2={el.y2 || el.y1}
+                stroke={el.color || '#10b981'}
+                strokeWidth="2"
+              />
+            );
+          }
+          return null;
+        })}
+        </g>
 
-              {/* Hover Crosshair */}
-              {mousePos && (
-                <g pointerEvents="none">
-                  <line
-                    x1={mousePos.x}
-                    y1={chartPadding.top}
-                    x2={mousePos.x}
-                    y2={dimensions.height - chartPadding.bottom}
-                    stroke={isLight ? '#94a3b8' : '#475569'}
-                    strokeWidth="0.8"
-                    strokeDasharray="3 3"
-                  />
-                  <line
-                    x1={chartPadding.left}
-                    y1={mousePos.y}
-                    x2={dimensions.width - chartPadding.right}
-                    y2={mousePos.y}
-                    stroke={isLight ? '#94a3b8' : '#475569'}
-                    strokeWidth="0.8"
-                    strokeDasharray="3 3"
-                  />
-                  <rect
-                    x={dimensions.width - chartPadding.right}
-                    y={mousePos.y - 9}
-                    width={chartPadding.right - 2}
-                    height={18}
-                    rx={2}
-                    fill={isLight ? '#1e293b' : '#334155'}
-                  />
-                  <text
-                    x={dimensions.width - chartPadding.right + 5}
-                    y={mousePos.y + 4}
-                    fill="#ffffff"
-                    fontSize="10"
-                    fontFamily="monospace"
-                  >
-                    {yToPrice(mousePos.y).toFixed(priceDecimals)}
-                  </text>
-                </g>
-              )}
+        {/* ================================================================= */}
+        {/* 9. HOVER CROSSHAIR */}
+        {/* ================================================================= */}
+        {mousePos && (
+          <g pointerEvents="none">
+            {/* Vertical crosshair line */}
+            <line
+              x1={mousePos.x}
+              y1={chartPadding.top}
+              x2={mousePos.x}
+              y2={dimensions.height - chartPadding.bottom}
+              stroke={isLight ? '#94a3b8' : '#475569'}
+              strokeWidth="0.8"
+              strokeDasharray="3 3"
+            />
+            {/* Horizontal crosshair line */}
+            <line
+              x1={chartPadding.left}
+              y1={mousePos.y}
+              x2={dimensions.width - chartPadding.right}
+              y2={mousePos.y}
+              stroke={isLight ? '#94a3b8' : '#475569'}
+              strokeWidth="0.8"
+              strokeDasharray="3 3"
+            />
+            {/* Price tag on right axis */}
+            <rect
+              x={dimensions.width - chartPadding.right}
+              y={mousePos.y - 9}
+              width={chartPadding.right - 4}
+              height={18}
+              rx={2}
+              fill={isLight ? '#1e293b' : '#334155'}
+            />
+            <text
+              x={dimensions.width - chartPadding.right + 6}
+              y={mousePos.y + 4}
+              fill="#ffffff"
+              fontSize="10"
+              fontFamily="monospace"
+            >
+              {yToPrice(mousePos.y).toFixed(priceDecimals)}
+            </text>
+          </g>
+        )}
 
-              {/* Bottom Time Scale Labels */}
-              {safeCandles.map((c, i) => {
-                const x = getCandleX(i);
-                if (x < chartPadding.left + 20 || x > dimensions.width - chartPadding.right - 20) return null;
-                const labelStep = Math.max(1, Math.round(5 / zoom));
-                if (i % labelStep !== 0) return null;
-                const timeLabel = new Date(c.timestamp || c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        {/* ================================================================= */}
+        {/* 10. TIME SCALE LABELS (BOTTOM) */}
+        {/* ================================================================= */}
+        {safeCandles.map((c, i) => {
+          const step = Math.max(Math.floor(6 / zoomLevel), 2);
+          if (i % step !== 0) return null;
+          const x = getCandleX(i);
+          if (x < chartPadding.left || x > dimensions.width - chartPadding.right) return null;
+          const timeLabel = new Date(c.timestamp || c.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-                return (
-                  <text
-                    key={`time-${i}`}
-                    x={x}
-                    y={dimensions.height - chartPadding.bottom + 18}
-                    textAnchor="middle"
-                    fill={isLight ? '#94a3b8' : '#64748b'}
-                    fontSize="10"
-                    fontFamily="monospace"
-                  >
-                    {timeLabel}
-                  </text>
-                );
-              })}
-            </svg>
+          return (
+            <text
+              key={`time-${i}`}
+              x={x}
+              y={dimensions.height - chartPadding.bottom + 18}
+              textAnchor="middle"
+              fill={isLight ? '#94a3b8' : '#64748b'}
+              fontSize="10"
+              fontFamily="monospace"
+            >
+              {timeLabel}
+            </text>
+          );
+        })}
+      </svg>
           </div>
         )}
       </div>

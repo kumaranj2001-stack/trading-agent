@@ -349,7 +349,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
 
   if (workspaceMode === 'infinity-vision') {
     return (
-      <div className="relative w-full rounded-xl overflow-hidden border border-terminal-border shadow-xl">
+      <div className="relative w-full rounded-xl border border-terminal-border bg-terminal-950/90 shadow-xl overflow-hidden">
         {/* Switcher Pill to 1,050+ Strategies Matrix */}
         <div className="absolute top-2 right-4 z-40 hidden lg:flex items-center gap-1.5">
           <button
@@ -385,7 +385,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-110px)] min-h-[750px] w-full bg-terminal-950 text-slate-100 select-none overflow-hidden rounded-xl border border-terminal-border shadow-2xl">
+    <div className="flex flex-col min-h-[750px] w-full bg-terminal-950 text-slate-100 select-none overflow-hidden rounded-xl border border-terminal-border shadow-xl">
       {/* 🧭 Top Institutional Navigation & Control Bar */}
       <div className="p-3 sm:px-4 bg-terminal-900 border-b border-terminal-border flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3 min-w-0">

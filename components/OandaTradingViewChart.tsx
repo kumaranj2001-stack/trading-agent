@@ -11,7 +11,6 @@ export interface OandaTradingViewChartProps {
   theme?: 'dark' | 'light';
   height?: number;
   containerIdPrefix?: string;
-  hideHeader?: boolean;
 }
 
 const getTimeframeInterval = (tf?: string): string => {
@@ -34,7 +33,6 @@ function OandaTradingViewChartComponent({
   theme = 'dark',
   height = 460,
   containerIdPrefix = 'oanda',
-  hideHeader = false,
 }: OandaTradingViewChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadError, setLoadError] = useState(false);
@@ -127,9 +125,13 @@ function OandaTradingViewChartComponent({
     setRetryNonce(prev => prev + 1);
   };
 
+  const isEmbeddedVision = containerIdPrefix === 'vision';
+
   return (
-    <div className={`w-full ${hideHeader ? 'h-full bg-terminal-950' : 'bg-terminal-950 rounded-xl overflow-hidden border border-terminal-border/80 shadow-xl'}`}>
-      {!hideHeader && (
+    <div className={`w-full overflow-hidden ${
+      isEmbeddedVision ? 'bg-transparent' : 'bg-terminal-950 rounded-xl border border-terminal-border/80 shadow-xl'
+    }`}>
+      {!isEmbeddedVision && (
         <div className="flex flex-wrap items-center justify-between px-3 py-1.5 bg-terminal-900 border-b border-terminal-border text-xs font-mono gap-1">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>

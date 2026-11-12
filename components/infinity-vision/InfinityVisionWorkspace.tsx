@@ -306,8 +306,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   };
 
   return (
-    <div className={`w-full min-h-[calc(100vh-100px)] flex flex-col font-sans overflow-x-hidden rounded-xl border shadow-xl ${
-      theme === 'light' ? 'bg-slate-100 text-slate-900 border-slate-200' : 'bg-terminal-950 text-slate-100 border-terminal-border/80'
+    <div className={`w-full flex flex-col font-sans select-none overflow-hidden ${
+      theme === 'light' ? 'bg-slate-100 text-slate-900' : 'bg-terminal-950 text-slate-100'
     }`}>
       {/* 🚀 PRIMARY CONTROL ROW (Begins directly with VISION pair selector & timeframe chips) */}
       <InfinityVisionToolbar

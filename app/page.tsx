@@ -971,8 +971,8 @@ export default function Home() {
         sessionInfo={sessionInfo}
       />
 
-      {/* Main Content Area: Strictly constrained within Header's exact max-w-7xl footprint */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-3 sm:p-4 space-y-4">
+      {/* Main Content Area - Strictly aligned to max-w-7xl container boundary */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-4">
         {/* ❄️ Global State Freeze upon Market Closure Banner */}
         {activeTab !== 'vision-atlas' && (activeTab as string) !== 'vision-atlas-lab' && (
           <MarketCloseFreezeBanner
