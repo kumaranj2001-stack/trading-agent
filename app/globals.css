@@ -120,59 +120,91 @@ body {
   border-color: #e2e8f0 !important;
 }
 
-/* Headings on Light Surfaces */
-.light h1, .light h2, .light h3, .light h4, .light h5, .light h6 {
-  color: #0f172a;
+/* Gradient Container Neutralization in Light Mode */
+.light [class*="bg-gradient-to-"][class*="from-terminal-"],
+.light [class*="bg-gradient-to-"][class*="from-cyan-950"],
+.light [class*="bg-gradient-to-"][class*="from-indigo-950"],
+.light [class*="bg-gradient-to-"][class*="from-purple-950"],
+.light [class*="bg-gradient-to-"][class*="from-sky-950"],
+.light [class*="bg-gradient-to-"][class*="from-emerald-950"],
+.light [class*="bg-gradient-to-"][class*="from-rose-950"],
+.light [class*="bg-gradient-to-"][class*="from-amber-950"],
+.light [class*="bg-gradient-to-"][class*="from-slate-900"],
+.light [class*="bg-gradient-to-"][class*="from-slate-950"],
+.light [class*="bg-gradient-to-"][class*="from-black"] {
+  background-image: none !important;
+  background-color: #ffffff !important;
 }
 
-/* Typography on Light Surfaces (Strict Contrast Rules - excluding solid colored buttons/badges/dark-surfaces) */
+/* Headings on Light Surfaces */
+.light h1, .light h2, .light h3, .light h4, .light h5, .light h6 {
+  color: #0f172a !important;
+  font-weight: 700;
+}
+
+/* Typography on Light Surfaces (Strict Contrast Rules - excluding solid colored action buttons) */
 .light .text-white:not(
-  button,
-  button *,
-  [class*="bg-emerald-5"],
-  [class*="bg-emerald-6"],
-  [class*="bg-rose-5"],
-  [class*="bg-rose-6"],
-  [class*="bg-cyan-5"],
-  [class*="bg-cyan-6"],
-  [class*="bg-blue-5"],
-  [class*="bg-blue-6"],
-  [class*="bg-indigo-5"],
-  [class*="bg-indigo-6"],
-  [class*="bg-amber-5"],
-  [class*="bg-amber-6"],
-  [class*="bg-orange-5"],
-  [class*="bg-orange-6"],
-  [class*="bg-purple-5"],
-  [class*="bg-purple-6"],
-  [class*="bg-slate-8"],
-  [class*="bg-slate-9"],
-  [class*="bg-black"],
-  [class*="bg-gradient-"],
+  button[class*="bg-emerald-"],
+  button[class*="bg-rose-"],
+  button[class*="bg-cyan-"],
+  button[class*="bg-blue-"],
+  button[class*="bg-indigo-"],
+  button[class*="bg-amber-"],
+  button[class*="bg-orange-"],
+  button[class*="bg-purple-"],
+  button[class*="bg-red-"],
+  button[class*="bg-slate-8"],
+  button[class*="bg-slate-9"],
+  button[class*="bg-black"],
+  button[class*="bg-gradient-"],
+  button[class*="bg-emerald-"] *,
+  button[class*="bg-rose-"] *,
+  button[class*="bg-cyan-"] *,
+  button[class*="bg-blue-"] *,
+  button[class*="bg-indigo-"] *,
+  button[class*="bg-amber-"] *,
+  button[class*="bg-orange-"] *,
+  button[class*="bg-purple-"] *,
+  button[class*="bg-red-"] *,
+  button[class*="bg-slate-8"] *,
+  button[class*="bg-slate-9"] *,
+  button[class*="bg-black"] *,
+  button[class*="bg-gradient-"] *,
   .force-white,
   .dark-surface,
   .dark-surface *,
   .toast,
-  [role="alert"]
+  .toast *,
+  [role="alert"],
+  [role="alert"] *
 ) {
   color: #0f172a !important;
 }
 
-.light .text-slate-100:not(button *, [class*="bg-emerald-"], [class*="bg-rose-"], [class*="bg-cyan-"], [class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-gradient-"], .dark-surface *),
-.light .text-slate-200:not(button *, [class*="bg-emerald-"], [class*="bg-rose-"], [class*="bg-cyan-"], [class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-gradient-"], .dark-surface *) {
+.light .text-slate-100:not(button[class*="bg-"] *, .dark-surface *),
+.light .text-slate-200:not(button[class*="bg-"] *, .dark-surface *) {
+  color: #0f172a !important;
+}
+
+.light .text-slate-300:not(button[class*="bg-"] *, .dark-surface *) {
   color: #1e293b !important;
 }
 
-.light .text-slate-300:not(button *, [class*="bg-emerald-"], [class*="bg-rose-"], [class*="bg-cyan-"], [class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-gradient-"], .dark-surface *) {
-  color: #334155 !important;
+.light .text-slate-400:not(button[class*="bg-"] *, .dark-surface *),
+.light .text-slate-500:not(button[class*="bg-"] *, .dark-surface *) {
+  color: #475569 !important; /* Crisp, high-contrast slate-600 */
 }
 
-.light .text-slate-400:not(button *, [class*="bg-emerald-"], [class*="bg-rose-"], [class*="bg-cyan-"], [class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-gradient-"], .dark-surface *) {
-  color: #64748b !important;
+/* UI Box Labels & Fields High-Contrast Enforcement */
+.light span[class*="uppercase"]:not(button *, .dark-surface *) {
+  color: #475569 !important;
+  font-weight: 700 !important;
 }
 
-.light .text-slate-500:not(button *, [class*="bg-emerald-"], [class*="bg-rose-"], [class*="bg-cyan-"], [class*="bg-blue-"], [class*="bg-indigo-"], [class*="bg-gradient-"], .dark-surface *) {
-  color: #94a3b8 !important;
+.light strong:not(button *, .dark-surface *),
+.light b:not(button *, .dark-surface *) {
+  color: #0f172a !important;
+  font-weight: 700 !important;
 }
 
 /* ========================================================
@@ -183,6 +215,8 @@ body {
 .light button[class*="bg-emerald-6"],
 .light button[class*="bg-rose-5"],
 .light button[class*="bg-rose-6"],
+.light button[class*="bg-red-5"],
+.light button[class*="bg-red-6"],
 .light button[class*="bg-cyan-5"],
 .light button[class*="bg-cyan-6"],
 .light button[class*="bg-blue-5"],
@@ -194,10 +228,11 @@ body {
 .light button[class*="bg-purple-6"],
 .light button[class*="bg-slate-8"],
 .light button[class*="bg-slate-9"],
+.light button[class*="bg-black"],
 .light button[class*="bg-gradient-"],
-.light [class*="bg-gradient-"] button,
 .light button[class*="bg-emerald-6"] *,
 .light button[class*="bg-rose-6"] *,
+.light button[class*="bg-red-6"] *,
 .light button[class*="bg-cyan-6"] *,
 .light button[class*="bg-blue-6"] *,
 .light button[class*="bg-indigo-6"] *,
@@ -206,7 +241,8 @@ body {
 .light button[class*="bg-purple-6"] *,
 .light button[class*="bg-slate-8"] *,
 .light button[class*="bg-slate-9"] *,
-.light [class*="bg-gradient-"] *,
+.light button[class*="bg-black"] *,
+.light button[class*="bg-gradient-"] *,
 .light .force-text-white,
 .light .toast * {
   color: #ffffff !important;
@@ -214,42 +250,50 @@ body {
 
 .light button[class*="bg-emerald-6"] svg,
 .light button[class*="bg-rose-6"] svg,
+.light button[class*="bg-red-6"] svg,
 .light button[class*="bg-cyan-6"] svg,
 .light button[class*="bg-blue-6"] svg,
 .light button[class*="bg-indigo-6"] svg,
-.light [class*="bg-gradient-"] svg {
+.light button[class*="bg-gradient-"] svg {
   color: #ffffff !important;
 }
 
 /* Accessible High-Contrast Accents on Light Backgrounds */
-.light .text-cyan-400:not(button *, [class*="bg-gradient-"] *),
-.light .text-cyan-300:not(button *, [class*="bg-gradient-"] *) {
+.light .text-cyan-400:not(button *, .dark-surface *),
+.light .text-cyan-300:not(button *, .dark-surface *) {
   color: #0891b2 !important; /* cyan-600 */
 }
 
-.light .text-emerald-400:not(button *, [class*="bg-gradient-"] *),
-.light .text-emerald-300:not(button *, [class*="bg-gradient-"] *) {
+.light .text-emerald-400:not(button *, .dark-surface *),
+.light .text-emerald-300:not(button *, .dark-surface *) {
   color: #047857 !important; /* emerald-700 */
 }
 
-.light .text-rose-400:not(button *, [class*="bg-gradient-"] *),
-.light .text-rose-300:not(button *, [class*="bg-gradient-"] *) {
+.light .text-rose-400:not(button *, .dark-surface *),
+.light .text-rose-300:not(button *, .dark-surface *),
+.light .text-red-400:not(button *, .dark-surface *),
+.light .text-red-300:not(button *, .dark-surface *) {
   color: #be123c !important; /* rose-700 */
 }
 
-.light .text-amber-400:not(button *, [class*="bg-gradient-"] *),
-.light .text-amber-300:not(button *, [class*="bg-gradient-"] *) {
+.light .text-amber-400:not(button *, .dark-surface *),
+.light .text-amber-300:not(button *, .dark-surface *) {
   color: #b45309 !important; /* amber-700 */
 }
 
-.light .text-purple-400:not(button *, [class*="bg-gradient-"] *),
-.light .text-purple-300:not(button *, [class*="bg-gradient-"] *) {
+.light .text-purple-400:not(button *, .dark-surface *),
+.light .text-purple-300:not(button *, .dark-surface *) {
   color: #6d28d9 !important; /* purple-700 */
 }
 
-.light .text-sky-400:not(button *, [class*="bg-gradient-"] *),
-.light .text-sky-300:not(button *, [class*="bg-gradient-"] *) {
+.light .text-sky-400:not(button *, .dark-surface *),
+.light .text-sky-300:not(button *, .dark-surface *) {
   color: #0369a1 !important; /* sky-700 */
+}
+
+.light .text-indigo-400:not(button *, .dark-surface *),
+.light .text-indigo-300:not(button *, .dark-surface *) {
+  color: #4338ca !important; /* indigo-700 */
 }
 
 /* Light Mode Badges & Soft Tint Containers */

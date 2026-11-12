@@ -31,6 +31,7 @@ interface UnifiedDecisionBannerProps {
   onForceRecalibrate?: () => void;
   isMarketFrozen?: boolean;
   sessionInfo?: MarketSessionInfo | null;
+  theme?: 'dark' | 'light';
 }
 
 export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
@@ -41,6 +42,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   onForceRecalibrate,
   isMarketFrozen = false,
   sessionInfo = null,
+  theme = 'dark',
 }) => {
   const { unifiedDecision, agents, executionSignal, currentPrice, pair } = consensus;
   const isBuy = unifiedDecision.direction === 'BUY';
@@ -49,14 +51,20 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   const isApproved = agents.risk.verdict === 'APPROVED';
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-terminal-border bg-gradient-to-b from-terminal-900 via-terminal-950 to-terminal-950 shadow-2xl p-4 sm:p-6 transition-all">
+    <div className={`relative overflow-hidden rounded-2xl border transition-all p-4 sm:p-6 shadow-2xl ${
+      theme === 'light'
+        ? 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
+        : 'border-terminal-border bg-gradient-to-b from-terminal-900 via-terminal-950 to-terminal-950 text-slate-100'
+    }`}>
       {/* Background glow accent */}
       <div className={`absolute top-0 right-1/4 w-96 h-44 rounded-full blur-3xl pointer-events-none opacity-20 ${
         isBuy ? 'bg-emerald-500' : isSell ? 'bg-rose-500' : 'bg-amber-500'
       }`} />
 
       {/* Top Row: Unified Direction, Confluence Grade & Execution Pill */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-terminal-border/80 pb-4">
+      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4 ${
+        theme === 'light' ? 'border-slate-200' : 'border-terminal-border/80'
+      }`}>
         <div className="flex flex-wrap items-center gap-3">
           {/* Pulsing Direction Badge */}
           <div className={`px-4 py-2 rounded-xl font-mono text-base sm:text-lg font-black tracking-wider flex items-center gap-2 border shadow-lg ${
@@ -95,12 +103,12 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             }`}>
               GRADE {unifiedDecision.confluenceGrade} • {executionSignal.lots.toFixed(2)} LOTS
             </span>
-            <span className="text-slate-400">
-              Confidence: <strong className="text-cyan-400 font-bold">{unifiedDecision.confidence}%</strong>
+            <span className={theme === 'light' ? 'text-slate-600 font-medium' : 'text-slate-400'}>
+              Confidence: <strong className="text-cyan-500 font-bold">{unifiedDecision.confidence}%</strong>
             </span>
             <span className="text-slate-400 hidden sm:inline">•</span>
-            <span className="text-slate-400 hidden sm:inline">
-              Price: <strong className="text-white font-bold">{currentPrice}</strong>
+            <span className={`${theme === 'light' ? 'text-slate-600' : 'text-slate-400'} hidden sm:inline`}>
+              Price: <strong className={`${theme === 'light' ? 'text-slate-900' : 'text-white'} font-bold`}>{currentPrice}</strong>
             </span>
           </div>
 
@@ -178,100 +186,128 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
       </div>
 
       {/* Subheader Recommendation */}
-      <div className="py-2.5 text-xs sm:text-sm font-mono text-slate-300 flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/40">
+      <div className={`py-2.5 text-xs sm:text-sm font-mono flex flex-wrap items-center justify-between gap-2 border-b ${
+        theme === 'light' ? 'border-slate-200 text-slate-700' : 'border-terminal-border/40 text-slate-300'
+      }`}>
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" />
-          <span className="font-semibold text-white">{unifiedDecision.recommendedAction}</span>
+          <Sparkles className="w-4 h-4 text-cyan-500 shrink-0" />
+          <span className={`font-semibold ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>{unifiedDecision.recommendedAction}</span>
         </div>
-        <div className="text-[11px] text-slate-400 flex items-center gap-3">
-          <span>Stop Loss: <strong className="text-rose-400">{executionSignal.stopLoss}</strong> {isSell ? '(Above)' : '(Below)'}</span>
-          <span>Target: <strong className="text-emerald-400">{executionSignal.takeProfit}</strong> {isSell ? '(Below)' : '(Above)'}</span>
-          <span>R:R: <strong className="text-cyan-400">{executionSignal.riskReward}:1</strong></span>
+        <div className={`text-[11px] flex items-center gap-3 ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
+          <span>Stop Loss: <strong className="text-rose-600 font-bold">{executionSignal.stopLoss}</strong> {isSell ? '(Above)' : '(Below)'}</span>
+          <span>Target: <strong className="text-emerald-600 font-bold">{executionSignal.takeProfit}</strong> {isSell ? '(Below)' : '(Above)'}</span>
+          <span>R:R: <strong className="text-cyan-600 font-bold">{executionSignal.riskReward}:1</strong></span>
         </div>
       </div>
 
-      {/* ⚓ Deterministic State-Latch & Debounce Anchor Card */}
+      {/* ⚓ Deterministic State-Latch & 15-Second Recalibration Anchor Card */}
       {consensus.latchedState && (
-        <div className="mt-3 p-3 rounded-xl border border-cyan-500/40 bg-gradient-to-r from-cyan-950/40 via-terminal-950 to-indigo-950/40 font-mono text-xs shadow-md">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-cyan-500/30 pb-2 mb-2">
+        <div className={`mt-3 p-3 rounded-xl border font-mono text-xs shadow-md ${
+          theme === 'light'
+            ? 'border-cyan-300 bg-gradient-to-r from-cyan-50 via-slate-50 to-indigo-50 text-slate-900 shadow-slate-200/60'
+            : 'border-cyan-500/40 bg-gradient-to-r from-cyan-950/40 via-terminal-950 to-indigo-950/40 text-white'
+        }`}>
+          <div className={`flex flex-wrap items-center justify-between gap-2 border-b pb-2 mb-2 ${
+            theme === 'light' ? 'border-cyan-200' : 'border-cyan-500/30'
+          }`}>
             <div className="flex items-center gap-2">
-              <span className="p-1 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 flex items-center gap-1 font-bold text-[10px]">
-                <Anchor className="w-3.5 h-3.5 text-cyan-400" />
-                <span>STATE-LATCHED ANCHOR</span>
+              <span className={`p-1 rounded flex items-center gap-1 font-bold text-[10px] border ${
+                theme === 'light'
+                  ? 'bg-cyan-100 text-cyan-800 border-cyan-300'
+                  : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50'
+              }`}>
+                <Anchor className="w-3.5 h-3.5 text-cyan-600" />
+                <span>15s MULTI-DESK RECALIBRATION</span>
               </span>
-              <span className="text-white font-bold text-xs">
-                {consensus.latchedState.anchoredDirection} Setup Locked (Zero Micro-Fluctuations)
+              <span className={`font-bold text-xs ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>
+                {consensus.latchedState.anchoredDirection} Setup Active (5-Engine Live Synthesis)
               </span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                <Clock className="w-3 h-3 text-cyan-400" />
-                <span>Expires in {Math.floor(consensus.latchedState.timeRemainingSeconds / 60)}m {consensus.latchedState.timeRemainingSeconds % 60}s</span>
+              <span className={`text-[10px] flex items-center gap-1 font-semibold ${
+                theme === 'light' ? 'text-slate-700' : 'text-slate-400'
+              }`}>
+                <Clock className="w-3.5 h-3.5 text-cyan-600 animate-pulse" />
+                <span>Recalibrates in {consensus.latchedState.timeRemainingSeconds}s</span>
               </span>
               {onForceRecalibrate && (
                 <button
                   onClick={onForceRecalibrate}
-                  className="px-2 py-0.5 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white text-[10px] flex items-center gap-1 border border-terminal-border transition-colors"
-                  title="Force re-evaluation of 5-agent swarm consensus"
+                  className={`px-2 py-0.5 rounded text-[10px] flex items-center gap-1 border transition-colors font-bold ${
+                    theme === 'light'
+                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                      : 'bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border-terminal-border'
+                  }`}
+                  title="Force immediate re-evaluation of 5-agent swarm consensus"
                 >
                   <RefreshCw className="w-2.5 h-2.5" />
-                  <span>Recalibrate</span>
+                  <span>Recalibrate Now</span>
                 </button>
               )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] mb-2">
-            <div className="p-2 rounded bg-terminal-900/80 border border-terminal-border">
-              <span className="text-[9px] text-slate-400 uppercase block">Anchored Entry</span>
-              <strong className="text-white text-xs">{consensus.latchedState.anchoredEntryPrice}</strong>
-              <span className="text-[9px] text-emerald-400 block font-semibold">Fixed Level</span>
+            <div className={`p-2 rounded border ${
+              theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900/80 border-terminal-border'
+            }`}>
+              <span className={`text-[9px] uppercase block font-semibold ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>Anchored Entry</span>
+              <strong className={`text-xs ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>{consensus.latchedState.anchoredEntryPrice}</strong>
+              <span className="text-[9px] text-emerald-600 block font-semibold">Fixed Level</span>
             </div>
-            <div className="p-2 rounded bg-terminal-900/80 border border-terminal-border">
-              <span className="text-[9px] text-rose-400 uppercase block">Anchored Stop Loss</span>
-              <strong className="text-rose-300 text-xs">{consensus.latchedState.anchoredStopLoss}</strong>
-              <span className="text-[9px] text-slate-400 block">Strict Protection</span>
+            <div className={`p-2 rounded border ${
+              theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900/80 border-terminal-border'
+            }`}>
+              <span className={`text-[9px] uppercase block font-semibold ${theme === 'light' ? 'text-rose-700' : 'text-rose-400'}`}>Anchored Stop Loss</span>
+              <strong className={`text-xs ${theme === 'light' ? 'text-rose-700' : 'text-rose-300'}`}>{consensus.latchedState.anchoredStopLoss}</strong>
+              <span className={`text-[9px] block ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>Strict Protection</span>
             </div>
-            <div className="p-2 rounded bg-terminal-900/80 border border-terminal-border">
-              <span className="text-[9px] text-emerald-400 uppercase block">Anchored Target</span>
-              <strong className="text-emerald-300 text-xs">{consensus.latchedState.anchoredTakeProfit}</strong>
-              <span className="text-[9px] text-cyan-400 block font-semibold">{consensus.latchedState.anchoredRiskReward}:1 Target</span>
+            <div className={`p-2 rounded border ${
+              theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900/80 border-terminal-border'
+            }`}>
+              <span className={`text-[9px] uppercase block font-semibold ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-400'}`}>Anchored Target</span>
+              <strong className={`text-xs ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-300'}`}>{consensus.latchedState.anchoredTakeProfit}</strong>
+              <span className={`text-[9px] block font-semibold ${theme === 'light' ? 'text-cyan-700' : 'text-cyan-400'}`}>{consensus.latchedState.anchoredRiskReward}:1 Target</span>
             </div>
-            <div className="p-2 rounded bg-terminal-900/80 border border-terminal-border">
-              <span className="text-[9px] text-amber-400 uppercase block">
+            <div className={`p-2 rounded border ${
+              theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900/80 border-terminal-border'
+            }`}>
+              <span className={`text-[9px] uppercase block font-semibold ${theme === 'light' ? 'text-amber-700' : 'text-amber-400'}`}>
                 {consensus.latchedState.anchoredDirection === 'SELL' ? 'Resistance Ceiling' : 'S1 Support Floor'}
               </span>
-              <strong className="text-amber-300 text-xs">
+              <strong className={`text-xs ${theme === 'light' ? 'text-amber-800' : 'text-amber-300'}`}>
                 {consensus.latchedState.anchoredDirection === 'SELL' 
                   ? consensus.latchedState.resistanceCeiling 
                   : consensus.latchedState.s1Floor}
               </strong>
-              <span className="text-[9px] text-rose-400 block font-semibold">Invalidation Level</span>
+              <span className={`text-[9px] block font-semibold ${theme === 'light' ? 'text-rose-700' : 'text-rose-400'}`}>Invalidation Level</span>
             </div>
           </div>
 
           {/* Probability-First & Knowledge Base Confluence Footer */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-cyan-500/20 text-[10px] text-slate-300">
+          <div className={`flex flex-wrap items-center justify-between gap-2 pt-2 border-t text-[10px] ${
+            theme === 'light' ? 'border-cyan-200 text-slate-700' : 'border-cyan-500/20 text-slate-300'
+          }`}>
             <div className="flex items-center gap-2">
               <span className={`px-2 py-0.5 rounded font-bold border ${
                 consensus.latchedState.probabilityFirstBoost
-                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                  : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                  ? theme === 'light' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                  : theme === 'light' ? 'bg-indigo-100 text-indigo-800 border-indigo-300' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
               }`}>
                 🎯 MONTE CARLO WIN PROB: {consensus.latchedState.winProbabilityPercent}%
               </span>
               {consensus.latchedState.probabilityFirstBoost && (
-                <span className="text-emerald-400 font-semibold hidden md:inline">
+                <span className={`font-semibold hidden md:inline ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-400'}`}>
                   (&gt;70% Win Prob Elevated to Grade {consensus.latchedState.anchoredGrade} — Counter-Momentum Prevented)
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-3 text-slate-400 text-[10px]">
-              <span>POC Anchor: <strong className="text-cyan-300">{consensus.latchedState.synthesisSources.technicalPocLevel}</strong></span>
-              <span>Wire Sentiment: <strong className="text-amber-300">{consensus.latchedState.synthesisSources.newsSentimentScore > 0 ? '+' : ''}{consensus.latchedState.synthesisSources.newsSentimentScore}%</strong></span>
-              <span>1,050+ KB Rules: <strong className="text-emerald-300">{consensus.latchedState.synthesisSources.matchedRulesCount} matched</strong></span>
+            <div className={`flex items-center gap-3 text-[10px] ${theme === 'light' ? 'text-slate-700' : 'text-slate-400'}`}>
+              <span>POC Anchor: <strong className={theme === 'light' ? 'text-cyan-700 font-bold' : 'text-cyan-300 font-bold'}>{consensus.latchedState.synthesisSources.technicalPocLevel}</strong></span>
+              <span>Wire Sentiment: <strong className={theme === 'light' ? 'text-amber-700 font-bold' : 'text-amber-300 font-bold'}>{consensus.latchedState.synthesisSources.newsSentimentScore > 0 ? '+' : ''}{consensus.latchedState.synthesisSources.newsSentimentScore}%</strong></span>
+              <span>1,050+ KB Rules: <strong className={theme === 'light' ? 'text-emerald-700 font-bold' : 'text-emerald-300 font-bold'}>{consensus.latchedState.synthesisSources.matchedRulesCount} matched</strong></span>
             </div>
           </div>
         </div>

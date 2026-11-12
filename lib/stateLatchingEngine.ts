@@ -11,10 +11,12 @@ import { orderFlowEngine } from './orderFlowEngine';
 // ============================================================================
 // ⚓ DETERMINISTIC STATE-LATCHING & DEBOUNCE ANCHOR ENGINE
 // Locks in Entry, Stop-Loss, Take-Profit once consensus is achieved,
-// rendering the setup static and immutable until structural invalidation.
+// rendering the setup static and immutable until the 15-second multi-desk
+// recalibration interval or structural invalidation.
 // ============================================================================
 
-const DEFAULT_LATCH_TTL_MINUTES = 20;
+export const RECALIBRATION_INTERVAL_SECONDS = 15;
+const DEFAULT_LATCH_TTL_MINUTES = RECALIBRATION_INTERVAL_SECONDS / 60; // 15 seconds (0.25 minutes)
 const STORAGE_PREFIX = 'qri_latched_trade_';
 
 export class StateLatchingEngine {
@@ -79,18 +81,18 @@ export class StateLatchingEngine {
     const state = this.latchedStates.get(pair);
     if (!state) return null;
 
-    // Check expiration
+    // Check expiration (15-second institutional recalibration interval)
     const now = Date.now();
     if (now >= state.timeWindowExpiryEpochMs) {
       state.isLatched = false;
       state.latchStatus = 'UNLATCHED_EXPIRED';
-      state.invalidationTriggerReason = `Time Window Expired (${state.timeWindowMinutes}m setup validity elapsed without trigger).`;
+      state.invalidationTriggerReason = `15-Second Recalibration Triggered: Automated 5-engine multi-desk synthesis cycle elapsed. Re-evaluating fresh setup.`;
       this.latchedStates.delete(pair);
       this.removePersistedState(pair);
       return null;
     }
 
-    state.timeRemainingSeconds = Math.max(0, Math.floor((state.timeWindowExpiryEpochMs - now) / 1000));
+    state.timeRemainingSeconds = Math.max(0, Math.ceil((state.timeWindowExpiryEpochMs - now) / 1000));
     return state;
   }
 
@@ -289,7 +291,7 @@ export class StateLatchingEngine {
     const anchoredLots = consensus.executionSignal.lots > 0 ? consensus.executionSignal.lots : 0.05;
 
     const now = Date.now();
-    const expiryMs = now + timeWindowMinutes * 60 * 1000;
+    const expiryMs = now + Math.round(timeWindowMinutes * 60 * 1000);
 
     const latchedState: LatchedTradeState = {
       pair,
@@ -298,7 +300,7 @@ export class StateLatchingEngine {
       latchedAtEpochMs: now,
       timeWindowExpiryEpochMs: expiryMs,
       timeWindowMinutes,
-      timeRemainingSeconds: timeWindowMinutes * 60,
+      timeRemainingSeconds: Math.round(timeWindowMinutes * 60),
       anchoredDirection: direction,
       anchoredGrade: finalGrade,
       anchoredEntryPrice,

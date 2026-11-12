@@ -1,7 +1,7 @@
 import { Candle, CurrencyPair, MarketSegment, Position, SwarmConsensusResult, TimeFrame } from './types';
 import { BASE_PRICES, PIP_VALUES, getMarketSegmentForSymbol } from './marketData';
 import { MarketSessionManager } from './marketSessionManager';
-import { stateLatchingEngine } from './stateLatchingEngine';
+import { stateLatchingEngine, RECALIBRATION_INTERVAL_SECONDS } from './stateLatchingEngine';
 
 export interface MarketFeedTickEvent {
   pair: CurrencyPair;
@@ -416,8 +416,8 @@ export class LiveMarketFeedManager {
     }
 
     if (!latched) {
-      // Form fresh anchored setup grounded in 1,000+ institutional rules and Monte Carlo win prob
-      latched = stateLatchingEngine.latchConsensus(pair, consensus, undefined, 20);
+      // Form fresh anchored setup grounded in 1,000+ institutional rules and Monte Carlo win prob with 15s recalibration
+      latched = stateLatchingEngine.latchConsensus(pair, consensus, undefined, RECALIBRATION_INTERVAL_SECONDS / 60);
     }
 
     // Directional Parity Protocol: Ensure direction strictly matches active multi-desk consensus and debate bias
@@ -433,7 +433,7 @@ export class LiveMarketFeedManager {
     // If consensus shifted direction relative to old latch, release and re-latch in fresh direction
     if (latched.anchoredDirection !== definitiveDirection) {
       stateLatchingEngine.releaseLatch(pair, `Directional synchronization: Swarm definitive bias is ${definitiveDirection}`);
-      latched = stateLatchingEngine.latchConsensus(pair, { ...consensus, consensusDirection: definitiveDirection }, undefined, 20);
+      latched = stateLatchingEngine.latchConsensus(pair, { ...consensus, consensusDirection: definitiveDirection }, undefined, RECALIBRATION_INTERVAL_SECONDS / 60);
     }
 
     const direction = latched.anchoredDirection;

@@ -373,9 +373,12 @@ export default function Home() {
         setConsensus(result);
         BrowserStorageManager.saveConsensusResult(result);
         executeAutopilotOrder(result);
+        return result;
       }
+      return null;
     } catch (e) {
       console.error('Swarm analysis error:', e);
+      return null;
     } finally {
       setIsAnalyzing(false);
     }
@@ -435,6 +438,42 @@ export default function Home() {
       stopLoop();
     };
   }, [selectedPair, timeframe, fetchMarketData, fetchOpportunities, executeAutopilotOrder]);
+
+  // 5b. Dedicated 15-Second Multi-Desk Institutional Recalibration Engine
+  // Automatically triggers every 15 SECONDS to synthesize data across all five core analytical engines:
+  // Technical (525 strategies), Fundamental (525 engines), News (38 wires), Forex/Order Flow, and Risk Management
+  useEffect(() => {
+    const recalibrationTimer = setInterval(() => {
+      if (MarketSessionManager.isMarketFrozen(selectedPair)) {
+        return;
+      }
+
+      // Expire old latch and trigger instant 5-desk high-confluence synthesis
+      stateLatchingEngine.releaseLatch(
+        selectedPair,
+        '15-Second Recalibration Triggered: Automated 5-engine multi-desk synthesis cycle elapsed.'
+      );
+
+      triggerSwarm(selectedPair, timeframe, candles).then((freshConsensus) => {
+        if (freshConsensus) {
+          const isHighConfluence =
+            freshConsensus.confluenceGrade === 'A+' ||
+            freshConsensus.confluenceGrade === 'A' ||
+            freshConsensus.confluenceGrade === 'B';
+
+          if (isHighConfluence && freshConsensus.unifiedDecision.direction !== 'HOLD') {
+            showNotification(
+              `⚡ 15s RECALIBRATION: High-confluence synthesis updated across 5 engines [Grade ${freshConsensus.confluenceGrade} • ${freshConsensus.unifiedDecision.direction}].`
+            );
+          }
+        }
+      }).catch(err => {
+        console.warn('[15s Recalibration] Error executing cycle:', err);
+      });
+    }, 15000); // Institutional 15-second cadence
+
+    return () => clearInterval(recalibrationTimer);
+  }, [selectedPair, timeframe, candles, triggerSwarm, showNotification]);
 
   // 6. Unidirectional Live Market Data Feed Engine (Single Source of Truth)
   useEffect(() => {
@@ -919,7 +958,7 @@ export default function Home() {
   const triggeredRules: KnowledgeRule[] = consensus ? consensus.knowledgeSummary.topConfluenceRules : [];
 
   return (
-    <div className="min-h-screen flex flex-col bg-terminal-950 text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className={`min-h-screen flex flex-col transition-colors duration-200 ${theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-terminal-950 text-slate-100'} selection:bg-cyan-500/30 selection:text-cyan-200`}>
       {/* Toast Notification */}
       {notification && (
         <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-mono text-xs font-semibold shadow-2xl flex items-center gap-2 border border-emerald-400 animate-fade-in max-w-[90vw]">
@@ -1004,6 +1043,7 @@ export default function Home() {
                 onForceRecalibrate={handleForceRecalibrate}
                 isMarketFrozen={isMarketFrozen}
                 sessionInfo={sessionInfo}
+                theme={theme}
               />
             )}
 
@@ -1047,6 +1087,7 @@ export default function Home() {
                 onOpenMonteCarlo={() => setActiveTab('var')}
                 onOpenNewsWire={() => setActiveTab('wire')}
                 telemetry={consensus.autonomousLoopTelemetry}
+                theme={theme}
               />
             )}
 
@@ -1119,6 +1160,7 @@ export default function Home() {
                 onForceRecalibrate={handleForceRecalibrate}
                 isMarketFrozen={isMarketFrozen}
                 sessionInfo={sessionInfo}
+                theme={theme}
               />
             )}
 
@@ -1133,6 +1175,7 @@ export default function Home() {
                 onOpenMonteCarlo={() => setActiveTab('var')}
                 onOpenNewsWire={() => setActiveTab('wire')}
                 telemetry={consensus.autonomousLoopTelemetry}
+                theme={theme}
               />
             )}
           </div>
