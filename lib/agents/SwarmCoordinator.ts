@@ -27,6 +27,7 @@ import { knowledgeEngine } from '../knowledge/KnowledgeEngine';
 import { JournalStorageManager } from '../journalStorage';
 import { riskRatioController } from '../riskRatioController';
 import { stateLatchingEngine } from '../stateLatchingEngine';
+import { diagnosticReasoningEngine } from '../diagnosticReasoningEngine';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -422,6 +423,26 @@ export class SwarmCoordinator {
     // Decouple trade entry from rigid swarm vetoes: continuous execution active 24/7
     const orderType = activeDirection === 'SELL' ? 'SELL_MARKET' : 'BUY_MARKET';
 
+    // 🛡️ Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
+    const preExecutionFilter = diagnosticReasoningEngine.crossReferenceSetup({
+      symbol: pair,
+      direction: activeDirection,
+      lots: finalLots,
+      indicators: technical.indicators,
+      smcStructure: technical.smartMoneyConcepts?.structure,
+      centralBankBias: fundamental.baseCurrencyOutlook?.centralBankStance,
+    });
+
+    let executionAuthorized = true;
+    let executionStatus: 'READY' | 'EXECUTED' | 'VETOED' = 'READY';
+
+    if (!preExecutionFilter.allowed) {
+      executionAuthorized = false;
+      executionStatus = 'VETOED';
+    } else if (preExecutionFilter.action === 'ADJUST_SIZING') {
+      finalLots = preExecutionFilter.adjustedLots || 0.01;
+    }
+
     const consensusResult: SwarmConsensusResult = {
       pair,
       marketSegment,
@@ -436,10 +457,14 @@ export class SwarmCoordinator {
       knowledgeSummary: {
         totalTechnicalRulesLoaded: stats.technicalCount,
         totalFundamentalRulesLoaded: stats.fundamentalCount,
+        totalDynamicRulesLoaded: stats.dynamicConstraintCount,
+        totalOperativeRules: stats.totalCount,
         matchedTechnicalRules: technical.matchedRulesCount,
         matchedFundamentalRules: fundamental.matchedRulesCount,
         topConfluenceRules,
+        activeFailureConstraint: preExecutionFilter.matchingFailureRule,
       },
+      preExecutionFilter,
       agents: {
         technical,
         fundamental,
@@ -450,7 +475,7 @@ export class SwarmCoordinator {
       debateTranscript: debateOutcome.transcript,
       debateSynthesis: debateOutcome.synthesis,
       executionSignal: {
-        authorized: true,
+        authorized: executionAuthorized,
         orderType,
         symbol: pair,
         lots: finalLots,
@@ -459,9 +484,11 @@ export class SwarmCoordinator {
         takeProfit: finalTakeProfit,
         riskReward: existingLatched?.anchoredRiskReward || finalRiskReward,
         riskAmountUsd: finalMaxRisk,
-        status: 'READY',
+        status: executionStatus,
         gradingTier: confluenceGrade,
-        tierDescription: tierParams.executionPolicy,
+        tierDescription: !executionAuthorized 
+          ? `VETOED BY ACTIVE FAILURE FILTER: ${preExecutionFilter.reason}`
+          : tierParams.executionPolicy,
       },
       autonomousLoopTelemetry: {
         cycleNumber: Math.max(1, SwarmCoordinator.autonomousCycleCounter),

@@ -924,10 +924,14 @@ export interface SwarmConsensusResult {
   knowledgeSummary: {
     totalTechnicalRulesLoaded: number;
     totalFundamentalRulesLoaded: number;
+    totalDynamicRulesLoaded?: number;
+    totalOperativeRules?: number;
     matchedTechnicalRules: number;
     matchedFundamentalRules: number;
     topConfluenceRules: KnowledgeRule[];
+    activeFailureConstraint?: FailureConstraintRule;
   };
+  preExecutionFilter?: PreExecutionFilterResult;
   agents: {
     technical: TechnicalAnalysis;
     fundamental: FundamentalAnalysis;

@@ -60,6 +60,8 @@ import { visionAtlasEngine } from '@/lib/visionAtlasEngine';
 import { BASE_PRICES, FOREX_PAIRS, METALS_COMMODITIES, INDIAN_MARKET_ASSETS } from '@/lib/marketData';
 import { TECHNICAL_KNOWLEDGE_BASE } from '@/lib/knowledge/technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from '@/lib/knowledge/fundamentalKnowledge';
+import { knowledgeEngine } from '@/lib/knowledge/KnowledgeEngine';
+import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 import { InfinityVisionWorkspace } from './infinity-vision/InfinityVisionWorkspace';
 
 export interface VisionAtlasWorkspaceProps {
@@ -123,7 +125,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
   // Multi-Factor Confluence Dashboard State
   const [activeDashboardView, setActiveDashboardView] = useState<'confluence-visualizer' | 'confluence-matrix' | 'knowledge-explorer'>('confluence-visualizer');
   const [strategySearchQuery, setStrategySearchQuery] = useState<string>('');
-  const [strategyFilterCategory, setStrategyFilterCategory] = useState<'ALL' | 'TECHNICAL' | 'FUNDAMENTAL' | 'SMC' | 'INDIAN_MARKET' | 'CENTRAL_BANK' | 'FLOWS'>('ALL');
+  const [strategyFilterCategory, setStrategyFilterCategory] = useState<'ALL' | 'TECHNICAL' | 'FUNDAMENTAL' | 'SMC' | 'INDIAN_MARKET' | 'CENTRAL_BANK' | 'FLOWS' | 'OPERATIVE_RULES'>('ALL');
   const [selectedRuleDetail, setSelectedRuleDetail] = useState<KnowledgeRule | null>(null);
   const [userTechWeightAdjustment, setUserTechWeightAdjustment] = useState<number | null>(null);
 
@@ -1296,27 +1298,30 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                 {/* Filter Chips */}
                 <div className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="text-slate-400 text-[11px]">Filter:</span>
-                  {(['ALL', 'TECHNICAL', 'FUNDAMENTAL', 'SMC', 'INDIAN_MARKET', 'CENTRAL_BANK', 'FLOWS'] as const).map(cat => (
+                  {(['ALL', 'TECHNICAL', 'FUNDAMENTAL', 'SMC', 'INDIAN_MARKET', 'CENTRAL_BANK', 'FLOWS', 'OPERATIVE_RULES'] as const).map(cat => (
                     <button
                       key={cat}
-                      onClick={() => setStrategyFilterCategory(cat)}
+                      onClick={() => setStrategyFilterCategory(cat as any)}
                       className={`px-2.5 py-1 rounded-md text-[11px] font-mono transition-colors ${
                         strategyFilterCategory === cat
-                          ? 'bg-cyan-600 text-white font-bold'
+                          ? cat === 'OPERATIVE_RULES' ? 'bg-rose-600 text-white font-bold' : 'bg-cyan-600 text-white font-bold'
                           : 'bg-terminal-950 text-slate-400 hover:text-white border border-terminal-border'
                       }`}
                     >
-                      {cat.replace('_', ' ')}
+                      {cat === 'OPERATIVE_RULES' ? `OPERATIVE RULES (#1051+)` : cat.replace('_', ' ')}
                     </button>
                   ))}
                 </div>
 
                 {/* Rules Cards Grid */}
                 {(() => {
-                  const allRules = [...TECHNICAL_KNOWLEDGE_BASE, ...FUNDAMENTAL_KNOWLEDGE_BASE];
+                  const dynamicRules = diagnosticReasoningEngine.getDynamicRules();
+                  const allRules = knowledgeEngine.getAllRules();
                   const filtered = allRules.filter(r => {
-                    if (strategyFilterCategory === 'TECHNICAL' && r.category !== 'TECHNICAL') return false;
-                    if (strategyFilterCategory === 'FUNDAMENTAL' && r.category !== 'FUNDAMENTAL') return false;
+                    const isDynamic = 'isSynthesizedFromLoss' in r || r.id.startsWith('RULE-KB-105');
+                    if (strategyFilterCategory === 'OPERATIVE_RULES' && !isDynamic) return false;
+                    if (strategyFilterCategory === 'TECHNICAL' && (r.category !== 'TECHNICAL' || isDynamic)) return false;
+                    if (strategyFilterCategory === 'FUNDAMENTAL' && (r.category !== 'FUNDAMENTAL' || isDynamic)) return false;
                     if (strategyFilterCategory === 'SMC' && !r.subcategory.toLowerCase().includes('smc')) return false;
                     if (strategyFilterCategory === 'INDIAN_MARKET' && r.marketScope !== 'INDIAN_MARKET' && !r.subcategory.toLowerCase().includes('nse') && !r.subcategory.toLowerCase().includes('rbi')) return false;
                     if (strategyFilterCategory === 'CENTRAL_BANK' && !r.subcategory.toLowerCase().includes('central bank')) return false;
@@ -1334,7 +1339,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                   return (
                     <div className="space-y-2">
                       <div className="text-[11px] text-slate-400 flex items-center justify-between">
-                        <span>Showing {filtered.length} of 1,050 institutional rules</span>
+                        <span>Showing {filtered.length} of {allRules.length} institutional & operative rules (1,050 baseline + {dynamicRules.length} synthesized)</span>
                         <span className="text-cyan-400">Click any card to inspect full criteria & invalidation</span>
                       </div>
 

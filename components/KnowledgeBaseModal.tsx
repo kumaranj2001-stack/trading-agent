@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Database, CheckCircle, X, ArrowLeft } from 'lucide-react';
-import { KnowledgeRule } from '@/lib/types';
+import { Search, Database, CheckCircle, X, ArrowLeft, ShieldAlert, AlertTriangle, ShieldCheck, Zap, Lock, History } from 'lucide-react';
+import { KnowledgeRule, FailureConstraintRule } from '@/lib/types';
 import { TECHNICAL_KNOWLEDGE_BASE } from '@/lib/knowledge/technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from '@/lib/knowledge/fundamentalKnowledge';
+import { knowledgeEngine } from '@/lib/knowledge/KnowledgeEngine';
+import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 
 interface KnowledgeBaseModalProps {
   isOpen?: boolean;
@@ -20,7 +22,7 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
   isFullPage = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'ALL' | 'TECHNICAL' | 'FUNDAMENTAL' | 'INDIAN_MARKET' | 'TRIGGERED'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'TECHNICAL' | 'FUNDAMENTAL' | 'INDIAN_MARKET' | 'FAILURE_CONSTRAINTS' | 'TRIGGERED'>('ALL');
   const [apiRules, setApiRules] = useState<KnowledgeRule[] | null>(null);
   const [apiStats, setApiStats] = useState<any>(null);
   const [isLoadingApi, setIsLoadingApi] = useState<boolean>(false);
@@ -31,7 +33,11 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
     const fetchKnowledgeFromApi = async () => {
       setIsLoadingApi(true);
       try {
-        const catParam = activeTab === 'ALL' || activeTab === 'TRIGGERED' ? '' : `&category=${activeTab}`;
+        const catParam = activeTab === 'ALL' || activeTab === 'TRIGGERED' 
+          ? '' 
+          : activeTab === 'FAILURE_CONSTRAINTS' 
+          ? '&category=FAILURE_CONSTRAINTS' 
+          : `&category=${activeTab}`;
         const queryParam = searchTerm.trim() ? `&query=${encodeURIComponent(searchTerm.trim())}` : '';
         const res = await fetch(`/api/knowledge?${catParam}${queryParam}`);
         const json = await res.json();
@@ -49,9 +55,13 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
     fetchKnowledgeFromApi();
   }, [isOpen, activeTab, searchTerm]);
 
-  const allRules: KnowledgeRule[] = useMemo(() => {
-    return [...TECHNICAL_KNOWLEDGE_BASE, ...FUNDAMENTAL_KNOWLEDGE_BASE];
-  }, []);
+  const dynamicRules: FailureConstraintRule[] = useMemo(() => {
+    return diagnosticReasoningEngine.getDynamicRules();
+  }, [isOpen, activeTab]);
+
+  const allRules: (KnowledgeRule | FailureConstraintRule)[] = useMemo(() => {
+    return knowledgeEngine.getAllRules();
+  }, [dynamicRules]);
 
   const filteredRules = useMemo(() => {
     // If backend API returned filtered rules, prioritize API result unless on TRIGGERED tab
@@ -60,10 +70,13 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
     }
 
     return allRules.filter(rule => {
+      const isDynamic = 'isSynthesizedFromLoss' in rule || rule.id.startsWith('RULE-KB-105');
+
       // Tab filter
-      if (activeTab === 'TECHNICAL' && rule.category !== 'TECHNICAL') return false;
-      if (activeTab === 'FUNDAMENTAL' && rule.category !== 'FUNDAMENTAL') return false;
+      if (activeTab === 'TECHNICAL' && (rule.category !== 'TECHNICAL' || isDynamic)) return false;
+      if (activeTab === 'FUNDAMENTAL' && (rule.category !== 'FUNDAMENTAL' || isDynamic)) return false;
       if (activeTab === 'INDIAN_MARKET' && rule.marketScope !== 'INDIAN_MARKET') return false;
+      if (activeTab === 'FAILURE_CONSTRAINTS' && !isDynamic) return false;
       if (activeTab === 'TRIGGERED') {
         const isTriggered = activeTriggeredRules.some(r => r.id === rule.id);
         if (!isTriggered) return false;
@@ -166,6 +179,17 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
             >
               🇮🇳 NSE
             </button>
+            <button
+              onClick={() => setActiveTab('FAILURE_CONSTRAINTS')}
+              className={`px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                activeTab === 'FAILURE_CONSTRAINTS' 
+                  ? 'bg-rose-600 text-white font-bold shadow-sm' 
+                  : 'text-rose-400 hover:text-white'
+              }`}
+            >
+              <ShieldAlert className="w-3 h-3 text-rose-300" />
+              <span>Operative Rules ({dynamicRules.length})</span>
+            </button>
             {activeTriggeredRules.length > 0 && (
               <button
                 onClick={() => setActiveTab('TRIGGERED')}
@@ -200,7 +224,84 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
 
           {filteredRules.slice(0, 100).map((rule) => {
             const isTriggered = activeTriggeredRules.some(r => r.id === rule.id);
+            const isDynamic = 'isSynthesizedFromLoss' in rule && (rule as FailureConstraintRule).isSynthesizedFromLoss;
+            const failureRule = isDynamic ? (rule as FailureConstraintRule) : null;
+            const audit = failureRule?.failureAudit;
             const isTech = rule.category === 'TECHNICAL';
+
+            if (isDynamic && failureRule) {
+              return (
+                <div
+                  key={rule.id}
+                  className="p-3 sm:p-4 rounded-xl border bg-gradient-to-r from-rose-950/40 via-terminal-950 to-amber-950/30 border-rose-500/50 hover:border-rose-400 transition-all shadow-lg"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 mb-2">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-600 text-white border border-rose-400 flex items-center gap-1">
+                        <ShieldAlert className="w-3 h-3" />
+                        OPERATIVE RULE #{audit?.ruleIndex || 1051}
+                      </span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                        SYNTHESIZED FROM STOP LOSS
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        failureRule.enforcementAction === 'DECLINE_ENTRY' 
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' 
+                          : 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                      }`}>
+                        ENFORCEMENT: {failureRule.enforcementAction.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                      <span>ORIGIN: <strong className="text-white">{audit?.symbol} {audit?.orderType}</strong></span>
+                      <span>LOSS: <strong className="text-rose-400">-${Math.abs(audit?.realizedLossUsd || 0).toFixed(2)}</strong></span>
+                      <span>ID: {rule.id}</span>
+                    </div>
+                  </div>
+
+                  <h4 className="text-white font-bold text-xs sm:text-sm mb-1">{rule.ruleName}</h4>
+                  
+                  {/* Point of Failure & Primary Metric */}
+                  <div className="p-2.5 rounded-lg bg-terminal-900/90 border border-rose-900/60 my-2 space-y-1 text-xs">
+                    <p className="text-rose-200">
+                      <strong className="text-rose-400 uppercase text-[10px] tracking-wide block">Point of Failure:</strong>
+                      {audit?.pointOfFailure || rule.conditionDescription}
+                    </p>
+                    {audit?.primaryFailureMetric && (
+                      <p className="text-slate-300 text-[11px]">
+                        <strong className="text-cyan-400 uppercase text-[10px] tracking-wide">Primary Failure Metric: </strong>
+                        {audit.primaryFailureMetric}
+                      </p>
+                    )}
+                    <p className="text-amber-200 text-[11px] pt-1 border-t border-rose-900/40">
+                      <strong className="text-amber-400 uppercase text-[10px] tracking-wide">Active Filter Directive: </strong>
+                      {failureRule.preventativeMessage}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-rose-900/40 text-[10px]">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="text-slate-400">
+                        Scope: <strong className="text-slate-200">{rule.marketScope.replace('_', ' ')}</strong>
+                      </span>
+                      <span className="text-slate-400">
+                        Inverse Signal Action: <strong className={rule.signalAction.includes('BUY') ? 'text-emerald-400' : 'text-rose-400'}>{rule.signalAction}</strong>
+                      </span>
+                      <span className="text-slate-400">
+                        Expected Win Rate: <strong className="text-cyan-400">{rule.expectedWinRate}%</strong>
+                      </span>
+                      <span className="text-slate-400">
+                        Weight: <strong className="text-indigo-400">{rule.confidenceWeight}/10</strong>
+                      </span>
+                    </div>
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" /> ACTIVE PRE-EXECUTION FILTER
+                    </span>
+                  </div>
+                </div>
+              );
+            }
 
             return (
               <div

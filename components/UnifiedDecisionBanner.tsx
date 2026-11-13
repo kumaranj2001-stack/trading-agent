@@ -145,33 +145,39 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
 
         {/* Action Button */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {executionSignal.authorized && onExecuteTrade && (
-            isMarketFrozen ? (
-              <div 
-                className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 bg-sky-950/80 border border-sky-600/50 text-sky-300 cursor-not-allowed shadow-md"
-                title={`Market Closed (${sessionInfo?.statusLabel || 'State Frozen'}). Trading resumes: ${sessionInfo?.nextOpenFormatted || 'next session'}`}
-              >
-                <Lock className="w-3.5 h-3.5 text-sky-400" />
-                <span>EXECUTION FROZEN ({sessionInfo?.statusLabel || 'MARKET CLOSED'})</span>
-              </div>
-            ) : (
-              <button
-                onClick={onExecuteTrade}
-                className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${
-                  isBuy
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
-                }`}
-              >
-                <span>
-                  {isSell
-                    ? `EXECUTE SELL MARKET (${executionSignal.lots} LOTS)`
-                    : `EXECUTE BUY MARKET (${executionSignal.lots} LOTS)`}
-                </span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )
-          )}
+          {!executionSignal.authorized ? (
+            <div 
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 bg-rose-950/80 border border-rose-600/60 text-rose-300 cursor-not-allowed shadow-md"
+              title={executionSignal.tierDescription || "Execution Vetoed: Live market conditions mirror historical stop loss confluence."}
+            >
+              <ShieldAlert className="w-4 h-4 text-rose-400 animate-pulse" />
+              <span>ENTRY VETOED (FAILURE RULE MIRROR)</span>
+            </div>
+          ) : isMarketFrozen ? (
+            <div 
+              className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 bg-sky-950/80 border border-sky-600/50 text-sky-300 cursor-not-allowed shadow-md"
+              title={`Market Closed (${sessionInfo?.statusLabel || 'State Frozen'}). Trading resumes: ${sessionInfo?.nextOpenFormatted || 'next session'}`}
+            >
+              <Lock className="w-3.5 h-3.5 text-sky-400" />
+              <span>EXECUTION FROZEN ({sessionInfo?.statusLabel || 'MARKET CLOSED'})</span>
+            </div>
+          ) : onExecuteTrade ? (
+            <button
+              onClick={onExecuteTrade}
+              className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${
+                isBuy
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
+                  : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
+              }`}
+            >
+              <span>
+                {isSell
+                  ? `EXECUTE SELL MARKET (${executionSignal.lots} LOTS)`
+                  : `EXECUTE BUY MARKET (${executionSignal.lots} LOTS)`}
+              </span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          ) : null}
 
           {onOpenNewsWire && (
             <button
@@ -370,6 +376,76 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
 
           <div className="mt-2 text-[10px] text-slate-300 italic">
             • {consensus.dualConfirmation.confirmationRationale}
+          </div>
+        </div>
+      )}
+
+      {/* 🧠 Active Pre-Execution Memory Filter (Cross-referencing 1051+ Operative Rules) */}
+      {consensus.preExecutionFilter && (
+        <div className={`mt-3 p-3 rounded-xl border font-mono text-xs shadow-md transition-all ${
+          consensus.preExecutionFilter.action === 'DECLINE_ENTRY'
+            ? 'bg-gradient-to-r from-rose-950/70 via-terminal-950 to-red-950/50 border-rose-500 text-rose-200 ring-1 ring-rose-500/50'
+            : consensus.preExecutionFilter.action === 'ADJUST_SIZING'
+            ? 'bg-gradient-to-r from-amber-950/60 via-terminal-950 to-amber-900/40 border-amber-500 text-amber-200'
+            : 'bg-gradient-to-r from-emerald-950/40 via-terminal-950 to-terminal-950 border-emerald-500/40 text-emerald-200'
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/60 pb-2 mb-2">
+            <div className="flex items-center gap-2">
+              {consensus.preExecutionFilter.action === 'DECLINE_ENTRY' ? (
+                <ShieldAlert className="w-4 h-4 text-rose-400 animate-bounce" />
+              ) : consensus.preExecutionFilter.action === 'ADJUST_SIZING' ? (
+                <ShieldAlert className="w-4 h-4 text-amber-400" />
+              ) : (
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              )}
+              <span className="font-bold uppercase text-xs tracking-wide">
+                ACTIVE MEMORY FILTER: {
+                  consensus.preExecutionFilter.action === 'DECLINE_ENTRY'
+                    ? `PRE-EXECUTION VETO (RULE #${consensus.preExecutionFilter.matchingFailureRule?.failureAudit?.ruleIndex || 1051} MIRROR)`
+                    : consensus.preExecutionFilter.action === 'ADJUST_SIZING'
+                    ? `CAUTION SIZING ENFORCED (RULE #${consensus.preExecutionFilter.matchingFailureRule?.failureAudit?.ruleIndex || 1051})`
+                    : `PASSED (0% HISTORICAL FAILURE CONFLUENCE)`
+                }
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-slate-400">
+                1,050 Baseline + {consensus.knowledgeSummary?.totalDynamicRulesLoaded || 1} Operative Rules
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                consensus.preExecutionFilter.action === 'DECLINE_ENTRY'
+                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+                  : consensus.preExecutionFilter.action === 'ADJUST_SIZING'
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+              }`}>
+                {consensus.preExecutionFilter.action.replace('_', ' ')}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-[11px] leading-relaxed">
+            <p className={
+              consensus.preExecutionFilter.action === 'DECLINE_ENTRY' 
+                ? 'text-rose-200' 
+                : consensus.preExecutionFilter.action === 'ADJUST_SIZING' 
+                ? 'text-amber-200' 
+                : 'text-slate-300'
+            }>
+              {consensus.preExecutionFilter.reason}
+            </p>
+            {consensus.preExecutionFilter.matchingFailureRule?.failureAudit && (
+              <div className="mt-2 pt-2 border-t border-terminal-border/40 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
+                <div className="p-1.5 rounded bg-terminal-900/80 border border-terminal-border">
+                  <span className="text-slate-400 block font-semibold">Historical Failure Point:</span>
+                  <span className="text-rose-300">{consensus.preExecutionFilter.matchingFailureRule.failureAudit.pointOfFailure}</span>
+                </div>
+                <div className="p-1.5 rounded bg-terminal-900/80 border border-terminal-border">
+                  <span className="text-slate-400 block font-semibold">Self-Optimizing Strategic Directive:</span>
+                  <span className="text-emerald-300">{consensus.preExecutionFilter.matchingFailureRule.invalidationCriteria}</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

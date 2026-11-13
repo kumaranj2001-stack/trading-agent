@@ -435,13 +435,29 @@ export class DiagnosticReasoningEngine {
           score += 15;
         }
       }
-      if (smcStructure && rule.triggerConditions.smcStructureInvalid && smcStructure.includes(rule.triggerConditions.smcStructureInvalid)) {
-        score += 10;
+      if (smcStructure && rule.triggerConditions.smcStructureInvalid) {
+        const normCurrent = smcStructure.toLowerCase();
+        const normTarget = rule.triggerConditions.smcStructureInvalid.toLowerCase();
+        if (normCurrent.includes(normTarget) || normTarget.includes(normCurrent) ||
+            (normCurrent.includes('demand') && normTarget.includes('demand')) ||
+            (normCurrent.includes('supply') && normTarget.includes('supply')) ||
+            (normCurrent.includes('order') && normTarget.includes('order')) ||
+            (normCurrent.includes('choch') && normTarget.includes('choch'))) {
+          score += 10;
+        }
       }
 
       // 4. Fundamental parameters match (+15%)
-      if (centralBankBias && rule.triggerConditions.centralBankBias === centralBankBias) {
-        score += 15;
+      if (centralBankBias && rule.triggerConditions.centralBankBias) {
+        const normCurrent = centralBankBias.toLowerCase();
+        const normRule = rule.triggerConditions.centralBankBias.toLowerCase();
+        if (normCurrent === normRule ||
+            (normCurrent.includes('hawk') && normRule.includes('hawk')) ||
+            (normCurrent.includes('dov') && normRule.includes('dov')) ||
+            (normCurrent.includes('hold') && normRule.includes('hold')) ||
+            (normCurrent.includes('pause') && normRule.includes('pause'))) {
+          score += 15;
+        }
       }
 
       if (score > highestSimilarity) {
