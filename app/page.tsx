@@ -282,15 +282,32 @@ export default function Home() {
     if (alreadyOpen) return;
 
     const signal = calibratedResult.executionSignal;
-    const livePrice = LiveMarketFeedManager.getCanonicalPrice(calibratedResult.pair);
+
+    // 1. Mandatory Chief Reviewer Clearance Check
+    const chiefAudit = calibratedResult.chiefReviewerAudit;
+    if (chiefAudit && chiefAudit.status === 'VETOED') {
+      console.warn(`[AUTOPILOT_VETOED_BY_CHIEF_REVIEWER] Entry aborted: ${chiefAudit.contradictionResolution.explanation}`);
+      return;
+    }
+
+    // 2. Real-Time Market Bid/Ask Price Engine (Decoupling Signal from Order Dispatch)
+    const bidAsk = LiveMarketFeedManager.getCanonicalBidAsk(calibratedResult.pair);
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     
     // Strict Single Source of Truth for Auto-Execution
     const isSellTrade = signal.orderType === 'SELL_MARKET' || calibratedResult.unifiedDecision.direction === 'SELL';
     const autoTradeType: 'BUY' | 'SELL' = isSellTrade ? 'SELL' : 'BUY';
+    const liveFillPrice = autoTradeType === 'BUY' ? bidAsk.ask : bidAsk.bid;
 
-    // 🛡️ Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
+    // 3. Mandatory Pre-Execution Verification: Atomic Price Deviation Check (< 0.05% tolerance)
+    const priceDeviation = Math.abs(liveFillPrice - signal.entry) / signal.entry;
+    if (priceDeviation > 0.0005) {
+      console.warn(`[AUTOPILOT_SLIPPAGE_ABORT] Price deviation ${(priceDeviation * 100).toFixed(3)}% exceeded 0.05% limit. Signal: ${signal.entry}, Live Fill (${autoTradeType === 'BUY' ? 'Ask' : 'Bid'}): ${liveFillPrice}. Aborting for atomic re-evaluation.`);
+      return;
+    }
+
+    // 4. Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
     const preCheck = diagnosticReasoningEngine.crossReferenceSetup({
       symbol: signal.symbol,
       direction: autoTradeType,
@@ -305,37 +322,44 @@ export default function Home() {
       return;
     }
 
-    const autoLots = preCheck.action === 'ADJUST_SIZING' ? (preCheck.adjustedLots || 0.01) : signal.lots;
+    let autoLots = preCheck.action === 'ADJUST_SIZING' ? (preCheck.adjustedLots || 0.01) : signal.lots;
+    if (chiefAudit?.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
+      autoLots = Math.max(0.01, Number((autoLots * 0.50).toFixed(2)));
+    }
 
     let autoStopLoss = signal.stopLoss;
     let autoTakeProfit = signal.takeProfit;
     if (autoTradeType === 'SELL') {
-      if (autoStopLoss <= livePrice) {
-        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (livePrice * 0.004);
-        autoStopLoss = Number((livePrice + stopDist).toFixed(5));
+      if (autoStopLoss <= liveFillPrice) {
+        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (liveFillPrice * 0.004);
+        autoStopLoss = Number((liveFillPrice + stopDist).toFixed(5));
       }
-      if (autoTakeProfit >= livePrice) {
-        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (livePrice * 0.008);
-        autoTakeProfit = Number((livePrice - targetDist).toFixed(5));
+      if (autoTakeProfit >= liveFillPrice) {
+        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (liveFillPrice * 0.008);
+        autoTakeProfit = Number((liveFillPrice - targetDist).toFixed(5));
       }
     } else {
-      if (autoStopLoss >= livePrice) {
-        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (livePrice * 0.004);
-        autoStopLoss = Number((livePrice - stopDist).toFixed(5));
+      if (autoStopLoss >= liveFillPrice) {
+        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (liveFillPrice * 0.004);
+        autoStopLoss = Number((liveFillPrice - stopDist).toFixed(5));
       }
-      if (autoTakeProfit <= livePrice) {
-        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (livePrice * 0.008);
-        autoTakeProfit = Number((livePrice + targetDist).toFixed(5));
+      if (autoTakeProfit <= liveFillPrice) {
+        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (liveFillPrice * 0.008);
+        autoTakeProfit = Number((liveFillPrice + targetDist).toFixed(5));
       }
     }
+
+    const explicitInvalidation = chiefAudit?.explicitInvalidationCriteria || 
+      `MANDATORY INVALIDATION: Immediate autonomous exit if ${autoTradeType === 'BUY' ? 'price breaches S1 structural floor' : 'price breaches R1 structural ceiling'} or confirmed CHoCH occurs.`;
+    const invalidationPriceLevel = chiefAudit?.invalidationPriceLevel || autoStopLoss;
 
     const autoPos: Position = {
       id: `pos-${Date.now()}`,
       symbol: signal.symbol,
       type: autoTradeType,
       lots: autoLots,
-      entryPrice: livePrice,
-      currentPrice: livePrice,
+      entryPrice: liveFillPrice,
+      currentPrice: liveFillPrice,
       stopLoss: autoStopLoss,
       takeProfit: autoTakeProfit,
       initialStopLoss: autoStopLoss,
@@ -348,6 +372,16 @@ export default function Home() {
       trailingStopActive: false,
       targetCompressed: false,
       confidenceAtEntry: calibratedResult.overallConfidence || 80,
+      explicitInvalidationCriteria: explicitInvalidation,
+      invalidationPriceLevel,
+      chiefReviewerSignature: chiefAudit?.gatekeeperSignature,
+      executionBidAsk: {
+        bid: bidAsk.bid,
+        ask: bidAsk.ask,
+        spread: bidAsk.spread,
+        executionSide: autoTradeType === 'BUY' ? 'ASK' : 'BID',
+        fillPrice: liveFillPrice,
+      },
     };
 
     const marginNeeded = (signal.lots * 100000) / 30;
@@ -540,9 +574,19 @@ export default function Home() {
         // ⚡ Paramount Structural Override & Invalidation Exit (FULL_AUTOPILOT & SEMI_AUTONOMOUS)
         if (executionModeRef.current === 'FULL_AUTOPILOT' || executionModeRef.current === 'SEMI_AUTONOMOUS') {
           for (const pos of updatedPositions) {
-            if (pos.invalidation?.structuralOverrideTriggered) {
+            const symPrice = pos.symbol === selectedPair ? event.livePrice : LiveMarketFeedManager.getCanonicalPrice(pos.symbol);
+            const isInvalidationPriceBreached = pos.invalidationPriceLevel && (
+              (pos.type === 'BUY' && symPrice <= pos.invalidationPriceLevel) ||
+              (pos.type === 'SELL' && symPrice >= pos.invalidationPriceLevel)
+            );
+
+            if (pos.invalidation?.structuralOverrideTriggered || isInvalidationPriceBreached) {
+              const reasons = [
+                ...(pos.invalidation?.allReasons || []),
+                isInvalidationPriceBreached ? `Explicit Invalidation Level Breached: Price ${symPrice} breached ${pos.invalidationPriceLevel}` : ''
+              ].filter(Boolean);
               setTimeout(() => {
-                handleClosePosition(pos.id, 'PARAMOUNT_STRUCTURAL_OVERRIDE', pos.invalidation?.allReasons);
+                handleClosePosition(pos.id, 'PARAMOUNT_STRUCTURAL_OVERRIDE', reasons);
               }, 0);
             } else if (pos.invalidation?.isInvalidated && (pos.invalidation.urgency === 'HIGH' || pos.invalidation.urgency === 'CRITICAL')) {
               setTimeout(() => {
@@ -755,20 +799,31 @@ export default function Home() {
       return;
     }
 
-    // 2. Strict Pre-Execution Guardrail: 500ms freshness and 0.05% price deviation tolerance
+    // 1. Mandatory Chief Reviewer Clearance Check
+    const chiefAudit = consensus.chiefReviewerAudit;
+    if (chiefAudit && chiefAudit.status === 'VETOED') {
+      showNotification(`🛑 CHIEF REVIEWER VETO: ${chiefAudit.contradictionResolution.explanation}`);
+      return;
+    }
+
+    // 2. Real-Time Market Bid/Ask Price Engine (Decoupling Signal from Order Dispatch)
+    const bidAsk = LiveMarketFeedManager.getCanonicalBidAsk(signal.symbol);
+    const isSell = signal.orderType === 'SELL_MARKET' || consensus.unifiedDecision.direction === 'SELL';
+    const tradeType: 'BUY' | 'SELL' = isSell ? 'SELL' : 'BUY';
+    const liveFillPrice = tradeType === 'BUY' ? bidAsk.ask : bidAsk.bid;
+
+    // 3. Strict Pre-Execution Guardrail: 500ms freshness and 0.05% price deviation tolerance
     const guardrail = LiveMarketFeedManager.verifyPreExecutionGuardrail(signal.symbol, signal.entry, 0.05, 500);
     if (!guardrail.valid) {
       showNotification(`PRE-EXECUTION HALTED: ${guardrail.error || 'Live price deviation exceeded 0.05%'}`);
       return;
     }
 
-    const liveEntryPrice = LiveMarketFeedManager.getCanonicalPrice(signal.symbol);
-
-    // 3. Circuit Breaker Mechanism Evaluation
+    // 4. Circuit Breaker Mechanism Evaluation
     const cbCheck = executionTelemetryEngine.evaluateCircuitBreaker(
       portfolio,
-      liveEntryPrice,
-      previousPriceRef.current || liveEntryPrice
+      liveFillPrice,
+      previousPriceRef.current || liveFillPrice
     );
     if (cbCheck.isTripped) {
       showNotification(`CIRCUIT BREAKER: ${cbCheck.reason}`);
@@ -780,11 +835,7 @@ export default function Home() {
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    // Immutable Single Source of Truth for Trade Execution: Bound strictly to consensus direction
-    const isSell = signal.orderType === 'SELL_MARKET' || consensus.unifiedDecision.direction === 'SELL';
-    const tradeType: 'BUY' | 'SELL' = isSell ? 'SELL' : 'BUY';
-
-    // 4. Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
+    // 5. Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
     const preExecutionFilter = diagnosticReasoningEngine.crossReferenceSetup({
       symbol: signal.symbol,
       direction: tradeType,
@@ -800,42 +851,48 @@ export default function Home() {
     }
 
     let executionLots = signal.lots;
-    if (preExecutionFilter.action === 'ADJUST_SIZING') {
+    if (chiefAudit?.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
+      executionLots = Math.max(0.01, Number((executionLots * 0.50).toFixed(2)));
+    } else if (preExecutionFilter.action === 'ADJUST_SIZING') {
       executionLots = preExecutionFilter.adjustedLots || 0.01;
       showNotification(`⚠️ CAUTION FILTER APPLIED: ${preExecutionFilter.reason}`);
     }
 
-    // Strict Mathematical Invariant: Guarantee Stop Loss & Target orientation relative to entry
+    // Strict Mathematical Invariant: Guarantee Stop Loss & Target orientation relative to real-time fill
     let executionStopLoss = signal.stopLoss;
     let executionTakeProfit = signal.takeProfit;
 
     if (tradeType === 'SELL') {
-      if (executionStopLoss <= liveEntryPrice) {
-        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (liveEntryPrice * 0.004);
-        executionStopLoss = Number((liveEntryPrice + stopDist).toFixed(5));
+      if (executionStopLoss <= liveFillPrice) {
+        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (liveFillPrice * 0.004);
+        executionStopLoss = Number((liveFillPrice + stopDist).toFixed(5));
       }
-      if (executionTakeProfit >= liveEntryPrice) {
-        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (liveEntryPrice * 0.008);
-        executionTakeProfit = Number((liveEntryPrice - targetDist).toFixed(5));
+      if (executionTakeProfit >= liveFillPrice) {
+        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (liveFillPrice * 0.008);
+        executionTakeProfit = Number((liveFillPrice - targetDist).toFixed(5));
       }
     } else {
-      if (executionStopLoss >= liveEntryPrice) {
-        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (liveEntryPrice * 0.004);
-        executionStopLoss = Number((liveEntryPrice - stopDist).toFixed(5));
+      if (executionStopLoss >= liveFillPrice) {
+        const stopDist = Math.abs(signal.entry - signal.stopLoss) || (liveFillPrice * 0.004);
+        executionStopLoss = Number((liveFillPrice - stopDist).toFixed(5));
       }
-      if (executionTakeProfit <= liveEntryPrice) {
-        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (liveEntryPrice * 0.008);
-        executionTakeProfit = Number((liveEntryPrice + targetDist).toFixed(5));
+      if (executionTakeProfit <= liveFillPrice) {
+        const targetDist = Math.abs(signal.takeProfit - signal.entry) || (liveFillPrice * 0.008);
+        executionTakeProfit = Number((liveFillPrice + targetDist).toFixed(5));
       }
     }
+
+    const explicitInvalidation = chiefAudit?.explicitInvalidationCriteria || 
+      `MANDATORY INVALIDATION: Immediate exit if ${tradeType === 'BUY' ? 'price breaches S1 structural floor' : 'price breaches R1 structural ceiling'} or confirmed CHoCH occurs.`;
+    const invalidationPriceLevel = chiefAudit?.invalidationPriceLevel || executionStopLoss;
 
     const newPosition: Position = {
       id: `pos-${Date.now()}`,
       symbol: signal.symbol,
       type: tradeType,
       lots: executionLots,
-      entryPrice: liveEntryPrice,
-      currentPrice: liveEntryPrice,
+      entryPrice: liveFillPrice,
+      currentPrice: liveFillPrice,
       stopLoss: executionStopLoss,
       takeProfit: executionTakeProfit,
       initialStopLoss: executionStopLoss,
@@ -844,6 +901,21 @@ export default function Home() {
       pnl: 0,
       pnlPercent: 0,
       riskReward: signal.riskReward,
+      isBreakevenLocked: false,
+      trailingStopActive: false,
+      targetCompressed: false,
+      confidenceAtEntry: consensus.overallConfidence || 80,
+      explicitInvalidationCriteria: explicitInvalidation,
+      invalidationPriceLevel,
+      chiefReviewerSignature: chiefAudit?.gatekeeperSignature,
+      executionBidAsk: {
+        bid: bidAsk.bid,
+        ask: bidAsk.ask,
+        spread: bidAsk.spread,
+        executionSide: tradeType === 'BUY' ? 'ASK' : 'BID',
+        fillPrice: liveFillPrice,
+      },
+    };
       isBreakevenLocked: false,
       trailingStopActive: false,
       targetCompressed: false,

@@ -179,27 +179,54 @@ export const ActiveEntryInvalidationBanner: React.FC<ActiveEntryInvalidationBann
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-2 text-slate-300 text-[11px]">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-            <span>
-              <strong className="text-emerald-300">Dual Analysis Aligned:</strong> Technical momentum (RSI/EMAs/Structure) and fundamental wire sentiment confirm trade thesis is healthy.
-            </span>
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-slate-300 text-[11px]">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>
+                <strong className="text-emerald-300">Dual Analysis Aligned:</strong> Technical momentum (RSI/EMAs/Structure) and fundamental wire sentiment confirm trade thesis is healthy.
+              </span>
+            </div>
+            <div className="flex items-center gap-3 text-slate-400 text-[10px]">
+              <span>
+                Entry: <strong className="text-white">{position.entryPrice}</strong>
+                {position.executionBidAsk && (
+                  <span className="ml-1 text-[9px] text-cyan-400 bg-cyan-950/60 px-1 py-0.5 rounded border border-cyan-800">
+                    {position.executionBidAsk.executionSide} @ {position.executionBidAsk.fillPrice} (Spread: {position.executionBidAsk.spread})
+                  </span>
+                )}
+              </span>
+              <span>Current: <strong className="text-cyan-300">{position.currentPrice}</strong></span>
+              <span>
+                Stop:{' '}
+                <strong className="text-rose-400">{position.stopLoss}</strong>
+                {isBreakevenLocked && <span className="text-emerald-400 ml-1 font-bold">[BE]</span>}
+              </span>
+              <span>
+                Target:{' '}
+                <strong className="text-emerald-400">{position.takeProfit}</strong>
+                {isTargetCompressed && <span className="text-amber-400 ml-1 font-bold">[-50%]</span>}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-3 text-slate-400 text-[10px]">
-            <span>Entry: <strong className="text-white">{position.entryPrice}</strong></span>
-            <span>Current: <strong className="text-cyan-300">{position.currentPrice}</strong></span>
-            <span>
-              Stop:{' '}
-              <strong className="text-rose-400">{position.stopLoss}</strong>
-              {isBreakevenLocked && <span className="text-emerald-400 ml-1 font-bold">[BE]</span>}
-            </span>
-            <span>
-              Target:{' '}
-              <strong className="text-emerald-400">{position.takeProfit}</strong>
-              {isTargetCompressed && <span className="text-amber-400 ml-1 font-bold">[-50%]</span>}
-            </span>
-          </div>
+
+          {/* Mandatory Explicit Invalidation Criteria & Chief Reviewer Verification Bar */}
+          {position.explicitInvalidationCriteria && (
+            <div className="p-2 rounded bg-terminal-950/90 border border-terminal-border/80 flex flex-wrap items-center justify-between gap-2 text-[10px]">
+              <div className="flex items-center gap-1.5 text-slate-300">
+                <span className="text-cyan-400 font-bold uppercase">Mandatory Invalidation:</span>
+                <span>{position.explicitInvalidationCriteria}</span>
+              </div>
+              <div className="flex items-center gap-3 text-slate-400">
+                {position.invalidationPriceLevel && (
+                  <span>Invalidation Level: <strong className="text-rose-400 font-bold">{position.invalidationPriceLevel}</strong></span>
+                )}
+                {position.chiefReviewerSignature && (
+                  <span className="text-emerald-400 font-mono">Audited: {position.chiefReviewerSignature}</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

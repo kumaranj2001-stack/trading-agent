@@ -319,6 +319,8 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <span>Live Feed: <strong className="text-emerald-400">Interactive TradingView Canvas</strong></span>
               <span>•</span>
               <span>Knowledge Base: <strong className="text-amber-300">525 Technical + 525 Fundamental Rules</strong></span>
+              <span>•</span>
+              <span>Chief Reviewer: <strong className="text-indigo-400">Marcus Sterling (Gatekeeper Clearance Active)</strong></span>
             </p>
           </div>
         </div>

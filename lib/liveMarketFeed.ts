@@ -104,6 +104,48 @@ export class LiveMarketFeedManager {
   }
 
   /**
+   * Real-Time Market Bid/Ask Price Engine:
+   * Decouples signal generation from order dispatch by providing authoritative
+   * real-time bid and ask prices calculated from institutional spread models.
+   * Long entries execute strictly at Ask; Short entries execute strictly at Bid.
+   */
+  public static getCanonicalBidAsk(pair: CurrencyPair = this.currentPair): {
+    bid: number;
+    ask: number;
+    mid: number;
+    spread: number;
+    spreadPips: number;
+  } {
+    const mid = this.getCanonicalPrice(pair);
+    const isJpy = pair.includes('JPY');
+    const isGold = pair === 'XAU/USD';
+    const isSilver = pair === 'XAG/USD';
+    const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY' || pair === 'RELIANCE' || pair === 'TCS';
+    const isOil = pair.includes('CRUDE');
+    const pipMultiplier = PIP_VALUES[pair] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
+
+    let decimals = 5;
+    if (isIndian || isGold || isOil) decimals = 2;
+    else if (isSilver || isJpy) decimals = 3;
+
+    // Institutional spreads in pips
+    const spreadPips = isGold ? 1.8 : isSilver ? 2.5 : isJpy ? 1.1 : isIndian ? 2.0 : 0.9;
+    const halfSpread = (spreadPips * pipMultiplier) / 2;
+
+    const bid = Number((mid - halfSpread).toFixed(decimals));
+    const ask = Number((mid + halfSpread).toFixed(decimals));
+    const spread = Number((ask - bid).toFixed(decimals));
+
+    return {
+      bid,
+      ask,
+      mid,
+      spread,
+      spreadPips,
+    };
+  }
+
+  /**
    * Pre-Execution Timestamp & Price-Deviation Guardrail:
    * Verifies that the tick timestamp is fresh (<500ms latency)
    * and blocks execution / triggers an alert if candidate price deviates

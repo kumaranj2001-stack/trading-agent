@@ -129,6 +129,7 @@ export type AgentRole =
   | 'forex_analyst'
   | 'news_analyst'
   | 'risk_manager'
+  | 'chief_reviewer'
   | 'terminal_node';
 
 export type ExecutionMode = 'MANUAL' | 'SEMI_AUTONOMOUS' | 'FULL_AUTOPILOT';
@@ -990,6 +991,41 @@ export interface SwarmConsensusResult {
     isAutonomousLooping: boolean;
   };
   latchedState?: LatchedTradeState;
+  chiefReviewerAudit?: ChiefReviewerAuditResult;
+}
+
+export interface DeskAuditVerdict {
+  desk: 'TECHNICAL' | 'FUNDAMENTAL' | 'NEWS_WIRE' | 'FOREX_INTERMARKET' | 'RISK_GOVERNANCE';
+  analystName: string;
+  verdict: 'COMPLIANT' | 'WARNING' | 'NON_COMPLIANT';
+  finding: string;
+  score: number;
+}
+
+export interface ChiefReviewerAuditResult {
+  auditorName: string;
+  status: 'APPROVED' | 'MODIFIED' | 'VETOED';
+  overallConfluenceScore: number;
+  deskAudits: {
+    technical: DeskAuditVerdict;
+    fundamental: DeskAuditVerdict;
+    newsWire: DeskAuditVerdict;
+    forexIntermarket: DeskAuditVerdict;
+    riskGovernance: DeskAuditVerdict;
+  };
+  contradictionResolution: {
+    hasContradiction: boolean;
+    contradictionType?: 'NEWS_TECHNICAL_INVERSION' | 'MACRO_PRICE_DIVERGENCE' | 'NONE';
+    resolutionAction: 'NONE' | 'REDUCE_SIZE_50_PERCENT' | 'WIDEN_BUFFER' | 'FORCE_VETO';
+    explanation: string;
+  };
+  riskWorkflowVerified: boolean;
+  proportionalSizingEnforced: boolean;
+  explicitInvalidationCriteria: string;
+  invalidationPriceLevel: number;
+  gatekeeperSignature: string;
+  auditTimestamp: string;
+  crossExaminationNotes: string;
 }
 
 export interface LatchedTradeState {
@@ -1086,6 +1122,16 @@ export interface Position {
   compressionReason?: string;
   structuralOverrideTriggered?: boolean;
   confidenceAtEntry?: number;
+  explicitInvalidationCriteria?: string;
+  invalidationPriceLevel?: number;
+  chiefReviewerSignature?: string;
+  executionBidAsk?: {
+    bid: number;
+    ask: number;
+    spread: number;
+    executionSide: 'BID' | 'ASK';
+    fillPrice: number;
+  };
 }
 
 export interface TradeHistoryItem {

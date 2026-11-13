@@ -450,6 +450,110 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
         </div>
       )}
 
+      {/* 🏛️ Chief Reviewer & Institutional Gatekeeper Clearance Card */}
+      {consensus.chiefReviewerAudit && (
+        <div className={`mt-3 p-3.5 rounded-xl border font-mono text-xs shadow-md transition-all ${
+          consensus.chiefReviewerAudit.status === 'VETOED'
+            ? 'bg-gradient-to-r from-rose-950/80 via-terminal-950 to-red-950/60 border-rose-500 text-rose-200 ring-1 ring-rose-500/50'
+            : consensus.chiefReviewerAudit.status === 'MODIFIED'
+            ? 'bg-gradient-to-r from-amber-950/70 via-terminal-950 to-amber-900/50 border-amber-500 text-amber-200'
+            : 'bg-gradient-to-r from-indigo-950/50 via-terminal-950 to-terminal-950 border-indigo-500/50 text-indigo-200'
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/60 pb-2.5 mb-2.5">
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded-lg border ${
+                consensus.chiefReviewerAudit.status === 'APPROVED' 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' 
+                  : consensus.chiefReviewerAudit.status === 'MODIFIED'
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
+                  : 'bg-rose-500/20 text-rose-400 border-rose-500/50 animate-pulse'
+              }`}>
+                <ShieldCheck className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-white text-xs uppercase tracking-wide">
+                    CHIEF REVIEWER AUDIT: {consensus.chiefReviewerAudit.auditorName.split(' ')[0]} {consensus.chiefReviewerAudit.auditorName.split(' ')[1]}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    consensus.chiefReviewerAudit.status === 'APPROVED'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                      : consensus.chiefReviewerAudit.status === 'MODIFIED'
+                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                      : 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+                  }`}>
+                    GATEKEEPER {consensus.chiefReviewerAudit.status}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  Signature: <code className="text-cyan-400">{consensus.chiefReviewerAudit.gatekeeperSignature}</code> • Risk Priority: <strong className="text-emerald-400">Proportional Sizing Enforced</strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 text-[10px]">
+              <span className="px-2 py-0.5 rounded bg-terminal-900 border border-terminal-border text-slate-300">
+                5 Specialist Desks Audited
+              </span>
+            </div>
+          </div>
+
+          {/* 5 Desk Audit Verdict Chips */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-[10px] mb-2.5">
+            <div className="p-1.5 rounded bg-terminal-900/90 border border-terminal-border">
+              <span className="text-slate-400 block font-semibold">1. Technical Desk</span>
+              <span className={`font-bold ${consensus.chiefReviewerAudit.deskAudits.technical.verdict === 'COMPLIANT' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {consensus.chiefReviewerAudit.deskAudits.technical.verdict}
+              </span>
+            </div>
+            <div className="p-1.5 rounded bg-terminal-900/90 border border-terminal-border">
+              <span className="text-slate-400 block font-semibold">2. Fundamental Desk</span>
+              <span className={`font-bold ${consensus.chiefReviewerAudit.deskAudits.fundamental.verdict === 'COMPLIANT' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {consensus.chiefReviewerAudit.deskAudits.fundamental.verdict}
+              </span>
+            </div>
+            <div className="p-1.5 rounded bg-terminal-900/90 border border-terminal-border">
+              <span className="text-slate-400 block font-semibold">3. News Wire Desk</span>
+              <span className={`font-bold ${consensus.chiefReviewerAudit.deskAudits.newsWire.verdict === 'COMPLIANT' ? 'text-emerald-400' : consensus.chiefReviewerAudit.deskAudits.newsWire.verdict === 'WARNING' ? 'text-amber-400' : 'text-rose-400'}`}>
+                {consensus.chiefReviewerAudit.deskAudits.newsWire.verdict}
+              </span>
+            </div>
+            <div className="p-1.5 rounded bg-terminal-900/90 border border-terminal-border">
+              <span className="text-slate-400 block font-semibold">4. Intermarket Desk</span>
+              <span className={`font-bold ${consensus.chiefReviewerAudit.deskAudits.forexIntermarket.verdict === 'COMPLIANT' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {consensus.chiefReviewerAudit.deskAudits.forexIntermarket.verdict}
+              </span>
+            </div>
+            <div className="p-1.5 rounded bg-terminal-900/90 border border-terminal-border">
+              <span className="text-slate-400 block font-semibold">5. Risk Governance</span>
+              <span className="font-bold text-emerald-400">
+                COMPLIANT (NON-SPECULATIVE)
+              </span>
+            </div>
+          </div>
+
+          {/* Contradiction Resolution & Mandated Invalidation Criteria */}
+          <div className="space-y-1.5 text-[11px] pt-2 border-t border-terminal-border/50">
+            {consensus.chiefReviewerAudit.contradictionResolution.hasContradiction && (
+              <div className="p-2 rounded bg-amber-950/60 border border-amber-600/60 text-amber-200">
+                <span className="font-bold text-amber-300 uppercase tracking-wide block text-[10px]">
+                  ⚠️ CONTRADICTION RESOLUTION: {consensus.chiefReviewerAudit.contradictionResolution.contradictionType?.replace('_', ' ')}
+                </span>
+                <p className="mt-0.5">{consensus.chiefReviewerAudit.contradictionResolution.explanation}</p>
+              </div>
+            )}
+            <div className="p-2 rounded bg-terminal-900/80 border border-terminal-border flex flex-wrap items-center justify-between gap-1 text-[10px]">
+              <span className="text-slate-300">
+                <strong className="text-cyan-400 uppercase">Mandated Invalidation:</strong> {consensus.chiefReviewerAudit.explicitInvalidationCriteria}
+              </span>
+              <span className="text-rose-400 font-bold">
+                Invalidation Level: {consensus.chiefReviewerAudit.invalidationPriceLevel}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Core Fundamental & Technical Reasons Driving the Decision (5 Structured Pillars) */}
       <div className="mt-4 space-y-2.5">
         <div className="flex items-center justify-between">

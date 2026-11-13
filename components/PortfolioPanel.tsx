@@ -164,7 +164,16 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
                           </span>
                         </td>
                         <td className="p-3 text-slate-300 font-mono whitespace-nowrap">{pos.lots}</td>
-                        <td className="p-3 text-slate-200 font-mono whitespace-nowrap">{pos.entryPrice}</td>
+                        <td className="p-3 text-slate-200 font-mono whitespace-nowrap">
+                          <div className="flex items-center gap-1">
+                            <span>{pos.entryPrice}</span>
+                            {pos.executionBidAsk && (
+                              <span className="px-1 py-0.5 rounded text-[9px] bg-cyan-950/70 border border-cyan-800 text-cyan-300 font-bold" title={`Executed at Live Market ${pos.executionBidAsk.executionSide} (Spread: ${pos.executionBidAsk.spread})`}>
+                                {pos.executionBidAsk.executionSide}
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-3 text-slate-200 font-mono whitespace-nowrap">{pos.currentPrice}</td>
                         <td className="p-3 text-rose-400 font-mono whitespace-nowrap">
                           <div className="flex items-center gap-1">
@@ -341,6 +350,24 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
                                   <span>Target R:R: <strong className="text-cyan-400">{pos.riskReward || 2.5}:1</strong></span>
                                   <span>SL Buffer: <strong className="text-rose-400">{Math.abs(pos.currentPrice - pos.stopLoss).toFixed(4)}</strong></span>
                                   <span>Last Checked: {inv?.lastCheckedTime || 'Active Live Loop'}</span>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Mandated Explicit Invalidation Criteria & Gatekeeper Signature */}
+                            {pos.explicitInvalidationCriteria && (
+                              <div className="mt-2 p-2 rounded-lg bg-terminal-950/90 border border-terminal-border/80 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px] text-slate-300">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-cyan-400 font-bold uppercase">MANDATED INVALIDATION CRITERIA:</span>
+                                  <span>{pos.explicitInvalidationCriteria}</span>
+                                </div>
+                                <div className="flex items-center gap-3 text-slate-400">
+                                  {pos.invalidationPriceLevel && (
+                                    <span>Trigger Level: <strong className="text-rose-400">{pos.invalidationPriceLevel}</strong></span>
+                                  )}
+                                  {pos.chiefReviewerSignature && (
+                                    <span className="text-emerald-400">Cleared: {pos.chiefReviewerSignature}</span>
+                                  )}
                                 </div>
                               </div>
                             )}

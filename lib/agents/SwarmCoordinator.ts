@@ -28,6 +28,7 @@ import { JournalStorageManager } from '../journalStorage';
 import { riskRatioController } from '../riskRatioController';
 import { stateLatchingEngine } from '../stateLatchingEngine';
 import { diagnosticReasoningEngine } from '../diagnosticReasoningEngine';
+import { ChiefReviewerAgent } from './ChiefReviewer';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -35,6 +36,7 @@ export class SwarmCoordinator {
   private forexAnalyst: ForexMarketAnalystAgent;
   private newsAnalyst: NewsAnalystAgent;
   private riskManager: RiskManagerAgent;
+  private chiefReviewer: ChiefReviewerAgent;
   public static autonomousCycleCounter = 0;
 
   constructor(riskConfig: Partial<RiskManagerConfig> = {}) {
@@ -43,6 +45,7 @@ export class SwarmCoordinator {
     this.forexAnalyst = new ForexMarketAnalystAgent();
     this.newsAnalyst = new NewsAnalystAgent();
     this.riskManager = new RiskManagerAgent({ ...DEFAULT_RISK_CONFIG, ...riskConfig });
+    this.chiefReviewer = new ChiefReviewerAgent();
   }
 
   /**
@@ -423,6 +426,22 @@ export class SwarmCoordinator {
     // Decouple trade entry from rigid swarm vetoes: continuous execution active 24/7
     const orderType = activeDirection === 'SELL' ? 'SELL_MARKET' : 'BUY_MARKET';
 
+    // 🏛️ Mandatory Chief Reviewer Audit & Institutional Gatekeeper Clearance
+    const chiefReviewerAudit = this.chiefReviewer.auditDesks({
+      pair,
+      timeframe,
+      currentPrice,
+      technical,
+      fundamental,
+      forex,
+      news,
+      risk,
+      proposedDirection: activeDirection,
+      confluenceGrade,
+      confidenceScore: overallConfidence,
+      topConfluenceRules,
+    });
+
     // 🛡️ Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
     const preExecutionFilter = diagnosticReasoningEngine.crossReferenceSetup({
       symbol: pair,
@@ -436,9 +455,14 @@ export class SwarmCoordinator {
     let executionAuthorized = true;
     let executionStatus: 'READY' | 'EXECUTED' | 'VETOED' = 'READY';
 
-    if (!preExecutionFilter.allowed) {
+    if (chiefReviewerAudit.status === 'VETOED') {
       executionAuthorized = false;
       executionStatus = 'VETOED';
+    } else if (!preExecutionFilter.allowed) {
+      executionAuthorized = false;
+      executionStatus = 'VETOED';
+    } else if (chiefReviewerAudit.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
+      finalLots = Math.max(0.01, Number((finalLots * 0.50).toFixed(2)));
     } else if (preExecutionFilter.action === 'ADJUST_SIZING') {
       finalLots = preExecutionFilter.adjustedLots || 0.01;
     }
@@ -465,6 +489,7 @@ export class SwarmCoordinator {
         activeFailureConstraint: preExecutionFilter.matchingFailureRule,
       },
       preExecutionFilter,
+      chiefReviewerAudit,
       agents: {
         technical,
         fundamental,
@@ -487,7 +512,9 @@ export class SwarmCoordinator {
         status: executionStatus,
         gradingTier: confluenceGrade,
         tierDescription: !executionAuthorized 
-          ? `VETOED BY ACTIVE FAILURE FILTER: ${preExecutionFilter.reason}`
+          ? (chiefReviewerAudit.status === 'VETOED'
+              ? `VETOED BY CHIEF REVIEWER: ${chiefReviewerAudit.contradictionResolution.explanation}`
+              : `VETOED BY ACTIVE FAILURE FILTER: ${preExecutionFilter.reason}`)
           : tierParams.executionPolicy,
       },
       autonomousLoopTelemetry: {
