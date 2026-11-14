@@ -32,7 +32,7 @@ interface MultiAssetIngestionTelemetryCardProps {
   theme?: 'dark' | 'light';
 }
 
-export const MultiAssetIngestionTelemetryCard: React.FC<MultiAssetIngestionTelemetryCardProps> = ({
+export const MultiAssetIngestionTelemetryCardComponent: React.FC<MultiAssetIngestionTelemetryCardProps> = ({
   selectedPair,
   onSelectPair,
   theme = 'dark',
@@ -45,11 +45,11 @@ export const MultiAssetIngestionTelemetryCard: React.FC<MultiAssetIngestionTelem
 
   useEffect(() => {
     // Start background ingestion daemon if not already running
-    const stopDaemon = multiAssetIngestionEngine.startIngestionDaemon(1500);
+    const stopDaemon = multiAssetIngestionEngine.startIngestionDaemon(2500);
 
     const interval = setInterval(() => {
       setTelemetry(multiAssetIngestionEngine.getTelemetry());
-    }, 1500);
+    }, 2500);
 
     return () => {
       clearInterval(interval);
@@ -262,3 +262,5 @@ export const MultiAssetIngestionTelemetryCard: React.FC<MultiAssetIngestionTelem
     </div>
   );
 };
+
+export const MultiAssetIngestionTelemetryCard = React.memo(MultiAssetIngestionTelemetryCardComponent);

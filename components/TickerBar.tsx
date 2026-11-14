@@ -22,7 +22,7 @@ interface TickerBarProps {
   sessionInfo?: MarketSessionInfo | null;
 }
 
-export const TickerBar: React.FC<TickerBarProps> = ({ 
+const TickerBarComponent: React.FC<TickerBarProps> = ({ 
   rates, 
   selectedPair, 
   onSelectPair,
@@ -122,3 +122,5 @@ export const TickerBar: React.FC<TickerBarProps> = ({
     </div>
   );
 };
+
+export const TickerBar = React.memo(TickerBarComponent);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { Candle, CurrencyPair, SignalDirection, TechnicalIndicators, TimeFrame } from '@/lib/types';
 import { BarChart2, Eye, EyeOff, LayoutGrid, MonitorPlay } from 'lucide-react';
 import { calculateEMA, calculateRSI } from '@/lib/indicators';
@@ -18,7 +18,7 @@ interface ChartViewProps {
   theme?: 'dark' | 'light';
 }
 
-export const ChartView: React.FC<ChartViewProps> = ({
+const ChartViewComponent: React.FC<ChartViewProps> = ({
   candles = [],
   pair,
   timeframe,
@@ -59,43 +59,54 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const bufferLower = entryPrice ? entryPrice - (bufferPips * pipMultiplier) : undefined;
 
   const safeCandles = candles && candles.length > 0 ? candles : [];
-  const closes = safeCandles.length > 0 ? safeCandles.map(c => c.close) : [1.0];
-  const ema20 = calculateEMA(closes, 20);
-  const ema50 = calculateEMA(closes, 50);
-  const rsi = calculateRSI(closes, 14);
-
-  const prices = safeCandles.flatMap(c => [c.high, c.low]);
-  if (entryPrice && Number.isFinite(entryPrice)) prices.push(entryPrice);
-  if (stopLoss && Number.isFinite(stopLoss)) prices.push(stopLoss);
-  if (takeProfit && Number.isFinite(takeProfit)) prices.push(takeProfit);
-
-  // Safe min/max to prevent Infinity if candles is empty
-  const safePrices = prices.length > 0 ? prices : [1.0, 1.01];
-  const minPrice = Math.min(...safePrices) * 0.9995;
-  const maxPrice = Math.max(...safePrices) * 1.0005;
-  const priceRange = Math.max(0.00001, maxPrice - minPrice);
-
-  // Fibonacci Retracements & Expansions Calculation
-  const swingHigh = Math.max(...safeCandles.map(c => c.high), takeProfit || maxPrice);
-  const swingLow = Math.min(...safeCandles.map(c => c.low), stopLoss || minPrice);
-  const swingDiff = Math.max(0.0001, swingHigh - swingLow);
   const isBuyBias = signalBias?.includes('BUY');
 
-  const fibRatios = [
-    { ratio: 0.236, label: '23.6%', color: '#94a3b8' },
-    { ratio: 0.382, label: '38.2%', color: '#38bdf8' },
-    { ratio: 0.500, label: '50.0%', color: '#f59e0b' },
-    { ratio: 0.618, label: '61.8% (Golden)', color: '#10b981' },
-    { ratio: 0.786, label: '78.6%', color: '#a855f7' },
-    { ratio: 1.618, label: '161.8% (Ext)', color: '#ec4899' },
-  ];
+  const { ema20, ema50, rsi, minPrice, maxPrice, priceRange, fibLevels } = useMemo(() => {
+    const closes = safeCandles.length > 0 ? safeCandles.map(c => c.close) : [1.0];
+    const ema20Calc = calculateEMA(closes, 20);
+    const ema50Calc = calculateEMA(closes, 50);
+    const rsiCalc = calculateRSI(closes, 14);
 
-  const fibLevels = fibRatios.map(f => {
-    const price = isBuyBias
-      ? swingLow + swingDiff * f.ratio
-      : swingHigh - swingDiff * f.ratio;
-    return { ...f, price };
-  });
+    const prices = safeCandles.flatMap(c => [c.high, c.low]);
+    if (entryPrice && Number.isFinite(entryPrice)) prices.push(entryPrice);
+    if (stopLoss && Number.isFinite(stopLoss)) prices.push(stopLoss);
+    if (takeProfit && Number.isFinite(takeProfit)) prices.push(takeProfit);
+
+    const safePrices = prices.length > 0 ? prices : [1.0, 1.01];
+    const minP = Math.min(...safePrices) * 0.9995;
+    const maxP = Math.max(...safePrices) * 1.0005;
+    const range = Math.max(0.00001, maxP - minP);
+
+    const swingHigh = Math.max(...safeCandles.map(c => c.high), takeProfit || maxP);
+    const swingLow = Math.min(...safeCandles.map(c => c.low), stopLoss || minP);
+    const swingDiff = Math.max(0.0001, swingHigh - swingLow);
+
+    const fibRatios = [
+      { ratio: 0.236, label: '23.6%', color: '#94a3b8' },
+      { ratio: 0.382, label: '38.2%', color: '#38bdf8' },
+      { ratio: 0.500, label: '50.0%', color: '#f59e0b' },
+      { ratio: 0.618, label: '61.8% (Golden)', color: '#10b981' },
+      { ratio: 0.786, label: '78.6%', color: '#a855f7' },
+      { ratio: 1.618, label: '161.8% (Ext)', color: '#ec4899' },
+    ];
+
+    const fibs = fibRatios.map(f => {
+      const price = isBuyBias
+        ? swingLow + swingDiff * f.ratio
+        : swingHigh - swingDiff * f.ratio;
+      return { ...f, price };
+    });
+
+    return {
+      ema20: ema20Calc,
+      ema50: ema50Calc,
+      rsi: rsiCalc,
+      minPrice: minP,
+      maxPrice: maxP,
+      priceRange: range,
+      fibLevels: fibs,
+    };
+  }, [safeCandles, entryPrice, stopLoss, takeProfit, isBuyBias]);
 
   const chartHeight = 280;
   const rsiHeight = 80;
@@ -418,3 +429,5 @@ export const ChartView: React.FC<ChartViewProps> = ({
     </div>
   );
 };
+
+export const ChartView = memo(ChartViewComponent);

@@ -47,7 +47,7 @@ interface UnifiedDecisionBannerProps {
   theme?: 'dark' | 'light';
 }
 
-export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
+const UnifiedDecisionBannerComponent: React.FC<UnifiedDecisionBannerProps> = ({
   consensus,
   onExecuteTrade,
   onOpenNewsWire,
@@ -1125,3 +1125,5 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
     </div>
   );
 };
+
+export const UnifiedDecisionBanner = React.memo(UnifiedDecisionBannerComponent);

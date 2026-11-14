@@ -62,24 +62,38 @@ export interface FirebaseConnectionStatus {
 export class BrowserStorageManager {
   private static lastSyncTimestamp: number = Date.now();
   private static isFirestoreAvailable: boolean = true;
+  private static portfolioCache: PortfolioState | null = null;
+  private static portfolioSaveTimeout: any = null;
+  private static cloudSyncTimeout: any = null;
+  private static lastCloudSyncAt: number = 0;
+  private static lastLocalPortfolioUpdate: number = 0;
+
+  private static consensusHistoryCache: SwarmConsensusResult[] | null = null;
+  private static consensusSaveTimeout: any = null;
+  private static lastConsensusCloudSyncAt: number = 0;
 
   // ==========================================================
   // 1. Portfolio Persistence (Firebase Firestore + Local Cache)
   // ==========================================================
   public static loadPortfolio(): PortfolioState {
+    const cached = this.portfolioCache;
+    if (cached) return cached;
     if (!isBrowser) return INITIAL_PORTFOLIO;
     try {
       const data = localStorage.getItem(STORAGE_KEYS.PORTFOLIO) || localStorage.getItem(LEGACY_STORAGE_KEYS.PORTFOLIO);
       if (data) {
         const parsed = JSON.parse(data);
-        return {
+        const loaded: PortfolioState = {
           ...INITIAL_PORTFOLIO,
           ...parsed,
         };
+        this.portfolioCache = loaded;
+        return loaded;
       }
     } catch (e) {
       console.warn('Error reading portfolio from browser localStorage:', e);
     }
+    this.portfolioCache = INITIAL_PORTFOLIO;
     return INITIAL_PORTFOLIO;
   }
 
@@ -90,7 +104,7 @@ export class BrowserStorageManager {
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data() as PortfolioState;
-        this.savePortfolioToLocal(data);
+        this.savePortfolioToLocal(data, true);
         return data;
       }
     } catch (e: any) {
@@ -100,32 +114,70 @@ export class BrowserStorageManager {
     return null;
   }
 
-  public static savePortfolio(portfolio: PortfolioState): void {
-    // 1. Synchronously save to local cache for 0ms UI latency
-    this.savePortfolioToLocal(portfolio);
+  public static savePortfolio(portfolio: PortfolioState, forceImmediate: boolean = false): void {
+    this.portfolioCache = portfolio;
+    this.lastLocalPortfolioUpdate = Date.now();
 
-    // 2. Asynchronously sync to Firebase Firestore
-    this.savePortfolioToCloud(portfolio);
+    // 1. Local Cache (Debounced for zero frame-drops / 60fps performance)
+    this.savePortfolioToLocal(portfolio, forceImmediate);
+
+    // 2. Cloud Firestore (Throttled to avoid socket saturation)
+    this.savePortfolioToCloud(portfolio, forceImmediate);
   }
 
-  private static savePortfolioToLocal(portfolio: PortfolioState): void {
+  private static savePortfolioToLocal(portfolio: PortfolioState, forceImmediate: boolean = false): void {
     if (!isBrowser) return;
-    try {
-      localStorage.setItem(STORAGE_KEYS.PORTFOLIO, JSON.stringify(portfolio));
-    } catch (e) {
-      console.warn('Error saving portfolio to browser localStorage:', e);
+
+    if (forceImmediate) {
+      if (this.portfolioSaveTimeout) {
+        clearTimeout(this.portfolioSaveTimeout);
+        this.portfolioSaveTimeout = null;
+      }
+      try {
+        localStorage.setItem(STORAGE_KEYS.PORTFOLIO, JSON.stringify(portfolio));
+      } catch (e) {
+        console.warn('Error saving portfolio to browser localStorage:', e);
+      }
+      return;
     }
+
+    if (this.portfolioSaveTimeout) return;
+    this.portfolioSaveTimeout = setTimeout(() => {
+      this.portfolioSaveTimeout = null;
+      try {
+        if (this.portfolioCache) {
+          localStorage.setItem(STORAGE_KEYS.PORTFOLIO, JSON.stringify(this.portfolioCache));
+        }
+      } catch (e) {
+        console.warn('Error saving debounced portfolio to browser localStorage:', e);
+      }
+    }, 1500);
   }
 
-  private static async savePortfolioToCloud(portfolio: PortfolioState): Promise<void> {
+  private static async savePortfolioToCloud(portfolio: PortfolioState, forceImmediate: boolean = false): Promise<void> {
     if (!db) return;
+    const now = Date.now();
+
+    if (!forceImmediate && (now - this.lastCloudSyncAt) < 10000) {
+      if (!this.cloudSyncTimeout) {
+        this.cloudSyncTimeout = setTimeout(() => {
+          this.cloudSyncTimeout = null;
+          if (this.portfolioCache) {
+            this.savePortfolioToCloud(this.portfolioCache, true);
+          }
+        }, 10000);
+      }
+      return;
+    }
+
+    this.lastCloudSyncAt = now;
     try {
       const cleaned = cleanForFirestore({
         ...portfolio,
-        updatedAt: Date.now(),
+        updatedAt: now,
       });
       await setDoc(doc(db, 'portfolios', 'default'), cleaned, { merge: true });
-      this.lastSyncTimestamp = Date.now();
+      this.lastSyncTimestamp = now;
       this.isFirestoreAvailable = true;
     } catch (e: any) {
       console.warn('Firestore savePortfolioNotice (falling back to local cache):', e?.message || e);
@@ -133,15 +185,20 @@ export class BrowserStorageManager {
     }
   }
 
-  // Real-time Firestore Portfolio Listener
+  // Real-time Firestore Portfolio Listener (with loop echo suppression)
   public static subscribeToPortfolio(onUpdate: (portfolio: PortfolioState) => void): Unsubscribe | null {
     if (!db || !isBrowser) return null;
     try {
       const docRef = doc(db, 'portfolios', 'default');
       return onSnapshot(docRef, (docSnap) => {
+        // Suppress echo-back updates if local state was updated in the last 2500ms
+        if (Date.now() - this.lastLocalPortfolioUpdate < 2500) {
+          return;
+        }
         if (docSnap.exists()) {
           const data = docSnap.data() as PortfolioState;
-          this.savePortfolioToLocal(data);
+          this.portfolioCache = data;
+          this.savePortfolioToLocal(data, true);
           onUpdate(data);
         }
       }, (error) => {
@@ -250,20 +307,46 @@ export class BrowserStorageManager {
   // ==========================================================
   // 4. Consensus & Decision History (Firebase + Local Cache)
   // ==========================================================
-  public static saveConsensusResult(result: SwarmConsensusResult): void {
-    // 1. Local Cache
-    if (isBrowser) {
+  public static saveConsensusResult(result: SwarmConsensusResult, forceImmediate: boolean = false): void {
+    if (!result) return;
+    const now = Date.now();
+
+    // 1. Maintain in-memory history
+    if (!this.consensusHistoryCache) {
+      this.consensusHistoryCache = this.loadConsensusHistory();
+    }
+    this.consensusHistoryCache = [result, ...this.consensusHistoryCache.slice(0, 19)];
+
+    // 2. Debounced Local Cache write (avoids synchronous disk I/O on 2.0s loop)
+    if (forceImmediate) {
+      if (this.consensusSaveTimeout) {
+        clearTimeout(this.consensusSaveTimeout);
+        this.consensusSaveTimeout = null;
+      }
       try {
-        const existing = this.loadConsensusHistory();
-        const updated = [result, ...existing.slice(0, 19)]; // Keep latest 20
-        localStorage.setItem(STORAGE_KEYS.CONSENSUS_HISTORY, JSON.stringify(updated));
+        if (isBrowser) {
+          localStorage.setItem(STORAGE_KEYS.CONSENSUS_HISTORY, JSON.stringify(this.consensusHistoryCache));
+        }
       } catch (e) {
         console.warn('Error saving consensus to browser localStorage:', e);
       }
+    } else if (!this.consensusSaveTimeout) {
+      this.consensusSaveTimeout = setTimeout(() => {
+        this.consensusSaveTimeout = null;
+        try {
+          if (isBrowser && this.consensusHistoryCache) {
+            localStorage.setItem(STORAGE_KEYS.CONSENSUS_HISTORY, JSON.stringify(this.consensusHistoryCache));
+          }
+        } catch (e) {
+          console.warn('Error saving debounced consensus to browser localStorage:', e);
+        }
+      }, 4000);
     }
 
-    // 2. Firebase Cloud Log
-    if (db) {
+    // 3. Throttled Firebase Cloud Log (at most once every 15s or on high confluence)
+    const isHighConfluence = result.confluenceGrade === 'A+' || result.confluenceGrade === 'A';
+    if (db && (forceImmediate || isHighConfluence || (now - this.lastConsensusCloudSyncAt) > 15000)) {
+      this.lastConsensusCloudSyncAt = now;
       const entry = cleanForFirestore({
         pair: result.pair,
         timeframe: result.timeframe,
@@ -272,8 +355,8 @@ export class BrowserStorageManager {
         confluenceGrade: result.confluenceGrade,
         unifiedDecision: result.unifiedDecision,
         currentPrice: result.currentPrice,
-        timestamp: Date.now(),
-        dateIso: new Date().toISOString(),
+        timestamp: now,
+        dateIso: new Date(now).toISOString(),
       });
 
       addDoc(collection(db, 'consensus_history'), entry)
@@ -282,10 +365,14 @@ export class BrowserStorageManager {
   }
 
   public static loadConsensusHistory(): SwarmConsensusResult[] {
+    if (this.consensusHistoryCache) return this.consensusHistoryCache;
     if (!isBrowser) return [];
     try {
       const data = localStorage.getItem(STORAGE_KEYS.CONSENSUS_HISTORY) || localStorage.getItem(LEGACY_STORAGE_KEYS.CONSENSUS_HISTORY);
-      if (data) return JSON.parse(data);
+      if (data) {
+        this.consensusHistoryCache = JSON.parse(data);
+        return this.consensusHistoryCache || [];
+      }
     } catch (e) {
       console.warn('Error reading consensus history from browser localStorage:', e);
     }
