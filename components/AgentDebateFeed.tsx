@@ -32,6 +32,7 @@ import {
   RotateCcw,
   Sliders,
   ShieldAlert,
+  ShieldCheck,
   ArrowRight,
   ArrowLeft,
   CornerDownRight,
@@ -160,6 +161,8 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         return <Newspaper className="w-4 h-4 text-sky-400" />;
       case 'risk_manager':
         return <Shield className="w-4 h-4 text-emerald-400" />;
+      case 'chief_reviewer':
+        return <ShieldCheck className="w-4 h-4 text-indigo-400" />;
       case 'terminal_node':
         return <Zap className="w-4 h-4 text-amber-400" />;
       default:
@@ -865,11 +868,11 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/50 pb-2">
           <div className="flex items-center gap-2">
             <Layers className="w-4 h-4 text-indigo-400" />
-            <span className="font-bold text-xs text-white">4-Round Dialectical Stream + DAG Terminal Node</span>
+            <span className="font-bold text-xs text-white">5-Round Dialectical Stream + DAG Terminal Node + Chief Reviewer</span>
           </div>
 
           <div className="flex items-center gap-1.5 text-[10px] font-mono flex-wrap">
-            {(['ALL', 1, 2, 3, 4, 5] as const).map((r) => (
+            {(['ALL', 1, 2, 3, 4, 5, 6] as const).map((r) => (
               <button
                 key={`btn-round-${r}`}
                 onClick={() => setActiveFilterRound(r)}
@@ -879,7 +882,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                     : 'bg-terminal-900 text-slate-400 hover:text-white border border-terminal-border'
                 }`}
               >
-                {r === 'ALL' ? 'ALL ROUNDS' : r === 5 ? '⚡ TERMINAL NODE' : `ROUND ${r}`}
+                {r === 'ALL' ? 'ALL ROUNDS' : r === 5 ? '⚡ TERMINAL NODE' : r === 6 ? '🏛️ CHIEF REVIEWER' : `ROUND ${r}`}
               </button>
             ))}
           </div>

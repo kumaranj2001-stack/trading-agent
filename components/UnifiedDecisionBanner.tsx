@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MarketSessionInfo, SwarmConsensusResult } from '@/lib/types';
 import { 
   TrendingUp, 
   TrendingDown, 
   ShieldCheck, 
+  Shield,
   Sparkles, 
   Globe2, 
   Newspaper, 
@@ -20,7 +21,16 @@ import {
   Zap,
   Anchor,
   Clock,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  AlertOctagon,
+  AlertTriangle,
+  CheckCircle2,
+  Check,
+  X,
+  Layers,
+  BookOpen
 } from 'lucide-react';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 
@@ -45,632 +55,608 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   sessionInfo = null,
   theme = 'dark',
 }) => {
-  const { unifiedDecision, agents, executionSignal, currentPrice, pair } = consensus;
-  const bidAsk = LiveMarketFeedManager.getCanonicalBidAsk(pair);
+  const [showInvalidationChecklist, setShowInvalidationChecklist] = useState(false);
+  const [showDebateBreakdown, setShowDebateBreakdown] = useState(true);
+
+  const { unifiedDecision, agents, currentPrice, pair, timeframe } = consensus;
   const isBuy = unifiedDecision.direction === 'BUY';
   const isSell = unifiedDecision.direction === 'SELL';
   const isHold = unifiedDecision.direction === 'HOLD';
-  const isApproved = agents.risk.verdict === 'APPROVED';
+  const isApproved = consensus.executionSignal.authorized;
+
+  const bgGradient =
+    theme === 'light'
+      ? isBuy
+        ? 'from-emerald-50 via-white to-slate-50 border-emerald-300 shadow-emerald-900/10'
+        : isSell
+        ? 'from-rose-50 via-white to-slate-50 border-rose-300 shadow-rose-900/10'
+        : 'from-amber-50 via-white to-slate-50 border-amber-300 shadow-amber-900/10'
+      : isBuy
+      ? 'from-emerald-950/60 via-terminal-900 to-terminal-950 border-emerald-500/50 shadow-emerald-950/30'
+      : isSell
+      ? 'from-rose-950/60 via-terminal-900 to-terminal-950 border-rose-500/50 shadow-rose-950/30'
+      : 'from-amber-950/50 via-terminal-900 to-terminal-950 border-amber-500/40 shadow-amber-950/20';
+
+  const chiefAudit = consensus.chiefReviewerAudit;
 
   return (
-    <div className={`relative overflow-hidden rounded-2xl border transition-all p-4 sm:p-6 shadow-2xl ${
-      theme === 'light'
-        ? 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
-        : 'border-terminal-border bg-gradient-to-b from-terminal-900 via-terminal-950 to-terminal-950 text-slate-100'
-    }`}>
-      {/* Background glow accent */}
-      <div className={`absolute top-0 right-1/4 w-96 h-44 rounded-full blur-3xl pointer-events-none opacity-20 ${
-        isBuy ? 'bg-emerald-500' : isSell ? 'bg-rose-500' : 'bg-amber-500'
-      }`} />
-
-      {/* Top Row: Unified Direction, Confluence Grade & Execution Pill */}
-      <div className={`flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4 ${
+    <div className={`p-4 sm:p-5 rounded-2xl border bg-gradient-to-br shadow-xl transition-all duration-300 ${bgGradient}`}>
+      {/* Top Meta Header: Asset Pair, Live Price, Active Market Session, & Latched State */}
+      <div className={`flex flex-wrap items-center justify-between pb-3 mb-3 border-b gap-2 text-xs font-mono ${
         theme === 'light' ? 'border-slate-200' : 'border-terminal-border/80'
       }`}>
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Pulsing Direction Badge */}
-          <div className={`px-4 py-2 rounded-xl font-mono text-base sm:text-lg font-black tracking-wider flex items-center gap-2 border shadow-lg ${
-            isBuy 
-              ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 shadow-emerald-500/20' 
-              : isSell 
-              ? 'bg-rose-500/20 text-rose-400 border-rose-500/50 shadow-rose-500/20' 
-              : 'bg-amber-500/20 text-amber-400 border-amber-500/50 shadow-amber-500/20'
-          }`}>
-            <span className="relative flex h-3 w-3">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                isBuy ? 'bg-emerald-400' : isSell ? 'bg-rose-400' : 'bg-amber-400'
-              }`}></span>
-              <span className={`relative inline-flex rounded-full h-3 w-3 ${
-                isBuy ? 'bg-emerald-500' : isSell ? 'bg-rose-500' : 'bg-amber-500'
-              }`}></span>
-            </span>
-            {isBuy ? <TrendingUp className="w-5 h-5" /> : isSell ? <TrendingDown className="w-5 h-5" /> : null}
-            <span>UNIFIED {unifiedDecision.direction}</span>
-          </div>
-
-          {/* Confluence Grade Pill */}
-          <div className="flex items-center gap-2 font-mono text-xs">
-            <span className={`px-3 py-1.5 rounded-lg font-bold border ${
-              unifiedDecision.confluenceGrade === 'A+' || unifiedDecision.confluenceGrade === 'A'
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
-                : unifiedDecision.confluenceGrade === 'B'
-                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50'
-                : unifiedDecision.confluenceGrade === 'C'
-                ? 'bg-blue-500/20 text-blue-300 border-blue-500/50'
-                : unifiedDecision.confluenceGrade === 'D'
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                : unifiedDecision.confluenceGrade === 'E'
-                ? 'bg-orange-500/20 text-orange-300 border-orange-500/50'
-                : 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className={`px-2 py-0.5 rounded text-xs font-bold ${
+              theme === 'light' ? 'bg-cyan-100 text-cyan-850 border border-cyan-300' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
             }`}>
-              GRADE {unifiedDecision.confluenceGrade} • {executionSignal.lots.toFixed(2)} LOTS
+              {pair}
             </span>
-            <span className={theme === 'light' ? 'text-slate-600 font-medium' : 'text-slate-400'}>
-              Confidence: <strong className="text-cyan-500 font-bold">{unifiedDecision.confidence}%</strong>
-            </span>
-            <span className="text-slate-400 hidden sm:inline">•</span>
-            <span className={`${theme === 'light' ? 'text-slate-600' : 'text-slate-400'} hidden sm:inline`}>
-              Price: <strong className={`${theme === 'light' ? 'text-slate-900' : 'text-white'} font-bold`}>{currentPrice}</strong>
+            <span className={`px-2 py-0.5 rounded text-xs ${
+              theme === 'light' ? 'bg-slate-200 text-slate-800' : 'bg-terminal-800 text-slate-300'
+            }`}>
+              {timeframe.toUpperCase()}
             </span>
           </div>
 
-          {/* SSOT Live Stream Parity & State Freeze Guardrail Badge */}
-          {isMarketFrozen ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-950/70 border border-sky-500/50 text-[11px] font-mono text-sky-300 shadow-sm">
-              <Snowflake className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-              <span className="font-bold tracking-tight">STATE FROZEN</span>
-              <span className="text-slate-400 hidden md:inline">| Zero Drift • Market Closed</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-[11px] font-mono text-emerald-300 shadow-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-              </span>
-              <span className="font-bold tracking-tight">SSOT LIVE FEED</span>
-              <span className="text-slate-400 hidden md:inline">| &lt;500ms • ±0.05% Tol</span>
-            </div>
+          {/* Active Session & Liquidity Pill */}
+          {sessionInfo && (
+            <span className={`px-2 py-0.5 rounded text-[11px] flex items-center gap-1 border ${
+              consensus.agents.forex.activeTradingSession.liquidityRating === 'OPTIMAL'
+                ? theme === 'light' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                : consensus.agents.forex.activeTradingSession.liquidityRating === 'MODERATE'
+                ? theme === 'light' ? 'bg-cyan-100 text-cyan-800 border-cyan-300' : 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30'
+                : theme === 'light' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+            }`}>
+              <Radio className="w-3 h-3 animate-pulse" />
+              <span>{sessionInfo.sessionName.replace('_', ' ')}</span>
+              <span className="opacity-70">({consensus.agents.forex.activeTradingSession.liquidityRating} Liq)</span>
+            </span>
           )}
 
-          {/* 24/7 Autonomous Multi-Agent Swarm Loop Pill */}
-          <div 
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-950/70 border border-indigo-500/40 text-[11px] font-mono text-indigo-300 shadow-sm"
-            title="24/7 Autonomous Multi-Agent Swarm continuously looping across 5 specialized desks"
-          >
-            <Zap className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-            <span className="font-bold tracking-tight">24/7 SWARM LOOP</span>
-            <span className="text-cyan-300 font-bold hidden xl:inline">
-              | Loop #{consensus.autonomousLoopTelemetry?.cycleNumber || 1} • 0.0s Latency
+          {/* Global Market Closed Freeze Pill */}
+          {isMarketFrozen && (
+            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-sky-500/20 text-sky-300 border border-sky-400 flex items-center gap-1 animate-pulse">
+              <Snowflake className="w-3 h-3 text-sky-300" />
+              <span>MARKET CLOSED • STATE FROZEN</span>
+            </span>
+          )}
+        </div>
+
+        {/* Live Synchronized Ticker Price & Recalibration Trigger */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className={theme === 'light' ? 'text-slate-600 font-medium' : 'text-slate-400'}>
+              Live Market:
+            </span>
+            <span className={`font-bold text-sm ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>
+              {currentPrice}
+            </span>
+          </div>
+
+          {onForceRecalibrate && (
+            <button
+              onClick={onForceRecalibrate}
+              className={`px-2 py-1 rounded text-[10px] font-bold border flex items-center gap-1 transition-all ${
+                theme === 'light'
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-sm'
+                  : 'bg-terminal-800 hover:bg-terminal-700 text-cyan-300 border-terminal-border hover:border-cyan-500/50'
+              }`}
+              title="Force unlatch & immediate 15s recalculation cycle"
+            >
+              <RefreshCw className="w-3 h-3 text-cyan-400" />
+              <span>RECALIBRATE (15s)</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Breaking News Real-Time Alert Banner (if active) */}
+      {consensus.agents.news.breakingAlert && (
+        <div className="mb-3 p-3 rounded-xl bg-gradient-to-r from-rose-950 via-amber-950 to-terminal-950 border-2 border-rose-500 shadow-lg text-xs font-mono animate-pulse">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded bg-rose-600 text-white font-bold text-[10px] uppercase">
+                🚨 REAL-TIME BREAKING WIRE ALERT
+              </span>
+              <span className="text-white font-bold text-xs">
+                {consensus.agents.news.breakingAlert}
+              </span>
+            </div>
+            <span className="px-2 py-0.5 rounded bg-black/60 text-amber-300 border border-amber-500/40 text-[10px] font-bold shrink-0">
+              38 MONITORED FEEDS
             </span>
           </div>
         </div>
+      )}
 
-        {/* Action Button */}
-        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-          {!executionSignal.authorized ? (
-            <div 
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 bg-rose-950/80 border border-rose-600/60 text-rose-300 cursor-not-allowed shadow-md"
-              title={executionSignal.tierDescription || "Execution Vetoed: Live market conditions mirror historical stop loss confluence."}
-            >
-              <ShieldAlert className="w-4 h-4 text-rose-400 animate-pulse" />
-              <span>ENTRY VETOED (FAILURE RULE MIRROR)</span>
+      {/* Main Unified Signal Display Row */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* Left: Direction + Confluence Grade + Confidence Score */}
+        <div className="flex items-center gap-3.5">
+          <div className={`p-3 rounded-2xl border shadow-inner ${
+            isBuy 
+              ? theme === 'light' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+              : isSell 
+              ? theme === 'light' ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-rose-500/20 text-rose-400 border-rose-500/40' 
+              : theme === 'light' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+          }`}>
+            {isBuy ? <TrendingUp className="w-8 h-8" /> : isSell ? <TrendingDown className="w-8 h-8" /> : <Scale className="w-8 h-8" />}
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${
+                isBuy 
+                  ? theme === 'light' ? 'text-emerald-700' : 'text-emerald-400' 
+                  : isSell 
+                  ? theme === 'light' ? 'text-rose-700' : 'text-rose-400' 
+                  : theme === 'light' ? 'text-amber-700' : 'text-amber-400'
+              }`}>
+                {unifiedDecision.direction}
+              </span>
+              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold border ${
+                theme === 'light' ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+              }`}>
+                GRADE {consensus.confluenceGrade}
+              </span>
+              <span className={`px-2 py-0.5 rounded-lg text-xs font-mono font-bold border ${
+                theme === 'light' ? 'bg-cyan-100 text-cyan-900 border-cyan-300' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+              }`}>
+                {consensus.overallConfidence}% CONFIDENCE
+              </span>
             </div>
-          ) : isMarketFrozen ? (
-            <div 
-              className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 bg-sky-950/80 border border-sky-600/50 text-sky-300 cursor-not-allowed shadow-md"
-              title={`Market Closed (${sessionInfo?.statusLabel || 'State Frozen'}). Trading resumes: ${sessionInfo?.nextOpenFormatted || 'next session'}`}
-            >
-              <Lock className="w-3.5 h-3.5 text-sky-400" />
-              <span>EXECUTION FROZEN ({sessionInfo?.statusLabel || 'MARKET CLOSED'})</span>
-            </div>
-          ) : onExecuteTrade ? (
+            <p className={`text-xs mt-1 font-mono font-medium ${theme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
+              {unifiedDecision.summary}
+            </p>
+          </div>
+        </div>
+
+        {/* Right: Execution Dispatch CTA & Live Fill Status */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {onExecuteTrade && (
             <button
               onClick={onExecuteTrade}
-              className={`w-full sm:w-auto px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-lg active:scale-95 ${
-                isBuy
-                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                  : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
+              disabled={!isApproved}
+              className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all shadow-md ${
+                isApproved
+                  ? isBuy
+                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-950/40'
+                  : 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600'
               }`}
             >
-              <span>
-                {isSell
-                  ? `EXECUTE SELL @ BID (${bidAsk.bid}) • ${executionSignal.lots} LOTS`
-                  : `EXECUTE BUY @ ASK (${bidAsk.ask}) • ${executionSignal.lots} LOTS`}
-              </span>
+              <span>{isApproved ? `DISPATCH ${unifiedDecision.direction} @ LIVE BID/ASK` : 'ORDER VETOED (CHIEF REVIEWER)'}</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
-          ) : null}
-
-          {onOpenNewsWire && (
-            <button
-              onClick={onOpenNewsWire}
-              className="w-full sm:w-auto px-3 py-2 rounded-xl bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-sky-300 font-mono text-xs flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <Radio className="w-3.5 h-3.5 text-sky-400 animate-pulse" />
-              <span>38 Sources Wire</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Subheader Recommendation */}
-      <div className={`py-2.5 text-xs sm:text-sm font-mono flex flex-wrap items-center justify-between gap-2 border-b ${
-        theme === 'light' ? 'border-slate-200 text-slate-700' : 'border-terminal-border/40 text-slate-300'
-      }`}>
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-cyan-500 shrink-0" />
-          <span className={`font-semibold ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>{unifiedDecision.recommendedAction}</span>
-        </div>
-        <div className={`text-[11px] flex flex-wrap items-center gap-3 ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
-          <span>Bid: <strong className="text-cyan-400 font-bold">{bidAsk.bid}</strong></span>
-          <span>Ask: <strong className="text-purple-400 font-bold">{bidAsk.ask}</strong></span>
-          <span className="hidden sm:inline">Spread: <strong className="text-amber-400 font-bold">{bidAsk.spreadPips} pips</strong></span>
-          <span>Stop Loss: <strong className="text-rose-600 font-bold">{executionSignal.stopLoss}</strong> {isSell ? '(Above)' : '(Below)'}</span>
-          <span>Target: <strong className="text-emerald-600 font-bold">{executionSignal.takeProfit}</strong> {isSell ? '(Below)' : '(Above)'}</span>
-          <span>R:R: <strong className="text-cyan-600 font-bold">{executionSignal.riskReward}:1</strong></span>
-        </div>
-      </div>
-
-      {/* ⚓ Deterministic State-Latch & 15-Second Recalibration Anchor Card */}
-      {consensus.latchedState && (
-        <div className={`mt-3 p-3 rounded-xl border font-mono text-xs shadow-md ${
-          theme === 'light'
-            ? 'border-cyan-300 bg-gradient-to-r from-cyan-50 via-slate-50 to-indigo-50 text-slate-900 shadow-slate-200/60'
-            : 'border-cyan-500/40 bg-gradient-to-r from-cyan-950/40 via-terminal-950 to-indigo-950/40 text-white'
+      {/* ⚓ Deterministic State-Latching Anchor Strip */}
+      {consensus.latchedState && consensus.latchedState.isLatched && (
+        <div className={`mt-3 p-3 rounded-xl border text-xs font-mono transition-all ${
+          theme === 'light' ? 'bg-cyan-50/80 border-cyan-200 text-slate-800' : 'bg-terminal-950/80 border-cyan-500/30 text-cyan-200'
         }`}>
-          <div className={`flex flex-wrap items-center justify-between gap-2 border-b pb-2 mb-2 ${
-            theme === 'light' ? 'border-cyan-200' : 'border-cyan-500/30'
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2 mb-2 border-cyan-500/20">
+            <div className="flex items-center gap-2">
+              <Anchor className="w-4 h-4 text-cyan-400" />
+              <span className="font-bold uppercase tracking-wide">
+                DETERMINISTIC STATE-LATCH ACTIVE ({consensus.latchedState.pair})
+              </span>
+              <span className="px-2 py-0.2 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                {consensus.latchedState.timeRemainingSeconds}s REMAINING
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px]">
+              <span>Win Prob: <strong className="text-emerald-400 font-bold">{consensus.latchedState.winProbabilityPercent}%</strong></span>
+              <span>•</span>
+              <span>Floor S1: <strong className="text-rose-400 font-bold">{consensus.latchedState.s1Floor}</strong></span>
+              <span>•</span>
+              <span>Ceiling R1: <strong className="text-rose-400 font-bold">{consensus.latchedState.resistanceCeiling}</strong></span>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-[11px]">
+            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className="text-[10px] opacity-70 block font-semibold">Anchored Entry</span>
+              <strong className="text-xs">{consensus.latchedState.anchoredEntryPrice}</strong>
+            </div>
+            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className="text-[10px] text-rose-500 block font-semibold">Anchored Stop Loss (5-Pip Buffer)</span>
+              <strong className="text-xs text-rose-400">{consensus.latchedState.anchoredStopLoss}</strong>
+            </div>
+            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className="text-[10px] text-emerald-500 block font-semibold">Anchored Target</span>
+              <strong className="text-xs text-emerald-400">{consensus.latchedState.anchoredTakeProfit}</strong>
+            </div>
+            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className="text-[10px] opacity-70 block font-semibold">Proportional Lot Size</span>
+              <strong className="text-xs">{consensus.latchedState.anchoredLots} Lots ({consensus.latchedState.anchoredRiskReward}:1 R:R)</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🏛️ MANDATORY CHIEF REVIEWER & INSTITUTIONAL GATEKEEPER CLEARANCE CARD */}
+      {chiefAudit && (
+        <div className={`mt-3.5 p-3.5 sm:p-4 rounded-xl border font-mono text-xs shadow-lg transition-all ${
+          chiefAudit.status === 'VETOED'
+            ? theme === 'light'
+              ? 'bg-rose-50/90 border-rose-300 text-rose-950 ring-1 ring-rose-300'
+              : 'bg-gradient-to-r from-rose-950/90 via-terminal-950 to-red-950/70 border-rose-500 text-rose-200 ring-1 ring-rose-500/50'
+            : chiefAudit.status === 'MODIFIED'
+            ? theme === 'light'
+              ? 'bg-amber-50/90 border-amber-300 text-amber-950 ring-1 ring-amber-300'
+              : 'bg-gradient-to-r from-amber-950/80 via-terminal-950 to-amber-900/60 border-amber-500 text-amber-200'
+            : theme === 'light'
+            ? 'bg-indigo-50/90 border-indigo-300 text-indigo-950 shadow-sm'
+            : 'bg-gradient-to-r from-indigo-950/60 via-terminal-950 to-terminal-950 border-indigo-500/50 text-indigo-200'
+        }`}>
+          {/* Gatekeeper Top Bar */}
+          <div className={`flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 mb-2.5 ${
+            theme === 'light' ? 'border-slate-300' : 'border-terminal-border/60'
           }`}>
-            <div className="flex items-center gap-2">
-              <span className={`p-1 rounded flex items-center gap-1 font-bold text-[10px] border ${
-                theme === 'light'
-                  ? 'bg-cyan-100 text-cyan-800 border-cyan-300'
-                  : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50'
-              }`}>
-                <Anchor className="w-3.5 h-3.5 text-cyan-600" />
-                <span>15s MULTI-DESK RECALIBRATION</span>
-              </span>
-              <span className={`font-bold text-xs ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>
-                {consensus.latchedState.anchoredDirection} Setup Active (5-Engine Live Synthesis)
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] flex items-center gap-1 font-semibold ${
-                theme === 'light' ? 'text-slate-700' : 'text-slate-400'
-              }`}>
-                <Clock className="w-3.5 h-3.5 text-cyan-600 animate-pulse" />
-                <span>Recalibrates in {consensus.latchedState.timeRemainingSeconds}s</span>
-              </span>
-              {onForceRecalibrate && (
-                <button
-                  onClick={onForceRecalibrate}
-                  className={`px-2 py-0.5 rounded text-[10px] flex items-center gap-1 border transition-colors font-bold ${
-                    theme === 'light'
-                      ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                      : 'bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border-terminal-border'
-                  }`}
-                  title="Force immediate re-evaluation of 5-agent swarm consensus"
-                >
-                  <RefreshCw className="w-2.5 h-2.5" />
-                  <span>Recalibrate Now</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] mb-2">
-            <div className={`p-2 rounded border ${
-              theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900/80 border-terminal-border'
-            }`}>
-              <span className={`text-[9px] uppercase block font-semibold ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>Anchored Entry</span>
-              <strong className={`text-xs ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>{consensus.latchedState.anchoredEntryPrice}</strong>
-              <span className="text-[9px] text-emerald-600 block font-semibold">Fixed Level</span>
-            </div>
-            <div className={`p-2 rounded border ${
-              theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900/80 border-terminal-border'
-            }`}>
-              <span className={`text-[9px] uppercase block font-semibold ${theme === 'light' ? 'text-rose-700' : 'text-rose-400'}`}>Anchored Stop Loss</span>
-              <strong className={`text-xs ${theme === 'light' ? 'text-rose-700' : 'text-rose-300'}`}>{consensus.latchedState.anchoredStopLoss}</strong>
-              <span className={`text-[9px] block ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>Strict Protection</span>
-            </div>
-            <div className={`p-2 rounded border ${
-              theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900/80 border-terminal-border'
-            }`}>
-              <span className={`text-[9px] uppercase block font-semibold ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-400'}`}>Anchored Target</span>
-              <strong className={`text-xs ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-300'}`}>{consensus.latchedState.anchoredTakeProfit}</strong>
-              <span className={`text-[9px] block font-semibold ${theme === 'light' ? 'text-cyan-700' : 'text-cyan-400'}`}>{consensus.latchedState.anchoredRiskReward}:1 Target</span>
-            </div>
-            <div className={`p-2 rounded border ${
-              theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900/80 border-terminal-border'
-            }`}>
-              <span className={`text-[9px] uppercase block font-semibold ${theme === 'light' ? 'text-amber-700' : 'text-amber-400'}`}>
-                {consensus.latchedState.anchoredDirection === 'SELL' ? 'Resistance Ceiling' : 'S1 Support Floor'}
-              </span>
-              <strong className={`text-xs ${theme === 'light' ? 'text-amber-800' : 'text-amber-300'}`}>
-                {consensus.latchedState.anchoredDirection === 'SELL' 
-                  ? consensus.latchedState.resistanceCeiling 
-                  : consensus.latchedState.s1Floor}
-              </strong>
-              <span className={`text-[9px] block font-semibold ${theme === 'light' ? 'text-rose-700' : 'text-rose-400'}`}>Invalidation Level</span>
-            </div>
-          </div>
-
-          {/* Probability-First & Knowledge Base Confluence Footer */}
-          <div className={`flex flex-wrap items-center justify-between gap-2 pt-2 border-t text-[10px] ${
-            theme === 'light' ? 'border-cyan-200 text-slate-700' : 'border-cyan-500/20 text-slate-300'
-          }`}>
-            <div className="flex items-center gap-2">
-              <span className={`px-2 py-0.5 rounded font-bold border ${
-                consensus.latchedState.probabilityFirstBoost
-                  ? theme === 'light' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                  : theme === 'light' ? 'bg-indigo-100 text-indigo-800 border-indigo-300' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-              }`}>
-                🎯 MONTE CARLO WIN PROB: {consensus.latchedState.winProbabilityPercent}%
-              </span>
-              {consensus.latchedState.probabilityFirstBoost && (
-                <span className={`font-semibold hidden md:inline ${theme === 'light' ? 'text-emerald-700' : 'text-emerald-400'}`}>
-                  (&gt;70% Win Prob Elevated to Grade {consensus.latchedState.anchoredGrade} — Counter-Momentum Prevented)
-                </span>
-              )}
-            </div>
-
-            <div className={`flex items-center gap-3 text-[10px] ${theme === 'light' ? 'text-slate-700' : 'text-slate-400'}`}>
-              <span>POC Anchor: <strong className={theme === 'light' ? 'text-cyan-700 font-bold' : 'text-cyan-300 font-bold'}>{consensus.latchedState.synthesisSources.technicalPocLevel}</strong></span>
-              <span>Wire Sentiment: <strong className={theme === 'light' ? 'text-amber-700 font-bold' : 'text-amber-300 font-bold'}>{consensus.latchedState.synthesisSources.newsSentimentScore > 0 ? '+' : ''}{consensus.latchedState.synthesisSources.newsSentimentScore}%</strong></span>
-              <span>1,050+ KB Rules: <strong className={theme === 'light' ? 'text-emerald-700 font-bold' : 'text-emerald-300 font-bold'}>{consensus.latchedState.synthesisSources.matchedRulesCount} matched</strong></span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ⚡ Dual-Confirmation: Technical Momentum & Fundamental Sentiment Confirmation Gate */}
-      {consensus.dualConfirmation && (
-        <div className={`mt-3 p-3 rounded-xl border font-mono text-xs shadow-md transition-all ${
-          consensus.dualConfirmation.confirmationStatus === 'DUAL_CONFIRMED'
-            ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-200'
-            : consensus.dualConfirmation.confirmationStatus === 'DIVERGENCE_REJECTED'
-            ? 'bg-rose-950/40 border-rose-500/50 text-rose-200'
-            : 'bg-amber-950/40 border-amber-500/50 text-amber-200'
-        }`}>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/60 pb-2 mb-2">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className={`w-4 h-4 ${
-                consensus.dualConfirmation.confirmationStatus === 'DUAL_CONFIRMED'
-                  ? 'text-emerald-400'
-                  : consensus.dualConfirmation.confirmationStatus === 'DIVERGENCE_REJECTED'
-                  ? 'text-rose-400'
-                  : 'text-amber-400'
-              }`} />
-              <span className="font-bold text-white uppercase text-xs tracking-wide">
-                DUAL-CONFIRMATION ENTRY GATE: {consensus.dualConfirmation.confirmationStatus.replace(/_/g, ' ')}
-              </span>
-            </div>
-            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-              consensus.dualConfirmation.entryAuthorized
-                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
-                : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-            }`}>
-              {consensus.dualConfirmation.entryAuthorized ? 'ENTRY AUTHORIZED' : 'EXECUTION WITHHELD'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px]">
-            {/* Technical Momentum Weight (50%) */}
-            <div className="p-2 rounded bg-terminal-950/80 border border-terminal-border/80">
-              <div className="flex justify-between font-bold text-cyan-300 mb-1">
-                <span>Technical Momentum (50% Weight):</span>
-                <span>{consensus.dualConfirmation.technicalMomentum.score}% Score</span>
-              </div>
-              <p className="text-slate-300 text-[10px]">
-                RSI: {consensus.dualConfirmation.technicalMomentum.rsiStatus} • Trend: {consensus.dualConfirmation.technicalMomentum.structureMomentum} • Direction: {consensus.dualConfirmation.technicalMomentum.direction}
-              </p>
-            </div>
-
-            {/* Fundamental Sentiment Weight (50%) */}
-            <div className="p-2 rounded bg-terminal-950/80 border border-terminal-border/80">
-              <div className="flex justify-between font-bold text-purple-300 mb-1">
-                <span>Fundamental Sentiment (50% Weight):</span>
-                <span>{consensus.dualConfirmation.fundamentalSentiment.score}% Score</span>
-              </div>
-              <p className="text-slate-300 text-[10px]">
-                Regime: {consensus.dualConfirmation.fundamentalSentiment.macroRegime} • Central Bank: {consensus.dualConfirmation.fundamentalSentiment.centralBankDivergence.replace(/_/g, ' ')} • Direction: {consensus.dualConfirmation.fundamentalSentiment.direction}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-2 text-[10px] text-slate-300 italic">
-            • {consensus.dualConfirmation.confirmationRationale}
-          </div>
-        </div>
-      )}
-
-      {/* 🧠 Active Pre-Execution Memory Filter (Cross-referencing 1051+ Operative Rules) */}
-      {consensus.preExecutionFilter && (
-        <div className={`mt-3 p-3 rounded-xl border font-mono text-xs shadow-md transition-all ${
-          consensus.preExecutionFilter.action === 'DECLINE_ENTRY'
-            ? 'bg-gradient-to-r from-rose-950/70 via-terminal-950 to-red-950/50 border-rose-500 text-rose-200 ring-1 ring-rose-500/50'
-            : consensus.preExecutionFilter.action === 'ADJUST_SIZING'
-            ? 'bg-gradient-to-r from-amber-950/60 via-terminal-950 to-amber-900/40 border-amber-500 text-amber-200'
-            : 'bg-gradient-to-r from-emerald-950/40 via-terminal-950 to-terminal-950 border-emerald-500/40 text-emerald-200'
-        }`}>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/60 pb-2 mb-2">
-            <div className="flex items-center gap-2">
-              {consensus.preExecutionFilter.action === 'DECLINE_ENTRY' ? (
-                <ShieldAlert className="w-4 h-4 text-rose-400 animate-bounce" />
-              ) : consensus.preExecutionFilter.action === 'ADJUST_SIZING' ? (
-                <ShieldAlert className="w-4 h-4 text-amber-400" />
-              ) : (
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              )}
-              <span className="font-bold uppercase text-xs tracking-wide">
-                ACTIVE MEMORY FILTER: {
-                  consensus.preExecutionFilter.action === 'DECLINE_ENTRY'
-                    ? `PRE-EXECUTION VETO (RULE #${consensus.preExecutionFilter.matchingFailureRule?.failureAudit?.ruleIndex || 1051} MIRROR)`
-                    : consensus.preExecutionFilter.action === 'ADJUST_SIZING'
-                    ? `CAUTION SIZING ENFORCED (RULE #${consensus.preExecutionFilter.matchingFailureRule?.failureAudit?.ruleIndex || 1051})`
-                    : `PASSED (0% HISTORICAL FAILURE CONFLUENCE)`
-                }
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-slate-400">
-                1,050 Baseline + {consensus.knowledgeSummary?.totalDynamicRulesLoaded || 1} Operative Rules
-              </span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                consensus.preExecutionFilter.action === 'DECLINE_ENTRY'
-                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/50'
-                  : consensus.preExecutionFilter.action === 'ADJUST_SIZING'
-                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
-              }`}>
-                {consensus.preExecutionFilter.action.replace('_', ' ')}
-              </span>
-            </div>
-          </div>
-
-          <div className="text-[11px] leading-relaxed">
-            <p className={
-              consensus.preExecutionFilter.action === 'DECLINE_ENTRY' 
-                ? 'text-rose-200' 
-                : consensus.preExecutionFilter.action === 'ADJUST_SIZING' 
-                ? 'text-amber-200' 
-                : 'text-slate-300'
-            }>
-              {consensus.preExecutionFilter.reason}
-            </p>
-            {consensus.preExecutionFilter.matchingFailureRule?.failureAudit && (
-              <div className="mt-2 pt-2 border-t border-terminal-border/40 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[10px]">
-                <div className="p-1.5 rounded bg-terminal-900/80 border border-terminal-border">
-                  <span className="text-slate-400 block font-semibold">Historical Failure Point:</span>
-                  <span className="text-rose-300">{consensus.preExecutionFilter.matchingFailureRule.failureAudit.pointOfFailure}</span>
-                </div>
-                <div className="p-1.5 rounded bg-terminal-900/80 border border-terminal-border">
-                  <span className="text-slate-400 block font-semibold">Self-Optimizing Strategic Directive:</span>
-                  <span className="text-emerald-300">{consensus.preExecutionFilter.matchingFailureRule.invalidationCriteria}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* 🏛️ Chief Reviewer & Institutional Gatekeeper Clearance Card */}
-      {consensus.chiefReviewerAudit && (
-        <div className={`mt-3 p-3.5 rounded-xl border font-mono text-xs shadow-md transition-all ${
-          consensus.chiefReviewerAudit.status === 'VETOED'
-            ? 'bg-gradient-to-r from-rose-950/80 via-terminal-950 to-red-950/60 border-rose-500 text-rose-200 ring-1 ring-rose-500/50'
-            : consensus.chiefReviewerAudit.status === 'MODIFIED'
-            ? 'bg-gradient-to-r from-amber-950/70 via-terminal-950 to-amber-900/50 border-amber-500 text-amber-200'
-            : 'bg-gradient-to-r from-indigo-950/50 via-terminal-950 to-terminal-950 border-indigo-500/50 text-indigo-200'
-        }`}>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/60 pb-2.5 mb-2.5">
             <div className="flex items-center gap-2">
               <div className={`p-1.5 rounded-lg border ${
-                consensus.chiefReviewerAudit.status === 'APPROVED' 
+                chiefAudit.status === 'APPROVED' 
                   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' 
-                  : consensus.chiefReviewerAudit.status === 'MODIFIED'
+                  : chiefAudit.status === 'MODIFIED'
                   ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
                   : 'bg-rose-500/20 text-rose-400 border-rose-500/50 animate-pulse'
               }`}>
-                <ShieldCheck className="w-4 h-4" />
+                <ShieldCheck className="w-5 h-5" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-white text-xs uppercase tracking-wide">
-                    CHIEF REVIEWER AUDIT: {consensus.chiefReviewerAudit.auditorName.split(' ')[0]} {consensus.chiefReviewerAudit.auditorName.split(' ')[1]}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`font-bold text-xs uppercase tracking-wide ${theme === 'light' ? 'text-slate-900 font-extrabold' : 'text-white'}`}>
+                    CHIEF REVIEWER AUDIT: {chiefAudit.auditorName}
                   </span>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                    consensus.chiefReviewerAudit.status === 'APPROVED'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
-                      : consensus.chiefReviewerAudit.status === 'MODIFIED'
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
-                      : 'bg-rose-500/20 text-rose-300 border-rose-500/50'
+                    chiefAudit.status === 'APPROVED'
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                      : chiefAudit.status === 'MODIFIED'
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
+                      : 'bg-rose-500/20 text-rose-400 border-rose-500/50'
                   }`}>
-                    GATEKEEPER {consensus.chiefReviewerAudit.status}
+                    GATEKEEPER {chiefAudit.status}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    chiefAudit.consensusRuleSatisfied
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                      : 'bg-rose-600 text-white border-rose-400 animate-pulse'
+                  }`}>
+                    {chiefAudit.agreeCount}/5 DESKS AGREE {chiefAudit.consensusRuleSatisfied ? '(SUPERMAJORITY SATISFIED)' : '(CONSENSUS FAILED: AVOID TRADE)'}
                   </span>
                 </div>
-                <p className="text-[10px] text-slate-400">
-                  Signature: <code className="text-cyan-400">{consensus.chiefReviewerAudit.gatekeeperSignature}</code> • Risk Priority: <strong className="text-emerald-400">Proportional Sizing Enforced</strong>
+                <p className={`text-[10px] mt-0.5 ${theme === 'light' ? 'text-slate-700' : 'text-slate-400'}`}>
+                  Signature: <code className="text-cyan-500 font-bold">{chiefAudit.gatekeeperSignature}</code> • Directive: <strong className={chiefAudit.consensusDirective === 'APPROVE_TRADE' ? 'text-emerald-500' : 'text-rose-500'}>{chiefAudit.consensusDirective}</strong>
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 text-[10px]">
-              <span className="px-2 py-0.5 rounded bg-terminal-900 border border-terminal-border text-slate-300">
-                5 Specialist Desks Audited
-              </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowDebateBreakdown(!showDebateBreakdown)}
+                className={`px-2.5 py-1 rounded text-[11px] font-bold border flex items-center gap-1 transition-all ${
+                  theme === 'light'
+                    ? 'bg-white hover:bg-slate-100 text-indigo-900 border-slate-300 shadow-sm'
+                    : 'bg-terminal-900 hover:bg-terminal-800 text-indigo-300 border-indigo-500/40'
+                }`}
+              >
+                <span>5-Agent Debate & Desk Votes</span>
+                {showDebateBreakdown ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
             </div>
           </div>
 
-          {/* 5 Desk Audit Verdict Chips */}
+          {/* 5 Specialist Desk Voting Breakdown Chips */}
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-[10px] mb-2.5">
-            <div className="p-1.5 rounded bg-terminal-900/90 border border-terminal-border">
-              <span className="text-slate-400 block font-semibold">1. Technical Desk</span>
-              <span className={`font-bold ${consensus.chiefReviewerAudit.deskAudits.technical.verdict === 'COMPLIANT' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {consensus.chiefReviewerAudit.deskAudits.technical.verdict}
+            {Object.values(chiefAudit.deskVotes).map((deskVote) => (
+              <div 
+                key={deskVote.desk}
+                className={`p-2 rounded border transition-all ${
+                  deskVote.vote === 'AGREE'
+                    ? theme === 'light'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                      : 'bg-terminal-900/90 border-emerald-500/40 text-emerald-200'
+                    : theme === 'light'
+                    ? 'bg-rose-50 border-rose-200 text-rose-950'
+                    : 'bg-terminal-900/90 border-rose-500/40 text-rose-200'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="font-bold truncate text-[10px]">
+                    {deskVote.desk === 'TECHNICAL' ? '1. Technical' :
+                     deskVote.desk === 'FUNDAMENTAL' ? '2. Macro Desk' :
+                     deskVote.desk === 'NEWS_WIRE' ? '3. News Wire' :
+                     deskVote.desk === 'FOREX_INTERMARKET' ? '4. Intermarket' : '5. Risk Gov'}
+                  </span>
+                  <span className={`px-1 py-0.2 rounded font-black text-[9px] ${
+                    deskVote.vote === 'AGREE'
+                      ? 'bg-emerald-500/20 text-emerald-500'
+                      : 'bg-rose-500/20 text-rose-500'
+                  }`}>
+                    {deskVote.vote}
+                  </span>
+                </div>
+                <div className="text-[9px] opacity-80 truncate">{deskVote.analystName.split(' ')[0]} • Bias: {deskVote.bias}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Dialectical Debate Comparison: Buy-Side Case vs Sell-Side Counter-Thesis */}
+          {showDebateBreakdown && (
+            <div className="mt-2.5 space-y-2.5 pt-2.5 border-t border-terminal-border/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {/* Buy-Side Case Card */}
+                <div className={`p-3 rounded-lg border text-[11px] ${
+                  theme === 'light'
+                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                    : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                }`}>
+                  <div className="flex items-center justify-between font-bold text-xs mb-1.5 text-emerald-500">
+                    <span className="flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4" />
+                      BUY-SIDE THESIS (DEMAND & CONFLUENCE)
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40">
+                      SMC DEMAND FLOOR
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    {chiefAudit.buySideCase}
+                  </p>
+                </div>
+
+                {/* Sell-Side Counter-Thesis Card */}
+                <div className={`p-3 rounded-lg border text-[11px] ${
+                  theme === 'light'
+                    ? 'bg-rose-50/70 border-rose-200 text-rose-950'
+                    : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                }`}>
+                  <div className="flex items-center justify-between font-bold text-xs mb-1.5 text-rose-500">
+                    <span className="flex items-center gap-1.5">
+                      <TrendingDown className="w-4 h-4" />
+                      SELL-SIDE COUNTER-THESIS (SUPPLY & DRAG)
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/40">
+                      RESISTANCE CEILING
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    {chiefAudit.sellSideCase}
+                  </p>
+                </div>
+              </div>
+
+              {/* Chief Reviewer Comparative Verdict */}
+              <div className={`p-3 rounded-lg border text-xs font-mono ${
+                chiefAudit.consensusRuleSatisfied
+                  ? theme === 'light'
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-950'
+                    : 'bg-indigo-950/50 border-indigo-500/40 text-indigo-200'
+                  : theme === 'light'
+                  ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold'
+                  : 'bg-rose-950/80 border-rose-500 text-rose-200'
+              }`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-xs uppercase flex items-center gap-1.5">
+                    <Shield className="w-4 h-4 text-indigo-400" />
+                    Chief Reviewer Dialectical Synthesis & Consensus Ruling:
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    chiefAudit.consensusRuleSatisfied ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-600 text-white'
+                  }`}>
+                    {chiefAudit.consensusDirective}
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  {chiefAudit.comparativeVerdict}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Contradiction Warning (if any) */}
+          {chiefAudit.contradictionResolution.hasContradiction && (
+            <div className={`mt-2.5 p-2.5 rounded-lg border text-[11px] ${
+              chiefAudit.status === 'VETOED'
+                ? 'bg-rose-950/80 border-rose-500 text-rose-200'
+                : 'bg-amber-950/60 border-amber-600 text-amber-200'
+            }`}>
+              <div className="flex items-center gap-1.5 font-bold mb-0.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span className="uppercase text-[10px]">
+                  CONTRADICTION DETECTED: {chiefAudit.contradictionResolution.contradictionType?.replace(/_/g, ' ')}
+                </span>
+              </div>
+              <p className="text-[10px] leading-relaxed">
+                {chiefAudit.contradictionResolution.explanation}
+              </p>
+            </div>
+          )}
+
+          {/* Mandatory Invalidation Trigger Strip */}
+          <div className={`mt-2.5 p-2.5 rounded-lg border flex flex-wrap items-center justify-between gap-2 text-[11px] ${
+            theme === 'light' ? 'bg-white border-slate-300 text-slate-800' : 'bg-terminal-900 border-terminal-border text-slate-200'
+          }`}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />
+              <span>
+                <strong className="text-cyan-500 uppercase">MANDATORY INVALIDATION:</strong> {chiefAudit.explicitInvalidationCriteria}
               </span>
             </div>
-            <div className="p-1.5 rounded bg-terminal-900/90 border border-terminal-border">
-              <span className="text-slate-400 block font-semibold">2. Fundamental Desk</span>
-              <span className={`font-bold ${consensus.chiefReviewerAudit.deskAudits.fundamental.verdict === 'COMPLIANT' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {consensus.chiefReviewerAudit.deskAudits.fundamental.verdict}
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold border border-rose-500/40 text-[10px]">
+                Level: {chiefAudit.invalidationPriceLevel}
               </span>
-            </div>
-            <div className="p-1.5 rounded bg-terminal-900/90 border border-terminal-border">
-              <span className="text-slate-400 block font-semibold">3. News Wire Desk</span>
-              <span className={`font-bold ${consensus.chiefReviewerAudit.deskAudits.newsWire.verdict === 'COMPLIANT' ? 'text-emerald-400' : consensus.chiefReviewerAudit.deskAudits.newsWire.verdict === 'WARNING' ? 'text-amber-400' : 'text-rose-400'}`}>
-                {consensus.chiefReviewerAudit.deskAudits.newsWire.verdict}
-              </span>
-            </div>
-            <div className="p-1.5 rounded bg-terminal-900/90 border border-terminal-border">
-              <span className="text-slate-400 block font-semibold">4. Intermarket Desk</span>
-              <span className={`font-bold ${consensus.chiefReviewerAudit.deskAudits.forexIntermarket.verdict === 'COMPLIANT' ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {consensus.chiefReviewerAudit.deskAudits.forexIntermarket.verdict}
-              </span>
-            </div>
-            <div className="p-1.5 rounded bg-terminal-900/90 border border-terminal-border">
-              <span className="text-slate-400 block font-semibold">5. Risk Governance</span>
-              <span className="font-bold text-emerald-400">
-                COMPLIANT (NON-SPECULATIVE)
-              </span>
+              <button
+                onClick={() => setShowInvalidationChecklist(!showInvalidationChecklist)}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 transition-colors ${
+                  theme === 'light'
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                    : 'bg-terminal-800 hover:bg-terminal-700 text-cyan-300 border-terminal-border'
+                }`}
+              >
+                <span>All 7 Invalidation Triggers</span>
+                {showInvalidationChecklist ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
             </div>
           </div>
 
-          {/* Contradiction Resolution & Mandated Invalidation Criteria */}
-          <div className="space-y-1.5 text-[11px] pt-2 border-t border-terminal-border/50">
-            {consensus.chiefReviewerAudit.contradictionResolution.hasContradiction && (
-              <div className="p-2 rounded bg-amber-950/60 border border-amber-600/60 text-amber-200">
-                <span className="font-bold text-amber-300 uppercase tracking-wide block text-[10px]">
-                  ⚠️ CONTRADICTION RESOLUTION: {consensus.chiefReviewerAudit.contradictionResolution.contradictionType?.replace('_', ' ')}
+          {/* Complete 7-Trigger Invalidation Checklist Modal/Panel */}
+          {showInvalidationChecklist && (
+            <div className={`mt-2.5 p-3 rounded-lg border text-[11px] space-y-1.5 ${
+              theme === 'light' ? 'bg-slate-50 border-slate-300 text-slate-800' : 'bg-terminal-950 border-terminal-border text-slate-300'
+            }`}>
+              <div className="flex items-center justify-between pb-1.5 border-b border-terminal-border/40 font-bold text-xs">
+                <span className="flex items-center gap-1.5 text-rose-400 uppercase">
+                  <ShieldAlert className="w-4 h-4" />
+                  Mandatory Institutional Invalidation Checklist (7 Triggers)
                 </span>
-                <p className="mt-0.5">{consensus.chiefReviewerAudit.contradictionResolution.explanation}</p>
+                <span className="text-[10px] text-slate-500">Autonomous exit on breach</span>
               </div>
-            )}
-            <div className="p-2 rounded bg-terminal-900/80 border border-terminal-border flex flex-wrap items-center justify-between gap-1 text-[10px]">
-              <span className="text-slate-300">
-                <strong className="text-cyan-400 uppercase">Mandated Invalidation:</strong> {consensus.chiefReviewerAudit.explicitInvalidationCriteria}
-              </span>
-              <span className="text-rose-400 font-bold">
-                Invalidation Level: {consensus.chiefReviewerAudit.invalidationPriceLevel}
-              </span>
+              <div className="space-y-1 pt-1 font-mono text-[10px]">
+                {chiefAudit.completeInvalidationCriteriaList.map((crit, idx) => (
+                  <div key={idx} className="flex items-start gap-2 p-1.5 rounded hover:bg-black/10 transition-colors">
+                    <span className="w-4 h-4 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold text-[9px] shrink-0 mt-0.5">
+                      {idx + 1}
+                    </span>
+                    <span className="leading-relaxed">{crit}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
       {/* Core Fundamental & Technical Reasons Driving the Decision (5 Structured Pillars) */}
       <div className="mt-4 space-y-2.5">
         <div className="flex items-center justify-between">
-          <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-            <Flame className="w-3.5 h-3.5 text-amber-400" />
+          <h4 className={`text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+            theme === 'light' ? 'text-slate-800 font-extrabold' : 'text-slate-300'
+          }`}>
+            <Flame className="w-3.5 h-3.5 text-amber-500" />
             Core Drivers Behind the {unifiedDecision.direction} Decision (5-Desk Synthesis)
           </h4>
-          <span className="text-[10px] font-mono text-cyan-400">
+          <span className="text-[10px] font-mono text-cyan-500 font-bold">
             5/5 AGENTS SYNCHRONIZED
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 font-mono text-xs">
           {/* Pillar 1: Fundamental Macro Catalyst */}
-          <div className="bg-terminal-950/80 border border-purple-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-purple-600/60 transition-colors">
+          <div className={`rounded-xl p-3.5 flex flex-col justify-between border transition-colors ${
+            theme === 'light' ? 'bg-white border-purple-200 text-slate-800 shadow-sm' : 'bg-terminal-950/80 border-purple-800/40 text-slate-300'
+          }`}>
             <div>
-              <div className="flex items-center justify-between mb-2 text-purple-400 text-xs sm:text-sm font-bold">
+              <div className="flex items-center justify-between mb-2 text-purple-500 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
                   <Globe2 className="w-4 h-4" />
                   1. Fundamental Drivers
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded font-bold bg-purple-950/60 border border-purple-800">
+                <span className="text-xs px-2 py-0.5 rounded font-bold bg-purple-500/15 border border-purple-400">
                   {agents.fundamental.bias}
                 </span>
               </div>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+              <p className={`text-xs sm:text-sm leading-relaxed ${theme === 'light' ? 'text-slate-800' : 'text-slate-300'}`}>
                 {unifiedDecision.coreReasons.fundamental}
               </p>
             </div>
           </div>
 
           {/* Pillar 2: Real-Time News Wire & Financial Websites Scraper */}
-          <div className="bg-terminal-950/80 border border-sky-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-sky-600/60 transition-colors">
+          <div className={`rounded-xl p-3.5 flex flex-col justify-between border transition-colors ${
+            theme === 'light' ? 'bg-white border-sky-200 text-slate-800 shadow-sm' : 'bg-terminal-950/80 border-sky-800/40 text-slate-300'
+          }`}>
             <div>
-              <div className="flex items-center justify-between mb-2 text-sky-400 text-xs sm:text-sm font-bold">
+              <div className="flex items-center justify-between mb-2 text-sky-500 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
                   <Newspaper className="w-4 h-4" />
                   2. 38-Source News Wire
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded font-bold bg-sky-950/60 border border-sky-800">
+                <span className="text-xs px-2 py-0.5 rounded font-bold bg-sky-500/15 border border-sky-400">
                   {agents.news.bias}
                 </span>
               </div>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+              <p className={`text-xs sm:text-sm leading-relaxed ${theme === 'light' ? 'text-slate-800' : 'text-slate-300'}`}>
                 {unifiedDecision.coreReasons.newsSentiment}
               </p>
             </div>
             {agents.news.breakingAlert && (
-              <div className="mt-2.5 pt-2 border-t border-sky-900/60 text-xs font-semibold text-amber-300 truncate">
+              <div className="mt-2.5 pt-2 border-t border-sky-500/30 text-xs font-semibold text-amber-500 truncate">
                 ⚡ {agents.news.breakingAlert}
               </div>
             )}
           </div>
 
           {/* Pillar 3: Technical Structure & Smart Money Concepts */}
-          <div className="bg-terminal-950/80 border border-cyan-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-cyan-600/60 transition-colors">
+          <div className={`rounded-xl p-3.5 flex flex-col justify-between border transition-colors ${
+            theme === 'light' ? 'bg-white border-cyan-200 text-slate-800 shadow-sm' : 'bg-terminal-950/80 border-cyan-800/40 text-slate-300'
+          }`}>
             <div>
-              <div className="flex items-center justify-between mb-2 text-cyan-400 text-xs sm:text-sm font-bold">
+              <div className="flex items-center justify-between mb-2 text-cyan-500 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
                   <BarChart3 className="w-4 h-4" />
                   3. Technical Structure
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded font-bold bg-cyan-950/60 border border-cyan-800">
+                <span className="text-xs px-2 py-0.5 rounded font-bold bg-cyan-500/15 border border-cyan-400">
                   {agents.technical.bias}
                 </span>
               </div>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+              <p className={`text-xs sm:text-sm leading-relaxed ${theme === 'light' ? 'text-slate-800' : 'text-slate-300'}`}>
                 {unifiedDecision.coreReasons.technicalSetup}
               </p>
             </div>
           </div>
 
           {/* Pillar 4: Market Mechanics & Intermarket Correlation */}
-          <div className="bg-terminal-950/80 border border-amber-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-amber-600/60 transition-colors">
+          <div className={`rounded-xl p-3.5 flex flex-col justify-between border transition-colors ${
+            theme === 'light' ? 'bg-white border-amber-200 text-slate-800 shadow-sm' : 'bg-terminal-950/80 border-amber-800/40 text-slate-300'
+          }`}>
             <div>
-              <div className="flex items-center justify-between mb-2 text-amber-400 text-xs sm:text-sm font-bold">
+              <div className="flex items-center justify-between mb-2 text-amber-500 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
                   <Scale className="w-4 h-4" />
                   4. Intermarket Flows
                 </span>
-                <span className="text-xs px-2 py-0.5 rounded font-bold bg-amber-950/60 border border-amber-800">
+                <span className="text-xs px-2 py-0.5 rounded font-bold bg-amber-500/15 border border-amber-400">
                   {agents.forex.bias}
                 </span>
               </div>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+              <p className={`text-xs sm:text-sm leading-relaxed ${theme === 'light' ? 'text-slate-800' : 'text-slate-300'}`}>
                 {unifiedDecision.coreReasons.marketDynamics}
               </p>
             </div>
           </div>
 
           {/* Pillar 5: Risk Manager & Capital Preservation */}
-          <div className="bg-terminal-950/80 border border-emerald-800/40 rounded-xl p-3.5 flex flex-col justify-between hover:border-emerald-600/60 transition-colors md:col-span-2 lg:col-span-2">
+          <div className={`rounded-xl p-3.5 flex flex-col justify-between border transition-colors md:col-span-2 lg:col-span-2 ${
+            theme === 'light' ? 'bg-white border-emerald-200 text-slate-800 shadow-sm' : 'bg-terminal-950/80 border-emerald-800/40 text-slate-300'
+          }`}>
             <div>
-              <div className="flex items-center justify-between mb-2 text-emerald-400 text-xs sm:text-sm font-bold">
+              <div className="flex items-center justify-between mb-2 text-emerald-500 text-xs sm:text-sm font-bold">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4" />
                   5. Risk Governance & Edge
                 </span>
                 <span className={`text-xs px-2 py-0.5 rounded font-bold ${
                   isApproved 
-                    ? 'bg-emerald-950/60 border border-emerald-800 text-emerald-300' 
-                    : 'bg-rose-950/60 border border-rose-800 text-rose-300'
+                    ? 'bg-emerald-500/15 border border-emerald-400 text-emerald-600' 
+                    : 'bg-rose-500/15 border border-rose-400 text-rose-600'
                 }`}>
                   {agents.risk.verdict}
                 </span>
               </div>
-              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed">
+              <p className={`text-xs sm:text-sm leading-relaxed ${theme === 'light' ? 'text-slate-800' : 'text-slate-300'}`}>
                 {unifiedDecision.coreReasons.riskGovernance}
               </p>
             </div>
             {agents.risk.monteCarlo && (
-              <div className="mt-2.5 pt-2 border-t border-emerald-900/60 flex flex-wrap items-center justify-between text-xs text-slate-300 font-medium">
+              <div className={`mt-2.5 pt-2 border-t flex flex-wrap items-center justify-between text-xs font-medium ${
+                theme === 'light' ? 'border-emerald-200 text-slate-700' : 'border-emerald-900/60 text-slate-300'
+              }`}>
                 <span>Monte Carlo 1,000 Paths: Win Prob {agents.risk.monteCarlo.projectedProfitProbability}%</span>
                 <span>95% VaR: ${agents.risk.monteCarlo.var95Usd}</span>
                 <span>Sharpe: {agents.risk.monteCarlo.sharpeRatio}</span>

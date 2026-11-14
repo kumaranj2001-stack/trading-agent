@@ -1002,10 +1002,29 @@ export interface DeskAuditVerdict {
   score: number;
 }
 
+export interface DeskVoteDetail {
+  desk: 'TECHNICAL' | 'FUNDAMENTAL' | 'NEWS_WIRE' | 'FOREX_INTERMARKET' | 'RISK_GOVERNANCE';
+  analystName: string;
+  bias: string;
+  vote: 'AGREE' | 'DISAGREE';
+  confidence: number;
+  buySideArgument: string;
+  sellSideArgument: string;
+  verdict: 'COMPLIANT' | 'WARNING' | 'NON_COMPLIANT';
+  finding: string;
+}
+
 export interface ChiefReviewerAuditResult {
   auditorName: string;
   status: 'APPROVED' | 'MODIFIED' | 'VETOED';
   overallConfluenceScore: number;
+  agreeCount: number;
+  disagreeCount: number;
+  consensusRuleSatisfied: boolean;
+  consensusDirective: 'APPROVE_TRADE' | 'AVOID_TRADE' | 'MODIFY_PARAMETERS';
+  buySideCase: string;
+  sellSideCase: string;
+  comparativeVerdict: string;
   deskAudits: {
     technical: DeskAuditVerdict;
     fundamental: DeskAuditVerdict;
@@ -1013,9 +1032,11 @@ export interface ChiefReviewerAuditResult {
     forexIntermarket: DeskAuditVerdict;
     riskGovernance: DeskAuditVerdict;
   };
+  deskVotes: Record<'TECHNICAL' | 'FUNDAMENTAL' | 'NEWS_WIRE' | 'FOREX_INTERMARKET' | 'RISK_GOVERNANCE', DeskVoteDetail>;
+  completeInvalidationCriteriaList: string[];
   contradictionResolution: {
     hasContradiction: boolean;
-    contradictionType?: 'NEWS_TECHNICAL_INVERSION' | 'MACRO_PRICE_DIVERGENCE' | 'NONE';
+    contradictionType?: 'NEWS_TECHNICAL_INVERSION' | 'MACRO_PRICE_DIVERGENCE' | 'SPECIALIST_CONSENSUS_FAILURE' | 'NONE';
     resolutionAction: 'NONE' | 'REDUCE_SIZE_50_PERCENT' | 'WIDEN_BUFFER' | 'FORCE_VETO';
     explanation: string;
   };

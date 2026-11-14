@@ -1121,6 +1121,24 @@ export class SwarmCoordinator {
       terminalData: terminalNode,
     });
 
+    // ===============================================================
+    // ROUND 6: MANDATORY CHIEF REVIEWER GATEKEEPER CLEARANCE
+    // ===============================================================
+    messages.push({
+      id: `chief-reviewer-node-${Date.now()}`,
+      round: 6,
+      role: 'chief_reviewer',
+      agentName: 'Marcus Sterling (Chief Reviewer & Institutional Gatekeeper)',
+      avatarColor: 'text-indigo-400 bg-indigo-950/80 border-indigo-700',
+      content: `[MANDATORY CHIEF REVIEWER FINAL GATEKEEPER AUDIT]
+• Institutional Gatekeeper Clearance: Audited all 5 specialist desks following the 5-agent dialectical debate comparing Buy-Side vs Sell-Side arguments.
+• Supermajority Consensus Rule: Minimum 4 of 5 specialist desks must agree (>= 4/5). If 3 or less agree, trade entry is strictly avoided (FORCE_VETO).
+• Invalidation Mandate: Active entry locked with explicit structural invalidation boundary (5 pips beyond S1/R1).`,
+      sentiment: directive === 'STRATEGIC_EXIT' ? 'CAUTION' : (dominantSide === 'BUY' ? 'BULLISH' : 'BEARISH'),
+      timestamp: 'Gatekeeper Clearance',
+      side: dominantSide,
+    });
+
     // Build Cited Rules Registry
     const citedRules: DebateCitedRule[] = [
       {

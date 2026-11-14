@@ -100,6 +100,7 @@ export default function Home() {
 
   const lastWebSocketHeartbeatRef = useRef<number>(Date.now());
   const previousPriceRef = useRef<number>(0);
+  const lastBreakingNewsRef = useRef<string | null>(null);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isRiskRatioControllerOpen, setIsRiskRatioControllerOpen] = useState<boolean>(false);
@@ -430,6 +431,12 @@ export default function Home() {
       setSwarmTelemetry(telemetry);
       BrowserStorageManager.saveConsensusResult(result);
 
+      // 🚨 Real-Time Notification for Major Breaking News Events
+      if (result.agents?.news?.breakingAlert && result.agents.news.breakingAlert !== lastBreakingNewsRef.current) {
+        lastBreakingNewsRef.current = result.agents.news.breakingAlert;
+        showNotification(`🚨 BREAKING NEWS ALERT: ${result.agents.news.breakingAlert}`);
+      }
+
       // 🛡️ Second-by-Second Technical & Fundamental Invalidation Re-evaluation on Open Positions
       setPortfolio(prev => {
         if (!prev.positions || prev.positions.length === 0) return prev;
@@ -493,6 +500,11 @@ export default function Home() {
             freshConsensus.confluenceGrade === 'A+' ||
             freshConsensus.confluenceGrade === 'A' ||
             freshConsensus.confluenceGrade === 'B';
+
+          if (freshConsensus.agents?.news?.breakingAlert && freshConsensus.agents.news.breakingAlert !== lastBreakingNewsRef.current) {
+            lastBreakingNewsRef.current = freshConsensus.agents.news.breakingAlert;
+            showNotification(`🚨 BREAKING NEWS ALERT: ${freshConsensus.agents.news.breakingAlert}`);
+          }
 
           if (isHighConfluence && freshConsensus.unifiedDecision.direction !== 'HOLD') {
             showNotification(
