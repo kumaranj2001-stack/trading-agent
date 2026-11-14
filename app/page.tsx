@@ -43,7 +43,6 @@ import { NewsWireModal } from '@/components/NewsWireModal';
 import { OrderFlowDesk } from '@/components/OrderFlowDesk';
 import { FirebaseStatusModal } from '@/components/FirebaseStatusModal';
 import { LeftNavigationDrawer } from '@/components/LeftNavigationDrawer';
-import { CollapsibleSidebar } from '@/components/CollapsibleSidebar';
 import { JournalModal } from '@/components/JournalModal';
 import { HistoricalJournalDesk } from '@/components/HistoricalJournalDesk';
 import { JournalStorageManager } from '@/lib/journalStorage';
@@ -84,7 +83,6 @@ export default function Home() {
   // Navigation & Execution Mode
   const [executionMode, setExecutionMode] = useState<ExecutionMode>('MANUAL');
   const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState<boolean>(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isScrapingNews, setIsScrapingNews] = useState<boolean>(false);
   const [opportunities, setOpportunities] = useState<MarketScannerOpportunity[]>([]);
   const [isScanning, setIsScanning] = useState<boolean>(false);
@@ -112,7 +110,7 @@ export default function Home() {
 
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
-  // Hydrate theme & sidebar collapse state from localStorage
+  // Hydrate theme from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = (localStorage.getItem('qri_theme') || localStorage.getItem('apex_theme')) as 'dark' | 'light' | null;
@@ -121,27 +119,7 @@ export default function Home() {
         document.documentElement.classList.remove('dark', 'light');
         document.documentElement.classList.add(savedTheme);
       }
-      const savedSidebar = localStorage.getItem('qri_sidebar_collapsed');
-      if (savedSidebar === 'true') {
-        setIsSidebarCollapsed(true);
-      }
     }
-  }, []);
-
-  // Keyboard shortcut (Ctrl+B / Cmd+B) to toggle sidebar
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
-        e.preventDefault();
-        setIsSidebarCollapsed(prev => {
-          const next = !prev;
-          try { localStorage.setItem('qri_sidebar_collapsed', String(next)); } catch (e) {}
-          return next;
-        });
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleToggleTheme = () => {
@@ -1075,106 +1053,66 @@ export default function Home() {
   const triggeredRules: KnowledgeRule[] = consensus ? consensus.knowledgeSummary.topConfluenceRules : [];
 
   return (
-    <div className={`min-h-screen flex transition-colors duration-200 ${theme === 'light' ? 'bg-slate-100/70 text-slate-900' : 'bg-terminal-950 text-slate-100'} selection:bg-cyan-500/30 selection:text-cyan-200`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-200 ${theme === 'light' ? 'bg-slate-50 text-slate-900' : 'bg-terminal-950 text-slate-100'} selection:bg-cyan-500/30 selection:text-cyan-200`}>
       {/* Toast Notification */}
       {notification && (
-        <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 px-4 py-2.5 rounded-xl bg-emerald-600 text-white font-mono text-xs font-semibold shadow-2xl flex items-center gap-2 border border-emerald-400 animate-fade-in max-w-[90vw]">
+        <div className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 px-4 py-2.5 rounded-lg bg-emerald-600 text-white font-mono text-xs font-semibold shadow-2xl flex items-center gap-2 border border-emerald-400 animate-fade-in max-w-[90vw]">
           <span className="w-2 h-2 rounded-full bg-white animate-ping shrink-0"></span>
           <span className="truncate">{notification}</span>
         </div>
       )}
 
-      {/* 🧭 Consolidating Navigation into Clean, Collapsible Institutional Sidebar */}
-      <CollapsibleSidebar
+      {/* Main Header with Market Selector & 18-Source News Wire Tool */}
+      <Header
+        selectedPair={selectedPair}
+        marketSegment={marketSegment}
+        onSelectMarketSegment={handleSelectMarketSegment}
+        timeframe={timeframe}
+        onSelectPair={handleSelectPair}
+        onSelectTimeframe={handleSelectTimeframe}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        isCollapsed={isSidebarCollapsed}
-        onToggleCollapse={() => {
-          setIsSidebarCollapsed(prev => {
-            const next = !prev;
-            try { localStorage.setItem('qri_sidebar_collapsed', String(next)); } catch (e) {}
-            return next;
-          });
-        }}
-        isMobileOpen={isLeftDrawerOpen}
-        onCloseMobile={() => setIsLeftDrawerOpen(false)}
-        executionMode={executionMode}
-        onToggleExecutionMode={handleToggleExecutionMode}
+        portfolio={portfolio}
         theme={theme}
         onToggleTheme={handleToggleTheme}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenRiskRatioController={() => setIsRiskRatioControllerOpen(true)}
-        onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
+        onOpenScanner={() => setActiveTab('scanner')}
+        onOpenCalendar={() => setActiveTab('calendar')}
+        onOpenMonteCarlo={() => setActiveTab('var')}
+        onOpenKnowledge={() => setActiveTab('knowledge')}
+        onOpenNewsWire={() => setActiveTab('wire')}
+        onOpenFirebase={() => setActiveTab('firebase')}
+        onOpenJournal={() => setActiveTab('journals')}
+        onOpenLeftDrawer={() => setIsLeftDrawerOpen(true)}
         isAnalyzing={isAnalyzing}
-        selectedPair={selectedPair}
+        onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
+        activeSession={activeSession}
+        executionMode={executionMode}
+        onToggleExecutionMode={handleToggleExecutionMode}
         confluenceGrade={consensus?.confluenceGrade}
+        isMarketFrozen={isMarketFrozen}
+        sessionInfo={sessionInfo}
+        onToggleFreeze={() => {
+          const next = !isMarketFrozen;
+          MarketSessionManager.setManualFreeze(next);
+          setIsMarketFrozen(next);
+          showNotification(next ? '❄️ Global State Freeze activated.' : '🟢 Trading resumed. Global State Unfrozen.');
+        }}
+        cycleNumber={consensus?.autonomousLoopTelemetry?.cycleNumber || swarmTelemetry?.cycleCount}
       />
 
-      {/* Primary Workspace Column (Expands seamlessly to maximize screen real estate) */}
-      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto overflow-x-hidden">
-        {/* Main Header with Market Selector & Technical Analysis Direct CTA */}
-        <Header
-          selectedPair={selectedPair}
-          marketSegment={marketSegment}
-          onSelectMarketSegment={handleSelectMarketSegment}
-          timeframe={timeframe}
-          onSelectPair={handleSelectPair}
-          onSelectTimeframe={handleSelectTimeframe}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          portfolio={portfolio}
-          theme={theme}
-          onToggleTheme={handleToggleTheme}
-          onOpenSettings={() => setIsSettingsOpen(true)}
-          onOpenScanner={() => setActiveTab('scanner')}
-          onOpenCalendar={() => setActiveTab('calendar')}
-          onOpenMonteCarlo={() => setActiveTab('var')}
-          onOpenKnowledge={() => setActiveTab('knowledge')}
-          onOpenNewsWire={() => setActiveTab('wire')}
-          onOpenFirebase={() => setActiveTab('firebase')}
-          onOpenJournal={() => setActiveTab('journals')}
-          onOpenLeftDrawer={() => setIsLeftDrawerOpen(true)}
-          onToggleSidebar={() => {
-            if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-              setIsLeftDrawerOpen(prev => !prev);
-            } else {
-              setIsSidebarCollapsed(prev => {
-                const next = !prev;
-                try { localStorage.setItem('qri_sidebar_collapsed', String(next)); } catch (e) {}
-                return next;
-              });
-            }
-          }}
-          isSidebarCollapsed={isSidebarCollapsed}
-          isAnalyzing={isAnalyzing}
-          onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
-          activeSession={activeSession}
-          executionMode={executionMode}
-          onToggleExecutionMode={handleToggleExecutionMode}
-          confluenceGrade={consensus?.confluenceGrade}
-          isMarketFrozen={isMarketFrozen}
-          sessionInfo={sessionInfo}
-          onToggleFreeze={() => {
-            const next = !isMarketFrozen;
-            MarketSessionManager.setManualFreeze(next);
-            setIsMarketFrozen(next);
-            showNotification(next ? '❄️ Global State Freeze activated.' : '🟢 Trading resumed. Global State Unfrozen.');
-          }}
-          cycleNumber={consensus?.autonomousLoopTelemetry?.cycleNumber || swarmTelemetry?.cycleCount}
-        />
+      {/* Live Ticker Bar (Forex, Metals & Commodities, or Indian Markets) */}
+      <TickerBar
+        rates={rates}
+        selectedPair={selectedPair}
+        onSelectPair={handleSelectPair}
+        marketSegment={marketSegment}
+        isMarketFrozen={isMarketFrozen}
+        sessionInfo={sessionInfo}
+      />
 
-        {/* Live Ticker Bar (Forex, Metals & Commodities, or Indian Markets) */}
-        <TickerBar
-          rates={rates}
-          selectedPair={selectedPair}
-          onSelectPair={handleSelectPair}
-          marketSegment={marketSegment}
-          isMarketFrozen={isMarketFrozen}
-          sessionInfo={sessionInfo}
-        />
-
-        {/* Main Content Area - Strictly aligned to max-w-7xl container boundary */}
-        <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-4">
+      {/* Main Content Area - Strictly aligned to max-w-7xl container boundary */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-4">
         {/* ❄️ Global State Freeze upon Market Closure Banner */}
         {activeTab !== 'vision-atlas' && (activeTab as string) !== 'vision-atlas-lab' && (
           <MarketCloseFreezeBanner
@@ -1237,7 +1175,6 @@ export default function Home() {
               selectedPair={selectedPair}
               onOpenJournalModal={() => setActiveTab('journals')}
               journalAnalysis={consensus?.journalAnalysis}
-              theme={theme}
             />
 
             {/* 5 Specialized Agent Cards (Technical, Fundamental, News, Forex, Risk) */}
@@ -1261,7 +1198,6 @@ export default function Home() {
               portfolio={portfolio}
               onClosePosition={handleClosePosition}
               executionMode={executionMode}
-              theme={theme}
             />
           </div>
         )}
@@ -1487,7 +1423,6 @@ export default function Home() {
           />
         )}
       </main>
-      </div>
 
       {/* Settings Modal (Persisted in Local Browser Storage & Firebase) */}
       <SettingsModal
