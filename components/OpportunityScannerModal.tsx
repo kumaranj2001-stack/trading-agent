@@ -150,6 +150,12 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
           >
             🇮🇳 NSE India
           </button>
+          <button
+            onClick={() => setFilterSegment('CRYPTO')}
+            className={`px-3 py-1 rounded transition-colors ${filterSegment === 'CRYPTO' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+          >
+            ₿ Crypto & Bitcoins
+          </button>
         </div>
 
         {/* Scanner Opportunities List */}

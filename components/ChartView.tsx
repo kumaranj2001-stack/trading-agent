@@ -16,6 +16,7 @@ interface ChartViewProps {
   entryPrice?: number;
   signalBias?: SignalDirection;
   theme?: 'dark' | 'light';
+  onSelectPair?: (pair: CurrencyPair) => void;
 }
 
 export const ChartView: React.FC<ChartViewProps> = ({
@@ -28,6 +29,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   entryPrice,
   signalBias,
   theme = 'dark',
+  onSelectPair,
 }) => {
   const [chartMode, setChartMode] = useState<'ALGO_SWARM' | 'OANDA_LIVE'>('OANDA_LIVE');
   const [showIndicators, setShowIndicators] = useState(true);
@@ -43,11 +45,14 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const isCopper = pair === 'COPPER';
   const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
   const isRupee = pair.includes('/INR');
+  const isBtc = pair === 'BTC/USD' || pair === 'WBTC/USD' || pair === 'BTC/EUR' || pair === 'BTC/GBP';
+  const isEth = pair === 'ETH/USD';
+  const isCrypto = pair.includes('BTC') || pair.includes('ETH') || pair.includes('BCH') || pair.includes('WBTC') || pair.includes('BSV') || pair.includes('SOL') || pair.includes('XRP') || pair.includes('DOGE') || pair.includes('ADA') || pair.includes('LTC');
 
   let decimalCount = 5;
-  if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil) decimalCount = 2;
+  if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil || isBtc || isEth || pair === 'BCH/USD' || pair === 'SOL/USD' || pair === 'LTC/USD') decimalCount = 2;
   else if (isSilver || isJpy || isRupee) decimalCount = 3;
-  else if (isCopper) decimalCount = 4;
+  else if (isCopper || pair.includes('XRP') || pair.includes('DOGE') || pair.includes('ADA')) decimalCount = 4;
 
   const safeCandles = candles && candles.length > 0 ? candles : [];
   const closes = safeCandles.length > 0 ? safeCandles.map(c => c.close) : [1.0];
@@ -173,6 +178,39 @@ export const ChartView: React.FC<ChartViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Quick-Switch Real-Time Feeds for Bitcoin, Ethereum and All Bitcoin Ecosystem Pairs */}
+      {onSelectPair && isCrypto && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-mono scrollbar-none touch-pan-x bg-terminal-950/50 p-1.5 rounded-lg border border-terminal-border/60">
+          <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider shrink-0 flex items-center gap-1 pr-1 border-r border-terminal-border">
+            <span>₿</span> REAL-TIME CRYPTO FEEDS:
+          </span>
+          {[
+            { p: 'BTC/USD', label: 'BTC/USD (Bitcoin)' },
+            { p: 'ETH/USD', label: 'ETH/USD (Ethereum)' },
+            { p: 'BCH/USD', label: 'BCH/USD (Bitcoin Cash)' },
+            { p: 'WBTC/USD', label: 'WBTC/USD (Wrapped BTC)' },
+            { p: 'BSV/USD', label: 'BSV/USD (Bitcoin SV)' },
+            { p: 'BTC/EUR', label: 'BTC/EUR' },
+            { p: 'BTC/GBP', label: 'BTC/GBP' },
+            { p: 'ETH/BTC', label: 'ETH/BTC' },
+            { p: 'SOL/USD', label: 'SOL/USD' },
+            { p: 'LTC/USD', label: 'LTC/USD' },
+          ].map(({ p, label }) => (
+            <button
+              key={p}
+              onClick={() => onSelectPair(p as CurrencyPair)}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap transition-all border shrink-0 ${
+                pair === p
+                  ? 'bg-amber-500/25 text-amber-300 border-amber-400 shadow-sm shadow-amber-500/20'
+                  : 'bg-terminal-900 text-slate-300 hover:text-white border-terminal-border hover:bg-terminal-800'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* View 1: Real OANDA / TradingView Live Advanced Chart */}
       {chartMode === 'OANDA_LIVE' && (

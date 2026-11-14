@@ -4,7 +4,7 @@ export interface FinancialSource {
   id: string;
   name: string;
   domain: string;
-  specialization: 'MACRO_CENTRAL_BANK' | 'FOREX' | 'METALS_COMMODITIES' | 'GLOBAL_WIRE' | 'REGULATORY_INSTITUTIONAL' | 'INDIAN_MARKET';
+  specialization: 'MACRO_CENTRAL_BANK' | 'FOREX' | 'METALS_COMMODITIES' | 'GLOBAL_WIRE' | 'REGULATORY_INSTITUTIONAL' | 'INDIAN_MARKET' | 'CRYPTO';
   refreshRateSeconds: number;
   status: 'ACTIVE' | 'STREAMING' | 'FAILOVER_STANDBY';
   tier: 'INSTITUTIONAL' | 'PRIMARY' | 'WIRE';
@@ -66,6 +66,12 @@ export const MONITORED_FINANCIAL_SOURCES: FinancialSource[] = [
   { id: 'sa', name: 'Seeking Alpha Commodities & Bullion', domain: 'seekingalpha.com', specialization: 'METALS_COMMODITIES', refreshRateSeconds: 25, status: 'ACTIVE', tier: 'PRIMARY', healthScore: 98.7, latencyMs: 32, reconnectAttempts: 0, lastPingTimestamp: Date.now() },
   { id: 'mint', name: 'Livemint & Business Standard (India)', domain: 'livemint.com', specialization: 'INDIAN_MARKET', refreshRateSeconds: 20, status: 'ACTIVE', tier: 'PRIMARY', healthScore: 99.2, latencyMs: 29, reconnectAttempts: 0, lastPingTimestamp: Date.now() },
   { id: 'et', name: 'Economic Times Markets Desk', domain: 'economictimes.indiatimes.com', specialization: 'INDIAN_MARKET', refreshRateSeconds: 20, status: 'ACTIVE', tier: 'PRIMARY', healthScore: 99.0, latencyMs: 31, reconnectAttempts: 0, lastPingTimestamp: Date.now() },
+
+  // 39-42: Crypto, Bitcoin & Digital Asset Institutional Wires
+  { id: 'cdesk', name: 'CoinDesk Institutional & Bitcoin Desk', domain: 'coindesk.com', specialization: 'CRYPTO', refreshRateSeconds: 10, status: 'STREAMING', tier: 'PRIMARY', healthScore: 99.7, latencyMs: 14, reconnectAttempts: 0, lastPingTimestamp: Date.now() },
+  { id: 'ctele', name: 'Cointelegraph Real-Time Bitcoin Wire', domain: 'cointelegraph.com', specialization: 'CRYPTO', refreshRateSeconds: 12, status: 'STREAMING', tier: 'PRIMARY', healthScore: 99.5, latencyMs: 16, reconnectAttempts: 0, lastPingTimestamp: Date.now() },
+  { id: 'glass', name: 'Glassnode On-Chain Bitcoin Intelligence', domain: 'glassnode.com', specialization: 'CRYPTO', refreshRateSeconds: 15, status: 'STREAMING', tier: 'INSTITUTIONAL', healthScore: 99.9, latencyMs: 12, reconnectAttempts: 0, lastPingTimestamp: Date.now() },
+  { id: 'cquant', name: 'CryptoQuant Bitcoin & Ethereum Reserve Monitor', domain: 'cryptoquant.com', specialization: 'CRYPTO', refreshRateSeconds: 15, status: 'STREAMING', tier: 'INSTITUTIONAL', healthScore: 99.8, latencyMs: 15, reconnectAttempts: 0, lastPingTimestamp: Date.now() },
 ];
 
 export interface ScrapeTemplate {

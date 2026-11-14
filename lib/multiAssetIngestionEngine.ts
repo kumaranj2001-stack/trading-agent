@@ -4,7 +4,7 @@ import {
   MultiAssetNormalizedTick, 
   IngestionEngineTelemetry 
 } from './types';
-import { BASE_PRICES, PIP_VALUES, FOREX_PAIRS, METALS_COMMODITIES, INDIAN_MARKET_ASSETS } from './marketData';
+import { BASE_PRICES, PIP_VALUES, FOREX_PAIRS, METALS_COMMODITIES, INDIAN_MARKET_ASSETS, CRYPTO_ASSETS } from './marketData';
 import { MarketSessionManager } from './marketSessionManager';
 
 export interface FIXMarketDataMessage {
@@ -84,6 +84,7 @@ export class MultiAssetIngestionEngine {
       ...FOREX_PAIRS,
       ...METALS_COMMODITIES,
       ...INDIAN_MARKET_ASSETS,
+      ...CRYPTO_ASSETS,
     ];
 
     for (const sym of allSymbols) {
@@ -115,7 +116,8 @@ export class MultiAssetIngestionEngine {
     }
   }
 
-  public resolveAssetClass(sym: CurrencyPair): 'FOREX' | 'METALS_COMMODITIES' | 'EQUITIES' | 'INDICES' {
+  public resolveAssetClass(sym: CurrencyPair): 'FOREX' | 'METALS_COMMODITIES' | 'EQUITIES' | 'INDICES' | 'CRYPTO' {
+    if (CRYPTO_ASSETS.includes(sym)) return 'CRYPTO';
     if (METALS_COMMODITIES.includes(sym)) return 'METALS_COMMODITIES';
     if (sym === 'NIFTY 50' || sym === 'BANK NIFTY') return 'INDICES';
     if (sym === 'RELIANCE' || sym === 'TCS' || sym === 'HDFC BANK' || sym === 'INFY') return 'EQUITIES';
@@ -133,10 +135,14 @@ export class MultiAssetIngestionEngine {
     const isSilver = sym === 'XAG/USD';
     const isJpy = sym.includes('JPY');
     const isCopper = sym === 'COPPER';
+    const isCrypto2Dec = sym === 'BTC/USD' || sym === 'ETH/USD' || sym === 'BCH/USD' || sym === 'WBTC/USD' || sym === 'BTC/EUR' || sym === 'BTC/GBP' || sym === 'SOL/USD' || sym === 'LTC/USD';
+    const isCrypto4Dec = sym === 'BSV/USD' || sym.includes('XRP') || sym.includes('DOGE') || sym.includes('ADA');
+    const isCrypto5Dec = sym === 'ETH/BTC';
 
-    if (isIndian || isGold || isOil) return 2;
+    if (isIndian || isGold || isOil || isCrypto2Dec) return 2;
     if (isSilver || isJpy) return 3;
-    if (isCopper) return 4;
+    if (isCopper || isCrypto4Dec) return 4;
+    if (isCrypto5Dec) return 5;
     return 5;
   }
 

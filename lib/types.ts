@@ -1,4 +1,4 @@
-export type MarketSegment = 'FOREX' | 'METALS_COMMODITIES' | 'INDIAN_MARKET';
+export type MarketSegment = 'FOREX' | 'METALS_COMMODITIES' | 'INDIAN_MARKET' | 'CRYPTO';
 
 export type ForexPair = 
   | 'EUR/USD' 
@@ -29,7 +29,22 @@ export type IndianMarketAsset =
   | 'HDFC BANK' 
   | 'INFY';
 
-export type TradableSymbol = ForexPair | MetalCommodityAsset | IndianMarketAsset;
+export type CryptoAsset = 
+  | 'BTC/USD'   // Bitcoin / US Dollar
+  | 'ETH/USD'   // Ethereum / US Dollar
+  | 'BCH/USD'   // Bitcoin Cash / US Dollar
+  | 'WBTC/USD'  // Wrapped Bitcoin / US Dollar
+  | 'BSV/USD'   // Bitcoin SV / US Dollar
+  | 'BTC/EUR'   // Bitcoin / Euro
+  | 'BTC/GBP'   // Bitcoin / British Pound
+  | 'ETH/BTC'   // Ethereum / Bitcoin
+  | 'SOL/USD'   // Solana / US Dollar
+  | 'XRP/USD'   // Ripple / US Dollar
+  | 'DOGE/USD'  // Dogecoin / US Dollar
+  | 'ADA/USD'   // Cardano / US Dollar
+  | 'LTC/USD';  // Litecoin / US Dollar
+
+export type TradableSymbol = ForexPair | MetalCommodityAsset | IndianMarketAsset | CryptoAsset;
 
 export type CurrencyPair = TradableSymbol;
 
@@ -1295,7 +1310,7 @@ export interface RiskGovernanceGatekeeperResult {
 
 export interface MultiAssetNormalizedTick {
   symbol: CurrencyPair;
-  assetClass: 'FOREX' | 'METALS_COMMODITIES' | 'EQUITIES' | 'INDICES';
+  assetClass: 'FOREX' | 'METALS_COMMODITIES' | 'EQUITIES' | 'INDICES' | 'CRYPTO';
   liveBid: number;
   liveAsk: number;
   midPrice: number;

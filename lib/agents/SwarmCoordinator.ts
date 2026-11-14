@@ -22,7 +22,7 @@ import { FundamentalAnalystAgent } from './FundamentalAnalyst';
 import { ForexMarketAnalystAgent } from './ForexMarketAnalyst';
 import { NewsAnalystAgent } from './NewsAnalyst';
 import { RiskManagerAgent, RiskManagerConfig, DEFAULT_RISK_CONFIG } from './RiskManager';
-import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, PIP_VALUES, generateCandles, getMarketSegmentForSymbol } from '../marketData';
+import { BASE_PRICES, FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, CRYPTO_ASSETS, PIP_VALUES, generateCandles, getMarketSegmentForSymbol } from '../marketData';
 import { knowledgeEngine } from '../knowledge/KnowledgeEngine';
 import { JournalStorageManager } from '../journalStorage';
 import { riskRatioController } from '../riskRatioController';
@@ -687,6 +687,8 @@ export class SwarmCoordinator {
       ? INDIAN_MARKET_ASSETS 
       : segment === 'METALS_COMMODITIES'
       ? METALS_COMMODITIES
+      : segment === 'CRYPTO'
+      ? CRYPTO_ASSETS
       : segment === 'FOREX' 
       ? FOREX_PAIRS 
       : (Object.keys(BASE_PRICES) as CurrencyPair[]);

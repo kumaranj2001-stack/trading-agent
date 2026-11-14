@@ -57,7 +57,7 @@ import {
   ConfluenceFactorItem
 } from '@/lib/types';
 import { visionAtlasEngine } from '@/lib/visionAtlasEngine';
-import { BASE_PRICES, FOREX_PAIRS, METALS_COMMODITIES, INDIAN_MARKET_ASSETS } from '@/lib/marketData';
+import { BASE_PRICES, FOREX_PAIRS, METALS_COMMODITIES, INDIAN_MARKET_ASSETS, CRYPTO_ASSETS } from '@/lib/marketData';
 import { TECHNICAL_KNOWLEDGE_BASE } from '@/lib/knowledge/technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from '@/lib/knowledge/fundamentalKnowledge';
 import { knowledgeEngine } from '@/lib/knowledge/KnowledgeEngine';
@@ -447,6 +447,11 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
               }}
               className="bg-transparent text-white font-bold focus:outline-none cursor-pointer pr-1"
             >
+              <optgroup label="Crypto & Bitcoins">
+                {CRYPTO_ASSETS.map(p => (
+                  <option key={p} value={p} className="bg-terminal-900 text-white">{p}</option>
+                ))}
+              </optgroup>
               <optgroup label="Metals & Commodities">
                 {METALS_COMMODITIES.map(p => (
                   <option key={p} value={p} className="bg-terminal-900 text-white">{p}</option>

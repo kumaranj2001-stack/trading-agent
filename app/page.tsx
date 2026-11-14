@@ -1169,6 +1169,7 @@ export default function Home() {
               entryPrice={consensus?.agents.risk.parameters.entryPrice}
               signalBias={consensus?.agents.technical.bias}
               theme={theme}
+              onSelectPair={handleSelectPair}
             />
 
             {/* 📓 Active Pre-Trade Historical Journal Loss Review & Guardrails Desk */}
