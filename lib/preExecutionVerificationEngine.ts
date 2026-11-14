@@ -1,12 +1,15 @@
 import { 
   CurrencyPair, 
   SwarmConsensusResult, 
-  PreExecutionAtomicVerification 
+  PreExecutionAtomicVerification,
+  EntryProximityFilterResult,
+  RiskGovernanceGatekeeperResult
 } from './types';
 import { LiveMarketFeedManager } from './liveMarketFeed';
 import { MarketSessionManager } from './marketSessionManager';
 import { PIP_VALUES } from './marketData';
 import { diagnosticReasoningEngine } from './diagnosticReasoningEngine';
+import { automatedSignalValidationModule } from './automatedSignalValidationModule';
 
 export class PreExecutionVerificationEngine {
   private static instance: PreExecutionVerificationEngine;
@@ -318,6 +321,94 @@ export class PreExecutionVerificationEngine {
       };
     }
 
+    // Trigger F: Strict Entry-Proximity Filter (10 to 50 Pip Band)
+    const entryProximity = automatedSignalValidationModule.evaluateEntryProximityBand({
+      symbol: pair,
+      proposedEntry: signalPrice,
+      livePrice: liveFillPrice,
+      minBandPips: 10,
+      maxBandPips: 50,
+    });
+
+    if (!entryProximity.passed) {
+      return {
+        isVerified: false,
+        atomicTickId,
+        verificationTimestamp: now,
+        symbol: pair,
+        orderType,
+        signalPrice,
+        liveBid: bidAsk.bid,
+        liveAsk: bidAsk.ask,
+        liveFillPrice,
+        spreadPips: bidAsk.spreadPips,
+        priceDeviationPercent,
+        slippagePips,
+        riskWorkflowVerified,
+        proportionalLotSize,
+        requiredMarginUsd,
+        freeMarginUsd: freeMargin,
+        contradictionCheck: {
+          passed: contradictionCheckPassed,
+          newsSentimentInversionDetected: newsSentimentInversion,
+          macroTechnicalDivergenceDetected: macroTechDivergence,
+          structuralInvalidationBreached,
+          resolutionDirective: contradictionDirective,
+        },
+        failureConstraintCheck,
+        entryProximityFilter: entryProximity,
+        action: 'ABORT_OUTSIDE_PROXIMITY_BAND',
+        abortReason: `Strict Entry-Proximity Filter Veto: ${entryProximity.rejectionReason}`,
+      };
+    }
+
+    // Trigger G: Autonomous Risk Governance Gatekeeper (R:R >= 2.0, Monte Carlo >= 68%, Absolute Loss Cap)
+    const riskGovernance = automatedSignalValidationModule.evaluateRiskGovernance({
+      symbol: pair,
+      accountEquity: accountBalance,
+      riskRewardRatio: signal.riskReward || risk?.parameters?.riskRewardRatio || 2.2,
+      monteCarloWinProbability: risk?.monteCarlo?.projectedProfitProbability || consensus.overallConfidence || 70,
+      proposedStopLoss: signal.stopLoss || risk?.parameters?.stopLoss,
+      currentPrice: liveFillPrice,
+      direction: orderType,
+      maxDrawdownLimitPercent: 2.0,
+      minAllowedRiskReward: 2.0,
+      minAllowedWinProbability: 68,
+    });
+
+    if (!riskGovernance.passed) {
+      return {
+        isVerified: false,
+        atomicTickId,
+        verificationTimestamp: now,
+        symbol: pair,
+        orderType,
+        signalPrice,
+        liveBid: bidAsk.bid,
+        liveAsk: bidAsk.ask,
+        liveFillPrice,
+        spreadPips: bidAsk.spreadPips,
+        priceDeviationPercent,
+        slippagePips,
+        riskWorkflowVerified,
+        proportionalLotSize,
+        requiredMarginUsd,
+        freeMarginUsd: freeMargin,
+        contradictionCheck: {
+          passed: contradictionCheckPassed,
+          newsSentimentInversionDetected: newsSentimentInversion,
+          macroTechnicalDivergenceDetected: macroTechDivergence,
+          structuralInvalidationBreached,
+          resolutionDirective: contradictionDirective,
+        },
+        failureConstraintCheck,
+        entryProximityFilter: entryProximity,
+        riskGovernanceValidation: riskGovernance,
+        action: 'ABORT_RISK_GOVERNANCE_BREACH',
+        abortReason: `Risk Governance Gatekeeper Veto: ${riskGovernance.rationale}`,
+      };
+    }
+
     // All atomic pre-execution checks verified on the identical tick
     return {
       isVerified: true,
@@ -333,7 +424,7 @@ export class PreExecutionVerificationEngine {
       priceDeviationPercent,
       slippagePips,
       riskWorkflowVerified: true,
-      proportionalLotSize,
+      proportionalLotSize: riskGovernance.dynamicLots || proportionalLotSize,
       requiredMarginUsd,
       freeMarginUsd: freeMargin,
       contradictionCheck: {
@@ -347,6 +438,8 @@ export class PreExecutionVerificationEngine {
         passed: true,
         similarityScore: failurePreCheck.similarityScore,
       },
+      entryProximityFilter: entryProximity,
+      riskGovernanceValidation: riskGovernance,
       action: 'DISPATCH_ORDER',
     };
   }

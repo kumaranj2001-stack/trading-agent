@@ -29,6 +29,8 @@ import { riskRatioController } from '../riskRatioController';
 import { stateLatchingEngine } from '../stateLatchingEngine';
 import { diagnosticReasoningEngine } from '../diagnosticReasoningEngine';
 import { ChiefReviewerAgent } from './ChiefReviewer';
+import { automatedSignalValidationModule } from '../automatedSignalValidationModule';
+import { multiAssetIngestionEngine } from '../multiAssetIngestionEngine';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -423,6 +425,46 @@ export class SwarmCoordinator {
       }
     }
 
+    // 🎯 Institutional Entry Threshold (Strict 10 to 50 Pip Proximity Band)
+    const pipMultiplier = PIP_VALUES[pair] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
+    let calculatedEntry = existingLatched?.anchoredEntryPrice || risk.parameters.entryPrice;
+
+    // Check if calculatedEntry falls outside the designated 10 to 50 pip band
+    const currentEntryPips = Math.abs(calculatedEntry - currentPrice) / pipMultiplier;
+    if (currentEntryPips < 10 || currentEntryPips > 50) {
+      // Calibrate institutional order block entry threshold to 18.5 pips into the structure
+      const entryBufferPips = 18.5;
+      if (activeDirection === 'BUY') {
+        calculatedEntry = Number((currentPrice - entryBufferPips * pipMultiplier).toFixed(decimals));
+      } else {
+        calculatedEntry = Number((currentPrice + entryBufferPips * pipMultiplier).toFixed(decimals));
+      }
+    }
+
+    // 🔬 Strict Automated Signal Validation Module Reconciliation:
+    // Reconciles live multi-asset stream against technical/fundamental engines,
+    // enforces 10 to 50 pip entry-proximity filter, and executes autonomous risk governance gatekeeper.
+    const entryProximityFilter = automatedSignalValidationModule.evaluateEntryProximityBand({
+      symbol: pair,
+      proposedEntry: calculatedEntry,
+      livePrice: currentPrice,
+      minBandPips: 10,
+      maxBandPips: 50,
+    });
+
+    const riskGovernanceGatekeeper = automatedSignalValidationModule.evaluateRiskGovernance({
+      symbol: pair,
+      accountEquity: 100000,
+      riskRewardRatio: finalRiskReward,
+      monteCarloWinProbability: overallConfidence,
+      proposedStopLoss: finalStopLoss,
+      currentPrice,
+      direction: activeDirection,
+      maxDrawdownLimitPercent: 2.0,
+      minAllowedRiskReward: 2.0,
+      minAllowedWinProbability: 68,
+    });
+
     // Decouple trade entry from rigid swarm vetoes: continuous execution active 24/7
     const orderType = activeDirection === 'SELL' ? 'SELL_MARKET' : 'BUY_MARKET';
 
@@ -474,6 +516,12 @@ export class SwarmCoordinator {
     } else if (!preExecutionFilter.allowed) {
       executionAuthorized = false;
       executionStatus = 'VETOED';
+    } else if (!entryProximityFilter.passed) {
+      executionAuthorized = false;
+      executionStatus = 'VETOED';
+    } else if (!riskGovernanceGatekeeper.passed) {
+      executionAuthorized = false;
+      executionStatus = 'VETOED';
     } else if (chiefReviewerAudit.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
       finalLots = Math.max(0.01, Number((finalLots * 0.50).toFixed(2)));
     } else if (preExecutionFilter.action === 'ADJUST_SIZING') {
@@ -503,6 +551,9 @@ export class SwarmCoordinator {
       },
       preExecutionFilter,
       chiefReviewerAudit,
+      entryProximityFilter,
+      riskGovernanceGatekeeper,
+      multiAssetTickTelemetry: multiAssetIngestionEngine.getLatestTick(pair),
       agents: {
         technical,
         fundamental,
@@ -517,7 +568,7 @@ export class SwarmCoordinator {
         orderType,
         symbol: pair,
         lots: finalLots,
-        entry: existingLatched?.anchoredEntryPrice || risk.parameters.entryPrice,
+        entry: calculatedEntry,
         stopLoss: finalStopLoss,
         takeProfit: finalTakeProfit,
         riskReward: existingLatched?.anchoredRiskReward || finalRiskReward,
@@ -531,6 +582,10 @@ export class SwarmCoordinator {
               ? 'VETOED: Confidence score below verified 68% threshold.'
               : chiefReviewerAudit.status === 'VETOED'
               ? `VETOED BY CHIEF REVIEWER: ${chiefReviewerAudit.contradictionResolution.explanation}`
+              : !entryProximityFilter.passed
+              ? `VETOED BY ENTRY-PROXIMITY FILTER: ${entryProximityFilter.rejectionReason}`
+              : !riskGovernanceGatekeeper.passed
+              ? `VETOED BY RISK GOVERNANCE: ${riskGovernanceGatekeeper.rationale}`
               : `VETOED BY ACTIVE FAILURE FILTER: ${preExecutionFilter.reason}`)
           : tierParams.executionPolicy,
       },

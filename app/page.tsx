@@ -28,6 +28,7 @@ import { AgentSwarmPanel } from '@/components/AgentSwarmPanel';
 import { AgentDebateFeed } from '@/components/AgentDebateFeed';
 import { PortfolioPanel } from '@/components/PortfolioPanel';
 import { ActiveEntryInvalidationBanner } from '@/components/ActiveEntryInvalidationBanner';
+import { MultiAssetIngestionTelemetryCard } from '@/components/MultiAssetIngestionTelemetryCard';
 import { BacktestView } from '@/components/BacktestModal';
 import { ArchitectureView } from '@/components/ArchitectureView';
 import { SettingsModal } from '@/components/SettingsModal';
@@ -449,6 +450,14 @@ export default function Home() {
             symCandles,
             pos.symbol === result.pair ? result : null
           );
+
+          // Automated 1:1 Breakeven Lock Notification
+          if (invStatus.isBreakevenLocked && !pos.isBreakevenLocked) {
+            setTimeout(() => {
+              showNotification(`🛡️ 1:1 BREAKEVEN ADJUSTMENT: Position on ${pos.symbol} stop loss locked at breakeven (zero downside risk).`);
+            }, 0);
+          }
+
           return {
             ...pos,
             invalidation: invStatus,
@@ -1141,6 +1150,13 @@ export default function Home() {
                 executionMode={executionMode}
               />
             )}
+
+            {/* 🌐 Multi-Asset Real-Time Ingestion Layer & Normalized Pip Metrics */}
+            <MultiAssetIngestionTelemetryCard
+              selectedPair={selectedPair}
+              onSelectPair={handleSelectPair}
+              theme={theme}
+            />
 
             {/* Candlestick Chart (OANDA Live Streaming or Swarm Matrix) */}
             <ChartView

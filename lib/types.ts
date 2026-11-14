@@ -992,6 +992,9 @@ export interface SwarmConsensusResult {
   };
   latchedState?: LatchedTradeState;
   chiefReviewerAudit?: ChiefReviewerAuditResult;
+  entryProximityFilter?: EntryProximityFilterResult;
+  riskGovernanceGatekeeper?: RiskGovernanceGatekeeperResult;
+  multiAssetTickTelemetry?: MultiAssetNormalizedTick;
 }
 
 export interface DeskAuditVerdict {
@@ -1156,6 +1159,71 @@ export interface Position {
   atomicVerification?: PreExecutionAtomicVerification;
 }
 
+export interface EntryProximityFilterResult {
+  passed: boolean;
+  symbol: CurrencyPair;
+  proposedEntry: number;
+  livePrice: number;
+  pipDistance: number;
+  minBandPips: number; // 10 pips
+  maxBandPips: number; // 50 pips
+  status: 'APPROVED_WITHIN_BAND' | 'REJECTED_BELOW_MIN_10_PIPS' | 'REJECTED_ABOVE_MAX_50_PIPS';
+  rejectionReason?: string;
+  toleranceBandDescription: string;
+}
+
+export interface RiskGovernanceGatekeeperResult {
+  passed: boolean;
+  symbol: CurrencyPair;
+  accountEquity: number;
+  dynamicLots: number;
+  riskRewardRatio: number;
+  minAllowedRiskReward: number; // 2.0
+  monteCarloWinProbability: number;
+  minAllowedWinProbability: number; // 68%
+  structuralStopLossLevel: number;
+  structuralBufferPips: number; // 5 pips
+  absoluteLossCapUsd: number;
+  maxDrawdownLimitPercent: number; // 2.0%
+  status: 'APPROVED' | 'VETOED';
+  rationale: string;
+}
+
+export interface MultiAssetNormalizedTick {
+  symbol: CurrencyPair;
+  assetClass: 'FOREX' | 'METALS_COMMODITIES' | 'EQUITIES' | 'INDICES';
+  liveBid: number;
+  liveAsk: number;
+  midPrice: number;
+  spreadPips: number;
+  pipMultiplier: number;
+  decimals: number;
+  timestamp: number;
+  protocol: 'FIX_5_0_SP2' | 'WSS_DIRECT';
+  ingestionLatencyMs: number;
+  volume24h: number;
+  vwap: number;
+}
+
+export interface IngestionEngineTelemetry {
+  status: 'ACTIVE_INGESTING' | 'RECONNECTING' | 'STANDBY';
+  totalInstrumentsMonitored: number;
+  activeProtocols: ('WSS_SECURE' | 'FIX_5_0_SP2')[];
+  ticksPerSecond: number;
+  averageIngestionLatencyMs: number;
+  inMemoryTimeSeriesRecords: number;
+  normalizedInstruments: Record<string, {
+    symbol: CurrencyPair;
+    assetClass: string;
+    pipMultiplier: number;
+    decimals: number;
+    currentBid: number;
+    currentAsk: number;
+    spreadPips: number;
+    lastLatencyMs: number;
+  }>;
+}
+
 export interface PreExecutionAtomicVerification {
   isVerified: boolean;
   atomicTickId: string;
@@ -1185,7 +1253,9 @@ export interface PreExecutionAtomicVerification {
     matchingRuleId?: string;
     similarityScore: number;
   };
-  action: 'DISPATCH_ORDER' | 'ABORT_AND_RECALIBRATE' | 'ABORT_INSUFFICIENT_MARGIN';
+  entryProximityFilter?: EntryProximityFilterResult;
+  riskGovernanceValidation?: RiskGovernanceGatekeeperResult;
+  action: 'DISPATCH_ORDER' | 'ABORT_AND_RECALIBRATE' | 'ABORT_INSUFFICIENT_MARGIN' | 'ABORT_OUTSIDE_PROXIMITY_BAND' | 'ABORT_RISK_GOVERNANCE_BREACH';
   abortReason?: string;
 }
 

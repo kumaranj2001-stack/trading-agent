@@ -277,6 +277,81 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
         </div>
       )}
 
+      {/* 🎯 STRICT ENTRY-PROXIMITY FILTER (10 TO 50 PIP BAND) & RISK GOVERNANCE GATEKEEPER */}
+      {consensus.entryProximityFilter && (
+        <div className={`mt-3 p-3.5 rounded-xl border font-mono text-xs shadow-md transition-all ${
+          consensus.entryProximityFilter.passed
+            ? theme === 'light' ? 'bg-indigo-50/70 border-indigo-200 text-indigo-950' : 'bg-indigo-950/40 border-indigo-500/40 text-indigo-200'
+            : theme === 'light' ? 'bg-rose-50 border-rose-300 text-rose-950' : 'bg-rose-950/60 border-rose-500 text-rose-200'
+        }`}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2 mb-2 border-indigo-500/20">
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-cyan-400" />
+              <span className="font-bold uppercase tracking-wide">
+                AUTOMATED SIGNAL VALIDATION: 10–50 PIP PROXIMITY FILTER & RISK GOVERNANCE
+              </span>
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                consensus.entryProximityFilter.passed
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                  : 'bg-rose-500/20 text-rose-400 border-rose-500/40 animate-pulse'
+              }`}>
+                {consensus.entryProximityFilter.status.replace(/_/g, ' ')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px]">
+              <span>Live Market: <strong className="font-bold">{currentPrice}</strong></span>
+              <span>•</span>
+              <span>Proposed Entry: <strong className="font-bold">{consensus.executionSignal.entry}</strong></span>
+              <span>•</span>
+              <span>Variance: <strong className={consensus.entryProximityFilter.passed ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>{consensus.entryProximityFilter.pipDistance} Pips</strong></span>
+            </div>
+          </div>
+
+          {/* 10-50 Pip Band Visual Meter */}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between text-[10px] opacity-80">
+              <span className="text-rose-400 font-medium">0 - 10 Pips (Rejected: High Slippage)</span>
+              <span className="text-emerald-400 font-bold">10 - 50 Pips (Designated Institutional Entry Band)</span>
+              <span className="text-rose-400 font-medium">&gt; 50 Pips (Rejected: Stale Fill)</span>
+            </div>
+            <div className="w-full h-2 rounded-full bg-slate-800 relative overflow-hidden flex">
+              <div className="w-[16.6%] bg-rose-500/40 h-full border-r border-rose-500/60" title="0-10 Pips (Rejected Zone)" />
+              <div className="w-[66.7%] bg-emerald-500/40 h-full relative border-r border-rose-500/60" title="10-50 Pips (Optimal Band)">
+                {/* Pointer for current entry variance */}
+                {consensus.entryProximityFilter.passed && (
+                  <div 
+                    className="absolute top-0 bottom-0 w-2.5 bg-cyan-400 rounded-full shadow-lg shadow-cyan-400 animate-pulse -ml-1"
+                    style={{ left: `${Math.min(100, Math.max(0, ((consensus.entryProximityFilter.pipDistance - 10) / 40) * 100))}%` }}
+                    title={`Current Distance: ${consensus.entryProximityFilter.pipDistance} pips`}
+                  />
+                )}
+              </div>
+              <div className="w-[16.7%] bg-rose-500/40 h-full" title="50+ Pips (Stale Zone)" />
+            </div>
+          </div>
+
+          {/* Risk Governance Parameters Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-[10px]">
+            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className="text-slate-500 block">Min R:R Mandate</span>
+              <strong className="text-emerald-400">{consensus.executionSignal.riskReward}:1 (&gt;= 2.0:1 PASS)</strong>
+            </div>
+            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className="text-slate-500 block">Monte Carlo Win Prob</span>
+              <strong className="text-cyan-400">{consensus.overallConfidence}% (&gt;= 68% PASS)</strong>
+            </div>
+            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className="text-slate-500 block">Dynamic Lot Sizing</span>
+              <strong className="text-amber-400">{consensus.executionSignal.lots} Lots (Proportional)</strong>
+            </div>
+            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className="text-slate-500 block">Absolute Loss Cap</span>
+              <strong className="text-rose-400">${consensus.executionSignal.riskAmountUsd} (2.0% Equity Cap)</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 🏛️ MANDATORY CHIEF REVIEWER & INSTITUTIONAL GATEKEEPER CLEARANCE CARD */}
       {chiefAudit && (
         <div className={`mt-3.5 p-3.5 sm:p-4 rounded-xl border font-mono text-xs shadow-lg transition-all ${
