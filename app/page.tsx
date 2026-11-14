@@ -1084,6 +1084,7 @@ export default function Home() {
         onOpenFirebase={() => setActiveTab('firebase')}
         onOpenJournal={() => setActiveTab('journals')}
         onOpenLeftDrawer={() => setIsLeftDrawerOpen(true)}
+        isLeftDrawerOpen={isLeftDrawerOpen}
         isAnalyzing={isAnalyzing}
         onTriggerAnalysis={() => triggerSwarm(selectedPair, timeframe, candles)}
         activeSession={activeSession}
@@ -1111,8 +1112,8 @@ export default function Home() {
         sessionInfo={sessionInfo}
       />
 
-      {/* Main Content Area - Strictly aligned to max-w-7xl container boundary */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-4">
+      {/* Main Content Area - Strictly aligned to max-w-7xl container boundary with zoom stability */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 py-3 sm:py-4 space-y-4 zoom-block-stable">
         {/* ❄️ Global State Freeze upon Market Closure Banner */}
         {activeTab !== 'vision-atlas' && (activeTab as string) !== 'vision-atlas-lab' && (
           <MarketCloseFreezeBanner
@@ -1450,10 +1451,11 @@ export default function Home() {
         }}
       />
 
-      {/* 🧭 Collapsible Left-Hand Hamburger Navigation Drawer (12 Items) */}
+      {/* 🧭 Collapsible Left-Hand Hamburger Navigation Drawer (14 Items with Hover Proximity Pullout) */}
       <LeftNavigationDrawer
         isOpen={isLeftDrawerOpen}
         onClose={() => setIsLeftDrawerOpen(false)}
+        onOpen={() => setIsLeftDrawerOpen(true)}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenJournal={() => setActiveTab('journals')}

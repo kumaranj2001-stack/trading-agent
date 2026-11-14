@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Activity,
   Bot,
@@ -26,12 +26,16 @@ import {
   ShieldAlert,
   Zap,
   BarChart2,
+  Pin,
+  PinOff,
+  Menu
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, NavigationTab } from '@/lib/types';
 
 export interface LeftNavigationDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  onOpen?: () => void;
   activeTab: NavigationTab | string;
   setActiveTab: (tab: any) => void;
   onOpenJournal?: () => void;
@@ -58,6 +62,7 @@ export interface LeftNavigationDrawerProps {
 export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
   isOpen,
   onClose,
+  onOpen,
   activeTab,
   setActiveTab,
   onOpenJournal,
@@ -78,10 +83,14 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
   selectedPair = 'EUR/USD',
   journalCount = 14,
 }) => {
+  const [isPinned, setIsPinned] = useState<boolean>(false);
+  const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Close drawer on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
+        setIsPinned(false);
         onClose();
       }
     };
@@ -89,19 +98,39 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Lock body scroll when drawer is open
+  // Clean up timer on unmount
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
     return () => {
-      document.body.style.overflow = '';
+      if (closeTimeoutRef.current) {
+        clearTimeout(closeTimeoutRef.current);
+      }
     };
-  }, [isOpen]);
+  }, []);
 
-  if (!isOpen) return null;
+  const handleMouseEnterDrawer = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+  };
+
+  const handleMouseLeaveDrawer = () => {
+    if (isPinned) return;
+    if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    closeTimeoutRef.current = setTimeout(() => {
+      onClose();
+    }, 320); // 320ms smooth grace delay
+  };
+
+  const handleEdgeProximityEnter = () => {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
+    if (onOpen) {
+      onOpen();
+    }
+  };
 
   // The 12 sidebar navigation modules strictly in required top-to-bottom sequence:
   // 1. Terminal, 2. Knowledge, 3. Agent, 4. Five-Agent Debate, 5. Role, 6. Journals, 
@@ -365,96 +394,149 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden" role="dialog" aria-modal="true" aria-label="Navigation Menu">
-      {/* Backdrop overlay */}
-      <div
-        className="fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity duration-300 ease-out"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+    <>
+      {/* 🧭 Cursor Proximity Trigger Strip along the left screen edge */}
+      {!isOpen && (
+        <div
+          className="nav-proximity-trigger group cursor-pointer"
+          onMouseEnter={handleEdgeProximityEnter}
+          aria-hidden="true"
+          title="Hover cursor near left edge to pull out Navigation Desk"
+        >
+          <div className="h-full w-1 bg-cyan-400/0 group-hover:bg-cyan-400/60 transition-all duration-300" />
+        </div>
+      )}
 
-      {/* Sliding Drawer completely attached to the left */}
-      <div className="fixed inset-y-0 left-0 max-w-[85vw] w-72 sm:w-80 bg-terminal-900 border-r border-terminal-border shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-out animate-slide-right select-none">
-        {/* Drawer Header */}
-        <div className="p-4 border-b border-terminal-border flex items-center justify-between bg-terminal-950/70">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
-              <Bot className="w-4 h-4 text-white" />
+      {/* Navigation Drawer Container with Smooth Hardware-Accelerated Sliding */}
+      <div 
+        className={`fixed inset-0 z-50 overflow-hidden transition-all duration-300 ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        role="dialog" 
+        aria-modal="true" 
+        aria-label="Navigation Menu"
+      >
+        {/* Backdrop overlay */}
+        <div
+          className={`fixed inset-0 bg-black/75 backdrop-blur-sm transition-opacity duration-300 ease-out ${
+            isOpen ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={() => {
+            setIsPinned(false);
+            onClose();
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Sliding Drawer completely attached to the left */}
+        <div 
+          onMouseEnter={handleMouseEnterDrawer}
+          onMouseLeave={handleMouseLeaveDrawer}
+          className={`fixed inset-y-0 left-0 max-w-[85vw] w-72 sm:w-80 bg-terminal-900 border-r border-terminal-border shadow-2xl flex flex-col z-50 transform transition-transform duration-300 ease-out select-none ${
+            isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          {/* Drawer Header */}
+          <div className="p-4 border-b border-terminal-border flex items-center justify-between bg-terminal-950/70">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 flex items-center justify-center shadow-md shadow-indigo-500/20 shrink-0">
+                <Bot className="w-4 h-4 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="text-sm font-bold text-white tracking-wide truncate">
+                  QRI TRADER
+                </h2>
+                <p className="text-[10px] text-cyan-400 font-mono tracking-wider font-semibold">
+                  NAVIGATION DESK
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <h2 className="text-sm font-bold text-white tracking-wide truncate">
-                QRI TRADER
-              </h2>
-              <p className="text-[10px] text-cyan-400 font-mono tracking-wider">
-                NAVIGATION DESK
-              </p>
+
+            <div className="flex items-center gap-1.5">
+              {/* Pin / Auto-Hide Mode Toggle Button */}
+              <button
+                onClick={() => setIsPinned(!isPinned)}
+                className={`p-1.5 rounded-lg border text-xs transition-colors flex items-center gap-1 ${
+                  isPinned 
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 shadow-sm' 
+                    : 'bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border-terminal-border'
+                }`}
+                title={isPinned ? 'Drawer Pinned (Will stay open on mouse leave)' : 'Auto-Hide Active (Hover near edge to pull out)'}
+                aria-label="Toggle Pin Navigation Drawer"
+              >
+                {isPinned ? <Pin className="w-3.5 h-3.5 text-cyan-400" /> : <PinOff className="w-3.5 h-3.5 text-slate-300" />}
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsPinned(false);
+                  onClose();
+                }}
+                className="p-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors"
+                aria-label="Close navigation drawer"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-400 hover:text-white border border-terminal-border transition-colors"
-            aria-label="Close navigation drawer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+          {/* Selected Pair & Mode Mini Info */}
+          <div className="px-4 py-2 bg-terminal-950/40 border-b border-terminal-border/60 flex items-center justify-between text-xs font-mono">
+            <span className="text-slate-300 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              ACTIVE: <strong className="text-white">{selectedPair}</strong>
+            </span>
+            <span className="text-[10px] text-cyan-400 font-semibold uppercase">
+              {isPinned ? '📌 PINNED' : '⚡ HOVER ACTIVE'}
+            </span>
+          </div>
 
-        {/* Selected Pair & Mode Mini Info */}
-        <div className="px-4 py-2 bg-terminal-950/40 border-b border-terminal-border/60 flex items-center justify-between text-xs font-mono">
-          <span className="text-slate-400 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            ACTIVE: <strong className="text-white">{selectedPair}</strong>
-          </span>
-          <span className="text-[10px] text-slate-400 uppercase">14 MODULES</span>
-        </div>
-
-        {/* Scrollable Navigation Items List (Vertically 1 by 1 without clipping) */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={item.action}
-                className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 group ${
-                  item.isActive
-                    ? item.activeBg
-                    : 'bg-terminal-900/60 border-transparent hover:bg-terminal-800/80 hover:border-terminal-border/80 text-slate-300 hover:text-white'
-                }`}
-              >
-                {/* Number Prefix & Icon */}
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[10px] font-mono text-slate-400 group-hover:text-cyan-400 transition-colors w-4">
-                    {item.number}
-                  </span>
-                  <div className={`p-1.5 rounded-md bg-terminal-950 border border-terminal-border/60 ${item.color}`}>
-                    <Icon className="w-4 h-4" />
-                  </div>
-                </div>
-
-                {/* Label and Subtitle */}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-1.5">
-                    <span className="text-xs sm:text-sm font-semibold truncate tracking-tight text-white group-hover:text-cyan-300 transition-colors">
-                      {item.label}
+          {/* Scrollable Navigation Items List (Vertically 1 by 1 without clipping) */}
+          <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  onClick={item.action}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all flex items-center gap-3 group ${
+                    item.isActive
+                      ? item.activeBg
+                      : 'bg-terminal-900/60 border-transparent hover:bg-terminal-800/80 hover:border-terminal-border/80 text-slate-300 hover:text-white'
+                  }`}
+                >
+                  {/* Number Prefix & Icon */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[10px] font-mono text-cyan-400 font-bold group-hover:text-cyan-300 transition-colors w-4">
+                      {item.number}
                     </span>
-                    {item.badge && (
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold border shrink-0 ${item.badgeColor}`}>
-                        {item.badge}
-                      </span>
-                    )}
+                    <div className={`p-1.5 rounded-md bg-terminal-950 border border-terminal-border/60 ${item.color}`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
                   </div>
-                  <p className="text-[10px] text-slate-400 truncate group-hover:text-slate-300">
-                    {item.description}
-                  </p>
-                </div>
 
-                <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-300 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-            );
-          })}
-        </nav>
+                  {/* Label and Subtitle */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1.5">
+                      <span className="text-xs sm:text-sm font-bold truncate tracking-tight text-white group-hover:text-cyan-300 transition-colors">
+                        {item.label}
+                      </span>
+                      {item.badge && (
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold border shrink-0 ${item.badgeColor}`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-300 truncate group-hover:text-white font-medium">
+                      {item.description}
+                    </p>
+                  </div>
+
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-300 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </button>
+              );
+            })}
+          </nav>
 
         {/* Drawer Footer with Execution Mode, Settings, Theme Toggle & Status */}
         <div className="p-3 border-t border-terminal-border bg-terminal-950/80 space-y-2 shrink-0">
@@ -564,5 +646,6 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
         </div>
       </div>
     </div>
-  );
+  </>
+);
 };

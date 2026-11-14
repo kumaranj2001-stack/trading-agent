@@ -40,6 +40,7 @@ export interface HeaderProps {
   onOpenFirebase?: () => void;
   onOpenJournal?: () => void;
   onOpenLeftDrawer?: () => void;
+  isLeftDrawerOpen?: boolean;
   isAnalyzing: boolean;
   onTriggerAnalysis: () => void;
   activeSession: string;
@@ -68,6 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
   setActiveTab,
   onOpenSettings,
   onOpenLeftDrawer,
+  isLeftDrawerOpen = false,
   isAnalyzing,
   onTriggerAnalysis,
   activeSession,
@@ -100,16 +102,26 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-2.5 space-y-2">
         {/* Row 1: Brand & Nav Controls (Responsive Split across Mobile & Desktop) */}
         <div className="flex items-center justify-between gap-2.5 sm:gap-3 w-full min-w-0">
-          {/* Left: Attached completely to the left - Three-dot drawer button + Brand */}
+          {/* Left: Attached completely to the left - Responsive Hamburger Drawer Trigger + Brand */}
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-            {/* Hamburger / Navigation Desk Three-Dot Trigger */}
+            {/* Modern Responsive Hamburger Menu Trigger with Smooth Proximity Hover Pullout */}
             <button
               onClick={onOpenLeftDrawer}
-              className="p-1.5 sm:p-2 rounded-lg bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border border-terminal-border transition-colors flex items-center justify-center shrink-0 active:scale-95 shadow-sm group"
-              title="Open Navigation Menu"
-              aria-label="Open Navigation Menu"
+              onMouseEnter={onOpenLeftDrawer}
+              className={`p-2 rounded-lg transition-all flex items-center justify-center shrink-0 shadow-sm group relative border ${
+                isLeftDrawerOpen
+                  ? 'bg-cyan-600/25 text-cyan-300 border-cyan-400 shadow-cyan-500/20'
+                  : 'bg-terminal-800 hover:bg-terminal-700 text-slate-200 hover:text-white border-terminal-border'
+              }`}
+              title="Navigation Menu (Hover cursor or click to pull out)"
+              aria-label="Toggle Navigation Menu"
             >
-              <MoreVertical className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 group-hover:scale-110 transition-transform" />
+              {/* Responsive 3-bar animated hamburger icon */}
+              <div className="w-4 h-4 sm:w-5 sm:h-5 flex flex-col justify-center items-center gap-1">
+                <span className={`block h-0.5 rounded-full bg-cyan-400 transition-all duration-300 ${isLeftDrawerOpen ? 'w-4 rotate-45 translate-y-1.5' : 'w-4 group-hover:w-4'}`} />
+                <span className={`block h-0.5 rounded-full bg-cyan-300 transition-all duration-300 ${isLeftDrawerOpen ? 'opacity-0' : 'w-3 group-hover:w-4'}`} />
+                <span className={`block h-0.5 rounded-full bg-cyan-400 transition-all duration-300 ${isLeftDrawerOpen ? 'w-4 -rotate-45 -translate-y-1.5' : 'w-4 group-hover:w-4'}`} />
+              </div>
             </button>
 
             {/* Brand Logo & Title */}
@@ -118,7 +130,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                 <span className="font-bold text-white tracking-wider text-xs sm:text-sm md:text-base truncate">
                   QRI TRADER <span className="text-cyan-400 font-mono">//</span> <span className="hidden xs:inline">5-AGENT SWARM</span>
                 </span>
@@ -134,17 +146,17 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 )}
               </div>
-              <div className="hidden sm:flex items-center gap-2 text-[11px]">
+              <div className="hidden sm:flex items-center gap-2 text-[11px] flex-wrap">
                 <span className={`inline-block w-2 h-2 rounded-full ${
                   isMarketFrozen ? 'bg-sky-400' : 'bg-emerald-400 animate-pulse'
                 }`}></span>
                 <span className={`truncate font-semibold ${
-                  isMarketFrozen ? 'text-sky-300 font-bold' : 'text-slate-400'
+                  isMarketFrozen ? 'text-sky-300 font-bold' : 'text-slate-300'
                 }`}>
                   {isMarketFrozen ? `❄️ STATE FROZEN (${sessionInfo?.statusLabel || activeSession})` : activeSession}
                 </span>
-                <span className="text-sky-400/90 font-medium hidden md:inline">• 38 NEWS WIRES</span>
-                <span className="text-cyan-400/80 hidden lg:inline font-medium">• 1,050+ RULES</span>
+                <span className="text-sky-400 font-bold hidden md:inline">• 95 DYNAMIC FEEDS</span>
+                <span className="text-cyan-400 hidden lg:inline font-bold">• 1,050+ RULES</span>
                 <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-cyan-300 border border-indigo-500/40 text-[10px] font-mono font-bold hidden xl:flex items-center gap-1">
                   <Zap className="w-2.5 h-2.5 text-cyan-400 animate-pulse" />
                   <span>24/7 AUTONOMOUS SWARM</span>

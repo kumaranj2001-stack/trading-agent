@@ -436,26 +436,26 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </div>
           </div>
 
-          {/* Strict Real-Time Loss Exposure Elimination Protocol Row */}
+          {/* Strict Real-Time Loss Exposure Elimination Protocol Row with Zoom Stability */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-indigo-500/20 text-[10px]">
-            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <span className="text-slate-500 block">1:1 Breakeven Ratchet</span>
-              <strong className="text-emerald-400 font-bold flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3 text-emerald-400 inline" />
-                <span>ARMED (0.00% Downside)</span>
+            <div className={`p-1.5 rounded border min-w-0 ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className={`block font-semibold ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}>1:1 Breakeven Ratchet</span>
+              <strong className="text-emerald-400 font-bold flex items-center gap-1 truncate">
+                <CheckCircle2 className="w-3 h-3 text-emerald-400 inline shrink-0" />
+                <span className="truncate">ARMED (0.00% Downside)</span>
               </strong>
             </div>
-            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <span className="text-slate-500 block">Structural Stop Loss</span>
-              <strong className="text-rose-400 font-bold">5 Pips Beyond S1/R1</strong>
+            <div className={`p-1.5 rounded border min-w-0 ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className={`block font-semibold ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}>Structural Stop Loss</span>
+              <strong className="text-rose-400 font-bold truncate block">5 Pips Beyond S1/R1</strong>
             </div>
-            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <span className="text-slate-500 block">Dynamic Lot Sizing</span>
-              <strong className="text-amber-400 font-bold">{consensus.executionSignal.lots} Lots (Proportional)</strong>
+            <div className={`p-1.5 rounded border min-w-0 ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className={`block font-semibold ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}>Dynamic Lot Sizing</span>
+              <strong className="text-amber-400 font-bold truncate block">{consensus.executionSignal.lots} Lots (Proportional)</strong>
             </div>
-            <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <span className="text-slate-500 block">Absolute Loss Cap</span>
-              <strong className="text-emerald-400 font-bold">Max 2.0% Equity (${consensus.executionSignal.riskAmountUsd})</strong>
+            <div className={`p-1.5 rounded border min-w-0 ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
+              <span className={`block font-semibold ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}>Absolute Loss Cap</span>
+              <strong className="text-emerald-400 font-bold truncate block">Max 2.0% Equity (${consensus.executionSignal.riskAmountUsd})</strong>
             </div>
           </div>
         </div>
@@ -533,12 +533,12 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </div>
           </div>
 
-          {/* 5 Specialist Desk Voting Breakdown Chips */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-[10px] mb-2.5">
+          {/* 5 Specialist Desk Voting Breakdown Chips with Zoom-Safe Wrap */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 text-[10px] mb-2.5">
             {Object.values(chiefAudit.deskVotes).map((deskVote) => (
               <div 
                 key={deskVote.desk}
-                className={`p-2 rounded border transition-all ${
+                className={`p-2 rounded border transition-all min-w-0 ${
                   deskVote.vote === 'AGREE'
                     ? theme === 'light'
                       ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
@@ -548,22 +548,22 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                     : 'bg-terminal-900/90 border-rose-500/40 text-rose-200'
                 }`}
               >
-                <div className="flex items-center justify-between mb-0.5">
+                <div className="flex items-center justify-between mb-0.5 gap-1">
                   <span className="font-bold truncate text-[10px]">
                     {deskVote.desk === 'TECHNICAL' ? '1. Technical' :
                      deskVote.desk === 'FUNDAMENTAL' ? '2. Macro Desk' :
                      deskVote.desk === 'NEWS_WIRE' ? '3. News Wire' :
                      deskVote.desk === 'FOREX_INTERMARKET' ? '4. Intermarket' : '5. Risk Gov'}
                   </span>
-                  <span className={`px-1 py-0.2 rounded font-black text-[9px] ${
+                  <span className={`px-1 py-0.2 rounded font-black text-[9px] shrink-0 ${
                     deskVote.vote === 'AGREE'
-                      ? 'bg-emerald-500/20 text-emerald-500'
-                      : 'bg-rose-500/20 text-rose-500'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'bg-rose-500/20 text-rose-400'
                   }`}>
                     {deskVote.vote}
                   </span>
                 </div>
-                <div className="text-[9px] opacity-80 truncate">{deskVote.analystName.split(' ')[0]} • Bias: {deskVote.bias}</div>
+                <div className="text-[9px] opacity-90 truncate font-mono">{deskVote.analystName.split(' ')[0]} • {deskVote.bias}</div>
               </div>
             ))}
           </div>
