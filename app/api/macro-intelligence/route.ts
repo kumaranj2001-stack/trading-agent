@@ -3,6 +3,9 @@ import { macroIntelligenceEngine, HIGH_IMPACT_MACRO_CATALYSTS } from '@/lib/macr
 import { dynamicTieredSourceDirectory } from '@/lib/dynamicTieredSourceDirectory';
 import { macroTelemetryBridge } from '@/lib/macroTelemetryBridge';
 import { eventDrivenRiskProtocols } from '@/lib/eventDrivenRiskProtocols';
+import { eventDrivenMacroTelemetryEngine } from '@/lib/eventDrivenMacroTelemetryEngine';
+import { historicalTickDataRepository } from '@/lib/historicalTickDataRepository';
+import { deterministicEntityExtractor } from '@/lib/deterministicEntityExtractor';
 import { CurrencyPair, MacroCatalystCategory } from '@/lib/types';
 import { BASE_PRICES } from '@/lib/marketData';
 
@@ -22,6 +25,22 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         success: true,
         data: bridgeState,
+      });
+    }
+
+    // Sub-action: get historical tick performance & risk governance telemetry
+    if (action === 'HISTORICAL_TICK_TELEMETRY') {
+      const perf = historicalTickDataRepository.evaluateEventPerformance(
+        eventId || 'fomc-rate-decision',
+        symbolParam
+      );
+      const audit = eventDrivenMacroTelemetryEngine.getRecentTelemetryAudit();
+      return NextResponse.json({
+        success: true,
+        data: {
+          performance: perf,
+          auditLog: audit,
+        },
       });
     }
 
@@ -88,6 +107,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         data: deepScrapeResult,
+      });
+    }
+
+    // Sub-action: Extract entities deterministically from unstructured text
+    if (action === 'EXTRACT_ENTITIES') {
+      const textToExtract = body.text || '';
+      const extraction = deterministicEntityExtractor.extractEntities(textToExtract);
+      return NextResponse.json({
+        success: true,
+        data: extraction,
+      });
+    }
+
+    // Sub-action: Pipe telemetry directly into Risk Governance
+    if (action === 'PIPE_RISK_TELEMETRY') {
+      const telemetry = eventDrivenMacroTelemetryEngine.generateRiskGovernanceTelemetry({
+        symbol,
+        currentPrice: BASE_PRICES[symbol] || 2650.0,
+        catalystId: eventId || 'fomc-rate-decision',
+        actualNumeric: body.actualNumeric ?? 4.50,
+        forecastNumeric: body.forecastNumeric ?? 4.75,
+        previousNumeric: body.previousNumeric ?? 4.75,
+        sentimentShiftThreshold: body.sentimentShiftThreshold,
+        varianceThreshold: body.varianceThreshold,
+        direction: body.direction || 'BUY',
+      });
+      return NextResponse.json({
+        success: true,
+        data: telemetry,
       });
     }
 

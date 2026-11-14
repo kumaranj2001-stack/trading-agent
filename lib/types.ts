@@ -780,6 +780,10 @@ export interface RiskAssessment {
     projectedGainUsd: number;
     accountRiskPercent: number;
     leverageUsed: number;
+    dynamicLimitBound?: number;
+    slippageCapPips?: number;
+    stopLossBufferPips?: number;
+    liquidityVacuumDefenseActive?: boolean;
   };
   monteCarlo?: MonteCarloProjection;
   accountHealth: {
@@ -1668,6 +1672,10 @@ export interface MacroIntelligenceReport {
 
   // High-Impact News Event Strict Risk Governance Protocols
   riskProtocols?: HighImpactEventRiskProtocols;
+
+  // Deterministic Macro Telemetry & Historical Tick Data Performance
+  macroTelemetry?: import('./eventDrivenMacroTelemetryEngine').RiskGovernancePipedTelemetry;
+  entityExtraction?: import('./deterministicEntityExtractor').EntityExtractionResult;
 
   // Swarm Synthesis & Strategic Rationale
   strategicSummary: string;

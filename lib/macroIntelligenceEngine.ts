@@ -11,6 +11,8 @@ import { realTimeNewsEngine } from './newsEngine';
 import { macroTelemetryBridge } from './macroTelemetryBridge';
 import { dynamicTieredSourceDirectory } from './dynamicTieredSourceDirectory';
 import { eventDrivenRiskProtocols } from './eventDrivenRiskProtocols';
+import { eventDrivenMacroTelemetryEngine } from './eventDrivenMacroTelemetryEngine';
+import { deterministicEntityExtractor } from './deterministicEntityExtractor';
 
 // ============================================================================
 // 09 // HIGH-IMPACT MACROECONOMIC CATALYSTS CATALOG
@@ -557,6 +559,21 @@ export class EventDrivenMacroIntelligenceEngine {
       url: article.url,
     }));
 
+    // 8b. Deterministic Entity Extraction & Macro Telemetry Integration
+    const entityExtraction = deterministicEntityExtractor.extractEntities(
+      `${catalyst.title} ${catalyst.description} ${relevantHeadlines.map(h => h.title).join('. ')}`
+    );
+
+    const macroTelemetry = eventDrivenMacroTelemetryEngine.generateRiskGovernanceTelemetry({
+      symbol,
+      currentPrice: livePrice,
+      catalystId: catalyst.id,
+      actualNumeric: catalyst.actualNumeric ?? catalyst.previousNumeric,
+      forecastNumeric: catalyst.forecastNumeric,
+      previousNumeric: catalyst.previousNumeric,
+      direction: signal === 'SELL' ? 'SELL' : 'BUY',
+    });
+
     // 9. Strategic Summary
     const strategicSummary = signal === 'UNCONFIRMED'
       ? `Data convergence alert: Primary release figures for ${catalyst.title} pending final cross-verification. In compliance with strict institutional risk gatekeeping, all directional exposure is quarantined.`
@@ -576,6 +593,8 @@ export class EventDrivenMacroIntelligenceEngine {
       telemetryBridge: macroTelemetryBridge.getBridgeState(symbol),
       tieredSourceDirectory: tieredDirectorySummary,
       riskProtocols,
+      macroTelemetry,
+      entityExtraction,
       dataConvergence: convergence,
       catalystAnalysis: {
         previous: catalyst.previous,

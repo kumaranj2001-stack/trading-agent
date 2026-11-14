@@ -85,6 +85,10 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
   const [deepScrapeResult, setDeepScrapeResult] = useState<DeepScrapeTriggerResult | null>(null);
   const [deepScrapeNotice, setDeepScrapeNotice] = useState<string>('');
   const [activeSourceTier, setActiveSourceTier] = useState<TieredSourceCategory | 'ALL'>('ALL');
+  const [varianceAlertThreshold, setVarianceAlertThreshold] = useState<number>(8.0);
+  const [sentimentShiftThreshold, setSentimentShiftThreshold] = useState<number>(35.0);
+  const [activeDeskViewTab, setActiveDeskViewTab] = useState<'OVERVIEW' | 'TELEMETRY_PIPELINE' | 'HISTORICAL_TICK_STUDY' | 'ENTITY_DICTIONARY'>('OVERVIEW');
+  const [isVolatilityMaskActive, setIsVolatilityMaskActive] = useState<boolean>(true);
 
   // Trigger On-Demand Deep-Scraping across 90+ tiered sources
   const handleTriggerDeepScrape = async () => {
@@ -367,6 +371,74 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
           <div className="text-[11px] font-semibold text-slate-300">
             {activeReport?.trendGate?.rationale || 'Trend Gate Verified: Multi-timeframe momentum is strictly aligned with macro bias.'}
           </div>
+        </div>
+      </div>
+
+      {/* 🧭 DESK NAVIGATION TABS & DYNAMIC VOLATILITY MASK CONTROLLER */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-terminal-900 border border-terminal-border font-mono text-xs">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={() => setActiveDeskViewTab('OVERVIEW')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+              activeDeskViewTab === 'OVERVIEW'
+                ? 'bg-cyan-500 text-terminal-950 shadow-sm'
+                : 'bg-terminal-950 text-slate-300 hover:text-white border border-terminal-border'
+            }`}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span>Synthesis & Directives</span>
+          </button>
+
+          <button
+            onClick={() => setActiveDeskViewTab('TELEMETRY_PIPELINE')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+              activeDeskViewTab === 'TELEMETRY_PIPELINE'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-terminal-950 text-slate-300 hover:text-white border border-terminal-border'
+            }`}
+          >
+            <Radio className="w-3.5 h-3.5 text-cyan-300" />
+            <span>Deterministic Telemetry Pipeline</span>
+          </button>
+
+          <button
+            onClick={() => setActiveDeskViewTab('HISTORICAL_TICK_STUDY')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+              activeDeskViewTab === 'HISTORICAL_TICK_STUDY'
+                ? 'bg-purple-600 text-white shadow-sm'
+                : 'bg-terminal-950 text-slate-300 hover:text-white border border-terminal-border'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 text-purple-300" />
+            <span>15m / 1h / 4h Historical Tick Study</span>
+          </button>
+
+          <button
+            onClick={() => setActiveDeskViewTab('ENTITY_DICTIONARY')}
+            className={`px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5 ${
+              activeDeskViewTab === 'ENTITY_DICTIONARY'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'bg-terminal-950 text-slate-300 hover:text-white border border-terminal-border'
+            }`}
+          >
+            <Database className="w-3.5 h-3.5 text-emerald-300" />
+            <span>Rule-Based Entity Extraction</span>
+          </button>
+        </div>
+
+        {/* Dynamic Volatility Mask Toggle */}
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer bg-terminal-950 px-2.5 py-1 rounded-lg border border-terminal-border">
+            <input
+              type="checkbox"
+              checked={isVolatilityMaskActive}
+              onChange={(e) => setIsVolatilityMaskActive(e.target.checked)}
+              className="rounded bg-terminal-900 border-terminal-border text-cyan-500 focus:ring-0 w-3.5 h-3.5"
+            />
+            <span className="text-[11px] text-slate-200">
+              Noise Masking: <strong className={isVolatilityMaskActive ? 'text-emerald-400' : 'text-slate-400'}>{isVolatilityMaskActive ? 'CRITICAL ONLY' : 'ALL TIERS'}</strong>
+            </span>
+          </label>
         </div>
       </div>
 
@@ -1170,6 +1242,332 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* 📡 DETERMINISTIC TELEMETRY & RISK GOVERNANCE PIPELINE CARD */}
+              {activeDeskViewTab === 'TELEMETRY_PIPELINE' && activeReport.macroTelemetry && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-indigo-950/70 via-terminal-900 to-terminal-950 border border-indigo-500/60 space-y-4 shadow-xl font-mono text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-terminal-border">
+                    <div className="flex items-center gap-2">
+                      <Radio className="w-5 h-5 text-indigo-400 animate-pulse" />
+                      <div>
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white block">
+                          DIRECT RISK GOVERNANCE TELEMETRY PIPELINE
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Automated Variance Engine • Dynamic Sentiment Shift Thresholds • Multi-Provider Cross Verification
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                        SCHEMA: VALIDATED
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-bold">
+                        PROVIDERS: {activeReport.macroTelemetry.auditTrail.crossVerificationProvidersCount} CONVERGENT
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Variance Calculation & Deviation Alert Section */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className={`p-3 rounded-xl border ${
+                      activeReport.macroTelemetry.variance.deviationBreached
+                        ? 'bg-rose-950/40 border-rose-500/60 text-rose-200'
+                        : 'bg-terminal-950 border-terminal-border text-slate-300'
+                    }`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Variance Engine</span>
+                        {activeReport.macroTelemetry.variance.deviationBreached ? (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-rose-600 text-white font-bold animate-pulse">
+                            BREACHED
+                          </span>
+                        ) : (
+                          <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold">
+                            WITHIN THRESHOLD
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-base font-bold text-white">
+                        {activeReport.macroTelemetry.variance.percentageDeviation >= 0 ? '+' : ''}
+                        {activeReport.macroTelemetry.variance.percentageDeviation}% Deviation
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Z-Score: <strong className="text-cyan-400">{activeReport.macroTelemetry.variance.standardizedZScore}σ</strong> (Threshold: {varianceAlertThreshold}%)
+                      </div>
+                    </div>
+
+                    <div className={`p-3 rounded-xl border ${
+                      activeReport.macroTelemetry.sentimentShift.shiftTriggered
+                        ? 'bg-amber-950/40 border-amber-500/60 text-amber-200'
+                        : 'bg-terminal-950 border-terminal-border text-slate-300'
+                    }`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Sentiment Shift Delta</span>
+                        <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold ${
+                          activeReport.macroTelemetry.sentimentShift.shiftTriggered ? 'bg-amber-600 text-white' : 'bg-indigo-500/20 text-indigo-300'
+                        }`}>
+                          {activeReport.macroTelemetry.sentimentShift.alertLevel.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <div className="text-base font-bold text-white">
+                        {activeReport.macroTelemetry.sentimentShift.cumulativeSentimentDelta >= 0 ? '+' : ''}
+                        {activeReport.macroTelemetry.sentimentShift.cumulativeSentimentDelta} pts
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Rolling 30m Delta (Limit: ±{sentimentShiftThreshold})
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-terminal-950 border border-terminal-border text-slate-300">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">Risk Governance Pipe</span>
+                        <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 font-bold">
+                          ACTIVE
+                        </span>
+                      </div>
+                      <div className="text-base font-bold text-emerald-400">
+                        {activeReport.macroTelemetry.riskAdjustments.liquidityVacuumDefenseMode ? 'VACUUM DEFENSE ON' : 'NOMINAL EXECUTION'}
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Sizing Multiplier: <strong className="text-cyan-400">{(activeReport.macroTelemetry.riskAdjustments.appliedSizingMultiplier * 100).toFixed(0)}%</strong>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Threshold Sliders & User Controls */}
+                  <div className="p-3 rounded-xl bg-terminal-950 border border-terminal-border space-y-2">
+                    <span className="text-[11px] font-bold text-white block uppercase tracking-wider">
+                      User-Configured Dynamic Governance Thresholds
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-[11px]">
+                      <div>
+                        <div className="flex justify-between text-slate-300 mb-1">
+                          <span>Consensus Variance Alert Threshold:</span>
+                          <span className="text-cyan-400 font-bold">±{varianceAlertThreshold}%</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="2"
+                          max="25"
+                          step="0.5"
+                          value={varianceAlertThreshold}
+                          onChange={(e) => setVarianceAlertThreshold(parseFloat(e.target.value))}
+                          className="w-full accent-cyan-400 h-1.5 bg-terminal-800 rounded-lg cursor-pointer"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-slate-300 mb-1">
+                          <span>Cumulative Sentiment Shift Threshold (Delta):</span>
+                          <span className="text-amber-400 font-bold">±{sentimentShiftThreshold} pts</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="15"
+                          max="60"
+                          step="1"
+                          value={sentimentShiftThreshold}
+                          onChange={(e) => setSentimentShiftThreshold(parseFloat(e.target.value))}
+                          className="w-full accent-amber-400 h-1.5 bg-terminal-800 rounded-lg cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ⏱️ HISTORICAL TICK STUDY (15M / 1H / 4H) CARD */}
+              {activeDeskViewTab === 'HISTORICAL_TICK_STUDY' && activeReport.macroTelemetry && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-purple-950/70 via-terminal-900 to-terminal-950 border border-purple-500/60 space-y-4 shadow-xl font-mono text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-terminal-border">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-purple-400" />
+                      <div>
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white block">
+                          HISTORICAL TICK-DATA VOLATILITY STUDY
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Expected Pip Range Expansion • Spread Widening • Directional Follow-Through
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] bg-purple-950/80 px-2 py-0.5 rounded border border-purple-800 text-purple-300 font-bold">
+                      SAMPLE SIZE: {activeReport.macroTelemetry.historicalTickPerformance.sampleEventCount} PAST RELEASES
+                    </span>
+                  </div>
+
+                  {/* 15m, 1h, 4h Window Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* 15 Minute Window */}
+                    <div className="p-3 rounded-xl bg-terminal-950 border border-terminal-border space-y-2">
+                      <div className="flex items-center justify-between border-b border-terminal-border/60 pb-1.5">
+                        <span className="font-bold text-cyan-300 text-sm">15-Minute Window</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800 font-bold">
+                          POST-RELEASE
+                        </span>
+                      </div>
+                      <div className="space-y-1.5 text-[11px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Pip Range Expansion:</span>
+                          <span className="text-white font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.m15.expectedPipRangeExpansion} pips</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Historical Max Peak:</span>
+                          <span className="text-purple-400 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.m15.historicalMaxPipExpansion} pips</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Expected Spread Widening:</span>
+                          <span className="text-amber-300 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.m15.expectedSpreadWideningPips} pips</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Follow-Through Rate:</span>
+                          <span className="text-emerald-400 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.m15.directionalFollowThroughRate}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Reversal Risk:</span>
+                          <span className="text-rose-400 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.m15.reversalProbability}%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 1 Hour Window */}
+                    <div className="p-3 rounded-xl bg-terminal-950 border border-terminal-border space-y-2">
+                      <div className="flex items-center justify-between border-b border-terminal-border/60 pb-1.5">
+                        <span className="font-bold text-indigo-300 text-sm">1-Hour Window</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-400 border border-indigo-800 font-bold">
+                          PRICE DISCOVERY
+                        </span>
+                      </div>
+                      <div className="space-y-1.5 text-[11px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Pip Range Expansion:</span>
+                          <span className="text-white font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.h1.expectedPipRangeExpansion} pips</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Historical Max Peak:</span>
+                          <span className="text-purple-400 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.h1.historicalMaxPipExpansion} pips</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Normalized Spread:</span>
+                          <span className="text-amber-300 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.h1.expectedSpreadWideningPips} pips</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Follow-Through Rate:</span>
+                          <span className="text-emerald-400 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.h1.directionalFollowThroughRate}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Reversal Risk:</span>
+                          <span className="text-rose-400 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.h1.reversalProbability}%</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 4 Hour Window */}
+                    <div className="p-3 rounded-xl bg-terminal-950 border border-terminal-border space-y-2">
+                      <div className="flex items-center justify-between border-b border-terminal-border/60 pb-1.5">
+                        <span className="font-bold text-purple-300 text-sm">4-Hour Window</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-950 text-purple-400 border border-purple-800 font-bold">
+                          MACRO TREND
+                        </span>
+                      </div>
+                      <div className="space-y-1.5 text-[11px]">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Pip Range Expansion:</span>
+                          <span className="text-white font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.h4.expectedPipRangeExpansion} pips</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Historical Max Peak:</span>
+                          <span className="text-purple-400 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.h4.historicalMaxPipExpansion} pips</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Normalized Spread:</span>
+                          <span className="text-amber-300 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.h4.expectedSpreadWideningPips} pips</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Follow-Through Rate:</span>
+                          <span className="text-emerald-400 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.h4.directionalFollowThroughRate}%</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Reversal Risk:</span>
+                          <span className="text-rose-400 font-bold">{activeReport.macroTelemetry.historicalTickPerformance.windows.h4.reversalProbability}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 🏷️ DETERMINISTIC ENTITY EXTRACTION DICTIONARY CARD */}
+              {activeDeskViewTab === 'ENTITY_DICTIONARY' && activeReport.entityExtraction && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-950/60 via-terminal-900 to-terminal-950 border border-emerald-500/60 space-y-4 shadow-xl font-mono text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-terminal-border">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-5 h-5 text-emerald-400" />
+                      <div>
+                        <span className="text-xs sm:text-sm font-bold uppercase tracking-wider text-white block">
+                          RULE-BASED ENTITY EXTRACTION & TICKER MAPPING
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          Zero-AI Model Deterministic Token Parsing • Central Banks • Policymakers • Terminal Tickers
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800 text-emerald-300 font-bold">
+                      {activeReport.entityExtraction.extractedEntities.length} ENTITIES IDENTIFIED
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-3 rounded-xl bg-terminal-950 border border-terminal-border space-y-2">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                        Extracted Entities & Key Authorities
+                      </span>
+                      <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                        {activeReport.entityExtraction.extractedEntities.map((ent, idx) => (
+                          <div key={idx} className="p-2 rounded bg-terminal-900 border border-terminal-border flex items-center justify-between">
+                            <div>
+                              <span className="font-bold text-white block">{ent.entityName}</span>
+                              <span className="text-[9px] text-slate-400">{ent.category.replace('_', ' ')} • Weight: {ent.relevanceWeight}</span>
+                            </div>
+                            <div className="flex flex-wrap gap-1">
+                              {ent.mappedTickers.map(tk => (
+                                <span key={tk} className="px-1.5 py-0.2 rounded bg-cyan-950 border border-cyan-800 text-cyan-300 text-[9px] font-bold">
+                                  {tk}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-terminal-950 border border-terminal-border space-y-2">
+                      <span className="text-[10px] text-slate-400 uppercase font-bold block">
+                        Mapped Terminal Ticker Hierarchy
+                      </span>
+                      <div className="space-y-1.5">
+                        {activeReport.entityExtraction.mappedTickers.map((ticker, idx) => (
+                          <div key={ticker} className="p-2 rounded bg-terminal-900 border border-terminal-border flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-cyan-400 font-bold">#{idx + 1}</span>
+                              <span className="text-white font-bold">{ticker}</span>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setSelectedPair(ticker);
+                                if (onSelectPair) onSelectPair(ticker);
+                              }}
+                              className="px-2 py-0.5 rounded bg-terminal-800 hover:bg-terminal-700 text-slate-300 text-[10px] font-bold transition-colors"
+                            >
+                              Select Ticker
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="p-8 rounded-2xl bg-terminal-900 border border-terminal-border text-center space-y-3 font-mono">
