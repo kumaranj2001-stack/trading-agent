@@ -25,20 +25,12 @@ export const YAHOO_SYMBOL_MAP: Record<CurrencyPair, string> = {
   'TCS': 'TCS.NS',
   'HDFC BANK': 'HDFCBANK.NS',
   'INFY': 'INFY.NS',
-  // Crypto & Bitcoins
+  // ₿ 24/7 Cryptocurrency Spot Tickers
   'BTC/USD': 'BTC-USD',
   'ETH/USD': 'ETH-USD',
-  'BCH/USD': 'BCH-USD',
-  'WBTC/USD': 'WBTC-USD',
-  'BSV/USD': 'BSV-USD',
-  'BTC/EUR': 'BTC-EUR',
-  'BTC/GBP': 'BTC-GBP',
-  'ETH/BTC': 'ETH-BTC',
   'SOL/USD': 'SOL-USD',
+  'BNB/USD': 'BNB-USD',
   'XRP/USD': 'XRP-USD',
-  'DOGE/USD': 'DOGE-USD',
-  'ADA/USD': 'ADA-USD',
-  'LTC/USD': 'LTC-USD',
 };
 
 export interface LiveMarketQuote {

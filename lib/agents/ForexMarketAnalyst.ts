@@ -55,18 +55,6 @@ export class ForexMarketAnalystAgent extends BaseAgent {
         interpretation: 'Inverse risk sentiment: equity sell-offs provoke safe-haven capital inflow.',
       });
     }
-    if (pair.includes('BTC') || pair.includes('ETH')) {
-      intermarketCorrelation.push({
-        asset: 'Nasdaq 100 / Global High-Beta Tech Liquidity',
-        correlation: 0.88,
-        interpretation: 'Digital assets track global high-beta liquidity conditions and Fed balance sheet shifts.',
-      });
-      intermarketCorrelation.push({
-        asset: 'US Dollar Index (DXY) Inverse Beta',
-        correlation: -0.79,
-        interpretation: 'Bitcoin and Ethereum exhibit strong negative correlation to Dollar surges.',
-      });
-    }
     intermarketCorrelation.push({
       asset: 'US 10Y Sovereign Yield Spread',
       correlation: pair.includes('USD') ? (pair.startsWith('USD') ? 0.85 : -0.85) : 0.40,

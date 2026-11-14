@@ -11,8 +11,7 @@ export async function GET(req: NextRequest) {
     const segment: MarketSegment | undefined = (
       rawSegment === 'FOREX' || 
       rawSegment === 'METALS_COMMODITIES' || 
-      rawSegment === 'INDIAN_MARKET' ||
-      rawSegment === 'CRYPTO'
+      rawSegment === 'INDIAN_MARKET'
     ) ? (rawSegment as MarketSegment) : undefined;
 
     const coordinator = new SwarmCoordinator();

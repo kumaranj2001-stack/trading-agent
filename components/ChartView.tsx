@@ -16,7 +16,6 @@ interface ChartViewProps {
   entryPrice?: number;
   signalBias?: SignalDirection;
   theme?: 'dark' | 'light';
-  onSelectPair?: (pair: CurrencyPair) => void;
 }
 
 export const ChartView: React.FC<ChartViewProps> = ({
@@ -29,13 +28,15 @@ export const ChartView: React.FC<ChartViewProps> = ({
   entryPrice,
   signalBias,
   theme = 'dark',
-  onSelectPair,
 }) => {
   const [chartMode, setChartMode] = useState<'ALGO_SWARM' | 'OANDA_LIVE'>('OANDA_LIVE');
   const [showIndicators, setShowIndicators] = useState(true);
   const [showRsi, setShowRsi] = useState(true);
+  const [showFib, setShowFib] = useState(true);
+  const [showBuffer, setShowBuffer] = useState(true);
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
 
+  const isCrypto = pair === 'BTC/USD' || pair === 'ETH/USD' || pair === 'SOL/USD' || pair === 'BNB/USD' || pair === 'XRP/USD';
   const isJpy = pair.includes('JPY');
   const isIndianIndex = pair === 'NIFTY 50' || pair === 'BANK NIFTY';
   const isIndianStock = pair === 'RELIANCE' || pair === 'TCS' || pair === 'HDFC BANK' || pair === 'INFY';
@@ -45,14 +46,17 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const isCopper = pair === 'COPPER';
   const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
   const isRupee = pair.includes('/INR');
-  const isBtc = pair === 'BTC/USD' || pair === 'WBTC/USD' || pair === 'BTC/EUR' || pair === 'BTC/GBP';
-  const isEth = pair === 'ETH/USD';
-  const isCrypto = pair.includes('BTC') || pair.includes('ETH') || pair.includes('BCH') || pair.includes('WBTC') || pair.includes('BSV') || pair.includes('SOL') || pair.includes('XRP') || pair.includes('DOGE') || pair.includes('ADA') || pair.includes('LTC');
 
   let decimalCount = 5;
-  if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil || isBtc || isEth || pair === 'BCH/USD' || pair === 'SOL/USD' || pair === 'LTC/USD') decimalCount = 2;
+  if (isCrypto) decimalCount = pair === 'XRP/USD' ? 4 : 2;
+  else if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil) decimalCount = 2;
   else if (isSilver || isJpy || isRupee) decimalCount = 3;
-  else if (isCopper || pair.includes('XRP') || pair.includes('DOGE') || pair.includes('ADA')) decimalCount = 4;
+  else if (isCopper) decimalCount = 4;
+
+  const pipMultiplier = isCrypto ? (pair === 'BTC/USD' ? 1.0 : 0.10) : isGold ? 0.10 : isJpy ? 0.01 : 0.0001;
+  const bufferPips = isCrypto ? (pair === 'BTC/USD' ? 25 : 15) : 15;
+  const bufferUpper = entryPrice ? entryPrice + (bufferPips * pipMultiplier) : undefined;
+  const bufferLower = entryPrice ? entryPrice - (bufferPips * pipMultiplier) : undefined;
 
   const safeCandles = candles && candles.length > 0 ? candles : [];
   const closes = safeCandles.length > 0 ? safeCandles.map(c => c.close) : [1.0];
@@ -61,6 +65,7 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const rsi = calculateRSI(closes, 14);
 
   const prices = safeCandles.flatMap(c => [c.high, c.low]);
+  if (entryPrice && Number.isFinite(entryPrice)) prices.push(entryPrice);
   if (stopLoss && Number.isFinite(stopLoss)) prices.push(stopLoss);
   if (takeProfit && Number.isFinite(takeProfit)) prices.push(takeProfit);
 
@@ -69,6 +74,28 @@ export const ChartView: React.FC<ChartViewProps> = ({
   const minPrice = Math.min(...safePrices) * 0.9995;
   const maxPrice = Math.max(...safePrices) * 1.0005;
   const priceRange = Math.max(0.00001, maxPrice - minPrice);
+
+  // Fibonacci Retracements & Expansions Calculation
+  const swingHigh = Math.max(...safeCandles.map(c => c.high), takeProfit || maxPrice);
+  const swingLow = Math.min(...safeCandles.map(c => c.low), stopLoss || minPrice);
+  const swingDiff = Math.max(0.0001, swingHigh - swingLow);
+  const isBuyBias = signalBias?.includes('BUY');
+
+  const fibRatios = [
+    { ratio: 0.236, label: '23.6%', color: '#94a3b8' },
+    { ratio: 0.382, label: '38.2%', color: '#38bdf8' },
+    { ratio: 0.500, label: '50.0%', color: '#f59e0b' },
+    { ratio: 0.618, label: '61.8% (Golden)', color: '#10b981' },
+    { ratio: 0.786, label: '78.6%', color: '#a855f7' },
+    { ratio: 1.618, label: '161.8% (Ext)', color: '#ec4899' },
+  ];
+
+  const fibLevels = fibRatios.map(f => {
+    const price = isBuyBias
+      ? swingLow + swingDiff * f.ratio
+      : swingHigh - swingDiff * f.ratio;
+    return { ...f, price };
+  });
 
   const chartHeight = 280;
   const rsiHeight = 80;
@@ -174,43 +201,30 @@ export const ChartView: React.FC<ChartViewProps> = ({
                 <BarChart2 className="w-3 h-3 text-purple-400" />
                 <span>RSI</span>
               </button>
+
+              <button
+                onClick={() => setShowFib(!showFib)}
+                className={`px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-[11px] flex items-center gap-1 border transition-colors ${
+                  showFib ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold' : 'bg-terminal-800 text-slate-400 border-terminal-border'
+                }`}
+                title="Toggle Fibonacci Retracements & Expansions"
+              >
+                <span>FIB</span>
+              </button>
+
+              <button
+                onClick={() => setShowBuffer(!showBuffer)}
+                className={`px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-[11px] flex items-center gap-1 border transition-colors ${
+                  showBuffer ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-bold' : 'bg-terminal-800 text-slate-400 border-terminal-border'
+                }`}
+                title="Toggle Dynamic Pip Entry Buffer Zone"
+              >
+                <span>BUFFER</span>
+              </button>
             </div>
           )}
         </div>
       </div>
-
-      {/* Quick-Switch Real-Time Feeds for Bitcoin, Ethereum and All Bitcoin Ecosystem Pairs */}
-      {onSelectPair && isCrypto && (
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-mono scrollbar-none touch-pan-x bg-terminal-950/50 p-1.5 rounded-lg border border-terminal-border/60">
-          <span className="text-[10px] text-amber-400 font-bold uppercase tracking-wider shrink-0 flex items-center gap-1 pr-1 border-r border-terminal-border">
-            <span>₿</span> REAL-TIME CRYPTO FEEDS:
-          </span>
-          {[
-            { p: 'BTC/USD', label: 'BTC/USD (Bitcoin)' },
-            { p: 'ETH/USD', label: 'ETH/USD (Ethereum)' },
-            { p: 'BCH/USD', label: 'BCH/USD (Bitcoin Cash)' },
-            { p: 'WBTC/USD', label: 'WBTC/USD (Wrapped BTC)' },
-            { p: 'BSV/USD', label: 'BSV/USD (Bitcoin SV)' },
-            { p: 'BTC/EUR', label: 'BTC/EUR' },
-            { p: 'BTC/GBP', label: 'BTC/GBP' },
-            { p: 'ETH/BTC', label: 'ETH/BTC' },
-            { p: 'SOL/USD', label: 'SOL/USD' },
-            { p: 'LTC/USD', label: 'LTC/USD' },
-          ].map(({ p, label }) => (
-            <button
-              key={p}
-              onClick={() => onSelectPair(p as CurrencyPair)}
-              className={`px-2 py-0.5 rounded text-[11px] font-bold whitespace-nowrap transition-all border shrink-0 ${
-                pair === p
-                  ? 'bg-amber-500/25 text-amber-300 border-amber-400 shadow-sm shadow-amber-500/20'
-                  : 'bg-terminal-900 text-slate-300 hover:text-white border-terminal-border hover:bg-terminal-800'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
 
       {/* View 1: Real OANDA / TradingView Live Advanced Chart */}
       {chartMode === 'OANDA_LIVE' && (
@@ -238,6 +252,62 @@ export const ChartView: React.FC<ChartViewProps> = ({
                   </g>
                 );
               })}
+
+              {/* Dynamic Pip Entry Buffer Zone */}
+              {showBuffer && entryPrice && bufferUpper && bufferLower && (
+                <g>
+                  <rect
+                    x="0"
+                    y={Math.min(getY(bufferUpper), getY(bufferLower))}
+                    width={chartWidth}
+                    height={Math.max(4, Math.abs(getY(bufferUpper) - getY(bufferLower)))}
+                    fill="rgba(6, 182, 212, 0.08)"
+                    stroke="rgba(6, 182, 212, 0.25)"
+                    strokeDasharray="2 2"
+                  />
+                  <text x="14" y={Math.min(getY(bufferUpper), getY(bufferLower)) + 11} fill="#06b6d4" fontSize="8" fontFamily="monospace" fontWeight="bold">
+                    ±{bufferPips} PIP DYNAMIC EXECUTION BUFFER
+                  </text>
+                </g>
+              )}
+
+              {/* Fibonacci Expansions & Retracements */}
+              {showFib && fibLevels.map((fib) => (
+                <g key={fib.label}>
+                  <line
+                    x1="0"
+                    y1={getY(fib.price)}
+                    x2={chartWidth}
+                    y2={getY(fib.price)}
+                    stroke={fib.color}
+                    strokeWidth="1"
+                    strokeDasharray="3 3"
+                    opacity="0.65"
+                  />
+                  <text x={chartWidth - 110} y={getY(fib.price) - 3} fill={fib.color} fontSize="8" fontFamily="monospace">
+                    FIB {fib.label}: {fib.price.toFixed(decimalCount)}
+                  </text>
+                </g>
+              ))}
+
+              {/* Anchored Entry Line */}
+              {entryPrice && Number.isFinite(entryPrice) && (
+                <g>
+                  <line
+                    x1="0"
+                    y1={getY(entryPrice)}
+                    x2={chartWidth}
+                    y2={getY(entryPrice)}
+                    stroke="#06b6d4"
+                    strokeWidth="1.5"
+                    strokeDasharray="4 2"
+                  />
+                  <rect x="10" y={getY(entryPrice) - 16} width="145" height="15" fill="#083344" rx="2" opacity="0.9" />
+                  <text x="14" y={getY(entryPrice) - 5} fill="#67e8f9" fontSize="9" fontFamily="monospace" fontWeight="bold">
+                    ANCHORED ENTRY: {entryPrice.toFixed(decimalCount)}
+                  </text>
+                </g>
+              )}
 
               {/* Stop Loss Line */}
               {stopLoss && Number.isFinite(stopLoss) && (

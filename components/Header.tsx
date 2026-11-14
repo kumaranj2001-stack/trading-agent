@@ -92,7 +92,7 @@ export const Header: React.FC<HeaderProps> = ({
     : marketSegment === 'METALS_COMMODITIES'
     ? <Coins className="w-3.5 h-3.5 text-amber-400" />
     : marketSegment === 'CRYPTO'
-    ? <span className="font-bold text-amber-400 text-sm leading-none">₿</span>
+    ? <span className="text-amber-400 font-extrabold text-sm leading-none">₿</span>
     : <Globe className="w-3.5 h-3.5 text-cyan-400" />;
 
   const segmentLabel = marketSegment === 'INDIAN_MARKET'
@@ -100,7 +100,7 @@ export const Header: React.FC<HeaderProps> = ({
     : marketSegment === 'METALS_COMMODITIES'
     ? 'Metals & Commodities'
     : marketSegment === 'CRYPTO'
-    ? 'Crypto & Bitcoins'
+    ? '24/7 Digital Assets'
     : 'Spot Forex';
 
   return (
@@ -226,12 +226,13 @@ export const Header: React.FC<HeaderProps> = ({
                 }}
                 className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
                   marketSegment === 'CRYPTO'
-                    ? 'bg-amber-600 text-white font-bold shadow-sm'
+                    ? 'bg-amber-600 text-white font-bold shadow-sm shadow-amber-500/20'
                     : 'text-slate-400 hover:text-white'
                 }`}
+                title="24/7 Global Cryptocurrency Spot & Derivative Markets"
               >
-                <span className="font-bold text-amber-300">₿</span>
-                <span>Crypto & BTC</span>
+                <span className="font-extrabold text-amber-400">₿</span>
+                <span>Crypto (BTC)</span>
               </button>
             </div>
 
@@ -381,7 +382,7 @@ export const Header: React.FC<HeaderProps> = ({
                   : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span className="font-bold text-amber-300">₿</span>
+              <span className="font-extrabold text-amber-400">₿</span>
               <span>BTC</span>
             </button>
           </div>

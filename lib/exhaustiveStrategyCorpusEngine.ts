@@ -338,10 +338,11 @@ export class ExhaustiveStrategyCorpusEngine {
       candles,
     } = params;
 
+    const isCrypto = symbol === 'BTC/USD' || symbol === 'ETH/USD' || symbol === 'SOL/USD' || symbol === 'BNB/USD' || symbol === 'XRP/USD';
     const isGold = symbol === 'XAU/USD';
     const isJpy = symbol.includes('JPY');
     const isIndia = symbol.includes('NIFTY');
-    const pipMultiplier = PIP_VALUES[symbol] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
+    const pipMultiplier = PIP_VALUES[symbol] || (isCrypto ? (symbol === 'BTC/USD' ? 1.0 : 0.10) : isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
 
     // 1. Calculate Real-Time Volatility Metrics (ATR-14)
     let atr14 = technical.indicators?.atr || 18.5;
@@ -383,7 +384,7 @@ export class ExhaustiveStrategyCorpusEngine {
     });
 
     const wallThicknessMultiplier = Number(((Math.max(bidWallVolume, askWallVolume) / 80)).toFixed(2));
-    const decimals = isGold || isIndia ? 2 : isJpy ? 3 : 5;
+    const decimals = isCrypto ? (symbol === 'XRP/USD' ? 4 : 2) : (isGold || isIndia ? 2 : isJpy ? 3 : 5);
 
     // 3. Mathematically Deterministic Stop Loss & Take Profit Parameters
     // Stop loss is anchored 5 pips BEYOND the verified liquidity wall

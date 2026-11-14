@@ -57,6 +57,9 @@ export interface LeftNavigationDrawerProps {
   onToggleTheme?: () => void;
   selectedPair?: CurrencyPair;
   journalCount?: number;
+  marketSegment?: MarketSegment;
+  onSelectMarketSegment?: (seg: MarketSegment) => void;
+  onSelectPair?: (pair: CurrencyPair) => void;
 }
 
 export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
@@ -82,6 +85,9 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
   onToggleTheme,
   selectedPair = 'EUR/USD',
   journalCount = 14,
+  marketSegment = 'FOREX',
+  onSelectMarketSegment,
+  onSelectPair,
 }) => {
   const [isPinned, setIsPinned] = useState<boolean>(false);
   const closeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -490,6 +496,56 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
               {isPinned ? '📌 PINNED' : '⚡ HOVER ACTIVE'}
             </span>
           </div>
+
+          {/* Quick Market Segment Scope Selectors */}
+          {onSelectMarketSegment && (
+            <div className="px-3 py-1.5 bg-terminal-950/70 border-b border-terminal-border/60 flex items-center justify-between gap-1 text-[10px] font-mono">
+              <button
+                onClick={() => {
+                  onSelectMarketSegment('FOREX');
+                  if (onSelectPair) onSelectPair('EUR/USD');
+                }}
+                className={`px-2 py-0.5 rounded transition-colors ${
+                  marketSegment === 'FOREX' ? 'bg-cyan-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Forex
+              </button>
+              <button
+                onClick={() => {
+                  onSelectMarketSegment('METALS_COMMODITIES');
+                  if (onSelectPair) onSelectPair('XAU/USD');
+                }}
+                className={`px-2 py-0.5 rounded transition-colors ${
+                  marketSegment === 'METALS_COMMODITIES' ? 'bg-amber-500 text-black font-extrabold' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Metals
+              </button>
+              <button
+                onClick={() => {
+                  onSelectMarketSegment('INDIAN_MARKET');
+                  if (onSelectPair) onSelectPair('NIFTY 50');
+                }}
+                className={`px-2 py-0.5 rounded transition-colors ${
+                  marketSegment === 'INDIAN_MARKET' ? 'bg-orange-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                NSE
+              </button>
+              <button
+                onClick={() => {
+                  onSelectMarketSegment('CRYPTO');
+                  if (onSelectPair) onSelectPair('BTC/USD');
+                }}
+                className={`px-2 py-0.5 rounded transition-colors ${
+                  marketSegment === 'CRYPTO' ? 'bg-amber-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                ₿ Crypto
+              </button>
+            </div>
+          )}
 
           {/* Scrollable Navigation Items List (Vertically 1 by 1 without clipping) */}
           <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-1">

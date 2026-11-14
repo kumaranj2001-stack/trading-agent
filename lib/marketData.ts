@@ -13,19 +13,7 @@ export const INDIAN_MARKET_ASSETS: CurrencyPair[] = [
 ];
 
 export const CRYPTO_ASSETS: CurrencyPair[] = [
-  'BTC/USD',
-  'ETH/USD',
-  'BCH/USD',
-  'WBTC/USD',
-  'BSV/USD',
-  'BTC/EUR',
-  'BTC/GBP',
-  'ETH/BTC',
-  'SOL/USD',
-  'XRP/USD',
-  'DOGE/USD',
-  'ADA/USD',
-  'LTC/USD'
+  'BTC/USD', 'ETH/USD', 'SOL/USD', 'BNB/USD', 'XRP/USD'
 ];
 
 export const BASE_PRICES: Record<CurrencyPair, number> = {
@@ -55,20 +43,12 @@ export const BASE_PRICES: Record<CurrencyPair, number> = {
   'TCS': 2498.80,
   'HDFC BANK': 784.10,
   'INFY': 1171.60,
-  // Crypto & Bitcoins (Real-Time TradingView / Binance Benchmark Parity)
-  'BTC/USD': 91420.50,
-  'ETH/USD': 3125.80,
-  'BCH/USD': 445.60,
-  'WBTC/USD': 91390.00,
-  'BSV/USD': 48.75,
-  'BTC/EUR': 85640.20,
-  'BTC/GBP': 72150.80,
-  'ETH/BTC': 0.03419,
-  'SOL/USD': 216.40,
-  'XRP/USD': 0.8540,
-  'DOGE/USD': 0.3850,
-  'ADA/USD': 0.5820,
-  'LTC/USD': 84.60,
+  // ₿ 24/7 Cryptocurrency Spot & Institutional Derivatives Parity
+  'BTC/USD': 89450.00, // Bitcoin / USD Benchmark
+  'ETH/USD': 3180.50,  // Ethereum / USD
+  'SOL/USD': 214.20,   // Solana / USD
+  'BNB/USD': 642.10,   // Binance Coin / USD
+  'XRP/USD': 1.1540,   // Ripple / USD
 };
 
 export const PIP_VALUES: Record<CurrencyPair, number> = {
@@ -97,20 +77,12 @@ export const PIP_VALUES: Record<CurrencyPair, number> = {
   'TCS': 0.05,
   'HDFC BANK': 0.05,
   'INFY': 0.05,
-  // Crypto & Bitcoins
-  'BTC/USD': 1.0,
-  'ETH/USD': 0.10,
-  'BCH/USD': 0.10,
-  'WBTC/USD': 1.0,
-  'BSV/USD': 0.01,
-  'BTC/EUR': 1.0,
-  'BTC/GBP': 1.0,
-  'ETH/BTC': 0.00001,
-  'SOL/USD': 0.05,
-  'XRP/USD': 0.0001,
-  'DOGE/USD': 0.0001,
-  'ADA/USD': 0.0001,
-  'LTC/USD': 0.01,
+  // Crypto Point/Pip Metrics
+  'BTC/USD': 1.0,     // $1.00 USD standard BTC pip/point
+  'ETH/USD': 0.10,    // $0.10 USD
+  'SOL/USD': 0.01,    // $0.01 USD cent
+  'BNB/USD': 0.01,    // $0.01 USD cent
+  'XRP/USD': 0.0001,  // 0.0001 USD
 };
 
 // Maps internal symbols to real OANDA / TradingView widget symbols!
@@ -141,20 +113,12 @@ export const OANDA_TRADINGVIEW_MAP: Record<CurrencyPair, string> = {
   'TCS': 'NSE:TCS',
   'HDFC BANK': 'NSE:HDFCBANK',
   'INFY': 'NSE:INFY',
-  // Crypto & Bitcoins (Real-Time TradingView Live Feed Symbols)
+  // ₿ 24/7 Cryptocurrency Spot Feeds
   'BTC/USD': 'BINANCE:BTCUSDT',
   'ETH/USD': 'BINANCE:ETHUSDT',
-  'BCH/USD': 'BINANCE:BCHUSDT',
-  'WBTC/USD': 'COINBASE:WBTCUSD',
-  'BSV/USD': 'OKX:BSVUSDT',
-  'BTC/EUR': 'COINBASE:BTCEUR',
-  'BTC/GBP': 'COINBASE:BTCGBP',
-  'ETH/BTC': 'BINANCE:ETHBTC',
   'SOL/USD': 'BINANCE:SOLUSDT',
+  'BNB/USD': 'BINANCE:BNBUSDT',
   'XRP/USD': 'BINANCE:XRPUSDT',
-  'DOGE/USD': 'BINANCE:DOGEUSDT',
-  'ADA/USD': 'BINANCE:ADAUSDT',
-  'LTC/USD': 'BINANCE:LTCUSDT',
 };
 
 export function getMarketSegmentForSymbol(symbol: CurrencyPair): MarketSegment {
@@ -175,28 +139,36 @@ export function generateCandles(pair: CurrencyPair, timeframe: TimeFrame, count:
   const isPlatinum = pair === 'XPT/USD';
   const isCopper = pair === 'COPPER';
   const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
-  const isBtc = pair === 'BTC/USD' || pair === 'WBTC/USD' || pair === 'BTC/EUR' || pair === 'BTC/GBP';
+  const isBtc = pair === 'BTC/USD';
   const isEth = pair === 'ETH/USD';
-  const isCrypto = CRYPTO_ASSETS.includes(pair);
+  const isSol = pair === 'SOL/USD';
+  const isBnb = pair === 'BNB/USD';
+  const isXrp = pair === 'XRP/USD';
 
   let pip = 0.0001;
   let volatility = 0.0012;
 
-  if (isIndianIndex) {
+  if (isBtc) {
+    pip = 1.0;
+    volatility = 185.0; // ~$185 volatility per BTC candle
+  } else if (isEth) {
+    pip = 0.10;
+    volatility = 16.5; // ~$16.5 volatility per ETH candle
+  } else if (isSol) {
+    pip = 0.01;
+    volatility = 2.40;
+  } else if (isBnb) {
+    pip = 0.01;
+    volatility = 3.60;
+  } else if (isXrp) {
+    pip = 0.0001;
+    volatility = 0.018;
+  } else if (isIndianIndex) {
     pip = 0.05;
     volatility = basePrice * 0.0018; // ~40-60 points
   } else if (isIndianStock) {
     pip = 0.05;
     volatility = basePrice * 0.0025; // ~5-10 INR
-  } else if (isBtc) {
-    pip = 1.0;
-    volatility = basePrice * 0.0035; // ~$320 per candle on $91,420 Bitcoin
-  } else if (isEth) {
-    pip = 0.10;
-    volatility = basePrice * 0.0045; // ~$14 per candle on $3,125 Ethereum
-  } else if (isCrypto) {
-    pip = PIP_VALUES[pair] || 0.01;
-    volatility = basePrice * 0.004;
   } else if (isGold) {
     pip = 0.10;
     volatility = 18.50; // ~$18.50 per gold candle on $4,074/oz Gold
@@ -244,10 +216,10 @@ export function generateCandles(pair: CurrencyPair, timeframe: TimeFrame, count:
     const open = currentClose;
     
     let decimalPlaces = 5;
-    if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil || isBtc || isEth || pair === 'BCH/USD' || pair === 'SOL/USD' || pair === 'LTC/USD') decimalPlaces = 2;
+    if (isBtc || isEth || isSol || isBnb || isIndianIndex || isIndianStock || isGold || isPlatinum || isOil) decimalPlaces = 2;
+    else if (isXrp) decimalPlaces = 4;
     else if (isSilver || isJpy || isRupeePair) decimalPlaces = 3;
-    else if (isCopper || pair.includes('XRP') || pair.includes('DOGE') || pair.includes('ADA')) decimalPlaces = 4;
-    else if (pair === 'ETH/BTC') decimalPlaces = 5;
+    else if (isCopper) decimalPlaces = 4;
 
     const close = Number((open + wave + randomStep).toFixed(decimalPlaces));
     const high = Number((Math.max(open, close) + Math.random() * volatility * 0.7).toFixed(decimalPlaces));
@@ -454,9 +426,9 @@ export const MACRO_ECONOMIC_CALENDAR: MacroIndicator[] = [
 ];
 
 export const CURRENCY_STRENGTH_INDEX: CurrencyStrength[] = [
-  { currency: 'USD', score: 7.8, trend: 'STRENGTHENING' },
   { currency: 'BTC', score: 8.9, trend: 'STRENGTHENING' },
-  { currency: 'ETH', score: 8.2, trend: 'STRENGTHENING' },
+  { currency: 'ETH', score: 7.6, trend: 'STRENGTHENING' },
+  { currency: 'USD', score: 7.8, trend: 'STRENGTHENING' },
   { currency: 'XAU (Gold)', score: 9.2, trend: 'STRENGTHENING' },
   { currency: 'INR', score: 7.2, trend: 'STABLE' },
   { currency: 'EUR', score: 6.2, trend: 'STABLE' },

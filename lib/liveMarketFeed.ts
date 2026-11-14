@@ -1,7 +1,8 @@
 import { Candle, CurrencyPair, MarketSegment, Position, SwarmConsensusResult, TimeFrame } from './types';
-import { BASE_PRICES, PIP_VALUES, getMarketSegmentForSymbol } from './marketData';
+import { BASE_PRICES, PIP_VALUES, getMarketSegmentForSymbol, CRYPTO_ASSETS } from './marketData';
 import { MarketSessionManager } from './marketSessionManager';
 import { stateLatchingEngine, RECALIBRATION_INTERVAL_SECONDS } from './stateLatchingEngine';
+import { postTradeDaemon } from './postTradeDaemon';
 
 export interface MarketFeedTickEvent {
   pair: CurrencyPair;
@@ -117,19 +118,21 @@ export class LiveMarketFeedManager {
     spreadPips: number;
   } {
     const mid = this.getCanonicalPrice(pair);
+    const isCrypto = CRYPTO_ASSETS.includes(pair);
     const isJpy = pair.includes('JPY');
     const isGold = pair === 'XAU/USD';
     const isSilver = pair === 'XAG/USD';
     const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY' || pair === 'RELIANCE' || pair === 'TCS';
     const isOil = pair.includes('CRUDE');
-    const pipMultiplier = PIP_VALUES[pair] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
+    const pipMultiplier = PIP_VALUES[pair] || (isCrypto ? (pair === 'BTC/USD' ? 1.0 : 0.10) : isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
 
     let decimals = 5;
-    if (isIndian || isGold || isOil) decimals = 2;
+    if (isCrypto) decimals = pair === 'XRP/USD' ? 4 : 2;
+    else if (isIndian || isGold || isOil) decimals = 2;
     else if (isSilver || isJpy) decimals = 3;
 
     // Institutional spreads in pips
-    const spreadPips = isGold ? 1.8 : isSilver ? 2.5 : isJpy ? 1.1 : isIndian ? 2.0 : 0.9;
+    const spreadPips = isCrypto ? (pair === 'BTC/USD' ? 1.5 : 2.0) : isGold ? 1.8 : isSilver ? 2.5 : isJpy ? 1.1 : isIndian ? 2.0 : 0.9;
     const halfSpread = (spreadPips * pipMultiplier) / 2;
 
     const bid = Number((mid - halfSpread).toFixed(decimals));
@@ -348,9 +351,11 @@ export class LiveMarketFeedManager {
       const isCopper = this.currentPair === 'COPPER';
       const isOil = this.currentPair === 'WTI_CRUDE' || this.currentPair === 'BRENT_CRUDE';
       const isRupee = this.currentPair.includes('/INR');
+      const isCrypto = CRYPTO_ASSETS.includes(this.currentPair);
 
       let decimals = 5;
-      if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
+      if (isCrypto) decimals = this.currentPair === 'XRP/USD' ? 4 : 2;
+      else if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
       else if (isSilver || isJpy || isRupee) decimals = 3;
       else if (isCopper) decimals = 4;
 
@@ -375,6 +380,9 @@ export class LiveMarketFeedManager {
       this.canonicalPrices.set(this.currentPair, newClose);
       this.lastTickTimestamp = Date.now();
       this.totalWsTicksReceived++;
+
+      // Trigger Post-Trade Daemon tick-by-tick monitoring for running entries
+      postTradeDaemon.evaluateTick(this.currentPair, newClose);
 
       const base = BASE_PRICES[this.currentPair] || newClose;
       const change24h = Number((((newClose - base) / base) * 100).toFixed(2));
@@ -430,6 +438,7 @@ export class LiveMarketFeedManager {
     if (!consensus || !livePrice || Number.isNaN(livePrice)) return consensus;
 
     const pair = consensus.pair;
+    const isCrypto = CRYPTO_ASSETS.includes(pair);
     const isJpy = pair.includes('JPY');
     const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY' || 
                      pair === 'RELIANCE' || pair === 'TCS' || 
@@ -442,11 +451,12 @@ export class LiveMarketFeedManager {
     const isRupee = pair.includes('/INR');
 
     let decimals = 5;
-    if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
+    if (isCrypto) decimals = pair === 'XRP/USD' ? 4 : 2;
+    else if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
     else if (isSilver || isJpy || isRupee) decimals = 3;
     else if (isCopper) decimals = 4;
 
-    const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
+    const pipMultiplier = PIP_VALUES[pair] || (isCrypto ? (pair === 'BTC/USD' ? 1.0 : 0.10) : isJpy ? 0.01 : 0.0001);
 
     // ⚓ DETERMINISTIC STATE-LATCHING PROTOCOL & REAL-TIME LIQUIDITY INTEGRATION
     // Anchors structural invalidation boundaries while dynamically pulling live quotes without delay

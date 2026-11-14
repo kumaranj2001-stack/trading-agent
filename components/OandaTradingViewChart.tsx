@@ -126,10 +126,6 @@ function OandaTradingViewChartComponent({
   };
 
   const isEmbeddedVision = containerIdPrefix === 'vision';
-  const isCrypto = symbol.includes('BTC') || symbol.includes('ETH') || symbol.includes('BCH') || symbol.includes('WBTC') || symbol.includes('BSV') || symbol.includes('SOL') || symbol.includes('XRP') || symbol.includes('DOGE') || symbol.includes('ADA') || symbol.includes('LTC');
-  const isIndian = symbol.includes('NIFTY') || symbol.includes('RELIANCE') || symbol.includes('TCS') || symbol.includes('HDFC') || symbol.includes('INFY') || symbol.includes('/INR');
-  const isMetals = symbol.includes('XAU') || symbol.includes('XAG') || symbol.includes('XPT') || symbol.includes('COPPER') || symbol.includes('CRUDE');
-  const feedLabel = isCrypto ? 'CRYPTO & BITCOINS / TRADINGVIEW' : isIndian ? 'NSE INDIA / TRADINGVIEW' : isMetals ? 'METALS & OIL / TRADINGVIEW' : 'OANDA / TRADINGVIEW';
 
   return (
     <div className={`w-full overflow-hidden ${
@@ -138,17 +134,17 @@ function OandaTradingViewChartComponent({
       {!isEmbeddedVision && (
         <div className="flex flex-wrap items-center justify-between px-3 py-1.5 bg-terminal-900 border-b border-terminal-border text-xs font-mono gap-1">
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${isCrypto ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400 animate-pulse'}`}></span>
-            <span className="text-white font-bold text-[11px] sm:text-xs">{feedLabel}</span>
-            <span className="text-cyan-400 font-mono text-[10px] sm:text-[11px] hidden xs:inline">• {tvSymbol}</span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-white font-bold text-[11px] sm:text-xs">OANDA / TRADINGVIEW LIVE FEED</span>
+            <span className="text-slate-400 text-[10px] sm:text-[11px] hidden xs:inline">• {tvSymbol}</span>
             <span className="px-1.5 py-0.2 rounded bg-terminal-800 text-cyan-300 text-[10px] font-bold border border-terminal-border">
               {timeframe.toUpperCase()}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-[9px] sm:text-[10px] ${isCrypto ? 'text-amber-400' : 'text-cyan-400'} uppercase tracking-widest flex items-center gap-1 font-bold`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${isCrypto ? 'bg-amber-400 animate-ping' : 'bg-cyan-400 animate-ping'}`} />
-              {isCrypto ? '24/7 STREAMING' : 'STREAMING'}
+            <span className="text-[9px] sm:text-[10px] text-cyan-400 uppercase tracking-widest flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+              STREAMING
             </span>
           </div>
         </div>

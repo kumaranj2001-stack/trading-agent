@@ -129,24 +129,27 @@ export class MultiAssetIngestionEngine {
   }
 
   public resolveDecimals(sym: CurrencyPair): number {
+    const isCrypto = CRYPTO_ASSETS.includes(sym);
+    if (isCrypto) return sym === 'XRP/USD' ? 4 : 2;
     const isGold = sym === 'XAU/USD';
     const isOil = sym.includes('CRUDE');
     const isIndian = sym === 'NIFTY 50' || sym === 'BANK NIFTY' || sym === 'RELIANCE' || sym === 'TCS';
     const isSilver = sym === 'XAG/USD';
     const isJpy = sym.includes('JPY');
     const isCopper = sym === 'COPPER';
-    const isCrypto2Dec = sym === 'BTC/USD' || sym === 'ETH/USD' || sym === 'BCH/USD' || sym === 'WBTC/USD' || sym === 'BTC/EUR' || sym === 'BTC/GBP' || sym === 'SOL/USD' || sym === 'LTC/USD';
-    const isCrypto4Dec = sym === 'BSV/USD' || sym.includes('XRP') || sym.includes('DOGE') || sym.includes('ADA');
-    const isCrypto5Dec = sym === 'ETH/BTC';
 
-    if (isIndian || isGold || isOil || isCrypto2Dec) return 2;
+    if (isIndian || isGold || isOil) return 2;
     if (isSilver || isJpy) return 3;
-    if (isCopper || isCrypto4Dec) return 4;
-    if (isCrypto5Dec) return 5;
+    if (isCopper) return 4;
     return 5;
   }
 
   public resolveDefaultSpreadPips(sym: CurrencyPair): number {
+    if (sym === 'BTC/USD') return 1.5;
+    if (sym === 'ETH/USD') return 1.8;
+    if (sym === 'SOL/USD') return 2.0;
+    if (sym === 'BNB/USD') return 1.6;
+    if (sym === 'XRP/USD') return 1.2;
     if (sym === 'XAU/USD') return 1.8;
     if (sym === 'XAG/USD') return 2.5;
     if (sym.includes('JPY')) return 1.2;

@@ -29,20 +29,12 @@ export type IndianMarketAsset =
   | 'HDFC BANK' 
   | 'INFY';
 
-export type CryptoAsset = 
-  | 'BTC/USD'   // Bitcoin / US Dollar
-  | 'ETH/USD'   // Ethereum / US Dollar
-  | 'BCH/USD'   // Bitcoin Cash / US Dollar
-  | 'WBTC/USD'  // Wrapped Bitcoin / US Dollar
-  | 'BSV/USD'   // Bitcoin SV / US Dollar
-  | 'BTC/EUR'   // Bitcoin / Euro
-  | 'BTC/GBP'   // Bitcoin / British Pound
-  | 'ETH/BTC'   // Ethereum / Bitcoin
-  | 'SOL/USD'   // Solana / US Dollar
-  | 'XRP/USD'   // Ripple / US Dollar
-  | 'DOGE/USD'  // Dogecoin / US Dollar
-  | 'ADA/USD'   // Cardano / US Dollar
-  | 'LTC/USD';  // Litecoin / US Dollar
+export type CryptoAsset =
+  | 'BTC/USD' // Bitcoin / USD (Primary Crypto Benchmark)
+  | 'ETH/USD' // Ethereum / USD
+  | 'SOL/USD' // Solana / USD
+  | 'BNB/USD' // Binance Coin / USD
+  | 'XRP/USD'; // Ripple / USD
 
 export type TradableSymbol = ForexPair | MetalCommodityAsset | IndianMarketAsset | CryptoAsset;
 
@@ -2256,4 +2248,40 @@ export interface VisionAtlasPayload {
     citedFundamentalModelIds: string[];
     executiveNarrative: string;
   };
+}
+
+export type PostTradeActionType = 
+  | 'BREAKEVEN_LOCKED'
+  | 'TRAILING_STOP_RATCHETED'
+  | 'TARGET_COMPRESSED'
+  | 'STRUCTURAL_INVALIDATION_WARNING'
+  | 'POSITION_PROTECTED';
+
+export interface PostTradeEvent {
+  id: string;
+  positionId: string;
+  symbol: CurrencyPair;
+  action: PostTradeActionType;
+  triggerPrice: number;
+  oldStopLoss?: number;
+  newStopLoss?: number;
+  oldTakeProfit?: number;
+  newTakeProfit?: number;
+  rMultiple: number;
+  pnlDollar: number;
+  pnlPips: number;
+  timestamp: number;
+  detail: string;
+}
+
+export interface PostTradeDaemonTelemetry {
+  isRunning: boolean;
+  activePositionsMonitored: number;
+  totalTicksEvaluated: number;
+  breakevenAdjustmentsLocked: number;
+  trailingStopAdjustments: number;
+  targetCompressions: number;
+  averageProcessingLatencyMs: number;
+  lastTickTimestamp: number;
+  recentEvents: PostTradeEvent[];
 }

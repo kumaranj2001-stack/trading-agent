@@ -35,9 +35,9 @@ export const TickerBar: React.FC<TickerBarProps> = ({
   const isCrypto = marketSegment === 'CRYPTO';
 
   const displayRates = rates.filter(r => {
-    if (isCrypto) return CRYPTO_ASSETS.includes(r.pair);
     if (isIndian) return INDIAN_MARKET_ASSETS.includes(r.pair);
     if (isMetals) return METALS_COMMODITIES.includes(r.pair);
+    if (isCrypto) return CRYPTO_ASSETS.includes(r.pair);
     return FOREX_PAIRS.includes(r.pair);
   });
 
@@ -54,7 +54,7 @@ export const TickerBar: React.FC<TickerBarProps> = ({
           )}
           {isMarketFrozen
             ? `${isIndian ? '🇮🇳 NSE' : isMetals ? '🏆 COMEX' : isCrypto ? '₿ CRYPTO' : '🌐 FX'} CLOSED • STATE FROZEN`
-            : isCrypto ? '₿ 24/7 CRYPTO & BITCOINS LIVE' : isIndian ? '🇮🇳 NSE/BSE LIVE' : isMetals ? '🏆 PRECIOUS METALS & CRUDE' : '🌐 GLOBAL FX RATES'}
+            : isCrypto ? '₿ 24/7 CRYPTO LIQUIDITY' : isIndian ? '🇮🇳 NSE/BSE LIVE' : isMetals ? '🏆 PRECIOUS METALS & CRUDE' : '🌐 GLOBAL FX RATES'}
         </span>
 
         {/* Live WebSocket Streaming Indicator (Zero Delayed Polls) */}
@@ -68,6 +68,7 @@ export const TickerBar: React.FC<TickerBarProps> = ({
           const isSelected = item.pair === selectedPair;
           const isPositive = item.change24h >= 0;
           const isJpy = item.pair.includes('JPY');
+          const isCryptoPair = CRYPTO_ASSETS.includes(item.pair);
           const isIndianIndex = item.pair === 'NIFTY 50' || item.pair === 'BANK NIFTY';
           const isStock = item.pair === 'RELIANCE' || item.pair === 'TCS' || item.pair === 'HDFC BANK' || item.pair === 'INFY';
           const isGold = item.pair === 'XAU/USD';
@@ -75,17 +76,17 @@ export const TickerBar: React.FC<TickerBarProps> = ({
           const isPlatinum = item.pair === 'XPT/USD';
           const isCopper = item.pair === 'COPPER';
           const isOil = item.pair === 'WTI_CRUDE' || item.pair === 'BRENT_CRUDE';
-          const isCrypto2Dec = item.pair.includes('BTC') || item.pair === 'ETH/USD' || item.pair === 'BCH/USD' || item.pair === 'SOL/USD' || item.pair === 'LTC/USD';
-          const isCrypto4Dec = item.pair === 'BSV/USD' || item.pair.includes('XRP') || item.pair.includes('DOGE') || item.pair.includes('ADA');
 
           let decimalCount = 5;
-          if (isIndianIndex || isStock || isGold || isPlatinum || isOil || isCrypto2Dec) decimalCount = 2;
+          if (isCryptoPair) decimalCount = item.pair === 'XRP/USD' ? 4 : 2;
+          else if (isIndianIndex || isStock || isGold || isPlatinum || isOil) decimalCount = 2;
           else if (isSilver || isJpy || item.pair.includes('/INR')) decimalCount = 3;
-          else if (isCopper || isCrypto4Dec) decimalCount = 4;
+          else if (isCopper) decimalCount = 4;
 
           const formatDisplayPrice = () => {
+            if (isCryptoPair) return `$${item.price.toLocaleString('en-US', { minimumFractionDigits: decimalCount, maximumFractionDigits: decimalCount })}`;
             if (isIndianIndex) return `₹${item.price.toLocaleString('en-IN')}`;
-            if (isGold || isSilver || isPlatinum || isOil || isCrypto2Dec || isCrypto4Dec) return `$${item.price.toLocaleString('en-US', { minimumFractionDigits: decimalCount, maximumFractionDigits: decimalCount })}`;
+            if (isGold || isSilver || isPlatinum || isOil) return `$${item.price.toFixed(decimalCount)}`;
             return item.price.toFixed(decimalCount);
           };
 

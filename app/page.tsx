@@ -57,6 +57,7 @@ import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
 import { ExecutionTelemetryEngine } from '@/lib/executionTelemetryEngine';
 import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 import { preExecutionVerificationEngine } from '@/lib/preExecutionVerificationEngine';
+import { postTradeDaemon } from '@/lib/postTradeDaemon';
 
 const executionTelemetryEngine = ExecutionTelemetryEngine.getInstance();
 
@@ -632,10 +633,52 @@ export default function Home() {
     setMarketSegment(getMarketSegmentForSymbol(newPair));
   };
 
-  // Handle Market Segment Switch (Forex vs Metals vs Indian Market)
+  // Handle Market Segment Switch (Forex vs Metals vs Indian Market vs 24/7 Crypto)
   const handleSelectMarketSegment = (newSegment: MarketSegment) => {
     setMarketSegment(newSegment);
+    if (newSegment === 'CRYPTO') {
+      setSelectedPair('BTC/USD');
+    } else if (newSegment === 'INDIAN_MARKET') {
+      setSelectedPair('NIFTY 50');
+    } else if (newSegment === 'METALS_COMMODITIES') {
+      setSelectedPair('XAU/USD');
+    } else if (newSegment === 'FOREX') {
+      setSelectedPair('EUR/USD');
+    }
   };
+
+  // Sync open positions to the Post-Trade Daemon for tick-by-tick breakeven monitoring
+  useEffect(() => {
+    postTradeDaemon.syncPositions(portfolio.positions);
+  }, [portfolio.positions]);
+
+  // Subscribe to Post-Trade Daemon automated breakeven adjustments
+  useEffect(() => {
+    const stopDaemon = postTradeDaemon.startDaemon();
+    const unsubscribe = postTradeDaemon.subscribe((event) => {
+      if (event.action === 'BREAKEVEN_LOCKED' || event.action === 'TRAILING_STOP_RATCHETED') {
+        setPortfolio(prev => ({
+          ...prev,
+          positions: prev.positions.map(p => {
+            if (p.id === event.positionId && event.newStopLoss) {
+              return {
+                ...p,
+                stopLoss: event.newStopLoss,
+                isBreakevenLocked: true,
+                trailingStopActive: true,
+              };
+            }
+            return p;
+          }),
+        }));
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      stopDaemon();
+    };
+  }, []);
 
   // Handle Timeframe Switch
   const handleSelectTimeframe = (newTf: TimeFrame) => {
@@ -1169,7 +1212,6 @@ export default function Home() {
               entryPrice={consensus?.agents.risk.parameters.entryPrice}
               signalBias={consensus?.agents.technical.bias}
               theme={theme}
-              onSelectPair={handleSelectPair}
             />
 
             {/* 📓 Active Pre-Trade Historical Journal Loss Review & Guardrails Desk */}
@@ -1476,6 +1518,9 @@ export default function Home() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         selectedPair={selectedPair}
+        marketSegment={marketSegment}
+        onSelectMarketSegment={handleSelectMarketSegment}
+        onSelectPair={handleSelectPair}
       />
     </div>
   );

@@ -11,7 +11,7 @@ import {
   ConfluenceGrade,
   OrderBookLiquidityWallSnapshot 
 } from '../types';
-import { PIP_VALUES } from '../marketData';
+import { PIP_VALUES, CRYPTO_ASSETS } from '../marketData';
 import { JournalStorageManager } from '../journalStorage';
 import { riskRatioController } from '../riskRatioController';
 import { eventDrivenMacroTelemetryEngine, RiskGovernancePipedTelemetry } from '../eventDrivenMacroTelemetryEngine';
@@ -170,6 +170,7 @@ export class RiskManagerAgent extends BaseAgent {
     }
 
     // 4. Invalidation / Stop Loss & Target Calculation
+    const isCrypto = CRYPTO_ASSETS.includes(pair);
     const isJpy = pair.includes('JPY');
     const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY' || 
                      pair === 'RELIANCE' || pair === 'TCS' || 
@@ -182,11 +183,12 @@ export class RiskManagerAgent extends BaseAgent {
     const isRupee = pair.includes('/INR');
 
     let decimals = 5;
-    if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
+    if (isCrypto) decimals = pair === 'XRP/USD' ? 4 : 2;
+    else if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
     else if (isSilver || isJpy || isRupee) decimals = 3;
     else if (isCopper) decimals = 4;
 
-    const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
+    const pipMultiplier = PIP_VALUES[pair] || (isCrypto ? (pair === 'BTC/USD' ? 1.0 : 0.10) : isJpy ? 0.01 : 0.0001);
 
     // 4. Invalidation / Stop Loss & Dynamic Take Profit Calculation
     // Generates real-time Footprint levels & Order Book Depth Walls
