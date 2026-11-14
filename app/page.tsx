@@ -99,6 +99,7 @@ export default function Home() {
 
   const lastWebSocketHeartbeatRef = useRef<number>(Date.now());
   const previousPriceRef = useRef<number>(0);
+  const lastBreakingNewsRef = useRef<string | null>(null);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isRiskRatioControllerOpen, setIsRiskRatioControllerOpen] = useState<boolean>(false);
@@ -397,7 +398,7 @@ export default function Home() {
     });
 
     JournalStorageManager.recordTradeOpen(autoPos, calibratedResult, 'FULL_AUTOPILOT');
-    showNotification(`⚡ AUTOPILOT EXECUTED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} @ ${livePrice} (Confluence: ${calibratedResult.confluenceGrade})`);
+    showNotification(`⚡ AUTOPILOT EXECUTED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} @ ${liveFillPrice} (Confluence: ${calibratedResult.confluenceGrade})`);
   }, []);
 
   // 4. Trigger 5-Agent Swarm (calibrating strictly against Canonical Chart Feed)
@@ -496,6 +497,13 @@ export default function Home() {
 
       triggerSwarm(selectedPair, timeframe, candles).then((freshConsensus) => {
         if (freshConsensus) {
+          // Real-time notification for major breaking news events
+          const breakingAlert = freshConsensus.agents?.news?.breakingAlert;
+          if (breakingAlert && lastBreakingNewsRef.current !== breakingAlert) {
+            lastBreakingNewsRef.current = breakingAlert;
+            showNotification(`🚨 BREAKING NEWS ALERT: ${breakingAlert}`);
+          }
+
           const isHighConfluence =
             freshConsensus.confluenceGrade === 'A+' ||
             freshConsensus.confluenceGrade === 'A' ||
@@ -916,11 +924,6 @@ export default function Home() {
         fillPrice: liveFillPrice,
       },
     };
-      isBreakevenLocked: false,
-      trailingStopActive: false,
-      targetCompressed: false,
-      confidenceAtEntry: consensus.overallConfidence || 80,
-    };
 
     const marginUsedForTrade = (executionLots * 100000) / 30;
     const updatedPositions = [newPosition, ...portfolio.positions];
@@ -945,12 +948,12 @@ export default function Home() {
       direction: tradeType,
       lots: signal.lots,
       targetEntry: signal.entry,
-      filledEntry: liveEntryPrice,
+      filledEntry: liveFillPrice,
       requestTimestamp: reqTimestamp,
       confirmTimestamp: Date.now(),
     });
 
-    showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${liveEntryPrice}`);
+    showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${liveFillPrice}`);
   };
 
   // Close Position & Save to Local Browser Storage (calibrated against live chart feed)
