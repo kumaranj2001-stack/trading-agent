@@ -44,7 +44,7 @@ interface AgentSwarmPanelProps {
   theme?: 'dark' | 'light';
 }
 
-const AgentSwarmPanelComponent: React.FC<AgentSwarmPanelProps> = ({
+export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
   technical,
   fundamental,
   forex,
@@ -608,5 +608,3 @@ const AgentSwarmPanelComponent: React.FC<AgentSwarmPanelProps> = ({
   </div>
 );
 };
-
-export const AgentSwarmPanel = React.memo(AgentSwarmPanelComponent);

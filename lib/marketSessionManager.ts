@@ -52,15 +52,6 @@ export class MarketSessionManager {
       statusLabel = 'MANUAL GLOBAL FREEZE';
       sessionName = 'EMERGENCY STATE FREEZE';
       reason = 'Global state manually frozen by risk governance or trader override.';
-    } else if (segment === 'CRYPTO') {
-      // ₿ 24/7/365 CONTINUOUS CRYPTOCURRENCY LIQUIDITY:
-      // Decentralized crypto spot and perpetual markets trade 24/7 without weekend halts or maintenance freeze.
-      isOpen = true;
-      status = 'OPEN';
-      statusLabel = '24/7 CONTINUOUS LIQUIDITY';
-      sessionName = 'GLOBAL CRYPTO DECENTRALIZED (24/7/365)';
-      reason = 'Cryptocurrency spot and institutional derivative markets operate 24 hours a day, 7 days a week, 365 days a year without weekend freeze.';
-      nextOpenDate = null;
     } else if (segment === 'INDIAN_MARKET') {
       // NSE India: Monday - Friday 09:15 to 15:30 IST (03:45 to 10:00 UTC)
       const isIsteWeekend = istDay === 0 || istDay === 6; // Sunday or Saturday

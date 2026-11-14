@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, MarketSessionInfo, TimeFrame, NavigationTab } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
-import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, CRYPTO_ASSETS } from '@/lib/marketData';
+import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES } from '@/lib/marketData';
 
 export interface HeaderProps {
   theme?: 'dark' | 'light';
@@ -83,24 +83,18 @@ export const Header: React.FC<HeaderProps> = ({
     ? INDIAN_MARKET_ASSETS 
     : marketSegment === 'METALS_COMMODITIES'
     ? METALS_COMMODITIES
-    : marketSegment === 'CRYPTO'
-    ? CRYPTO_ASSETS
     : FOREX_PAIRS;
 
   const segmentIcon = marketSegment === 'INDIAN_MARKET'
     ? '🇮🇳'
     : marketSegment === 'METALS_COMMODITIES'
     ? <Coins className="w-3.5 h-3.5 text-amber-400" />
-    : marketSegment === 'CRYPTO'
-    ? <span className="text-amber-400 font-extrabold text-sm leading-none">₿</span>
     : <Globe className="w-3.5 h-3.5 text-cyan-400" />;
 
   const segmentLabel = marketSegment === 'INDIAN_MARKET'
     ? 'NSE India'
     : marketSegment === 'METALS_COMMODITIES'
     ? 'Metals & Commodities'
-    : marketSegment === 'CRYPTO'
-    ? '24/7 Digital Assets'
     : 'Spot Forex';
 
   return (
@@ -217,22 +211,6 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <span>🇮🇳</span>
                 <span>NSE India</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  onSelectMarketSegment('CRYPTO');
-                  onSelectPair('BTC/USD');
-                }}
-                className={`px-2 sm:px-2.5 py-1 rounded flex items-center gap-1 transition-colors ${
-                  marketSegment === 'CRYPTO'
-                    ? 'bg-amber-600 text-white font-bold shadow-sm shadow-amber-500/20'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                title="24/7 Global Cryptocurrency Spot & Derivative Markets"
-              >
-                <span className="font-extrabold text-amber-400">₿</span>
-                <span>Crypto (BTC)</span>
               </button>
             </div>
 
@@ -369,21 +347,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <span>🇮🇳</span>
               <span>NSE</span>
-            </button>
-
-            <button
-              onClick={() => {
-                onSelectMarketSegment('CRYPTO');
-                onSelectPair('BTC/USD');
-              }}
-              className={`px-2 py-1 rounded flex items-center gap-1 transition-colors ${
-                marketSegment === 'CRYPTO'
-                  ? 'bg-amber-600 text-white font-bold shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <span className="font-extrabold text-amber-400">₿</span>
-              <span>BTC</span>
             </button>
           </div>
 

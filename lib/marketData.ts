@@ -12,10 +12,6 @@ export const INDIAN_MARKET_ASSETS: CurrencyPair[] = [
   'NIFTY 50', 'BANK NIFTY', 'USD/INR', 'EUR/INR', 'GBP/INR', 'RELIANCE', 'TCS', 'HDFC BANK', 'INFY'
 ];
 
-export const CRYPTO_ASSETS: CurrencyPair[] = [
-  'BTC/USD', 'ETH/USD', 'SOL/USD', 'BNB/USD', 'XRP/USD'
-];
-
 export const BASE_PRICES: Record<CurrencyPair, number> = {
   // Forex Majors (Live Market Parity)
   'EUR/USD': 1.1143,
@@ -43,12 +39,6 @@ export const BASE_PRICES: Record<CurrencyPair, number> = {
   'TCS': 2498.80,
   'HDFC BANK': 784.10,
   'INFY': 1171.60,
-  // ₿ 24/7 Cryptocurrency Spot & Institutional Derivatives Parity
-  'BTC/USD': 89450.00, // Bitcoin / USD Benchmark
-  'ETH/USD': 3180.50,  // Ethereum / USD
-  'SOL/USD': 214.20,   // Solana / USD
-  'BNB/USD': 642.10,   // Binance Coin / USD
-  'XRP/USD': 1.1540,   // Ripple / USD
 };
 
 export const PIP_VALUES: Record<CurrencyPair, number> = {
@@ -77,12 +67,6 @@ export const PIP_VALUES: Record<CurrencyPair, number> = {
   'TCS': 0.05,
   'HDFC BANK': 0.05,
   'INFY': 0.05,
-  // Crypto Point/Pip Metrics
-  'BTC/USD': 1.0,     // $1.00 USD standard BTC pip/point
-  'ETH/USD': 0.10,    // $0.10 USD
-  'SOL/USD': 0.01,    // $0.01 USD cent
-  'BNB/USD': 0.01,    // $0.01 USD cent
-  'XRP/USD': 0.0001,  // 0.0001 USD
 };
 
 // Maps internal symbols to real OANDA / TradingView widget symbols!
@@ -113,16 +97,9 @@ export const OANDA_TRADINGVIEW_MAP: Record<CurrencyPair, string> = {
   'TCS': 'NSE:TCS',
   'HDFC BANK': 'NSE:HDFCBANK',
   'INFY': 'NSE:INFY',
-  // ₿ 24/7 Cryptocurrency Spot Feeds
-  'BTC/USD': 'BINANCE:BTCUSDT',
-  'ETH/USD': 'BINANCE:ETHUSDT',
-  'SOL/USD': 'BINANCE:SOLUSDT',
-  'BNB/USD': 'BINANCE:BNBUSDT',
-  'XRP/USD': 'BINANCE:XRPUSDT',
 };
 
 export function getMarketSegmentForSymbol(symbol: CurrencyPair): MarketSegment {
-  if (CRYPTO_ASSETS.includes(symbol)) return 'CRYPTO';
   if (INDIAN_MARKET_ASSETS.includes(symbol)) return 'INDIAN_MARKET';
   if (METALS_COMMODITIES.includes(symbol)) return 'METALS_COMMODITIES';
   return 'FOREX';
@@ -139,31 +116,11 @@ export function generateCandles(pair: CurrencyPair, timeframe: TimeFrame, count:
   const isPlatinum = pair === 'XPT/USD';
   const isCopper = pair === 'COPPER';
   const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
-  const isBtc = pair === 'BTC/USD';
-  const isEth = pair === 'ETH/USD';
-  const isSol = pair === 'SOL/USD';
-  const isBnb = pair === 'BNB/USD';
-  const isXrp = pair === 'XRP/USD';
 
   let pip = 0.0001;
   let volatility = 0.0012;
 
-  if (isBtc) {
-    pip = 1.0;
-    volatility = 185.0; // ~$185 volatility per BTC candle
-  } else if (isEth) {
-    pip = 0.10;
-    volatility = 16.5; // ~$16.5 volatility per ETH candle
-  } else if (isSol) {
-    pip = 0.01;
-    volatility = 2.40;
-  } else if (isBnb) {
-    pip = 0.01;
-    volatility = 3.60;
-  } else if (isXrp) {
-    pip = 0.0001;
-    volatility = 0.018;
-  } else if (isIndianIndex) {
+  if (isIndianIndex) {
     pip = 0.05;
     volatility = basePrice * 0.0018; // ~40-60 points
   } else if (isIndianStock) {
@@ -216,8 +173,7 @@ export function generateCandles(pair: CurrencyPair, timeframe: TimeFrame, count:
     const open = currentClose;
     
     let decimalPlaces = 5;
-    if (isBtc || isEth || isSol || isBnb || isIndianIndex || isIndianStock || isGold || isPlatinum || isOil) decimalPlaces = 2;
-    else if (isXrp) decimalPlaces = 4;
+    if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil) decimalPlaces = 2;
     else if (isSilver || isJpy || isRupeePair) decimalPlaces = 3;
     else if (isCopper) decimalPlaces = 4;
 
@@ -426,8 +382,6 @@ export const MACRO_ECONOMIC_CALENDAR: MacroIndicator[] = [
 ];
 
 export const CURRENCY_STRENGTH_INDEX: CurrencyStrength[] = [
-  { currency: 'BTC', score: 8.9, trend: 'STRENGTHENING' },
-  { currency: 'ETH', score: 7.6, trend: 'STRENGTHENING' },
   { currency: 'USD', score: 7.8, trend: 'STRENGTHENING' },
   { currency: 'XAU (Gold)', score: 9.2, trend: 'STRENGTHENING' },
   { currency: 'INR', score: 7.2, trend: 'STABLE' },

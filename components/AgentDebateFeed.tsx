@@ -80,7 +80,7 @@ const PRESET_SCENARIOS = [
   'Liquidity Sweep & Stop Run Invalidation',
 ];
 
-const AgentDebateFeedComponent: React.FC<AgentDebateFeedProps> = ({
+export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
   messages,
   candles = [],
   pair = 'EUR/USD',
@@ -1340,5 +1340,3 @@ const AgentDebateFeedComponent: React.FC<AgentDebateFeedProps> = ({
     </div>
   );
 };
-
-export const AgentDebateFeed = React.memo(AgentDebateFeedComponent);

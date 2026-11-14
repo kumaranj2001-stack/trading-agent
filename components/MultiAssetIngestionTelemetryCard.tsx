@@ -32,7 +32,7 @@ interface MultiAssetIngestionTelemetryCardProps {
   theme?: 'dark' | 'light';
 }
 
-export const MultiAssetIngestionTelemetryCardComponent: React.FC<MultiAssetIngestionTelemetryCardProps> = ({
+export const MultiAssetIngestionTelemetryCard: React.FC<MultiAssetIngestionTelemetryCardProps> = ({
   selectedPair,
   onSelectPair,
   theme = 'dark',
@@ -40,16 +40,16 @@ export const MultiAssetIngestionTelemetryCardComponent: React.FC<MultiAssetInges
   const [telemetry, setTelemetry] = useState<IngestionEngineTelemetry>(() => 
     multiAssetIngestionEngine.getTelemetry()
   );
-  const [activeAssetTab, setActiveAssetTab] = useState<'ALL' | 'CRYPTO' | 'FOREX' | 'METALS_COMMODITIES' | 'EQUITIES' | 'INDICES'>('ALL');
+  const [activeAssetTab, setActiveAssetTab] = useState<'ALL' | 'FOREX' | 'METALS_COMMODITIES' | 'EQUITIES' | 'INDICES'>('ALL');
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
   useEffect(() => {
     // Start background ingestion daemon if not already running
-    const stopDaemon = multiAssetIngestionEngine.startIngestionDaemon(2500);
+    const stopDaemon = multiAssetIngestionEngine.startIngestionDaemon(1500);
 
     const interval = setInterval(() => {
       setTelemetry(multiAssetIngestionEngine.getTelemetry());
-    }, 2500);
+    }, 1500);
 
     return () => {
       clearInterval(interval);
@@ -168,8 +168,8 @@ export const MultiAssetIngestionTelemetryCardComponent: React.FC<MultiAssetInges
 
       {/* Asset Class Filter Tabs */}
       <div className="flex items-center justify-between pb-2 mb-2 flex-wrap gap-2">
-        <div className="flex items-center gap-1 text-[10px] flex-wrap">
-          {(['ALL', 'CRYPTO', 'FOREX', 'METALS_COMMODITIES', 'EQUITIES', 'INDICES'] as const).map(tab => (
+        <div className="flex items-center gap-1 text-[10px]">
+          {(['ALL', 'FOREX', 'METALS_COMMODITIES', 'EQUITIES', 'INDICES'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveAssetTab(tab)}
@@ -181,7 +181,7 @@ export const MultiAssetIngestionTelemetryCardComponent: React.FC<MultiAssetInges
                   : 'bg-terminal-900 text-slate-400 hover:text-white border border-terminal-border'
               }`}
             >
-              {tab === 'METALS_COMMODITIES' ? 'METALS & COMMODITIES' : tab === 'CRYPTO' ? '₿ 24/7 CRYPTO' : tab}
+              {tab === 'METALS_COMMODITIES' ? 'METALS & COMMODITIES' : tab}
             </button>
           ))}
         </div>
@@ -262,5 +262,3 @@ export const MultiAssetIngestionTelemetryCardComponent: React.FC<MultiAssetInges
     </div>
   );
 };
-
-export const MultiAssetIngestionTelemetryCard = React.memo(MultiAssetIngestionTelemetryCardComponent);

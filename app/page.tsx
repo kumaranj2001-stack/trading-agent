@@ -57,7 +57,6 @@ import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
 import { ExecutionTelemetryEngine } from '@/lib/executionTelemetryEngine';
 import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 import { preExecutionVerificationEngine } from '@/lib/preExecutionVerificationEngine';
-import { postTradeDaemon } from '@/lib/postTradeDaemon';
 
 const executionTelemetryEngine = ExecutionTelemetryEngine.getInstance();
 
@@ -111,9 +110,6 @@ export default function Home() {
 
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
-  const candlesRef = useRef<Candle[]>(candles);
-  candlesRef.current = candles;
-
   // Hydrate theme from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -126,11 +122,6 @@ export default function Home() {
     }
   }, []);
 
-  const showNotification = useCallback((msg: string) => {
-    setNotification(msg);
-    setTimeout(() => setNotification(null), 4500);
-  }, []);
-
   const handleToggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
@@ -140,6 +131,11 @@ export default function Home() {
       document.documentElement.classList.add(nextTheme);
     }
     showNotification(`Switched to ${nextTheme === 'light' ? 'Light' : 'Dark'} Mode.`);
+  };
+
+  const showNotification = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 4500);
   };
 
   // 1. Initial Load from Local Storage & Real-Time Firebase Sync
@@ -240,7 +236,6 @@ export default function Home() {
 
         // Live update active position P&L strictly from Chart Feed price
         setPortfolio(prev => {
-          if (!prev.positions || prev.positions.length === 0) return prev;
           const { positions: updatedPositions, totalOpenPnl, hasChanged } = 
             LiveMarketFeedManager.calibratePositions(prev.positions, (sym) => {
               if (sym === pair) return livePrice;
@@ -254,6 +249,7 @@ export default function Home() {
             positions: updatedPositions,
             freeMargin: Math.max(0, prev.balance - prev.marginUsed + totalOpenPnl),
           };
+          BrowserStorageManager.savePortfolio(newPortfolio);
           return newPortfolio;
         });
       }
@@ -391,7 +387,7 @@ export default function Home() {
         marginUsed: prev.marginUsed + marginNeeded,
         freeMargin: Math.max(0, prev.balance - (prev.marginUsed + marginNeeded)),
       };
-      BrowserStorageManager.savePortfolio(updated, true);
+      BrowserStorageManager.savePortfolio(updated);
       return updated;
     });
 
@@ -479,17 +475,6 @@ export default function Home() {
           }
         }
 
-        const hasAnyInvalidationChanged = reevaluated.some((pos, idx) => {
-          const prevPos = prev.positions[idx];
-          return (
-            pos.invalidation?.isInvalidated !== prevPos?.invalidation?.isInvalidated ||
-            pos.invalidation?.isBreakevenLocked !== prevPos?.invalidation?.isBreakevenLocked ||
-            pos.invalidation?.targetCompressed !== prevPos?.invalidation?.targetCompressed ||
-            pos.invalidation?.structuralOverrideTriggered !== prevPos?.invalidation?.structuralOverrideTriggered
-          );
-        });
-        if (!hasAnyInvalidationChanged) return prev;
-
         return { ...prev, positions: reevaluated };
       });
 
@@ -518,11 +503,7 @@ export default function Home() {
         '15-Second Recalibration Triggered: Automated 5-engine multi-desk synthesis cycle elapsed.'
       );
 
-      const latestCandles = candlesRef.current.length > 0
-        ? candlesRef.current
-        : LiveMarketFeedManager.getCanonicalCandles(selectedPair, timeframe);
-
-      triggerSwarm(selectedPair, timeframe, latestCandles).then((freshConsensus) => {
+      triggerSwarm(selectedPair, timeframe, candles).then((freshConsensus) => {
         if (freshConsensus) {
           const isHighConfluence =
             freshConsensus.confluenceGrade === 'A+' ||
@@ -546,7 +527,7 @@ export default function Home() {
     }, 15000); // Institutional 15-second cadence
 
     return () => clearInterval(recalibrationTimer);
-  }, [selectedPair, timeframe, triggerSwarm, showNotification]);
+  }, [selectedPair, timeframe, candles, triggerSwarm, showNotification]);
 
   // 6. Unidirectional Live Market Data Feed Engine (Single Source of Truth)
   useEffect(() => {
@@ -571,15 +552,11 @@ export default function Home() {
 
       // 4. Dynamically calibrate active position values, P&L, and Second-by-Second Technical/Fundamental Invalidation
       setPortfolio(prev => {
-        if (!prev.positions || prev.positions.length === 0) return prev;
-
-        const { positions: calibratedPositions, totalOpenPnl, hasChanged } = 
+        const { positions: calibratedPositions, totalOpenPnl } = 
           LiveMarketFeedManager.calibratePositions(prev.positions, (sym) => {
             if (sym === selectedPair) return event.livePrice;
             return LiveMarketFeedManager.getCanonicalPrice(sym);
           });
-
-        if (!hasChanged) return prev;
 
         // 🛡️ Evaluate second-by-second technical & fundamental health on every running position
         const updatedPositions = calibratedPositions.map(pos => {
@@ -633,11 +610,13 @@ export default function Home() {
           }
         }
 
-        return {
+        const updated = {
           ...prev,
           positions: updatedPositions,
           freeMargin: Math.max(0, prev.balance - prev.marginUsed + totalOpenPnl),
         };
+        BrowserStorageManager.savePortfolio(updated);
+        return updated;
       });
     });
 
@@ -648,65 +627,23 @@ export default function Home() {
   }, [selectedPair, timeframe]);
 
   // Handle Pair Switch
-  const handleSelectPair = useCallback((newPair: CurrencyPair) => {
+  const handleSelectPair = (newPair: CurrencyPair) => {
     setSelectedPair(newPair);
     setMarketSegment(getMarketSegmentForSymbol(newPair));
-  }, []);
+  };
 
-  // Handle Market Segment Switch (Forex vs Metals vs Indian Market vs 24/7 Crypto)
-  const handleSelectMarketSegment = useCallback((newSegment: MarketSegment) => {
+  // Handle Market Segment Switch (Forex vs Metals vs Indian Market)
+  const handleSelectMarketSegment = (newSegment: MarketSegment) => {
     setMarketSegment(newSegment);
-    if (newSegment === 'CRYPTO') {
-      setSelectedPair('BTC/USD');
-    } else if (newSegment === 'INDIAN_MARKET') {
-      setSelectedPair('NIFTY 50');
-    } else if (newSegment === 'METALS_COMMODITIES') {
-      setSelectedPair('XAU/USD');
-    } else if (newSegment === 'FOREX') {
-      setSelectedPair('EUR/USD');
-    }
-  }, []);
-
-  // Sync open positions to the Post-Trade Daemon for tick-by-tick breakeven monitoring
-  useEffect(() => {
-    postTradeDaemon.syncPositions(portfolio.positions);
-  }, [portfolio.positions]);
-
-  // Subscribe to Post-Trade Daemon automated breakeven adjustments
-  useEffect(() => {
-    const stopDaemon = postTradeDaemon.startDaemon();
-    const unsubscribe = postTradeDaemon.subscribe((event) => {
-      if (event.action === 'BREAKEVEN_LOCKED' || event.action === 'TRAILING_STOP_RATCHETED') {
-        setPortfolio(prev => ({
-          ...prev,
-          positions: prev.positions.map(p => {
-            if (p.id === event.positionId && event.newStopLoss) {
-              return {
-                ...p,
-                stopLoss: event.newStopLoss,
-                isBreakevenLocked: true,
-                trailingStopActive: true,
-              };
-            }
-            return p;
-          }),
-        }));
-      }
-    });
-
-    return () => {
-      unsubscribe();
-      stopDaemon();
-    };
-  }, []);
+  };
 
   // Handle Timeframe Switch
-  const handleSelectTimeframe = useCallback((newTf: TimeFrame) => {
+  const handleSelectTimeframe = (newTf: TimeFrame) => {
     setTimeframe(newTf);
-  }, []);
+  };
 
   // Toggle execution mode
-  const handleToggleExecutionMode = useCallback(() => {
+  const handleToggleExecutionMode = () => {
     setExecutionMode(prev => {
       let next: ExecutionMode = 'MANUAL';
       if (prev === 'MANUAL') next = 'SEMI_AUTONOMOUS';
@@ -714,7 +651,7 @@ export default function Home() {
       BrowserStorageManager.saveExecutionMode(next);
       return next;
     });
-  }, []);
+  };
 
   // Force Scrape 38 Financial Websites on demand
   const handleForceScrape = async () => {
@@ -993,7 +930,7 @@ export default function Home() {
     };
 
     setPortfolio(updatedPortfolio);
-    BrowserStorageManager.savePortfolio(updatedPortfolio, true);
+    BrowserStorageManager.savePortfolio(updatedPortfolio);
 
     // 📓 Persistent Trading Journal: Auto-log entry credentials, stop-loss ratios & trade parameters
     JournalStorageManager.recordTradeOpen(newPosition, consensus, executionMode);
@@ -1070,7 +1007,7 @@ export default function Home() {
     };
 
     setPortfolio(updatedPortfolio);
-    BrowserStorageManager.savePortfolio(updatedPortfolio, true);
+    BrowserStorageManager.savePortfolio(updatedPortfolio);
 
     // 📓 Immutable Event-Driven Data Bus: Transmit complete execution payload directly to journal
     const closeResult = JournalStorageManager.recordTradeClose(
@@ -1538,9 +1475,6 @@ export default function Home() {
         theme={theme}
         onToggleTheme={handleToggleTheme}
         selectedPair={selectedPair}
-        marketSegment={marketSegment}
-        onSelectMarketSegment={handleSelectMarketSegment}
-        onSelectPair={handleSelectPair}
       />
     </div>
   );

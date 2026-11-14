@@ -21,7 +21,7 @@ interface ActiveEntryInvalidationBannerProps {
   executionMode?: string;
 }
 
-const ActiveEntryInvalidationBannerComponent: React.FC<ActiveEntryInvalidationBannerProps> = ({
+export const ActiveEntryInvalidationBanner: React.FC<ActiveEntryInvalidationBannerProps> = ({
   position,
   onClosePosition,
   executionMode = 'MANUAL',
@@ -232,5 +232,3 @@ const ActiveEntryInvalidationBannerComponent: React.FC<ActiveEntryInvalidationBa
     </div>
   );
 };
-
-export const ActiveEntryInvalidationBanner = React.memo(ActiveEntryInvalidationBannerComponent);

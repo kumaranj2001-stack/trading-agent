@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState } from 'react';
 import { Candle, CurrencyPair, SignalDirection, TechnicalIndicators, TimeFrame } from '@/lib/types';
 import { BarChart2, Eye, EyeOff, LayoutGrid, MonitorPlay } from 'lucide-react';
 import { calculateEMA, calculateRSI } from '@/lib/indicators';
@@ -18,7 +18,7 @@ interface ChartViewProps {
   theme?: 'dark' | 'light';
 }
 
-const ChartViewComponent: React.FC<ChartViewProps> = ({
+export const ChartView: React.FC<ChartViewProps> = ({
   candles = [],
   pair,
   timeframe,
@@ -32,11 +32,8 @@ const ChartViewComponent: React.FC<ChartViewProps> = ({
   const [chartMode, setChartMode] = useState<'ALGO_SWARM' | 'OANDA_LIVE'>('OANDA_LIVE');
   const [showIndicators, setShowIndicators] = useState(true);
   const [showRsi, setShowRsi] = useState(true);
-  const [showFib, setShowFib] = useState(true);
-  const [showBuffer, setShowBuffer] = useState(true);
   const [hoveredCandle, setHoveredCandle] = useState<Candle | null>(null);
 
-  const isCrypto = pair === 'BTC/USD' || pair === 'ETH/USD' || pair === 'SOL/USD' || pair === 'BNB/USD' || pair === 'XRP/USD';
   const isJpy = pair.includes('JPY');
   const isIndianIndex = pair === 'NIFTY 50' || pair === 'BANK NIFTY';
   const isIndianStock = pair === 'RELIANCE' || pair === 'TCS' || pair === 'HDFC BANK' || pair === 'INFY';
@@ -48,65 +45,25 @@ const ChartViewComponent: React.FC<ChartViewProps> = ({
   const isRupee = pair.includes('/INR');
 
   let decimalCount = 5;
-  if (isCrypto) decimalCount = pair === 'XRP/USD' ? 4 : 2;
-  else if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil) decimalCount = 2;
+  if (isIndianIndex || isIndianStock || isGold || isPlatinum || isOil) decimalCount = 2;
   else if (isSilver || isJpy || isRupee) decimalCount = 3;
   else if (isCopper) decimalCount = 4;
 
-  const pipMultiplier = isCrypto ? (pair === 'BTC/USD' ? 1.0 : 0.10) : isGold ? 0.10 : isJpy ? 0.01 : 0.0001;
-  const bufferPips = isCrypto ? (pair === 'BTC/USD' ? 25 : 15) : 15;
-  const bufferUpper = entryPrice ? entryPrice + (bufferPips * pipMultiplier) : undefined;
-  const bufferLower = entryPrice ? entryPrice - (bufferPips * pipMultiplier) : undefined;
-
   const safeCandles = candles && candles.length > 0 ? candles : [];
-  const isBuyBias = signalBias?.includes('BUY');
+  const closes = safeCandles.length > 0 ? safeCandles.map(c => c.close) : [1.0];
+  const ema20 = calculateEMA(closes, 20);
+  const ema50 = calculateEMA(closes, 50);
+  const rsi = calculateRSI(closes, 14);
 
-  const { ema20, ema50, rsi, minPrice, maxPrice, priceRange, fibLevels } = useMemo(() => {
-    const closes = safeCandles.length > 0 ? safeCandles.map(c => c.close) : [1.0];
-    const ema20Calc = calculateEMA(closes, 20);
-    const ema50Calc = calculateEMA(closes, 50);
-    const rsiCalc = calculateRSI(closes, 14);
+  const prices = safeCandles.flatMap(c => [c.high, c.low]);
+  if (stopLoss && Number.isFinite(stopLoss)) prices.push(stopLoss);
+  if (takeProfit && Number.isFinite(takeProfit)) prices.push(takeProfit);
 
-    const prices = safeCandles.flatMap(c => [c.high, c.low]);
-    if (entryPrice && Number.isFinite(entryPrice)) prices.push(entryPrice);
-    if (stopLoss && Number.isFinite(stopLoss)) prices.push(stopLoss);
-    if (takeProfit && Number.isFinite(takeProfit)) prices.push(takeProfit);
-
-    const safePrices = prices.length > 0 ? prices : [1.0, 1.01];
-    const minP = Math.min(...safePrices) * 0.9995;
-    const maxP = Math.max(...safePrices) * 1.0005;
-    const range = Math.max(0.00001, maxP - minP);
-
-    const swingHigh = Math.max(...safeCandles.map(c => c.high), takeProfit || maxP);
-    const swingLow = Math.min(...safeCandles.map(c => c.low), stopLoss || minP);
-    const swingDiff = Math.max(0.0001, swingHigh - swingLow);
-
-    const fibRatios = [
-      { ratio: 0.236, label: '23.6%', color: '#94a3b8' },
-      { ratio: 0.382, label: '38.2%', color: '#38bdf8' },
-      { ratio: 0.500, label: '50.0%', color: '#f59e0b' },
-      { ratio: 0.618, label: '61.8% (Golden)', color: '#10b981' },
-      { ratio: 0.786, label: '78.6%', color: '#a855f7' },
-      { ratio: 1.618, label: '161.8% (Ext)', color: '#ec4899' },
-    ];
-
-    const fibs = fibRatios.map(f => {
-      const price = isBuyBias
-        ? swingLow + swingDiff * f.ratio
-        : swingHigh - swingDiff * f.ratio;
-      return { ...f, price };
-    });
-
-    return {
-      ema20: ema20Calc,
-      ema50: ema50Calc,
-      rsi: rsiCalc,
-      minPrice: minP,
-      maxPrice: maxP,
-      priceRange: range,
-      fibLevels: fibs,
-    };
-  }, [safeCandles, entryPrice, stopLoss, takeProfit, isBuyBias]);
+  // Safe min/max to prevent Infinity if candles is empty
+  const safePrices = prices.length > 0 ? prices : [1.0, 1.01];
+  const minPrice = Math.min(...safePrices) * 0.9995;
+  const maxPrice = Math.max(...safePrices) * 1.0005;
+  const priceRange = Math.max(0.00001, maxPrice - minPrice);
 
   const chartHeight = 280;
   const rsiHeight = 80;
@@ -212,26 +169,6 @@ const ChartViewComponent: React.FC<ChartViewProps> = ({
                 <BarChart2 className="w-3 h-3 text-purple-400" />
                 <span>RSI</span>
               </button>
-
-              <button
-                onClick={() => setShowFib(!showFib)}
-                className={`px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-[11px] flex items-center gap-1 border transition-colors ${
-                  showFib ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 font-bold' : 'bg-terminal-800 text-slate-400 border-terminal-border'
-                }`}
-                title="Toggle Fibonacci Retracements & Expansions"
-              >
-                <span>FIB</span>
-              </button>
-
-              <button
-                onClick={() => setShowBuffer(!showBuffer)}
-                className={`px-2 py-0.5 sm:py-1 rounded text-[10px] sm:text-[11px] flex items-center gap-1 border transition-colors ${
-                  showBuffer ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40 font-bold' : 'bg-terminal-800 text-slate-400 border-terminal-border'
-                }`}
-                title="Toggle Dynamic Pip Entry Buffer Zone"
-              >
-                <span>BUFFER</span>
-              </button>
             </div>
           )}
         </div>
@@ -263,62 +200,6 @@ const ChartViewComponent: React.FC<ChartViewProps> = ({
                   </g>
                 );
               })}
-
-              {/* Dynamic Pip Entry Buffer Zone */}
-              {showBuffer && entryPrice && bufferUpper && bufferLower && (
-                <g>
-                  <rect
-                    x="0"
-                    y={Math.min(getY(bufferUpper), getY(bufferLower))}
-                    width={chartWidth}
-                    height={Math.max(4, Math.abs(getY(bufferUpper) - getY(bufferLower)))}
-                    fill="rgba(6, 182, 212, 0.08)"
-                    stroke="rgba(6, 182, 212, 0.25)"
-                    strokeDasharray="2 2"
-                  />
-                  <text x="14" y={Math.min(getY(bufferUpper), getY(bufferLower)) + 11} fill="#06b6d4" fontSize="8" fontFamily="monospace" fontWeight="bold">
-                    ±{bufferPips} PIP DYNAMIC EXECUTION BUFFER
-                  </text>
-                </g>
-              )}
-
-              {/* Fibonacci Expansions & Retracements */}
-              {showFib && fibLevels.map((fib) => (
-                <g key={fib.label}>
-                  <line
-                    x1="0"
-                    y1={getY(fib.price)}
-                    x2={chartWidth}
-                    y2={getY(fib.price)}
-                    stroke={fib.color}
-                    strokeWidth="1"
-                    strokeDasharray="3 3"
-                    opacity="0.65"
-                  />
-                  <text x={chartWidth - 110} y={getY(fib.price) - 3} fill={fib.color} fontSize="8" fontFamily="monospace">
-                    FIB {fib.label}: {fib.price.toFixed(decimalCount)}
-                  </text>
-                </g>
-              ))}
-
-              {/* Anchored Entry Line */}
-              {entryPrice && Number.isFinite(entryPrice) && (
-                <g>
-                  <line
-                    x1="0"
-                    y1={getY(entryPrice)}
-                    x2={chartWidth}
-                    y2={getY(entryPrice)}
-                    stroke="#06b6d4"
-                    strokeWidth="1.5"
-                    strokeDasharray="4 2"
-                  />
-                  <rect x="10" y={getY(entryPrice) - 16} width="145" height="15" fill="#083344" rx="2" opacity="0.9" />
-                  <text x="14" y={getY(entryPrice) - 5} fill="#67e8f9" fontSize="9" fontFamily="monospace" fontWeight="bold">
-                    ANCHORED ENTRY: {entryPrice.toFixed(decimalCount)}
-                  </text>
-                </g>
-              )}
 
               {/* Stop Loss Line */}
               {stopLoss && Number.isFinite(stopLoss) && (
@@ -429,5 +310,3 @@ const ChartViewComponent: React.FC<ChartViewProps> = ({
     </div>
   );
 };
-
-export const ChartView = memo(ChartViewComponent);

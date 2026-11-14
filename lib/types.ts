@@ -1,4 +1,4 @@
-export type MarketSegment = 'FOREX' | 'METALS_COMMODITIES' | 'INDIAN_MARKET' | 'CRYPTO';
+export type MarketSegment = 'FOREX' | 'METALS_COMMODITIES' | 'INDIAN_MARKET';
 
 export type ForexPair = 
   | 'EUR/USD' 
@@ -29,14 +29,7 @@ export type IndianMarketAsset =
   | 'HDFC BANK' 
   | 'INFY';
 
-export type CryptoAsset =
-  | 'BTC/USD' // Bitcoin / USD (Primary Crypto Benchmark)
-  | 'ETH/USD' // Ethereum / USD
-  | 'SOL/USD' // Solana / USD
-  | 'BNB/USD' // Binance Coin / USD
-  | 'XRP/USD'; // Ripple / USD
-
-export type TradableSymbol = ForexPair | MetalCommodityAsset | IndianMarketAsset | CryptoAsset;
+export type TradableSymbol = ForexPair | MetalCommodityAsset | IndianMarketAsset;
 
 export type CurrencyPair = TradableSymbol;
 
@@ -1302,7 +1295,7 @@ export interface RiskGovernanceGatekeeperResult {
 
 export interface MultiAssetNormalizedTick {
   symbol: CurrencyPair;
-  assetClass: 'FOREX' | 'METALS_COMMODITIES' | 'EQUITIES' | 'INDICES' | 'CRYPTO';
+  assetClass: 'FOREX' | 'METALS_COMMODITIES' | 'EQUITIES' | 'INDICES';
   liveBid: number;
   liveAsk: number;
   midPrice: number;
@@ -2248,40 +2241,4 @@ export interface VisionAtlasPayload {
     citedFundamentalModelIds: string[];
     executiveNarrative: string;
   };
-}
-
-export type PostTradeActionType = 
-  | 'BREAKEVEN_LOCKED'
-  | 'TRAILING_STOP_RATCHETED'
-  | 'TARGET_COMPRESSED'
-  | 'STRUCTURAL_INVALIDATION_WARNING'
-  | 'POSITION_PROTECTED';
-
-export interface PostTradeEvent {
-  id: string;
-  positionId: string;
-  symbol: CurrencyPair;
-  action: PostTradeActionType;
-  triggerPrice: number;
-  oldStopLoss?: number;
-  newStopLoss?: number;
-  oldTakeProfit?: number;
-  newTakeProfit?: number;
-  rMultiple: number;
-  pnlDollar: number;
-  pnlPips: number;
-  timestamp: number;
-  detail: string;
-}
-
-export interface PostTradeDaemonTelemetry {
-  isRunning: boolean;
-  activePositionsMonitored: number;
-  totalTicksEvaluated: number;
-  breakevenAdjustmentsLocked: number;
-  trailingStopAdjustments: number;
-  targetCompressions: number;
-  averageProcessingLatencyMs: number;
-  lastTickTimestamp: number;
-  recentEvents: PostTradeEvent[];
 }

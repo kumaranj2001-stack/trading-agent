@@ -3,7 +3,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, Coins, Snowflake, Lock } from 'lucide-react';
 import { CurrencyPair, MarketSegment, MarketSessionInfo } from '@/lib/types';
-import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES, CRYPTO_ASSETS } from '@/lib/marketData';
+import { FOREX_PAIRS, INDIAN_MARKET_ASSETS, METALS_COMMODITIES } from '@/lib/marketData';
 
 interface TickerItem {
   pair: CurrencyPair;
@@ -22,7 +22,7 @@ interface TickerBarProps {
   sessionInfo?: MarketSessionInfo | null;
 }
 
-const TickerBarComponent: React.FC<TickerBarProps> = ({ 
+export const TickerBar: React.FC<TickerBarProps> = ({ 
   rates, 
   selectedPair, 
   onSelectPair,
@@ -32,12 +32,10 @@ const TickerBarComponent: React.FC<TickerBarProps> = ({
 }) => {
   const isIndian = marketSegment === 'INDIAN_MARKET';
   const isMetals = marketSegment === 'METALS_COMMODITIES';
-  const isCrypto = marketSegment === 'CRYPTO';
 
   const displayRates = rates.filter(r => {
     if (isIndian) return INDIAN_MARKET_ASSETS.includes(r.pair);
     if (isMetals) return METALS_COMMODITIES.includes(r.pair);
-    if (isCrypto) return CRYPTO_ASSETS.includes(r.pair);
     return FOREX_PAIRS.includes(r.pair);
   });
 
@@ -53,8 +51,8 @@ const TickerBarComponent: React.FC<TickerBarProps> = ({
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           )}
           {isMarketFrozen
-            ? `${isIndian ? '🇮🇳 NSE' : isMetals ? '🏆 COMEX' : isCrypto ? '₿ CRYPTO' : '🌐 FX'} CLOSED • STATE FROZEN`
-            : isCrypto ? '₿ 24/7 CRYPTO LIQUIDITY' : isIndian ? '🇮🇳 NSE/BSE LIVE' : isMetals ? '🏆 PRECIOUS METALS & CRUDE' : '🌐 GLOBAL FX RATES'}
+            ? `${isIndian ? '🇮🇳 NSE' : isMetals ? '🏆 COMEX' : '🌐 FX'} CLOSED • STATE FROZEN`
+            : isIndian ? '🇮🇳 NSE/BSE LIVE' : isMetals ? '🏆 PRECIOUS METALS & CRUDE' : '🌐 GLOBAL FX RATES'}
         </span>
 
         {/* Live WebSocket Streaming Indicator (Zero Delayed Polls) */}
@@ -68,7 +66,6 @@ const TickerBarComponent: React.FC<TickerBarProps> = ({
           const isSelected = item.pair === selectedPair;
           const isPositive = item.change24h >= 0;
           const isJpy = item.pair.includes('JPY');
-          const isCryptoPair = CRYPTO_ASSETS.includes(item.pair);
           const isIndianIndex = item.pair === 'NIFTY 50' || item.pair === 'BANK NIFTY';
           const isStock = item.pair === 'RELIANCE' || item.pair === 'TCS' || item.pair === 'HDFC BANK' || item.pair === 'INFY';
           const isGold = item.pair === 'XAU/USD';
@@ -78,13 +75,11 @@ const TickerBarComponent: React.FC<TickerBarProps> = ({
           const isOil = item.pair === 'WTI_CRUDE' || item.pair === 'BRENT_CRUDE';
 
           let decimalCount = 5;
-          if (isCryptoPair) decimalCount = item.pair === 'XRP/USD' ? 4 : 2;
-          else if (isIndianIndex || isStock || isGold || isPlatinum || isOil) decimalCount = 2;
+          if (isIndianIndex || isStock || isGold || isPlatinum || isOil) decimalCount = 2;
           else if (isSilver || isJpy || item.pair.includes('/INR')) decimalCount = 3;
           else if (isCopper) decimalCount = 4;
 
           const formatDisplayPrice = () => {
-            if (isCryptoPair) return `$${item.price.toLocaleString('en-US', { minimumFractionDigits: decimalCount, maximumFractionDigits: decimalCount })}`;
             if (isIndianIndex) return `₹${item.price.toLocaleString('en-IN')}`;
             if (isGold || isSilver || isPlatinum || isOil) return `$${item.price.toFixed(decimalCount)}`;
             return item.price.toFixed(decimalCount);
@@ -122,5 +117,3 @@ const TickerBarComponent: React.FC<TickerBarProps> = ({
     </div>
   );
 };
-
-export const TickerBar = React.memo(TickerBarComponent);

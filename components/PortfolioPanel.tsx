@@ -30,7 +30,7 @@ interface PortfolioPanelProps {
   theme?: 'dark' | 'light';
 }
 
-const PortfolioPanelComponent: React.FC<PortfolioPanelProps> = ({ 
+export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({ 
   portfolio, 
   onClosePosition,
   executionMode = 'MANUAL',
@@ -467,5 +467,3 @@ const PortfolioPanelComponent: React.FC<PortfolioPanelProps> = ({
     </div>
   );
 };
-
-export const PortfolioPanel = React.memo(PortfolioPanelComponent);
