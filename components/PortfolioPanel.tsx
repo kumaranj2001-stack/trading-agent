@@ -365,6 +365,9 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
                                   {pos.invalidationPriceLevel && (
                                     <span>Trigger Level: <strong className="text-rose-400">{pos.invalidationPriceLevel}</strong></span>
                                   )}
+                                  {pos.atomicVerification && (
+                                    <span className="text-cyan-400">Tick ID: {pos.atomicVerification.atomicTickId}</span>
+                                  )}
                                   {pos.chiefReviewerSignature && (
                                     <span className="text-emerald-400">Cleared: {pos.chiefReviewerSignature}</span>
                                   )}

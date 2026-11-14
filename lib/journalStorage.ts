@@ -241,6 +241,8 @@ export class JournalStorageManager {
       tags: [consensus?.marketSegment || 'FOREX', consensus?.confluenceGrade || 'A', executionMode],
       isImmutableLedgerRecord: true,
       entrySnapshot,
+      atomicVerification: pos.atomicVerification,
+      executionBidAsk: pos.executionBidAsk,
     };
 
     this.saveJournal(entry);

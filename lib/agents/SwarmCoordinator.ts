@@ -452,10 +452,23 @@ export class SwarmCoordinator {
       centralBankBias: fundamental.baseCurrencyOutlook?.centralBankStance,
     });
 
+    // 🛡️ Strict Risk Management Workflow Priority Verification
+    // Sizing is never speculative but strictly proportional to validated risk parameters.
+    const riskWorkflowCompleted = !!(
+      risk &&
+      risk.parameters &&
+      risk.parameters.positionSizeLots > 0 &&
+      risk.parameters.stopLoss > 0 &&
+      risk.parameters.takeProfit1 > 0
+    );
+
     let executionAuthorized = true;
     let executionStatus: 'READY' | 'EXECUTED' | 'VETOED' = 'READY';
 
-    if (chiefReviewerAudit.status === 'VETOED') {
+    if (!riskWorkflowCompleted || overallConfidence < 68) {
+      executionAuthorized = false;
+      executionStatus = 'VETOED';
+    } else if (chiefReviewerAudit.status === 'VETOED') {
       executionAuthorized = false;
       executionStatus = 'VETOED';
     } else if (!preExecutionFilter.allowed) {
@@ -512,7 +525,11 @@ export class SwarmCoordinator {
         status: executionStatus,
         gradingTier: confluenceGrade,
         tierDescription: !executionAuthorized 
-          ? (chiefReviewerAudit.status === 'VETOED'
+          ? (!riskWorkflowCompleted 
+              ? 'VETOED: Risk management workflow incomplete or invalid.'
+              : overallConfidence < 68
+              ? 'VETOED: Confidence score below verified 68% threshold.'
+              : chiefReviewerAudit.status === 'VETOED'
               ? `VETOED BY CHIEF REVIEWER: ${chiefReviewerAudit.contradictionResolution.explanation}`
               : `VETOED BY ACTIVE FAILURE FILTER: ${preExecutionFilter.reason}`)
           : tierParams.executionPolicy,

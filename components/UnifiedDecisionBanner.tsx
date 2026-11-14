@@ -22,6 +22,7 @@ import {
   Clock,
   RefreshCw
 } from 'lucide-react';
+import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 
 interface UnifiedDecisionBannerProps {
   consensus: SwarmConsensusResult;
@@ -45,6 +46,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   theme = 'dark',
 }) => {
   const { unifiedDecision, agents, executionSignal, currentPrice, pair } = consensus;
+  const bidAsk = LiveMarketFeedManager.getCanonicalBidAsk(pair);
   const isBuy = unifiedDecision.direction === 'BUY';
   const isSell = unifiedDecision.direction === 'SELL';
   const isHold = unifiedDecision.direction === 'HOLD';
@@ -172,8 +174,8 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             >
               <span>
                 {isSell
-                  ? `EXECUTE SELL MARKET (${executionSignal.lots} LOTS)`
-                  : `EXECUTE BUY MARKET (${executionSignal.lots} LOTS)`}
+                  ? `EXECUTE SELL @ BID (${bidAsk.bid}) • ${executionSignal.lots} LOTS`
+                  : `EXECUTE BUY @ ASK (${bidAsk.ask}) • ${executionSignal.lots} LOTS`}
               </span>
               <ArrowRight className="w-4 h-4" />
             </button>
@@ -199,7 +201,10 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
           <Sparkles className="w-4 h-4 text-cyan-500 shrink-0" />
           <span className={`font-semibold ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>{unifiedDecision.recommendedAction}</span>
         </div>
-        <div className={`text-[11px] flex items-center gap-3 ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
+        <div className={`text-[11px] flex flex-wrap items-center gap-3 ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
+          <span>Bid: <strong className="text-cyan-400 font-bold">{bidAsk.bid}</strong></span>
+          <span>Ask: <strong className="text-purple-400 font-bold">{bidAsk.ask}</strong></span>
+          <span className="hidden sm:inline">Spread: <strong className="text-amber-400 font-bold">{bidAsk.spreadPips} pips</strong></span>
           <span>Stop Loss: <strong className="text-rose-600 font-bold">{executionSignal.stopLoss}</strong> {isSell ? '(Above)' : '(Below)'}</span>
           <span>Target: <strong className="text-emerald-600 font-bold">{executionSignal.takeProfit}</strong> {isSell ? '(Below)' : '(Above)'}</span>
           <span>R:R: <strong className="text-cyan-600 font-bold">{executionSignal.riskReward}:1</strong></span>

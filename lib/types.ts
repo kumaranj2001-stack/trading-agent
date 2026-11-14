@@ -1132,6 +1132,40 @@ export interface Position {
     executionSide: 'BID' | 'ASK';
     fillPrice: number;
   };
+  atomicVerification?: PreExecutionAtomicVerification;
+}
+
+export interface PreExecutionAtomicVerification {
+  isVerified: boolean;
+  atomicTickId: string;
+  verificationTimestamp: number;
+  symbol: CurrencyPair;
+  orderType: 'BUY' | 'SELL';
+  signalPrice: number;
+  liveBid: number;
+  liveAsk: number;
+  liveFillPrice: number;
+  spreadPips: number;
+  priceDeviationPercent: number;
+  slippagePips: number;
+  riskWorkflowVerified: boolean;
+  proportionalLotSize: number;
+  requiredMarginUsd: number;
+  freeMarginUsd: number;
+  contradictionCheck: {
+    passed: boolean;
+    newsSentimentInversionDetected: boolean;
+    macroTechnicalDivergenceDetected: boolean;
+    structuralInvalidationBreached: boolean;
+    resolutionDirective: string;
+  };
+  failureConstraintCheck: {
+    passed: boolean;
+    matchingRuleId?: string;
+    similarityScore: number;
+  };
+  action: 'DISPATCH_ORDER' | 'ABORT_AND_RECALIBRATE' | 'ABORT_INSUFFICIENT_MARGIN';
+  abortReason?: string;
 }
 
 export interface TradeHistoryItem {
@@ -1151,6 +1185,8 @@ export interface TradeHistoryItem {
   strategyNotes: string;
   exitReason?: string;
   invalidationTriggers?: string[];
+  atomicVerification?: PreExecutionAtomicVerification;
+  executionBidAsk?: Position['executionBidAsk'];
 }
 
 // ==========================================
@@ -1305,6 +1341,8 @@ export interface JournalEntry {
   synthesizedRuleId?: string;
   exitReason?: string;
   invalidationTriggers?: string[];
+  atomicVerification?: PreExecutionAtomicVerification;
+  executionBidAsk?: Position['executionBidAsk'];
 }
 
 export interface HistoricalJournalAnalysis {

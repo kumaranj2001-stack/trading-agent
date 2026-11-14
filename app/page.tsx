@@ -55,6 +55,7 @@ import { tradeInvalidationEngine } from '@/lib/tradeInvalidationEngine';
 import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
 import { ExecutionTelemetryEngine } from '@/lib/executionTelemetryEngine';
 import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
+import { preExecutionVerificationEngine } from '@/lib/preExecutionVerificationEngine';
 
 const executionTelemetryEngine = ExecutionTelemetryEngine.getInstance();
 
@@ -99,7 +100,6 @@ export default function Home() {
 
   const lastWebSocketHeartbeatRef = useRef<number>(Date.now());
   const previousPriceRef = useRef<number>(0);
-  const lastBreakingNewsRef = useRef<string | null>(null);
 
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isRiskRatioControllerOpen, setIsRiskRatioControllerOpen] = useState<boolean>(false);
@@ -291,42 +291,33 @@ export default function Home() {
       return;
     }
 
-    // 2. Real-Time Market Bid/Ask Price Engine (Decoupling Signal from Order Dispatch)
-    const bidAsk = LiveMarketFeedManager.getCanonicalBidAsk(calibratedResult.pair);
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    
-    // Strict Single Source of Truth for Auto-Execution
-    const isSellTrade = signal.orderType === 'SELL_MARKET' || calibratedResult.unifiedDecision.direction === 'SELL';
-    const autoTradeType: 'BUY' | 'SELL' = isSellTrade ? 'SELL' : 'BUY';
-    const liveFillPrice = autoTradeType === 'BUY' ? bidAsk.ask : bidAsk.bid;
-
-    // 3. Mandatory Pre-Execution Verification: Atomic Price Deviation Check (< 0.05% tolerance)
-    const priceDeviation = Math.abs(liveFillPrice - signal.entry) / signal.entry;
-    if (priceDeviation > 0.0005) {
-      console.warn(`[AUTOPILOT_SLIPPAGE_ABORT] Price deviation ${(priceDeviation * 100).toFixed(3)}% exceeded 0.05% limit. Signal: ${signal.entry}, Live Fill (${autoTradeType === 'BUY' ? 'Ask' : 'Bid'}): ${liveFillPrice}. Aborting for atomic re-evaluation.`);
-      return;
-    }
-
-    // 4. Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
-    const preCheck = diagnosticReasoningEngine.crossReferenceSetup({
-      symbol: signal.symbol,
-      direction: autoTradeType,
-      lots: signal.lots,
-      indicators: calibratedResult.agents?.technical?.indicators,
-      smcStructure: calibratedResult.agents?.technical?.smartMoneyConcepts?.structure,
-      centralBankBias: calibratedResult.agents?.fundamental?.baseCurrencyOutlook?.centralBankStance,
+    // 2. 🛡️ Mandatory Atomic Pre-Execution Verification Gate (Identical Tick)
+    // Decouples signal generation from order dispatch: validates risk workflow completeness,
+    // enforces execution exclusively at real-time market Bid/Ask, and evaluates contradictory
+    // signals and price deviations atomically on the identical tick.
+    const verification = preExecutionVerificationEngine.verifyAtomicTickExecution({
+      consensus: calibratedResult,
+      accountBalance: portfolioRef.current.balance,
+      freeMargin: portfolioRef.current.freeMargin,
+      proposedLots: signal.lots,
+      maxAllowedDeviationPercent: 0.05,
     });
 
-    if (!preCheck.allowed) {
-      console.warn(`[AUTOPILOT_PRE_EXECUTION_VETO] Entry aborted: ${preCheck.reason}`);
+    if (verification.action !== 'DISPATCH_ORDER') {
+      console.warn(`[AUTOPILOT_ATOMIC_ABORT] Order dispatch aborted on tick: ${verification.abortReason}`);
       return;
     }
 
-    let autoLots = preCheck.action === 'ADJUST_SIZING' ? (preCheck.adjustedLots || 0.01) : signal.lots;
+    const liveFillPrice = verification.liveFillPrice;
+    const autoTradeType = verification.orderType;
+    let autoLots = verification.proportionalLotSize;
+
     if (chiefAudit?.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
       autoLots = Math.max(0.01, Number((autoLots * 0.50).toFixed(2)));
     }
+
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     let autoStopLoss = signal.stopLoss;
     let autoTakeProfit = signal.takeProfit;
@@ -377,15 +368,16 @@ export default function Home() {
       invalidationPriceLevel,
       chiefReviewerSignature: chiefAudit?.gatekeeperSignature,
       executionBidAsk: {
-        bid: bidAsk.bid,
-        ask: bidAsk.ask,
-        spread: bidAsk.spread,
+        bid: verification.liveBid,
+        ask: verification.liveAsk,
+        spread: verification.spreadPips,
         executionSide: autoTradeType === 'BUY' ? 'ASK' : 'BID',
         fillPrice: liveFillPrice,
       },
+      atomicVerification: verification,
     };
 
-    const marginNeeded = (signal.lots * 100000) / 30;
+    const marginNeeded = (autoLots * 100000) / 30;
     setPortfolio(prev => {
       const updated = {
         ...prev,
@@ -398,7 +390,7 @@ export default function Home() {
     });
 
     JournalStorageManager.recordTradeOpen(autoPos, calibratedResult, 'FULL_AUTOPILOT');
-    showNotification(`⚡ AUTOPILOT EXECUTED: ${autoPos.type} ${signal.lots} Lots on ${signal.symbol} @ ${liveFillPrice} (Confluence: ${calibratedResult.confluenceGrade})`);
+    showNotification(`⚡ AUTOPILOT EXECUTED: ${autoPos.type} ${autoPos.lots} Lots on ${signal.symbol} @ ${liveFillPrice} (${autoTradeType === 'BUY' ? 'Ask' : 'Bid'} Fill) [Confluence: ${calibratedResult.confluenceGrade}]`);
   }, []);
 
   // 4. Trigger 5-Agent Swarm (calibrating strictly against Canonical Chart Feed)
@@ -497,13 +489,6 @@ export default function Home() {
 
       triggerSwarm(selectedPair, timeframe, candles).then((freshConsensus) => {
         if (freshConsensus) {
-          // Real-time notification for major breaking news events
-          const breakingAlert = freshConsensus.agents?.news?.breakingAlert;
-          if (breakingAlert && lastBreakingNewsRef.current !== breakingAlert) {
-            lastBreakingNewsRef.current = breakingAlert;
-            showNotification(`🚨 BREAKING NEWS ALERT: ${breakingAlert}`);
-          }
-
           const isHighConfluence =
             freshConsensus.confluenceGrade === 'A+' ||
             freshConsensus.confluenceGrade === 'A' ||
@@ -807,27 +792,36 @@ export default function Home() {
       return;
     }
 
-    // 1. Mandatory Chief Reviewer Clearance Check
+    // 2. 🛡️ Mandatory Atomic Pre-Execution Verification Gate (Identical Tick)
+    // Evaluates risk management completeness, real-time bid/ask decoupling,
+    // tick slippage guardrails, and contradictory news wire sentiment inversions atomically on the identical tick.
+    const verification = preExecutionVerificationEngine.verifyAtomicTickExecution({
+      consensus,
+      accountBalance: portfolio.balance,
+      freeMargin: portfolio.freeMargin,
+      proposedLots: signal.lots,
+      maxAllowedDeviationPercent: 0.05,
+    });
+
+    if (verification.action !== 'DISPATCH_ORDER') {
+      showNotification(`🛑 ATOMIC PRE-EXECUTION ABORT: ${verification.abortReason}`);
+      if (verification.action === 'ABORT_AND_RECALIBRATE') {
+        // Trigger immediate re-evaluation of swarm on fresh tick
+        triggerSwarm(selectedPair, timeframe);
+      }
+      return;
+    }
+
+    const liveFillPrice = verification.liveFillPrice;
+    const tradeType = verification.orderType;
+    let executionLots = verification.proportionalLotSize;
+
     const chiefAudit = consensus.chiefReviewerAudit;
-    if (chiefAudit && chiefAudit.status === 'VETOED') {
-      showNotification(`🛑 CHIEF REVIEWER VETO: ${chiefAudit.contradictionResolution.explanation}`);
-      return;
+    if (chiefAudit?.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
+      executionLots = Math.max(0.01, Number((executionLots * 0.50).toFixed(2)));
     }
 
-    // 2. Real-Time Market Bid/Ask Price Engine (Decoupling Signal from Order Dispatch)
-    const bidAsk = LiveMarketFeedManager.getCanonicalBidAsk(signal.symbol);
-    const isSell = signal.orderType === 'SELL_MARKET' || consensus.unifiedDecision.direction === 'SELL';
-    const tradeType: 'BUY' | 'SELL' = isSell ? 'SELL' : 'BUY';
-    const liveFillPrice = tradeType === 'BUY' ? bidAsk.ask : bidAsk.bid;
-
-    // 3. Strict Pre-Execution Guardrail: 500ms freshness and 0.05% price deviation tolerance
-    const guardrail = LiveMarketFeedManager.verifyPreExecutionGuardrail(signal.symbol, signal.entry, 0.05, 500);
-    if (!guardrail.valid) {
-      showNotification(`PRE-EXECUTION HALTED: ${guardrail.error || 'Live price deviation exceeded 0.05%'}`);
-      return;
-    }
-
-    // 4. Circuit Breaker Mechanism Evaluation
+    // 3. Circuit Breaker Mechanism Evaluation
     const cbCheck = executionTelemetryEngine.evaluateCircuitBreaker(
       portfolio,
       liveFillPrice,
@@ -842,29 +836,6 @@ export default function Home() {
 
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-
-    // 5. Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
-    const preExecutionFilter = diagnosticReasoningEngine.crossReferenceSetup({
-      symbol: signal.symbol,
-      direction: tradeType,
-      lots: signal.lots,
-      indicators: consensus.agents?.technical?.indicators,
-      smcStructure: consensus.agents?.technical?.smartMoneyConcepts?.structure,
-      centralBankBias: consensus.agents?.fundamental?.baseCurrencyOutlook?.centralBankStance,
-    });
-
-    if (!preExecutionFilter.allowed) {
-      showNotification(`🛑 PRE-EXECUTION VETO: ${preExecutionFilter.reason}`);
-      return;
-    }
-
-    let executionLots = signal.lots;
-    if (chiefAudit?.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
-      executionLots = Math.max(0.01, Number((executionLots * 0.50).toFixed(2)));
-    } else if (preExecutionFilter.action === 'ADJUST_SIZING') {
-      executionLots = preExecutionFilter.adjustedLots || 0.01;
-      showNotification(`⚠️ CAUTION FILTER APPLIED: ${preExecutionFilter.reason}`);
-    }
 
     // Strict Mathematical Invariant: Guarantee Stop Loss & Target orientation relative to real-time fill
     let executionStopLoss = signal.stopLoss;
@@ -917,12 +888,13 @@ export default function Home() {
       invalidationPriceLevel,
       chiefReviewerSignature: chiefAudit?.gatekeeperSignature,
       executionBidAsk: {
-        bid: bidAsk.bid,
-        ask: bidAsk.ask,
-        spread: bidAsk.spread,
+        bid: verification.liveBid,
+        ask: verification.liveAsk,
+        spread: verification.spreadPips,
         executionSide: tradeType === 'BUY' ? 'ASK' : 'BID',
         fillPrice: liveFillPrice,
       },
+      atomicVerification: verification,
     };
 
     const marginUsedForTrade = (executionLots * 100000) / 30;
@@ -946,14 +918,14 @@ export default function Home() {
     executionTelemetryEngine.logTradeExecution({
       symbol: signal.symbol,
       direction: tradeType,
-      lots: signal.lots,
+      lots: executionLots,
       targetEntry: signal.entry,
       filledEntry: liveFillPrice,
       requestTimestamp: reqTimestamp,
       confirmTimestamp: Date.now(),
     });
 
-    showNotification(`ORDER EXECUTED: ${newPosition.type} ${signal.lots} Lots on ${signal.symbol} @ ${liveFillPrice}`);
+    showNotification(`ORDER EXECUTED: ${newPosition.type} ${executionLots} Lots on ${signal.symbol} @ ${liveFillPrice} (${tradeType === 'BUY' ? 'Ask' : 'Bid'} Fill)`);
   };
 
   // Close Position & Save to Local Browser Storage (calibrated against live chart feed)
