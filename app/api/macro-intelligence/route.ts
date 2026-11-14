@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { macroIntelligenceEngine, HIGH_IMPACT_MACRO_CATALYSTS } from '@/lib/macroIntelligenceEngine';
+import { dynamicTieredSourceDirectory } from '@/lib/dynamicTieredSourceDirectory';
+import { macroTelemetryBridge } from '@/lib/macroTelemetryBridge';
+import { eventDrivenRiskProtocols } from '@/lib/eventDrivenRiskProtocols';
 import { CurrencyPair, MacroCatalystCategory } from '@/lib/types';
 import { BASE_PRICES } from '@/lib/marketData';
 
@@ -10,6 +13,30 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const category = searchParams.get('category') as MacroCatalystCategory | 'ALL' | null;
     const eventId = searchParams.get('eventId');
+    const action = searchParams.get('action');
+    const symbolParam = (searchParams.get('symbol') || 'XAU/USD') as CurrencyPair;
+
+    // Sub-action: get telemetry bridge status
+    if (action === 'TELEMETRY_BRIDGE') {
+      const bridgeState = macroTelemetryBridge.getBridgeState(symbolParam);
+      return NextResponse.json({
+        success: true,
+        data: bridgeState,
+      });
+    }
+
+    // Sub-action: get tiered source directory manifest
+    if (action === 'TIERED_DIRECTORY') {
+      const summary = dynamicTieredSourceDirectory.getDirectorySummary();
+      const allSources = dynamicTieredSourceDirectory.getAllSources();
+      return NextResponse.json({
+        success: true,
+        data: {
+          summary,
+          sources: allSources,
+        },
+      });
+    }
 
     if (eventId) {
       const correlatedPairs = macroIntelligenceEngine.getCorrelatedPairs(eventId);
@@ -30,6 +57,7 @@ export async function GET(req: NextRequest) {
       data: {
         totalCatalysts: catalysts.length,
         catalysts,
+        tieredDirectorySummary: dynamicTieredSourceDirectory.getDirectorySummary(),
         timestamp: new Date().toISOString(),
       },
     });
@@ -44,7 +72,24 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { eventId, symbol: rawSymbol, forceUnconfirmed } = body;
+    const { eventId, symbol: rawSymbol, forceUnconfirmed, action, triggerReason, validationScoreBefore } = body;
+
+    const symbol: CurrencyPair = (rawSymbol && rawSymbol in BASE_PRICES) 
+      ? (rawSymbol as CurrencyPair) 
+      : 'XAU/USD';
+
+    // Sub-action: Execute on-demand deep-scraping across 90+ tiered sources
+    if (action === 'TRIGGER_DEEP_SCRAPE') {
+      const deepScrapeResult = await dynamicTieredSourceDirectory.executeOnDemandDeepScrape(
+        symbol,
+        triggerReason || 'ON_DEMAND_MANUAL',
+        validationScoreBefore || 72.0
+      );
+      return NextResponse.json({
+        success: true,
+        data: deepScrapeResult,
+      });
+    }
 
     if (!eventId) {
       return NextResponse.json(
@@ -52,10 +97,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    const symbol: CurrencyPair = (rawSymbol && rawSymbol in BASE_PRICES) 
-      ? (rawSymbol as CurrencyPair) 
-      : 'XAU/USD';
 
     // Generate full macro intelligence synthesis report
     let report = macroIntelligenceEngine.generateMacroIntelligenceReport(eventId, symbol);

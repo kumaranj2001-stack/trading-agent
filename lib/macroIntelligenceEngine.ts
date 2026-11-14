@@ -8,6 +8,9 @@ import {
 } from './types';
 import { BASE_PRICES } from './marketData';
 import { realTimeNewsEngine } from './newsEngine';
+import { macroTelemetryBridge } from './macroTelemetryBridge';
+import { dynamicTieredSourceDirectory } from './dynamicTieredSourceDirectory';
+import { eventDrivenRiskProtocols } from './eventDrivenRiskProtocols';
 
 // ============================================================================
 // 09 // HIGH-IMPACT MACROECONOMIC CATALYSTS CATALOG
@@ -454,22 +457,52 @@ export class EventDrivenMacroIntelligenceEngine {
     const technicalStructureTrend = isBullishCatalyst ? 'BULLISH_EXPANSION' : 'BEARISH_BREAKDOWN';
 
     // 6. Fail-Safe Protocol & Convergence Check
-    let signal: MacroSignalType = 'UNCONFIRMED';
+    let rawSignal: MacroSignalType = 'UNCONFIRMED';
     let confidenceScore = 92.4; // Target 85% to 97% range
     let validationStatus: ConvergenceStatus = 'CONVERGED';
-    let statusDescription = 'Institutional Data Convergence Verified Across Primary & Fallback Channels.';
+    let statusDescription = 'Institutional Data Convergence Verified Across Dynamic Tiered Directories & Fallback Channels.';
 
     if (!convergence.isConverged || !convergence.confidenceThresholdMet) {
-      signal = 'UNCONFIRMED';
+      rawSignal = 'UNCONFIRMED';
       validationStatus = 'AWAITING_CONVERGENCE';
       statusDescription = 'Unconfirmed – Awaiting Data Convergence (Directional Bias Suppressed by Fail-Safe Protocol)';
       confidenceScore = 64.0;
     } else {
       // Verified convergence: High conviction BUY or SELL
-      signal = isBullishCatalyst ? 'BUY' : 'SELL';
-      // Confidence in 85% to 97% range
+      rawSignal = isBullishCatalyst ? 'BUY' : 'SELL';
       confidenceScore = Math.min(96.8, Math.max(86.5, 88.5 + (Math.abs(newsSynthesis.sentimentScore) * 8.0)));
     }
+
+    // 6b. Real-Time Telemetry Bridge & Strict Trend Gate
+    // Resolves signal lag during market reversals:
+    // Continuously monitors multi-timeframe chart momentum and automatically
+    // downgrades or flips static "Definitive Buy" signals when price breaches support or diverges.
+    const trendGate = macroTelemetryBridge.evaluateTrendGate({
+      symbol,
+      macroSignal: rawSignal,
+      macroSentimentScore: newsSynthesis.sentimentScore,
+      currentPrice: livePrice,
+    });
+
+    const signal: MacroSignalType = trendGate.effectiveSignal;
+    if (trendGate.downgradeOrFlipAction === 'FLIP_BIAS') {
+      statusDescription = `Signal Reversed by Trend Gate: ${trendGate.rationale}`;
+    } else if (trendGate.downgradeOrFlipAction === 'DOWNGRADE_CONVICTION') {
+      statusDescription = `Signal Downgraded by Trend Gate: ${trendGate.rationale}`;
+      validationStatus = 'AWAITING_CONVERGENCE';
+    }
+
+    // 6c. Dynamic Tiered Source Directory Manifest (90+ Global Sources)
+    const tieredDirectorySummary = dynamicTieredSourceDirectory.getDirectorySummary();
+
+    // 6d. High-Impact News Risk Protocols (Calendar Lockout, Volatility Sizing, Limit-Bound Entry, Sweep Protection)
+    const riskProtocols = eventDrivenRiskProtocols.evaluateRiskProtocols({
+      symbol,
+      catalyst,
+      currentPrice: livePrice,
+      accountEquity: 100000,
+      direction: signal === 'SELL' ? 'SELL' : 'BUY',
+    });
 
     // 7. Calculate Precise Execution Parameters (Math Consistency: SL > Entry for SELL, SL < Entry for BUY)
     const pipMultiplier = symbol.includes('JPY') ? 0.01 : symbol.includes('XAU') || symbol.includes('WTI') || symbol.includes('BRENT') || symbol.includes('NIFTY') ? 1.0 : 0.0001;
@@ -488,19 +521,20 @@ export class EventDrivenMacroIntelligenceEngine {
       entryZoneMin = Number((livePrice - (volatilityPips * 0.15)).toFixed(symbol.includes('JPY') ? 3 : 5));
       entryZoneMax = Number((livePrice + (volatilityPips * 0.10)).toFixed(symbol.includes('JPY') ? 3 : 5));
       recommendedEntry = livePrice;
-      stopLoss = Number((livePrice - volatilityPips).toFixed(symbol.includes('JPY') ? 3 : 5));
-      takeProfit1 = Number((livePrice + (volatilityPips * 1.5)).toFixed(symbol.includes('JPY') ? 3 : 5));
-      takeProfit2 = Number((livePrice + (volatilityPips * 2.5)).toFixed(symbol.includes('JPY') ? 3 : 5));
-      takeProfit3 = Number((livePrice + (volatilityPips * 3.8)).toFixed(symbol.includes('JPY') ? 3 : 5));
+      // Anchor stop loss to anti-liquidity sweep price from risk protocols
+      stopLoss = riskProtocols.antiLiquiditySweepProtection.widenedStopLossPrice;
+      takeProfit1 = riskProtocols.multiTierTakeProfitScaling.tp1.price;
+      takeProfit2 = riskProtocols.multiTierTakeProfitScaling.tp2.price;
+      takeProfit3 = riskProtocols.multiTierTakeProfitScaling.tp3.price;
       riskRewardRatio = Number(((takeProfit2 - recommendedEntry) / (recommendedEntry - stopLoss)).toFixed(2));
     } else if (signal === 'SELL') {
       entryZoneMin = Number((livePrice - (volatilityPips * 0.10)).toFixed(symbol.includes('JPY') ? 3 : 5));
       entryZoneMax = Number((livePrice + (volatilityPips * 0.15)).toFixed(symbol.includes('JPY') ? 3 : 5));
       recommendedEntry = livePrice;
-      stopLoss = Number((livePrice + volatilityPips).toFixed(symbol.includes('JPY') ? 3 : 5));
-      takeProfit1 = Number((livePrice - (volatilityPips * 1.5)).toFixed(symbol.includes('JPY') ? 3 : 5));
-      takeProfit2 = Number((livePrice - (volatilityPips * 2.5)).toFixed(symbol.includes('JPY') ? 3 : 5));
-      takeProfit3 = Number((livePrice - (volatilityPips * 3.8)).toFixed(symbol.includes('JPY') ? 3 : 5));
+      stopLoss = riskProtocols.antiLiquiditySweepProtection.widenedStopLossPrice;
+      takeProfit1 = riskProtocols.multiTierTakeProfitScaling.tp1.price;
+      takeProfit2 = riskProtocols.multiTierTakeProfitScaling.tp2.price;
+      takeProfit3 = riskProtocols.multiTierTakeProfitScaling.tp3.price;
       riskRewardRatio = Number(((recommendedEntry - takeProfit2) / (stopLoss - recommendedEntry)).toFixed(2));
     } else {
       // Unconfirmed fallback
@@ -526,7 +560,7 @@ export class EventDrivenMacroIntelligenceEngine {
     // 9. Strategic Summary
     const strategicSummary = signal === 'UNCONFIRMED'
       ? `Data convergence alert: Primary release figures for ${catalyst.title} pending final cross-verification. In compliance with strict institutional risk gatekeeping, all directional exposure is quarantined.`
-      : `High-conviction ${signal} recommendation on ${symbol} triggered by ${catalyst.title}. Surprise deviation (${surpriseDelta > 0 ? '+' : ''}${surpriseDelta} ${catalyst.unit}) combined with ${centralBankTone.replace('_', ' ')} policy regime, positive order book imbalance (${orderBookImbalanceRatio}x), and confirmed 38-wire news convergence yielded a ${confidenceScore.toFixed(1)}% statistical validation score. Strict risk governance dictates ${signal === 'BUY' ? 'protective Stop-Loss below' : 'protective Stop-Loss above'} entry at ${stopLoss}.`;
+      : `High-conviction ${signal} recommendation on ${symbol} triggered by ${catalyst.title}. Surprise deviation (${surpriseDelta > 0 ? '+' : ''}${surpriseDelta} ${catalyst.unit}) synthesized across ${tieredDirectorySummary.totalDynamicSourcesCount} dynamic tiered feeds with ${centralBankTone.replace('_', ' ')} policy tone. Real-time Telemetry Bridge verified Trend Gate status (${trendGate.status}). Strict risk protocols enforced: Pre-release calendar lockout ${riskProtocols.calendarLockout.isLockoutActive ? 'ACTIVE' : 'MONITORING'}, Limit-bound entry (${riskProtocols.entryExecutionMode.boundLimitPrice}), and anti-liquidity sweep stop widening (${riskProtocols.antiLiquiditySweepProtection.widenedStopPips} pips) with proportional sizing (${riskProtocols.volatilityAdaptedSizing.adaptedLots} lots).`;
 
     return {
       id: `macro-rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -538,6 +572,10 @@ export class EventDrivenMacroIntelligenceEngine {
       confidenceScore: Number(confidenceScore.toFixed(1)),
       validationStatus,
       statusDescription,
+      trendGate,
+      telemetryBridge: macroTelemetryBridge.getBridgeState(symbol),
+      tieredSourceDirectory: tieredDirectorySummary,
+      riskProtocols,
       dataConvergence: convergence,
       catalystAnalysis: {
         previous: catalyst.previous,
@@ -550,7 +588,7 @@ export class EventDrivenMacroIntelligenceEngine {
       },
       sentimentAnalysis: {
         wireSentimentScore: newsSynthesis.sentimentScore,
-        monitoredOutletsCount: 38,
+        monitoredOutletsCount: tieredDirectorySummary.totalDynamicSourcesCount,
         centralBankTone,
         policyDivergenceScore,
         relevantHeadlines,
@@ -576,8 +614,8 @@ export class EventDrivenMacroIntelligenceEngine {
         takeProfit2,
         takeProfit3,
         riskRewardRatio: isNaN(riskRewardRatio) ? 2.5 : riskRewardRatio,
-        recommendedLotSize: symbol.includes('NIFTY') ? 25 : symbol.includes('XAU') ? 0.25 : 0.50,
-        maxRiskDollars: 250,
+        recommendedLotSize: riskProtocols.volatilityAdaptedSizing.adaptedLots,
+        maxRiskDollars: riskProtocols.volatilityAdaptedSizing.constantDollarRiskUsd,
         executionValidityMinutes: 120,
       },
       strategicSummary,

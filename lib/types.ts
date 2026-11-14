@@ -995,6 +995,7 @@ export interface SwarmConsensusResult {
   entryProximityFilter?: EntryProximityFilterResult;
   riskGovernanceGatekeeper?: RiskGovernanceGatekeeperResult;
   multiAssetTickTelemetry?: MultiAssetNormalizedTick;
+  trendGate?: TrendGateStatus;
 }
 
 export interface DeskAuditVerdict {
@@ -1657,8 +1658,156 @@ export interface MacroIntelligenceReport {
     executionValidityMinutes: number;
   };
 
+  // Real-Time Telemetry Bridge & Strict Trend Gate
+  trendGate?: TrendGateStatus;
+  telemetryBridge?: MacroTelemetryBridgeState;
+
+  // Dynamic Tiered Source Directory (90+ Sources replacing static 38 wires)
+  tieredSourceDirectory?: TieredSourceDirectory;
+  deepScrapeTriggerResult?: DeepScrapeTriggerResult;
+
+  // High-Impact News Event Strict Risk Governance Protocols
+  riskProtocols?: HighImpactEventRiskProtocols;
+
   // Swarm Synthesis & Strategic Rationale
   strategicSummary: string;
+}
+
+// ============================================================================
+// EVENT-DRIVEN MACRO INTELLIGENCE & TELEMETRY BRIDGE TYPES
+// ============================================================================
+
+export interface MultiTimeframeMomentumVector {
+  m1: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  m5: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  m15: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  h1: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  h4: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  alignmentScore: number; // 0 to 100
+  rsi14: number;
+  emaTrend: 'STRONG_UPTREND' | 'STRONG_DOWNTREND' | 'CONSOLIDATION';
+  smcStructure: 'BOS_EXPANSION' | 'CHOCH_REVERSAL' | 'RANGE_BOUND';
+}
+
+export interface TrendGateStatus {
+  passed: boolean;
+  status: 'CONFIRMED_ALIGNED' | 'DOWNGRADED_WARNING' | 'FLIPPED_TO_SELL' | 'FLIPPED_TO_BUY' | 'VETOED_BREACH';
+  originalSignal: MacroSignalType;
+  effectiveSignal: MacroSignalType;
+  supportPrice: number;
+  resistancePrice: number;
+  currentPrice: number;
+  supportBreached: boolean;
+  resistanceBreached: boolean;
+  macroSentimentDivergenceDetected: boolean;
+  multiTimeframeMomentum: MultiTimeframeMomentumVector;
+  rationale: string;
+  downgradeOrFlipAction: 'MAINTAIN' | 'DOWNGRADE_CONVICTION' | 'FLIP_BIAS' | 'QUARANTINE_TRADE';
+  lastEvaluatedAt: number;
+}
+
+export interface MacroTelemetryBridgeState {
+  bridgeActive: boolean;
+  latencyMs: number;
+  lastSyncTimestamp: number;
+  activeTerminalSymbol: CurrencyPair;
+  trendGate: TrendGateStatus;
+  realTimePrice: number;
+  syncStatus: 'SYNCED_REALTIME' | 'RECONNECTING' | 'STALE';
+}
+
+export type TieredSourceCategory = 
+  | 'TIER1_PRIME_INSTITUTIONAL' 
+  | 'TIER2_REGIONAL_DESKS' 
+  | 'TIER3_SPECIALIZED_COMMODITY' 
+  | 'TIER4_SPEED_WIRES_SCRAPERS';
+
+export interface TieredFinancialSource {
+  id: string;
+  name: string;
+  domain: string;
+  tier: TieredSourceCategory;
+  specialization: 'MACRO_CENTRAL_BANK' | 'FOREX' | 'METALS_COMMODITIES' | 'GLOBAL_WIRE' | 'REGULATORY_INSTITUTIONAL' | 'INDIAN_MARKET';
+  refreshRateSeconds: number;
+  status: 'ACTIVE' | 'STREAMING' | 'STANDBY_SCRAPER';
+  healthScore: number;
+  latencyMs: number;
+}
+
+export interface TieredSourceDirectory {
+  tier1PrimeCount: number;
+  tier2RegionalCount: number;
+  tier3SpecializedCount: number;
+  tier4SpeedWireCount: number;
+  totalDynamicSourcesCount: number; // 90+ verified global sources
+  activeScrapedArticlesCount: number;
+  onDemandDeepScrapingActive: boolean;
+  lastDeepScrapeTimestamp?: number;
+}
+
+export interface DeepScrapeTriggerResult {
+  triggered: boolean;
+  symbol: CurrencyPair;
+  triggerReason: 'STATISTICAL_VALIDATION_DROP' | 'DIVERGENCE_DETECTED' | 'VOLATILITY_ANOMALY' | 'ON_DEMAND_MANUAL';
+  validationScoreBefore: number;
+  validationScoreAfter: number;
+  sourcesScrapedCount: number;
+  newCatalystsIngested: number;
+  crossSourceConsensus: 'STRONG_CONVERGENCE' | 'DIVERGENT' | 'HIGH_VOLATILITY_ALERT';
+  auditTrail: string[];
+}
+
+export interface HighImpactEventRiskProtocols {
+  calendarLockout: {
+    isLockoutActive: boolean;
+    lockoutWindowMinutes: number; // 15 mins before & 5 mins after
+    nextEventId?: string;
+    nextEventTitle?: string;
+    secondsToLockout: number;
+    liquidityVacuumMitigation: boolean;
+    tradingAllowed: boolean;
+  };
+  volatilityAdaptedSizing: {
+    baselineAtr14Pips: number;
+    currentAtrPips: number;
+    atrExpansionRatio: number; // Current ATR / Baseline ATR
+    standardLots: number;
+    adaptedLots: number;
+    constantDollarRiskUsd: number;
+    maxEquityRiskPercent: number; // <= 2.0%
+  };
+  entryExecutionMode: {
+    orderType: 'LIMIT_BOUND_ENTRY' | 'MARKET_ORDER_PROHIBITED';
+    maxSlippagePips: number; // Strict 1.5 - 2.5 pip bound
+    boundLimitPrice: number;
+    rawMarketOrdersBlocked: boolean;
+  };
+  antiLiquiditySweepProtection: {
+    releaseDayAtrMultiple: number; // 2.5x to 3.5x ATR
+    widenedStopLossPrice: number;
+    widenedStopPips: number;
+    proportionalLotScaleDownFactor: number;
+    sweepAbsorptionCapacity: string;
+  };
+  multiTierTakeProfitScaling: {
+    tp1: { price: number; pips: number; riskMultiplier: 1.5; scaleOutPercent: 50; breakevenArmed: boolean };
+    tp2: { price: number; pips: number; riskMultiplier: 3.0; scaleOutPercent: 30 };
+    tp3: { price: number; pips: number; riskMultiplier: 5.0; scaleOutPercent: 20; runnerMode: boolean };
+    breakevenStopLockedAtTp1: boolean;
+  };
+  reflectionTimeTracker: {
+    currentPhase: 'PRE_RELEASE_LOCKOUT' | 'IMMEDIATE_IMPULSE' | 'INSTITUTIONAL_PRICE_DISCOVERY' | 'MACRO_TREND_REFLECTION' | 'SECONDARY_CONTINUATION' | 'POST_ABSORPTION_STABLE';
+    phaseProgressPercent: number;
+    timeToNextPhaseSeconds: number;
+    expectedPhases: {
+      immediateImpulseWindow: string; // 0 - 45s
+      priceDiscoveryWindow: string; // 1 - 5m
+      macroTrendReflectionWindow: string; // 15 - 45m
+      secondaryContinuationWindow: string; // 1 - 4h
+    };
+    exactReleaseTimeUtc: string;
+    exactReleaseTimeIst: string;
+  };
 }
 
 // ============================================================================

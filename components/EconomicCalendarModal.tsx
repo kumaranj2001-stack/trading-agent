@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { MacroIndicator, MacroHistoricalEvent, HistoricalMacroBaselineMetrics } from '@/lib/types';
-import { Calendar, X, RefreshCw, Filter, Search, Sparkles, ArrowLeft, Clock, Database, ShieldCheck, Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, X, RefreshCw, Filter, Search, Sparkles, ArrowLeft, Clock, Database, ShieldCheck, Activity, ChevronDown, ChevronUp, Lock } from 'lucide-react';
 import { macroHistoricalArchive } from '@/lib/macroHistoricalArchive';
 
 interface EconomicCalendarModalProps {
@@ -319,7 +319,24 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
       )}
 
       {/* Modal Body with Horizontal & Vertical Scrolling */}
-      <div className="flex-1 overflow-auto p-2 sm:p-4">
+      <div className="flex-1 overflow-auto p-2 sm:p-4 space-y-3">
+        {/* Risk Governance & Reflection Tracking Status Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 px-3 rounded-lg bg-terminal-950 border border-purple-500/30 text-[11px] font-mono shadow-sm">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+              <Lock className="w-3.5 h-3.5 text-purple-400" />
+              <span>PRE-RELEASE LOCKOUT: ARMED</span>
+            </span>
+            <span className="text-slate-400 hidden sm:inline">
+              (T-15m to T+5m Liquidity Vacuum Mitigation Active)
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-cyan-300 font-bold">
+            <Clock className="w-3.5 h-3.5 text-cyan-400" />
+            <span>4-Phase Reflection Engine: Active (0-45s → 1-5m → 15-45m → 1-4h)</span>
+          </div>
+        </div>
+
         <div className="overflow-x-auto border border-terminal-border rounded-lg scrollbar-thin">
           <table className="w-full text-left font-mono text-xs min-w-[620px]">
             <thead className="bg-terminal-950 text-slate-400 border-b border-terminal-border text-[11px] sticky top-0">
@@ -342,6 +359,7 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
             <tbody className="divide-y divide-terminal-border/50">
               {events.map((event, i) => {
                 const { dateOnly, timeOnlyIST, concatenatedDateTime } = parseAndFormatIST(event);
+                const isHighImpact = event.impact === 'HIGH';
                 return (
                   <tr key={i} className="hover:bg-terminal-800/50 transition-colors">
                     <td className="p-2.5 sm:p-3 font-bold text-white flex items-center gap-1.5">
@@ -349,12 +367,24 @@ export const EconomicCalendarModal: React.FC<EconomicCalendarModalProps> = ({
                       {event.region}
                     </td>
                     <td className="p-2.5 sm:p-3 text-slate-200">
-                      <span className="font-semibold text-white block">{event.name}</span>
-                      {event.timeUTC && (
-                        <span className="text-[10px] text-slate-500 font-mono block">
-                          Release: {event.timeUTC}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-white">{event.name}</span>
+                        {isHighImpact && (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-950 text-purple-300 border border-purple-700/60">
+                            LOCKOUT PROTECTED
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5 flex-wrap">
+                        {event.timeUTC && (
+                          <span>Release: {event.timeUTC}</span>
+                        )}
+                        {isHighImpact && (
+                          <span className="text-cyan-400 font-medium">
+                            • Reflection: 0-45s (Impulse) → 1-5m (Disc) → 15-45m (Trend) → 1-4h (Cont)
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="p-2.5 sm:p-3">
                       <span

@@ -31,6 +31,7 @@ import { diagnosticReasoningEngine } from '../diagnosticReasoningEngine';
 import { ChiefReviewerAgent } from './ChiefReviewer';
 import { automatedSignalValidationModule } from '../automatedSignalValidationModule';
 import { multiAssetIngestionEngine } from '../multiAssetIngestionEngine';
+import { macroTelemetryBridge } from '../macroTelemetryBridge';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -469,6 +470,31 @@ export class SwarmCoordinator {
     // Decouple trade entry from rigid swarm vetoes: continuous execution active 24/7
     const orderType = activeDirection === 'SELL' ? 'SELL_MARKET' : 'BUY_MARKET';
 
+    let executionAuthorized = true;
+    let executionStatus: 'READY' | 'EXECUTED' | 'VETOED' = 'READY';
+
+    // 🌐 Real-Time Telemetry Bridge & Strict Trend Gate Verification:
+    // Resolves signal lag during market reversals:
+    // Automatically downgrades or flips static "Definitive Buy" signals when price breaches support or diverges from macro sentiment.
+    const trendGate = macroTelemetryBridge.evaluateTrendGate({
+      symbol: pair,
+      macroSignal: activeDirection,
+      macroSentimentScore: news?.sentimentScore ? news.sentimentScore / 100 : 0,
+      currentPrice,
+      supportLevel: technical.keySupport,
+      resistanceLevel: technical.keyResistance,
+      candles: marketCandles,
+    });
+
+    if (trendGate.downgradeOrFlipAction === 'FLIP_BIAS') {
+      activeDirection = trendGate.effectiveSignal === 'SELL' ? 'SELL' : 'BUY';
+      unifiedDecision.direction = activeDirection;
+      unifiedDecision.summary = `Trend Gate Flip: ${activeDirection} reversal triggered via real-time telemetry bridge (${trendGate.rationale})`;
+    } else if (trendGate.downgradeOrFlipAction === 'DOWNGRADE_CONVICTION') {
+      executionAuthorized = false;
+      executionStatus = 'VETOED';
+    }
+
     // 🏛️ Mandatory Chief Reviewer Audit & Institutional Gatekeeper Clearance
     const chiefReviewerAudit = this.chiefReviewer.auditDesks({
       pair,
@@ -504,9 +530,6 @@ export class SwarmCoordinator {
       risk.parameters.stopLoss > 0 &&
       risk.parameters.takeProfit1 > 0
     );
-
-    let executionAuthorized = true;
-    let executionStatus: 'READY' | 'EXECUTED' | 'VETOED' = 'READY';
 
     if (!riskWorkflowCompleted || overallConfidence < 68) {
       executionAuthorized = false;
@@ -555,6 +578,7 @@ export class SwarmCoordinator {
       entryProximityFilter,
       riskGovernanceGatekeeper,
       multiAssetTickTelemetry: multiAssetIngestionEngine.getLatestTick(pair),
+      trendGate,
       agents: {
         technical,
         fundamental,

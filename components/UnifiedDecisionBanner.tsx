@@ -30,7 +30,8 @@ import {
   Check,
   X,
   Layers,
-  BookOpen
+  BookOpen,
+  Activity
 } from 'lucide-react';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 
@@ -121,6 +122,24 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               <span>MARKET CLOSED • STATE FROZEN</span>
             </span>
           )}
+
+          {/* ⚡ Real-Time Telemetry Bridge & Trend Gate Status Pill */}
+          {consensus.trendGate && (
+            <span className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border ${
+              consensus.trendGate.downgradeOrFlipAction === 'FLIP_BIAS'
+                ? 'bg-rose-500/25 text-rose-300 border-rose-500 animate-pulse'
+                : consensus.trendGate.downgradeOrFlipAction === 'DOWNGRADE_CONVICTION'
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
+                : theme === 'light'
+                ? 'bg-indigo-100 text-indigo-900 border-indigo-300'
+                : 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30'
+            }`}>
+              <Activity className="w-3 h-3 text-cyan-400" />
+              <span>
+                TREND GATE: {consensus.trendGate.downgradeOrFlipAction === 'FLIP_BIAS' ? `FLIPPED (${consensus.trendGate.effectiveSignal})` : consensus.trendGate.downgradeOrFlipAction === 'DOWNGRADE_CONVICTION' ? 'DOWNGRADED' : 'ARMED & ALIGNED'}
+              </span>
+            </span>
+          )}
         </div>
 
         {/* Live Synchronized Ticker Price & Recalibration Trigger */}
@@ -164,8 +183,35 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               </span>
             </div>
             <span className="px-2 py-0.5 rounded bg-black/60 text-amber-300 border border-amber-500/40 text-[10px] font-bold shrink-0">
-              38 MONITORED FEEDS
+              95 DYNAMIC FEEDS (4 TIERS)
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* ⚡ Real-Time Telemetry Bridge Reversal / Downgrade Override Banner */}
+      {consensus.trendGate && consensus.trendGate.downgradeOrFlipAction !== 'MAINTAIN' && (
+        <div className="mb-3 p-3 rounded-xl bg-gradient-to-r from-purple-950/90 via-terminal-950 to-slate-950 border border-purple-500/60 shadow-lg text-xs font-mono">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="p-1 rounded bg-purple-600 text-white font-bold text-[10px] uppercase flex items-center gap-1">
+                <Activity className="w-3 h-3" />
+                TELEMETRY BRIDGE OVERRIDE
+              </span>
+              <span className="text-white font-bold">
+                {consensus.trendGate.status.replace(/_/g, ' ')}: {consensus.trendGate.rationale}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-[10px] text-slate-300 bg-black/60 px-2 py-1 rounded border border-purple-800/50">
+              <span className="text-slate-400">MTF Momentum:</span>
+              <span className="text-cyan-400 font-bold">1m:{consensus.trendGate.multiTimeframeMomentum.m1.slice(0, 4)}</span>
+              <span>•</span>
+              <span className="text-cyan-400 font-bold">5m:{consensus.trendGate.multiTimeframeMomentum.m5.slice(0, 4)}</span>
+              <span>•</span>
+              <span className="text-cyan-400 font-bold">15m:{consensus.trendGate.multiTimeframeMomentum.m15.slice(0, 4)}</span>
+              <span>•</span>
+              <span className="text-cyan-400 font-bold">1h:{consensus.trendGate.multiTimeframeMomentum.h1.slice(0, 4)}</span>
+            </div>
           </div>
         </div>
       )}
