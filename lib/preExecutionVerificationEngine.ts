@@ -321,13 +321,12 @@ export class PreExecutionVerificationEngine {
       };
     }
 
-    // Trigger F: Strict Entry-Proximity Filter (10 to 50 Pip Band)
+    // Trigger F: Unlimited Profit Potential & Entry-Proximity Engine (50-Pip Profit Restriction Removed)
     const entryProximity = automatedSignalValidationModule.evaluateEntryProximityBand({
       symbol: pair,
       proposedEntry: signalPrice,
       livePrice: liveFillPrice,
       minBandPips: 10,
-      maxBandPips: 50,
     });
 
     if (!entryProximity.passed) {

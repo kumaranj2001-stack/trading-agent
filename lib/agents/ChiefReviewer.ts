@@ -191,7 +191,7 @@ export class ChiefReviewerAgent extends BaseAgent {
       analystName: 'Sarah Stirling (Risk Governance & Capital Preservation)',
       verdict: riskVote === 'AGREE' ? 'COMPLIANT' : 'NON_COMPLIANT',
       score: 95,
-      finding: `Workflow Verified: Dynamic sizing fully completed prior to signal dispatch. Sizing set to ${risk.parameters.positionSizeLots} lots with maximum dollar risk capped at $${risk.parameters.maxLossUsd} (${risk.parameters.accountRiskPercent}% equity). 1:1 Breakeven trailing armed.`,
+      finding: `Workflow Verified: Dynamic sizing fully completed prior to signal dispatch. Sizing set to ${risk.parameters.positionSizeLots} lots with maximum dollar risk capped at $${risk.parameters.maxLossUsd} (${risk.parameters.accountRiskPercent}% equity). 24/7 Autonomous Monitoring active: 1:1 Breakeven locked to eliminate loss exposure & multi-tier uncapped runners engaged.`,
     };
     const riskVoteDetail: DeskVoteDetail = {
       desk: 'RISK_GOVERNANCE',

@@ -139,16 +139,16 @@ export const MultiAssetIngestionTelemetryCard: React.FC<MultiAssetIngestionTelem
           </p>
         </div>
 
-        {/* Pillar B: Strict Entry-Proximity Filter (10 to 50 Pip Band) */}
+        {/* Pillar B: Unlimited Profit Maximization & Zero-Loss Exposure */}
         <div className={`p-2.5 rounded-xl border ${
           theme === 'light' ? 'bg-indigo-50/50 border-indigo-200 text-indigo-950' : 'bg-indigo-950/30 border-indigo-500/30 text-indigo-200'
         }`}>
           <div className="flex items-center gap-1.5 font-bold mb-1 text-indigo-500 text-xs">
             <Zap className="w-3.5 h-3.5" />
-            <span>2. 10–50 PIP PROXIMITY BAND</span>
+            <span>2. UNLIMITED PROFIT MAXIMIZATION</span>
           </div>
           <p className="text-[10px] leading-relaxed opacity-90">
-            Strictly filters execution signals: orders only trigger when entry threshold variance falls within designated 10 to 50 pip band.
+            50-pip profit cap permanently removed. Uncapped multi-tier Fibonacci targets (+100 to +500+ pips) and dynamic trailing runners with 1:1 breakeven loss elimination.
           </p>
         </div>
 

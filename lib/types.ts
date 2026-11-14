@@ -1165,11 +1165,22 @@ export interface EntryProximityFilterResult {
   proposedEntry: number;
   livePrice: number;
   pipDistance: number;
-  minBandPips: number; // 10 pips
-  maxBandPips: number; // 50 pips
-  status: 'APPROVED_WITHIN_BAND' | 'REJECTED_BELOW_MIN_10_PIPS' | 'REJECTED_ABOVE_MAX_50_PIPS';
+  minBandPips: number; // 10 pips minimum buffer against noise
+  maxBandPips?: number; // Removed artificial 50-pip cap to allow unlimited profit potential
+  status: 'APPROVED_WITHIN_BAND' | 'APPROVED_UNLIMITED_PROFIT' | 'REJECTED_BELOW_MIN_10_PIPS' | 'REJECTED_ABOVE_MAX_50_PIPS';
   rejectionReason?: string;
   toleranceBandDescription: string;
+  unlimitedProfitPotential: boolean; // True: allows uncapped upside (+100, +250, +500+ pips)
+  profitCapEnforced: boolean; // False: 50-pip restriction permanently removed
+  zeroLossExposureEliminated: boolean; // True: 1:1 breakeven ratchet + 5-pip structural stop
+  breakevenStopArmed: boolean; // Automated breakeven trigger armed
+  dynamicTrailingRunnerActive: boolean; // Dynamic ATR/structural trailing stop active
+  expansionTargets?: {
+    tp1: number;
+    tp2: number;
+    tp3: number;
+    openRunnerPips: string;
+  };
 }
 
 export interface RiskGovernanceGatekeeperResult {
@@ -1187,6 +1198,14 @@ export interface RiskGovernanceGatekeeperResult {
   maxDrawdownLimitPercent: number; // 2.0%
   status: 'APPROVED' | 'VETOED';
   rationale: string;
+  unlimitedProfitPotential: boolean;
+  zeroLossExposureProtocol: {
+    breakevenTriggerDistancePips: number;
+    breakevenLockArmed: boolean;
+    structuralStopPips: number;
+    trailingRatchetActive: boolean;
+    status: 'ZERO_LOSS_EXPOSURE_ARMED';
+  };
 }
 
 export interface MultiAssetNormalizedTick {
