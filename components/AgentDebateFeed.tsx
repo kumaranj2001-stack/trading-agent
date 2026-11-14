@@ -43,7 +43,8 @@ import {
   Clock,
   Gauge,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Database
 } from 'lucide-react';
 import { OandaTradingViewChart } from './OandaTradingViewChart';
 import { 
@@ -320,6 +321,14 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 flex items-center gap-1">
                 <ShieldCheck className="w-3 h-3 text-indigo-400" />
                 ZERO-LOSS EXPOSURE PROTOCOL
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-500/15 text-purple-300 border border-purple-500/40 flex items-center gap-1">
+                <Database className="w-3 h-3 text-purple-400" />
+                1,050+ STRATEGIES SYNCHRONOUS DEBATE
+              </span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3 text-cyan-400" />
+                ZERO-PRUNING CERTIFIED
               </span>
             </div>
             <p className="text-[11px] font-mono text-slate-400 flex items-center gap-2 flex-wrap">

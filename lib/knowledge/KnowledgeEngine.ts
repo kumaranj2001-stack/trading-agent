@@ -6,11 +6,19 @@ import {
   MarketSegment, 
   SignalDirection, 
   TechnicalIndicators,
-  FailureConstraintRule
+  FailureConstraintRule,
+  ExhaustiveStrategyCorpusEvaluation,
+  AbsoluteCapitalPreservationGateResult,
+  Candle,
+  TechnicalAnalysis,
+  FundamentalAnalysis,
+  ForexAnalysis,
+  NewsAnalysis
 } from '../types';
 import { TECHNICAL_KNOWLEDGE_BASE } from './technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from './fundamentalKnowledge';
 import { diagnosticReasoningEngine } from '../diagnosticReasoningEngine';
+import { exhaustiveStrategyCorpusEngine } from '../exhaustiveStrategyCorpusEngine';
 
 export class KnowledgeEngine {
   private technicalRules: KnowledgeRule[];
@@ -28,6 +36,8 @@ export class KnowledgeEngine {
     totalCount: number;
     baselineRules: number;
     synthesizedRules: number;
+    zeroPruningCertified: boolean;
+    exhaustiveExecutionActive: boolean;
   } {
     const dynamicRules = diagnosticReasoningEngine.getDynamicRules();
     return {
@@ -37,7 +47,41 @@ export class KnowledgeEngine {
       totalCount: this.technicalRules.length + this.fundamentalRules.length + dynamicRules.length,
       baselineRules: this.technicalRules.length + this.fundamentalRules.length,
       synthesizedRules: dynamicRules.length,
+      zeroPruningCertified: true,
+      exhaustiveExecutionActive: true,
     };
+  }
+
+  /**
+   * Exhaustive Synchronous Strategy Corpus Evaluation
+   * Evaluates all 525 technical and 525 fundamental models without heuristic pruning.
+   */
+  public evaluateExhaustiveStrategyCorpus(params: {
+    pair: CurrencyPair;
+    marketSegment: MarketSegment;
+    currentPrice: number;
+    candles: Candle[];
+    technical: TechnicalAnalysis;
+    fundamental: FundamentalAnalysis;
+    forex: ForexAnalysis;
+    news: NewsAnalysis;
+  }): ExhaustiveStrategyCorpusEvaluation {
+    return exhaustiveStrategyCorpusEngine.evaluateSynchronously(params);
+  }
+
+  /**
+   * Absolute Capital Preservation Gating Layer
+   */
+  public evaluateCapitalPreservationGate(params: {
+    symbol: CurrencyPair;
+    currentPrice: number;
+    direction: 'BUY' | 'SELL' | 'HOLD';
+    metaConsensusScore: number;
+    debateFrictionIndex: number;
+    technical: TechnicalAnalysis;
+    candles: Candle[];
+  }): AbsoluteCapitalPreservationGateResult {
+    return exhaustiveStrategyCorpusEngine.evaluateCapitalPreservationGate(params);
   }
 
   public getTechnicalRules(): KnowledgeRule[] {

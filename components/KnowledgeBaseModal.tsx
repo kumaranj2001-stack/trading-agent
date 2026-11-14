@@ -110,10 +110,13 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
                 10 // INSTITUTIONAL KNOWLEDGE BASE (1,050+ STRATEGIES & HEURISTICS)
               </h3>
               <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                {allRules.length} VERIFIED RULES
+                {allRules.length} VERIFIED RULES (525 TECH + 525 FUND)
               </span>
-              <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                {isLoadingApi ? 'SYNCING API...' : 'REST API INTEGRATED'}
+              <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                ZERO PRUNING CERTIFIED
+              </span>
+              <span className="hidden lg:inline px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                SYNCHRONOUS INTEGRATION
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">

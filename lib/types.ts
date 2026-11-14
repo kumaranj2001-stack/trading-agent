@@ -455,6 +455,77 @@ export interface KnowledgeMatchResult {
   rationale: string;
 }
 
+export interface ExhaustiveCategoryBreakdown {
+  categoryName: string;
+  type: 'TECHNICAL' | 'FUNDAMENTAL';
+  totalRules: number;
+  concordantRulesCount: number;
+  opposingRulesCount: number;
+  categoryWinRate: number;
+  alignmentStatus: 'ALIGNED' | 'OPPOSED' | 'MIXED';
+}
+
+export interface ExhaustiveStrategyCorpusEvaluation {
+  totalEvaluatedStrategies: number; // 1,050+
+  technicalEvaluatedCount: number;  // 525
+  fundamentalEvaluatedCount: number; // 525
+  dynamicFailureConstraintsCount: number; // 1+
+
+  technicalConcordance: {
+    bullishCount: number;
+    bearishCount: number;
+    neutralCount: number;
+    concordanceRatio: number; // percentage
+    dominantBias: 'BUY' | 'SELL' | 'NEUTRAL';
+  };
+
+  fundamentalConcordance: {
+    bullishCount: number;
+    bearishCount: number;
+    neutralCount: number;
+    concordanceRatio: number; // percentage
+    dominantBias: 'BUY' | 'SELL' | 'NEUTRAL';
+  };
+
+  metaConsensusScore: number; // 0 to 100
+  metaConsensusDirection: 'BUY' | 'SELL' | 'HOLD';
+  debateFrictionIndex: number; // 0 to 100% dialectical friction
+  zeroPruningCertified: boolean; // strictly true (heuristic pruning deprecated)
+  synchronousExecutionVerified: boolean; // strictly true (synchronous integration)
+  evaluationTimestamp: number;
+
+  categoryPerformanceBreakdown: ExhaustiveCategoryBreakdown[];
+}
+
+export interface OrderBookLiquidityWallSnapshot {
+  bidWallPrice: number;
+  bidWallVolume: number;
+  askWallPrice: number;
+  askWallVolume: number;
+  wallThicknessMultiplier: number;
+  anchoredStopLossLevel: number;
+  anchoredTakeProfitLevel: number;
+  volatilityAtrBufferPips: number;
+  liquidityWallDistancePips: number;
+}
+
+export interface AbsoluteCapitalPreservationGateResult {
+  passed: boolean;
+  status: 'ARMED_AND_VERIFIED' | 'LOCKED_PRINCIPAL_AT_RISK' | 'HOLD_AWAITING_CONFLUENCE';
+  zeroLossAssuranceRating: 'AAA_ABSOLUTE_ZERO_LOSS' | 'AA_PROTECTED' | 'FAIL_EXPOSURE_RISK';
+  
+  gatingChecklist: {
+    probabilityThresholdSatisfied: boolean; // metaConsensusScore >= 78%
+    structuralIntegrityVerified: boolean;  // S1/R1 unbroken, no opposite CHoCH
+    liquidityWallAnchored: boolean;        // SL safely placed behind verified depth wall
+    zeroUnhedgedRiskCertified: boolean;     // 1:1 Breakeven ratchet & proportional sizing
+  };
+
+  orderBookLiquidityWalls: OrderBookLiquidityWallSnapshot;
+  invalidationAndExitDirective: string;
+  gatekeeperAuditStamp: string;
+}
+
 export interface MultiTimeframeAnalysis {
   tf15m: SignalDirection;
   tf1h: SignalDirection;
@@ -784,6 +855,7 @@ export interface RiskAssessment {
     slippageCapPips?: number;
     stopLossBufferPips?: number;
     liquidityVacuumDefenseActive?: boolean;
+    orderBookLiquidityWalls?: OrderBookLiquidityWallSnapshot;
   };
   monteCarlo?: MonteCarloProjection;
   accountHealth: {
@@ -1000,6 +1072,8 @@ export interface SwarmConsensusResult {
   riskGovernanceGatekeeper?: RiskGovernanceGatekeeperResult;
   multiAssetTickTelemetry?: MultiAssetNormalizedTick;
   trendGate?: TrendGateStatus;
+  exhaustiveStrategyCorpus?: ExhaustiveStrategyCorpusEvaluation;
+  capitalPreservationGate?: AbsoluteCapitalPreservationGateResult;
 }
 
 export interface DeskAuditVerdict {
@@ -1044,7 +1118,7 @@ export interface ChiefReviewerAuditResult {
   completeInvalidationCriteriaList: string[];
   contradictionResolution: {
     hasContradiction: boolean;
-    contradictionType?: 'NEWS_TECHNICAL_INVERSION' | 'MACRO_PRICE_DIVERGENCE' | 'SPECIALIST_CONSENSUS_FAILURE' | 'NONE';
+    contradictionType?: 'NEWS_TECHNICAL_INVERSION' | 'MACRO_PRICE_DIVERGENCE' | 'SPECIALIST_CONSENSUS_FAILURE' | 'CAPITAL_PRESERVATION_TRIGGERED' | 'NONE';
     resolutionAction: 'NONE' | 'REDUCE_SIZE_50_PERCENT' | 'WIDEN_BUFFER' | 'FORCE_VETO';
     explanation: string;
   };
@@ -1055,6 +1129,12 @@ export interface ChiefReviewerAuditResult {
   gatekeeperSignature: string;
   auditTimestamp: string;
   crossExaminationNotes: string;
+  exhaustiveCorpusAudit?: {
+    totalStrategiesAudited: number;
+    metaConsensusScore: number;
+    zeroPruningCertified: boolean;
+    capitalPreservationStatus: string;
+  };
 }
 
 export interface LatchedTradeState {

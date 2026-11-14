@@ -8,12 +8,14 @@ import {
   RiskVerdict, 
   TechnicalAnalysis,
   NewsAnalysis,
-  ConfluenceGrade 
+  ConfluenceGrade,
+  OrderBookLiquidityWallSnapshot 
 } from '../types';
 import { PIP_VALUES } from '../marketData';
 import { JournalStorageManager } from '../journalStorage';
 import { riskRatioController } from '../riskRatioController';
 import { eventDrivenMacroTelemetryEngine, RiskGovernancePipedTelemetry } from '../eventDrivenMacroTelemetryEngine';
+import { OrderFlowEngine } from '../orderFlowEngine';
 
 export interface RiskManagerConfig {
   accountBalance: number;
@@ -187,42 +189,63 @@ export class RiskManagerAgent extends BaseAgent {
     const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
 
     // 4. Invalidation / Stop Loss & Dynamic Take Profit Calculation
-    // Dynamic Risk Calculator: Enforces initial Stop Loss anchored at a tight baseline of 5 pips beyond structural invalidation point.
+    // Generates real-time Footprint levels & Order Book Depth Walls
+    const footprintLevels = OrderFlowEngine.getInstance().generateFootprintLevels(pair, currentPrice);
+    let bidWallPrice = Number((currentPrice - 15 * pipMultiplier).toFixed(decimals));
+    let bidWallVolume = 120;
+    let askWallPrice = Number((currentPrice + 15 * pipMultiplier).toFixed(decimals));
+    let askWallVolume = 120;
+
+    footprintLevels.forEach(lvl => {
+      if (lvl.price < currentPrice && lvl.bidVolume > bidWallVolume) {
+        bidWallVolume = lvl.bidVolume;
+        bidWallPrice = lvl.price;
+      }
+      if (lvl.price > currentPrice && lvl.askVolume > askWallVolume) {
+        askWallVolume = lvl.askVolume;
+        askWallPrice = lvl.price;
+      }
+    });
+
+    const atrValue = technical.indicators?.atr || 18.5;
+    const volatilityAtrBufferPips = Number(Math.max(10, atrValue * 0.35).toFixed(1));
+    const volatilityBufferAbs = volatilityAtrBufferPips * pipMultiplier;
+
     let structuralPoint = currentPrice;
     let stopDistance: number;
     let calculatedStopLoss: number;
 
     if (proposedAction === 'BUY') {
-      // For BUY setups: structural invalidation is keySupport / S1 floor
+      // For BUY setups: structural floor is min(keySupport, bidWallPrice)
       structuralPoint = (technical.keySupport && technical.keySupport < currentPrice)
-        ? technical.keySupport
-        : Number((currentPrice - 15 * pipMultiplier).toFixed(decimals));
+        ? Math.min(technical.keySupport, bidWallPrice)
+        : bidWallPrice;
       
-      // Stop Loss anchored strictly 5 pips beyond structural invalidation point
-      calculatedStopLoss = Number((structuralPoint - 5 * pipMultiplier).toFixed(decimals));
+      // Stop Loss anchored strictly beyond the verified Order Book Bid Liquidity Wall + ATR buffer
+      calculatedStopLoss = Number((structuralPoint - (volatilityBufferAbs + 5 * pipMultiplier)).toFixed(decimals));
       stopDistance = Number((currentPrice - calculatedStopLoss).toFixed(decimals));
-      if (stopDistance <= 0) {
-        stopDistance = 5 * pipMultiplier;
+      if (stopDistance <= 0 || calculatedStopLoss >= currentPrice) {
+        stopDistance = Math.max(15 * pipMultiplier, volatilityBufferAbs + 5 * pipMultiplier);
         calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
       }
       adjustmentsMade.push(
-        `Dynamic Risk Calculator: Initial Stop Loss anchored tightly at ${calculatedStopLoss} (5 pips beyond structural support ${structuralPoint}).`
+        `Order Book Liquidity Wall Anchoring: Initial Stop Loss anchored strictly at ${calculatedStopLoss} behind Order Book Bid Wall at ${bidWallPrice} (Depth: ${bidWallVolume} lots, ATR Buffer: ${volatilityAtrBufferPips} pips).`
       );
     } else if (proposedAction === 'SELL') {
-      // For SELL setups: structural invalidation is keyResistance / ceiling
+      // For SELL setups: structural ceiling is max(keyResistance, askWallPrice)
       structuralPoint = (technical.keyResistance && technical.keyResistance > currentPrice)
-        ? technical.keyResistance
-        : Number((currentPrice + 15 * pipMultiplier).toFixed(decimals));
+        ? Math.max(technical.keyResistance, askWallPrice)
+        : askWallPrice;
       
-      // Stop Loss anchored strictly 5 pips beyond structural invalidation point
-      calculatedStopLoss = Number((structuralPoint + 5 * pipMultiplier).toFixed(decimals));
+      // Stop Loss anchored strictly beyond the verified Order Book Ask Liquidity Wall + ATR buffer
+      calculatedStopLoss = Number((structuralPoint + (volatilityBufferAbs + 5 * pipMultiplier)).toFixed(decimals));
       stopDistance = Number((calculatedStopLoss - currentPrice).toFixed(decimals));
-      if (stopDistance <= 0) {
-        stopDistance = 5 * pipMultiplier;
+      if (stopDistance <= 0 || calculatedStopLoss <= currentPrice) {
+        stopDistance = Math.max(15 * pipMultiplier, volatilityBufferAbs + 5 * pipMultiplier);
         calculatedStopLoss = Number((currentPrice + stopDistance).toFixed(decimals));
       }
       adjustmentsMade.push(
-        `Dynamic Risk Calculator: Initial Stop Loss anchored tightly at ${calculatedStopLoss} (5 pips beyond structural resistance ${structuralPoint}).`
+        `Order Book Liquidity Wall Anchoring: Initial Stop Loss anchored strictly at ${calculatedStopLoss} behind Order Book Ask Wall at ${askWallPrice} (Depth: ${askWallVolume} lots, ATR Buffer: ${volatilityAtrBufferPips} pips).`
       );
     } else {
       stopDistance = 20 * pipMultiplier;
@@ -452,6 +475,17 @@ export class RiskManagerAgent extends BaseAgent {
         slippageCapPips: macroTelemetry.riskAdjustments.maxSlippageCapPips,
         stopLossBufferPips: macroTelemetry.riskAdjustments.recommendedStopLossBufferPips,
         liquidityVacuumDefenseActive: macroTelemetry.riskAdjustments.liquidityVacuumDefenseMode,
+        orderBookLiquidityWalls: {
+          bidWallPrice,
+          bidWallVolume,
+          askWallPrice,
+          askWallVolume,
+          wallThicknessMultiplier: Number((Math.max(bidWallVolume, askWallVolume) / 80).toFixed(2)),
+          anchoredStopLossLevel: calculatedStopLoss,
+          anchoredTakeProfitLevel: calculatedTakeProfit1,
+          volatilityAtrBufferPips,
+          liquidityWallDistancePips: Number((Math.abs(currentPrice - (proposedAction === 'BUY' ? bidWallPrice : askWallPrice)) / pipMultiplier).toFixed(1)),
+        },
       },
       monteCarlo,
       accountHealth: {

@@ -201,6 +201,20 @@ export class SwarmCoordinator {
     const fundIsBuy = fundamental.bias.includes('BUY') || news.bias.includes('BUY');
     const fundIsSell = fundamental.bias.includes('SELL') || news.bias.includes('SELL');
 
+    // 🧠 Exhaustive Synchronous Meta-Analysis Engine:
+    // Mandates the exhaustive integration and debate of all 1,050+ strategies (525+ Technical & 525+ Fundamental models)
+    // strictly deprecating any heuristic pruning or partial execution.
+    const exhaustiveCorpus = knowledgeEngine.evaluateExhaustiveStrategyCorpus({
+      pair,
+      marketSegment,
+      currentPrice,
+      candles: marketCandles,
+      technical,
+      fundamental,
+      forex,
+      news,
+    });
+
     const technicalMomentumWeight = 0.50;
     const fundamentalSentimentWeight = 0.50;
 
@@ -217,7 +231,8 @@ export class SwarmCoordinator {
     // Detect Momentum-Fundamental Divergence
     const hasMomentumFundamentalDivergence = 
       (techIsBuy && fundIsSell && !techIsSell) || 
-      (techIsSell && fundIsBuy && !techIsBuy);
+      (techIsSell && fundIsBuy && !techIsBuy) ||
+      (exhaustiveCorpus.debateFrictionIndex > 35.0);
 
     let consensusDirection: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let overallConfidence = 50;
@@ -244,6 +259,11 @@ export class SwarmCoordinator {
     } else {
       consensusDirection = 'HOLD';
       overallConfidence = 45;
+    }
+
+    // Synchronize overall confidence with exhaustive 1,050+ strategy corpus
+    if (exhaustiveCorpus.metaConsensusDirection !== 'HOLD') {
+      overallConfidence = Math.min(98, Math.round(overallConfidence * 0.45 + exhaustiveCorpus.metaConsensusScore * 0.55));
     }
 
     // 5. Risk Manager Evaluation & Final Sizing — Strictly Driven by Consensus Direction
@@ -443,6 +463,24 @@ export class SwarmCoordinator {
       }
     }
 
+    // 🛡️ Absolute Capital Preservation Gating & Order Book Liquidity Wall Anchoring
+    // Mathematically calculates dynamic Stop Loss and Take Profit anchored strictly behind
+    // order book liquidity walls using real-time volatility metrics to eliminate unhedged exposure.
+    const capitalPreservationGate = knowledgeEngine.evaluateCapitalPreservationGate({
+      symbol: pair,
+      currentPrice,
+      direction: activeDirection,
+      metaConsensusScore: exhaustiveCorpus.metaConsensusScore,
+      debateFrictionIndex: exhaustiveCorpus.debateFrictionIndex,
+      technical,
+      candles: marketCandles,
+    });
+
+    if (!isStateLatched && capitalPreservationGate.orderBookLiquidityWalls) {
+      finalStopLoss = capitalPreservationGate.orderBookLiquidityWalls.anchoredStopLossLevel;
+      finalTakeProfit = capitalPreservationGate.orderBookLiquidityWalls.anchoredTakeProfitLevel;
+    }
+
     // 🔬 Strict Automated Signal Validation Module Reconciliation:
     // Reconciles live multi-asset stream against technical/fundamental engines,
     // verifies unlimited profit potential with positive expectancy (R:R >= 2.0:1),
@@ -509,6 +547,8 @@ export class SwarmCoordinator {
       confluenceGrade,
       confidenceScore: overallConfidence,
       topConfluenceRules,
+      exhaustiveCorpus,
+      capitalPreservationGate,
     });
 
     // 🛡️ Pre-Execution Active Failure Filter (Cross-referencing 1051st+ Operative Rules)
@@ -521,7 +561,7 @@ export class SwarmCoordinator {
       centralBankBias: fundamental.baseCurrencyOutlook?.centralBankStance,
     });
 
-    // 🛡️ Strict Risk Management Workflow Priority Verification
+    // 🛡️ Strict Risk Management Workflow Priority & Absolute Capital Preservation Verification
     // Sizing is never speculative but strictly proportional to validated risk parameters.
     const riskWorkflowCompleted = !!(
       risk &&
@@ -532,6 +572,9 @@ export class SwarmCoordinator {
     );
 
     if (!riskWorkflowCompleted || overallConfidence < 68) {
+      executionAuthorized = false;
+      executionStatus = 'VETOED';
+    } else if (!capitalPreservationGate.passed) {
       executionAuthorized = false;
       executionStatus = 'VETOED';
     } else if (chiefReviewerAudit.status === 'VETOED') {
@@ -579,6 +622,8 @@ export class SwarmCoordinator {
       riskGovernanceGatekeeper,
       multiAssetTickTelemetry: multiAssetIngestionEngine.getLatestTick(pair),
       trendGate,
+      exhaustiveStrategyCorpus: exhaustiveCorpus,
+      capitalPreservationGate,
       agents: {
         technical,
         fundamental,
@@ -601,7 +646,9 @@ export class SwarmCoordinator {
         status: executionStatus,
         gradingTier: confluenceGrade,
         tierDescription: !executionAuthorized 
-          ? (!riskWorkflowCompleted 
+          ? (!capitalPreservationGate.passed
+              ? `VETOED BY CAPITAL PRESERVATION GATE: ${capitalPreservationGate.invalidationAndExitDirective}`
+              : !riskWorkflowCompleted 
               ? 'VETOED: Risk management workflow incomplete or invalid.'
               : overallConfidence < 68
               ? 'VETOED: Confidence score below verified 68% threshold.'
