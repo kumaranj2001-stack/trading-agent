@@ -27,12 +27,14 @@ interface PortfolioPanelProps {
   portfolio: PortfolioState;
   onClosePosition: (posId: string) => void;
   executionMode?: string;
+  theme?: 'dark' | 'light';
 }
 
 export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({ 
   portfolio, 
   onClosePosition,
-  executionMode = 'MANUAL'
+  executionMode = 'MANUAL',
+  theme = 'dark'
 }) => {
   const totalOpenPnl = portfolio.positions.reduce((sum, p) => sum + p.pnl, 0);
   const winTrades = portfolio.tradeHistory.filter(t => t.outcome === 'WIN').length;
@@ -388,58 +390,76 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
 
       {/* Closed Trade History */}
       <div>
-        <h4 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider mb-2">
-          Historical Trade Log
-        </h4>
-        <div className="overflow-x-auto border border-terminal-border rounded-lg max-h-48 scrollbar-thin">
-          <table className="w-full text-left font-mono text-xs">
-            <thead className="bg-terminal-950 text-slate-400 border-b border-terminal-border text-xs uppercase font-semibold sticky top-0">
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <h4 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
+            Historical Trade Log ({portfolio.tradeHistory.length})
+          </h4>
+          <span className="text-[11px] font-mono text-slate-400">
+            Immutable Audit Trail • Realized: <strong className={totalRealizedPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+              {totalRealizedPnl >= 0 ? '+' : ''}${totalRealizedPnl.toFixed(2)}
+            </strong>
+          </span>
+        </div>
+        <div className="overflow-x-auto border border-terminal-border rounded-lg max-h-64 scrollbar-thin touch-pan-x">
+          <table className="w-full text-left font-mono text-xs min-w-[860px]">
+            <thead className="bg-terminal-950 text-slate-400 border-b border-terminal-border text-xs uppercase font-semibold sticky top-0 z-10">
               <tr>
-                <th className="p-3">Pair</th>
-                <th className="p-3">Side</th>
-                <th className="p-3">Lots</th>
-                <th className="p-3">Entry</th>
-                <th className="p-3">Exit</th>
-                <th className="p-3">Outcome</th>
-                <th className="p-3">P&L ($)</th>
-                <th className="p-3">Exit Rationale & Invalidation Notes</th>
+                <th className="p-3 whitespace-nowrap w-24">Pair</th>
+                <th className="p-3 whitespace-nowrap w-20">Side</th>
+                <th className="p-3 whitespace-nowrap w-20">Lots</th>
+                <th className="p-3 whitespace-nowrap w-24">Entry</th>
+                <th className="p-3 whitespace-nowrap w-24">Exit</th>
+                <th className="p-3 whitespace-nowrap w-24">Outcome</th>
+                <th className="p-3 whitespace-nowrap w-28">P&L ($)</th>
+                <th className="p-3 min-w-[280px]">Exit Rationale & Invalidation Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-terminal-border/60 bg-terminal-900/60 font-medium">
-              {portfolio.tradeHistory.map((item) => (
-                <tr key={item.id} className="hover:bg-terminal-800/40">
-                  <td className="p-3 font-bold text-white">{item.symbol}</td>
-                  <td className="p-3">
-                    <span className={`px-2.5 py-0.5 rounded text-xs font-bold ${
-                      item.type === 'BUY' ? 'text-emerald-400' : 'text-rose-400'
-                    }`}>
-                      {item.type}
-                    </span>
-                  </td>
-                  <td className="p-3 text-slate-300">{item.lots}</td>
-                  <td className="p-3 text-slate-200">{item.entryPrice}</td>
-                  <td className="p-3 text-slate-200">{item.exitPrice}</td>
-                  <td className="p-3">
-                    <span className={`px-2.5 py-0.5 rounded text-xs font-bold ${
-                      item.outcome === 'WIN' 
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                        : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
-                    }`}>
-                      {item.outcome}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span className={`font-bold ${item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                      {item.pnl >= 0 ? '+' : ''}${item.pnl.toFixed(2)}
-                    </span>
-                  </td>
-                  <td className="p-3 text-xs text-slate-300">
-                    <span className="text-[11px] text-slate-300 block">
-                      {item.strategyNotes}
-                    </span>
+              {portfolio.tradeHistory.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-slate-500 font-sans text-xs">
+                    No closed positions logged yet. Completed executions will appear here with post-trade rationale.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                portfolio.tradeHistory.map((item) => (
+                  <tr key={item.id} className="hover:bg-terminal-800/40 transition-colors">
+                    <td className="p-3 font-bold text-white whitespace-nowrap">{item.symbol}</td>
+                    <td className="p-3 whitespace-nowrap">
+                      <span className={`px-2.5 py-0.5 rounded text-xs font-bold ${
+                        item.type === 'BUY' 
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                      }`}>
+                        {item.type}
+                      </span>
+                    </td>
+                    <td className="p-3 text-slate-300 whitespace-nowrap">{item.lots}</td>
+                    <td className="p-3 text-slate-200 whitespace-nowrap">{item.entryPrice}</td>
+                    <td className="p-3 text-slate-200 whitespace-nowrap">{item.exitPrice}</td>
+                    <td className="p-3 whitespace-nowrap">
+                      <span className={`px-2.5 py-0.5 rounded text-xs font-bold inline-flex items-center gap-1 ${
+                        item.outcome === 'WIN' 
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                          : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                      }`}>
+                        {item.outcome}
+                      </span>
+                    </td>
+                    <td className="p-3 whitespace-nowrap font-bold">
+                      <span className={item.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                        {item.pnl >= 0 ? '+' : ''}${item.pnl.toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="p-3 text-xs text-slate-300 leading-relaxed font-sans">
+                      <span className="text-[11px] text-slate-300 block break-words">
+                        {item.strategyNotes}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

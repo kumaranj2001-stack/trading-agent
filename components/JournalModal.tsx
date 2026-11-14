@@ -353,17 +353,17 @@ export const JournalModal: React.FC<JournalModalProps> = ({
 
             {/* Table of Journal Entries */}
             <div className="border border-terminal-border rounded-xl overflow-hidden bg-terminal-950">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
+              <div className="overflow-x-auto scrollbar-thin touch-pan-x">
+                <table className="w-full text-left text-xs font-mono min-w-[850px]">
                   <thead className="bg-terminal-900 border-b border-terminal-border text-slate-400 text-[11px] uppercase">
                     <tr>
-                      <th className="py-2.5 px-3">Symbol & Type</th>
-                      <th className="py-2.5 px-3">Entry / Exit</th>
-                      <th className="py-2.5 px-3">Stop / Target</th>
-                      <th className="py-2.5 px-3">R:R & Lots</th>
-                      <th className="py-2.5 px-3">Outcome & P&L</th>
-                      <th className="py-2.5 px-3">Diagnostic Failure Attribution</th>
-                      <th className="py-2.5 px-3 text-right">Audit</th>
+                      <th className="py-2.5 px-3 whitespace-nowrap">Symbol & Type</th>
+                      <th className="py-2.5 px-3 whitespace-nowrap">Entry / Exit</th>
+                      <th className="py-2.5 px-3 whitespace-nowrap">Stop / Target</th>
+                      <th className="py-2.5 px-3 whitespace-nowrap">R:R & Lots</th>
+                      <th className="py-2.5 px-3 whitespace-nowrap">Outcome & P&L</th>
+                      <th className="py-2.5 px-3 min-w-[220px]">Diagnostic Failure Attribution</th>
+                      <th className="py-2.5 px-3 text-right whitespace-nowrap">Audit</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-terminal-border/60">

@@ -1199,6 +1199,7 @@ export default function Home() {
               portfolio={portfolio}
               onClosePosition={handleClosePosition}
               executionMode={executionMode}
+              theme={theme}
             />
           </div>
         )}
