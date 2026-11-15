@@ -48,6 +48,7 @@ export interface LeftNavigationDrawerProps {
   onOpenCalendar?: () => void;
   onOpenMacroIntelligence?: () => void;
   onOpenOrderFlow?: () => void;
+  onOpenSequentialPipeline?: () => void;
   onOpenSettings?: () => void;
   onOpenRiskRatioController?: () => void;
   executionMode?: ExecutionMode;
@@ -73,6 +74,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
   onOpenScanner,
   onOpenCalendar,
   onOpenOrderFlow,
+  onOpenSequentialPipeline,
   onOpenSettings,
   onOpenRiskRatioController,
   executionMode,
@@ -239,8 +241,29 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'journals',
+      id: 'sequential-pipeline',
       number: '07',
+      label: '7-Stage Pipeline',
+      description: 'Deterministic 7-Stage Sequential Execution Pipeline',
+      icon: Layers,
+      color: 'text-emerald-400',
+      activeBg: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-semibold',
+      isActive: activeTab === 'sequential-pipeline' || activeTab === 'pipeline',
+      badge: '7 STAGES',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      action: () => {
+        if (onOpenSequentialPipeline) {
+          onOpenSequentialPipeline();
+        } else {
+          setActiveTab('sequential-pipeline');
+        }
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
+    {
+      id: 'journals',
+      number: '08',
       label: 'Journals',
       description: 'Persistent Trade Journal & Loss Review',
       icon: BookOpen,
@@ -257,7 +280,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'wire',
-      number: '08',
+      number: '09',
       label: 'Wire',
       description: 'Wire with 38 Live Financial Outlets & Institutional Feeds',
       icon: Radio,
@@ -274,7 +297,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'order-flow',
-      number: '09',
+      number: '10',
       label: 'Order Flow',
       description: 'Footprint Charts, Volume Profile & Dual Confluence Execution',
       icon: BarChart2,
@@ -291,7 +314,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'calendar',
-      number: '10',
+      number: '11',
       label: 'Macro Calendar',
       description: 'Institutional Macro Economic Release Pulse',
       icon: Calendar,
@@ -308,7 +331,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'macro-intelligence',
-      number: '11',
+      number: '12',
       label: 'Macro Intelligence',
       description: 'Event-Driven Macro Intelligence & Execution Engine',
       icon: Zap,
@@ -325,7 +348,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'scanner',
-      number: '12',
+      number: '13',
       label: 'Scanner',
       description: 'Multi-Asset Screener & Confluence Hunter',
       icon: Radar,
@@ -342,7 +365,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'var',
-      number: '13',
+      number: '14',
       label: 'VAR',
       description: '1,000-Path Monte Carlo Value-at-Risk',
       icon: Shield,
@@ -353,23 +376,6 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       badgeColor: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
       action: () => {
         setActiveTab('var');
-        onClose();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      },
-    },
-    {
-      id: 'journals-history',
-      number: '14',
-      label: 'Journals',
-      description: 'Historical Execution Logs & Loss Attribution',
-      icon: BookOpen,
-      color: 'text-teal-400',
-      activeBg: 'bg-teal-500/15 border-teal-500/40 text-teal-300 font-semibold',
-      isActive: activeTab === 'journals',
-      badge: 'LOGS',
-      badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
-      action: () => {
-        setActiveTab('journals');
         onClose();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },

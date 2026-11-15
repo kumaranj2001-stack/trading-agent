@@ -45,6 +45,7 @@ import {
   Crosshair
 } from 'lucide-react';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { SevenStagePipelineVisualizer } from './SevenStagePipelineVisualizer';
 
 interface UnifiedDecisionBannerProps {
   consensus: SwarmConsensusResult;
@@ -52,6 +53,7 @@ interface UnifiedDecisionBannerProps {
   onOpenNewsWire?: () => void;
   onOpenMonteCarlo?: () => void;
   onForceRecalibrate?: () => void;
+  onOpenSequentialPipeline?: () => void;
   isMarketFrozen?: boolean;
   sessionInfo?: MarketSessionInfo | null;
   theme?: 'dark' | 'light';
@@ -63,6 +65,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   onOpenNewsWire,
   onOpenMonteCarlo,
   onForceRecalibrate,
+  onOpenSequentialPipeline,
   isMarketFrozen = false,
   sessionInfo = null,
   theme = 'dark',
@@ -71,6 +74,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   const [showDebateBreakdown, setShowDebateBreakdown] = useState(true);
   const [showExhaustiveCorpusDetails, setShowExhaustiveCorpusDetails] = useState(false);
   const [showInstitutionalOrderFlow, setShowInstitutionalOrderFlow] = useState(true);
+  const [showPipelineDetails, setShowPipelineDetails] = useState(false);
 
   const rawInstitutionalGrading = consensus.exhaustiveStrategyCorpus?.institutionalGrading || consensus.unifiedDecision.institutionalGrading;
   const rawInstitutionalOrderFlow = consensus.exhaustiveStrategyCorpus?.institutionalOrderFlow || consensus.unifiedDecision.institutionalOrderFlow;
@@ -297,6 +301,28 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               </span>
             </span>
           )}
+
+          {/* 🧬 7-Stage Deterministic Sequential Pipeline Verification Pill & Drawer Trigger */}
+          <button
+            type="button"
+            onClick={() => setShowPipelineDetails(prev => !prev)}
+            className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
+              consensus.sevenStagePipeline?.pipelineCompleted
+                ? theme === 'light'
+                  ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-300 shadow-sm'
+                  : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                : theme === 'light'
+                ? 'bg-indigo-100 hover:bg-indigo-200 text-indigo-900 border-indigo-300 shadow-sm'
+                : 'bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border-indigo-500/40'
+            }`}
+            title="Inspect 7-Stage Deterministic Sequential Pipeline (Stage 1 to Stage 7 Audit Trail)"
+          >
+            <Layers className="w-3 h-3 text-cyan-400" />
+            <span>
+              7-STAGE PIPELINE: {consensus.sevenStagePipeline?.pipelineCompleted ? '7/7 VERIFIED' : `${consensus.sevenStagePipeline?.stagesCompletedCount ?? 7}/7`}
+            </span>
+            {showPipelineDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
         </div>
 
         {/* Live Synchronized Ticker Price & Recalibration Trigger */}
@@ -441,6 +467,18 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
           )}
         </div>
       </div>
+
+      {/* 🧬 Interactive Seven-Stage Sequential Pipeline Drawer */}
+      {showPipelineDetails && (
+        <div className="mt-3">
+          <SevenStagePipelineVisualizer
+            pipeline={consensus.sevenStagePipeline}
+            selectedPair={pair}
+            theme={theme}
+            isCompact={false}
+          />
+        </div>
+      )}
 
       {/* ⚓ Deterministic State-Latching Anchor Strip */}
       {consensus.latchedState && consensus.latchedState.isLatched && (

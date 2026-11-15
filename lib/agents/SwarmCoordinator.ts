@@ -32,6 +32,7 @@ import { ChiefReviewerAgent } from './ChiefReviewer';
 import { automatedSignalValidationModule } from '../automatedSignalValidationModule';
 import { multiAssetIngestionEngine } from '../multiAssetIngestionEngine';
 import { macroTelemetryBridge } from '../macroTelemetryBridge';
+import { sevenStagePipelineEngine } from '../sevenStagePipelineEngine';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -605,6 +606,14 @@ export class SwarmCoordinator {
       finalLots = preExecutionFilter.adjustedLots || 0.01;
     }
 
+    // ⚡ Execute Strict Seven-Stage Deterministic Sequential Pipeline
+    const sevenStagePipeline = sevenStagePipelineEngine.executePipeline({
+      pair,
+      timeframe,
+      providedCandles: marketCandles,
+      scenarioPrompt: typeof scenarioInput === 'string' ? scenarioInput : scenarioInput?.prompt,
+    });
+
     const consensusResult: SwarmConsensusResult = {
       pair,
       marketSegment,
@@ -634,6 +643,7 @@ export class SwarmCoordinator {
       trendGate,
       exhaustiveStrategyCorpus: exhaustiveCorpus,
       capitalPreservationGate,
+      sevenStagePipeline,
       agents: {
         technical,
         fundamental,

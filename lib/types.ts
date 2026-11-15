@@ -53,7 +53,9 @@ export type NavigationTab =
   | 'scanner'              // 12. Scanner (Multi-Asset Screener & Confluence Hunter)
   | 'var'                  // 13. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
   | 'backtest'             // Backtest (Monte Carlo Walk-Forward Backtester)
-  | 'firebase';            // 15. Firebase (Firestore Cloud Realtime State Sync)
+  | 'firebase'             // 15. Firebase (Firestore Cloud Realtime State Sync)
+  | 'sequential-pipeline'  // 16. Seven-Stage Deterministic Sequential Pipeline
+  | 'pipeline';            // 16. Pipeline alias
 
 export type TimeFrame = '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
 
@@ -1206,6 +1208,353 @@ export interface SwarmConsensusResult {
   trendGate?: TrendGateStatus;
   exhaustiveStrategyCorpus?: ExhaustiveStrategyCorpusEvaluation;
   capitalPreservationGate?: AbsoluteCapitalPreservationGateResult;
+  sevenStagePipeline?: SevenStagePipelineResult;
+}
+
+// ============================================================================
+// ⚡ SEVEN-STAGE DETERMINISTIC SEQUENTIAL PIPELINE ARCHITECTURE
+// Strict sequential pipeline where each downstream module consumes ONLY
+// the validated output of the preceding stage for the currently selected instrument.
+// ============================================================================
+
+export interface Stage1StrategiesAnalysis {
+  stage: 1;
+  stageName: '1,050+ Execution Strategies Analysis';
+  timestamp: number;
+  symbol: CurrencyPair;
+  timeframe: TimeFrame;
+  totalStrategiesEvaluated: number; // 1,050+ (525+ Technical + 525+ Fundamental)
+  technicalStrategiesEvaluated: number;
+  fundamentalStrategiesEvaluated: number;
+  rawTechnicalScore: number;
+  rawFundamentalScore: number;
+  rawDirectionalScores: {
+    buyScore: number;
+    sellScore: number;
+    netScore: number;
+    rawBias: 'BUY' | 'SELL' | 'NEUTRAL';
+  };
+  patternDetections: {
+    smartMoneyConcepts: {
+      structure: string;
+      orderBlock: string;
+      fvgStatus: string;
+      liquiditySweep: string;
+    };
+    ictFrameworks: string[];
+    liquidityZones: string[];
+    marketDna: string;
+    quantumVisionOverlay: string;
+  };
+  topRuleMatches: KnowledgeRule[];
+  status: 'COMPLETED';
+  latencyMs: number;
+}
+
+export interface Stage2CongressOrderFlowGovernance {
+  stage: 2;
+  stageName: 'Institutional Strategies Congress and Order Flow Governance';
+  timestamp: number;
+  symbol: CurrencyPair;
+  inputStage1: Stage1StrategiesAnalysis;
+  multiTimeframeAlignment: {
+    htfBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    mtfBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    ltfBias: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    isAligned: boolean;
+    alignmentScore: number;
+  };
+  liquiditySweepValidation: {
+    sweepDetected: boolean;
+    sweptSide: 'BUY_SIDE_LIQUIDITY' | 'SELL_SIDE_LIQUIDITY' | 'NONE';
+    sweepPriceLevel: number;
+    institutionalAbsorptionConfirmed: boolean;
+  };
+  institutionalVolumeProfile: {
+    pointOfControl: number;
+    valueAreaHigh: number;
+    valueAreaLow: number;
+    cumulativeVolumeDelta: number;
+    buyingPressurePercent: number;
+    sellingPressurePercent: number;
+    stackedImbalanceDetected: boolean;
+    imbalanceRatio: number;
+  };
+  orderFlowGovernance: {
+    retailNoiseFiltered: boolean;
+    governanceVerdict: 'APPROVED_INSTITUTIONAL' | 'REJECTED_RETAIL_NOISE' | 'BORDERLINE_NEUTRAL';
+    selectedSetupGrade: ConfluenceGrade;
+    isInstitutionalGrade: boolean; // Grade A or Grade A+
+    congressVotingTally: {
+      institutionalYes: number;
+      institutionalNo: number;
+      abstain: number;
+      rationale: string;
+    };
+  };
+  status: 'COMPLETED';
+  latencyMs: number;
+}
+
+export interface Stage3RealTimeMarketDataIntegration {
+  stage: 3;
+  stageName: 'Real-Time Market Data Integration';
+  timestamp: number;
+  symbol: CurrencyPair;
+  inputStage2: Stage2CongressOrderFlowGovernance;
+  exactLiveQuotes: {
+    bidPrice: number;
+    askPrice: number;
+    midPrice: number;
+    spreadPips: number;
+    spreadCostUsd: number;
+  };
+  liveStreamIntegrations: {
+    webSocketStream: {
+      endpoint: string;
+      protocol: 'WSS (Secure WebSocket)' | 'Direct Real-Time Streaming';
+      isConnected: boolean;
+      latencyMs: number;
+      ticksIngested: number;
+    };
+    mt5RestApi: {
+      endpoint: string;
+      terminalStatus: 'CONNECTED' | 'SYNCHRONIZED';
+      executionBridgeActive: boolean;
+      pingMs: number;
+      serverTime: string;
+    };
+  };
+  tickVolatility: {
+    instantaneousAtr: number;
+    tickVelocityPerSec: number;
+    volatilityRegime: 'NORMAL' | 'EXPANDING' | 'EXTREME_SPIKE' | 'COMPRESSED';
+  };
+  orderBookDepth: {
+    bidDepthVolume: number;
+    askDepthVolume: number;
+    depthImbalanceRatio: number;
+    nearestBidWall: number;
+    nearestAskWall: number;
+  };
+  sessionLiquidityState: {
+    activeSession: string;
+    liquidityRating: 'VERY_HIGH' | 'HIGH' | 'MODERATE' | 'LOW';
+    isMarketFrozen: boolean;
+  };
+  lastCandleMomentum: {
+    open: number;
+    high: number;
+    low: number;
+    close: number;
+    delta: number;
+    isExpansionBar: boolean;
+  };
+  evaluatedAgainstExactLivePricing: boolean;
+  status: 'COMPLETED';
+  latencyMs: number;
+}
+
+export interface Stage4IntermarketNewsCorrelations {
+  stage: 4;
+  stageName: 'Intermarket and Forex Market News and Correlations';
+  timestamp: number;
+  symbol: CurrencyPair;
+  inputStage3: Stage3RealTimeMarketDataIntegration;
+  crossAssetCorrelationTelemetry: {
+    dxyIndex: { value: number; trend: string; correlationToSymbol: number };
+    us10YRealYield: { value: number; trend: string; yieldSpread2Y10Y: number };
+    equityIndices: { spxTrend: string; spxCorrelation: number };
+    commodityTelemetry: { crudeOilTrend: string; goldTrend: string; copperTrend: string };
+    correlatedPairs: Array<{ pair: string; correlationPercent: number; trend: string }>;
+  };
+  wireFeedsAndCalendar: {
+    activeWireSourcesCount: number;
+    breakingNewsBullets: Array<{
+      source: string;
+      title: string;
+      sentiment: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+      impact: 'CRITICAL' | 'HIGH' | 'MEDIUM';
+      timestamp: string;
+    }>;
+    macroEconomicSurprises: Array<{
+      event: string;
+      country: string;
+      actual: number;
+      forecast: number;
+      variancePercent: number;
+      deviationAlertTriggered: boolean;
+    }>;
+  };
+  nlpSentimentScoring: {
+    sentimentScore: number; // -100 to +100
+    centralBankStance: 'HAWKISH' | 'DOVISH' | 'NEUTRAL';
+    macroRegime: string;
+    catalystRelationship: 'CONFIRMS_THESIS' | 'AMPLIFIES_THESIS' | 'CONTRADICTS_THESIS' | 'NEUTRAL';
+    divergenceDetected: boolean;
+    sentimentAnalysisRationale: string;
+  };
+  status: 'COMPLETED';
+  latencyMs: number;
+}
+
+export interface Stage5ChiefGatekeeperCompilation {
+  stage: 5;
+  stageName: 'Chief Gatekeeper / Risk Manager Compilation';
+  timestamp: number;
+  symbol: CurrencyPair;
+  inputStages1Through4: {
+    stage1Summary: string;
+    stage2Summary: string;
+    stage3Summary: string;
+    stage4Summary: string;
+  };
+  unifiedIntelligenceDossier: {
+    dossierId: string;
+    compiledAt: string;
+    chiefGatekeeper: string;
+    strategicConfluence: {
+      confluenceGrade: ConfluenceGrade;
+      compositeConfidenceScore: number;
+      institutionalDirectionalBias: 'BUY' | 'SELL' | 'HOLD';
+    };
+    accountConstraints: {
+      accountEquity: number;
+      freeMargin: number;
+      maxAllowedDrawdownPercent: number;
+      maxDailyLossCapUsd: number;
+      currentOpenRiskUsd: number;
+    };
+    riskRatioControllerParams: {
+      enforcedMinRiskRewardRatio: number; // >= 2.0:1
+      volatilityAdaptedLotSize: number;
+      absoluteDownsideLossCapUsd: number;
+      capitalPreservationDirective: string;
+    };
+    preExecutionComplianceAudit: {
+      liquidityWallProtectionConfirmed: boolean;
+      slippageToleranceVerified: boolean;
+      calendarLockoutCleared: boolean;
+      noCriticalContextDropped: boolean;
+    };
+  };
+  gatekeeperVerdict: 'APPROVED_FOR_DEBATE' | 'GATEKEEPER_CAUTION' | 'GATEKEEPER_VETO';
+  gatekeeperRationale: string;
+  status: 'COMPLETED';
+  latencyMs: number;
+}
+
+export interface Stage6ChiefReviewerDebate {
+  stage: 6;
+  stageName: 'Chief Reviewer and Buy-Side vs. Sell-Side Debate';
+  timestamp: number;
+  symbol: CurrencyPair;
+  inputStage5: Stage5ChiefGatekeeperCompilation;
+  chiefReviewer: string;
+  adversarialDebateArena: {
+    debateRounds: number;
+    buySideThesis: {
+      leadAdvocate: string;
+      convictionScore: number;
+      coreArguments: string[];
+      competingLiquidityTargets: number[];
+      structuralSupportPoints: number[];
+      liveMomentumEvidences: string[];
+    };
+    sellSideThesis: {
+      leadAdvocate: string;
+      convictionScore: number;
+      coreArguments: string[];
+      competingLiquidityTargets: number[];
+      structuralResistancePoints: number[];
+      macroIntermarketRisks: string[];
+    };
+    crossExaminations: Array<{
+      round: number;
+      questioner: string;
+      respondent: string;
+      argumentTopic: string;
+      resolutionVerdict: string;
+    }>;
+  };
+  adjudicatedConsensus: {
+    consensusRuling: 'DEFINITIVE_BUY' | 'DEFINITIVE_SELL' | 'NO_CONSENSUS_HOLD';
+    adjudicatedDirection: 'BUY' | 'SELL' | 'HOLD';
+    directionalBiasEliminated: boolean;
+    adjudicatedConfidence: number;
+    gatekeeperClearanceSignature: string;
+    adjudicationSummary: string;
+  };
+  status: 'COMPLETED';
+  latencyMs: number;
+}
+
+export interface StageAuditTrailItem {
+  stageNumber: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  stageName: string;
+  status: 'PASSED' | 'VERIFIED' | 'COMPLETED' | 'MODIFIED' | 'VETOED';
+  timestamp: number;
+  timeFormatted: string;
+  latencyMs: number;
+  summary: string;
+  keyMetric: string;
+}
+
+export interface Stage7FinalTradeOutput {
+  stage: 7;
+  stageName: 'Final Trade Output Generation';
+  timestamp: number;
+  symbol: CurrencyPair;
+  inputStage6: Stage6ChiefReviewerDebate;
+  actionableTradeDirective: {
+    action: 'BUY' | 'SELL' | 'HOLD';
+    orderType: 'BUY_MARKET' | 'SELL_MARKET' | 'NONE';
+    symbol: CurrencyPair;
+    entryPrice: number;
+    stopLoss: number;
+    takeProfit: number;
+    riskRewardRatio: number;
+    confidenceGradedLots: number;
+    maxLossUsd: number;
+    executionAuthorized: boolean;
+    executionStatus: 'READY' | 'EXECUTED' | 'VETOED';
+    rationale: string;
+  };
+  structuralInvalidationAnchors: {
+    invalidationPriceLevel: number;
+    invalidationDistancePips: number;
+    resistanceCeiling: number;
+    s1Floor: number;
+    anchoredLiquidityWall: string;
+  };
+  confidenceGradedSizingBreakdown: {
+    baseAccountRiskPercent: number;
+    gradeMultiplier: number;
+    volatilityAtrMultiplier: number;
+    calculatedLots: number;
+  };
+  stageByStageAuditTrail: StageAuditTrailItem[];
+  terminalPayloadReady: boolean;
+  status: 'COMPLETED';
+  latencyMs: number;
+}
+
+export interface SevenStagePipelineResult {
+  pipelineId: string;
+  symbol: CurrencyPair;
+  timeframe: TimeFrame;
+  executedAt: string;
+  totalPipelineLatencyMs: number;
+  stage1: Stage1StrategiesAnalysis;
+  stage2: Stage2CongressOrderFlowGovernance;
+  stage3: Stage3RealTimeMarketDataIntegration;
+  stage4: Stage4IntermarketNewsCorrelations;
+  stage5: Stage5ChiefGatekeeperCompilation;
+  stage6: Stage6ChiefReviewerDebate;
+  stage7: Stage7FinalTradeOutput;
+  isSuccess: boolean;
+  pipelineCompleted: boolean;
+  stagesCompletedCount: number;
 }
 
 export interface DeskAuditVerdict {
