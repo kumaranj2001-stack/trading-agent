@@ -13,24 +13,24 @@ export const DEFAULT_TIER_RISK_CONFIG: RiskRatioControllerConfig = {
     'A+': {
       grade: 'A+',
       name: 'Grade A+ (Institutional High-Conviction Core)',
-      minConfidence: 85,
+      minConfidence: 80,
       defaultLots: 1.00,
       minLots: 0.90,
       maxLots: 1.50,
       accountRiskPercent: 2.0,
-      targetRRRatio: 3.2,
-      executionPolicy: 'Full pip allocation. Prime multi-desk confluence across 525 technical and 525 macro strategies.',
+      targetRRRatio: 3.5,
+      executionPolicy: 'Unanimous/supermajority alignment (>=80% probability, <10% friction, verified depth wall). Minimum 1:3.5 R:R.',
     },
     'A': {
       grade: 'A',
-      name: 'Grade A (Primary Alpha Trend Expansion)',
+      name: 'Grade A (Primary Institutional Setup)',
       minConfidence: 70,
       defaultLots: 0.75,
       minLots: 0.60,
       maxLots: 0.85,
       accountRiskPercent: 1.5,
-      targetRRRatio: 2.8,
-      executionPolicy: 'Proportional alpha sizing (0.60 to 0.85 lots). Validated liquidity sweeps & order flow confirmation.',
+      targetRRRatio: 3.0,
+      executionPolicy: 'Supermajority alignment (70-79% probability, <15% friction, structural hold). Mandatory minimum 1:3 R:R.',
     },
     'B': {
       grade: 'B',
@@ -165,12 +165,52 @@ export class RiskRatioController {
   }
 
   /**
-   * Derives a 7-tier institutional confluence grade strictly from multi-agent confidence score
+   * Derives a 7-tier institutional confluence grade strictly enforcing calibrated Grade A+ and Grade A tiers.
+   * Grade A+: Unanimous/supermajority (>=4/5), probability >=80%, friction <10%, liquidity wall, clean HTF alignment, no conflicting news.
+   * Grade A: At least 4/5 desk agreement, probability 70-79%, friction <15%, structural hold, minimum 1:3 R:R.
    */
-  public deriveGradeFromConfidence(confidence: number, hasDivergence: boolean = false): ConfluenceGrade {
+  public deriveGradeFromConfidence(
+    confidence: number,
+    hasDivergence: boolean = false,
+    options?: {
+      agreeDeskCount?: number;
+      dialecticalFriction?: number;
+      liquidityWallVerified?: boolean;
+      htfStructuralAlignment?: boolean;
+      hasConflictingNews?: boolean;
+      structuralFloorCeilingHeld?: boolean;
+      riskRewardRatio?: number;
+    }
+  ): ConfluenceGrade {
+    const agreeDesks = options?.agreeDeskCount ?? 5;
+    const friction = options?.dialecticalFriction ?? 8.0;
+    const rrr = options?.riskRewardRatio ?? 3.2;
+
     if (hasDivergence && confidence < 50) return 'E';
-    if (confidence >= 85) return 'A+';
-    if (confidence >= 70) return 'A';
+
+    // Strict Grade A+ Setup Calibration
+    if (
+      confidence >= 80 &&
+      agreeDesks >= 4 &&
+      friction < 10.0 &&
+      (options?.liquidityWallVerified !== false) &&
+      (options?.htfStructuralAlignment !== false) &&
+      !options?.hasConflictingNews
+    ) {
+      return 'A+';
+    }
+
+    // Strict Grade A Setup Calibration
+    if (
+      confidence >= 70 &&
+      agreeDesks >= 4 &&
+      friction < 15.0 &&
+      rrr >= 3.0 &&
+      (options?.structuralFloorCeilingHeld !== false)
+    ) {
+      return 'A';
+    }
+
     if (confidence >= 58) return 'B';
     if (confidence >= 46) return 'C';
     if (confidence >= 34) return 'D';

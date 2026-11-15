@@ -465,6 +465,131 @@ export interface ExhaustiveCategoryBreakdown {
   alignmentStatus: 'ALIGNED' | 'OPPOSED' | 'MIXED';
 }
 
+export type InstitutionalStrategyCategory =
+  | 'SMART_MONEY_CONCEPTS'
+  | 'VOLUME_PROFILE_AUCTION_MARKET_THEORY'
+  | 'HARMONIC_FIBONACCI_CONFLUENCE'
+  | 'CROSS_ASSET_MACRO_MODELS'
+  | 'SECONDARY_CONFIRMATION_FILTER';
+
+export type StrategyTier = 'INSTITUTIONAL_CORE' | 'SECONDARY_CONFIRMATION' | 'DEPRECATED_STANDALONE';
+export type StrategyPruneStatus = 'ACTIVE' | 'PRUNED_UNDERPERFORMING' | 'SECONDARY_ONLY';
+
+export interface InstitutionalStrategyDefinition {
+  id: string;
+  name: string;
+  category: InstitutionalStrategyCategory;
+  tier: StrategyTier;
+  isPrimaryCatalyst: boolean;
+  weight: number;
+  expectedWinRate: number;
+  historicalWinRate: number;
+  historicalTradesCount: number;
+  pruneStatus: StrategyPruneStatus;
+  invalidationCriteria: string;
+  pruneReason?: string;
+  description: string;
+}
+
+export interface StrictInstitutionalGradingResult {
+  grade: ConfluenceGrade; // 'A+' | 'A' | 'B' | 'C' | 'FILTERED_OUT'
+  isGradeAPlus: boolean;
+  isGradeA: boolean;
+  isRetailFiltered: boolean;
+  metaConsensusProbability: number; // e.g. >= 80% for A+, 70-79% for A
+  dialecticalFriction: number;      // < 10% for A+, < 15% for A
+  deskAgreementRatio: number;      // e.g. 5/5 or 4/5
+  agreeDeskCount: number;
+  liquidityWallVerified: boolean;  // Order book depth wall backing
+  htfStructuralAlignment: boolean; // Higher-timeframe clean alignment
+  hasConflictingNewsCatalyst: boolean; // No high-impact news shock/lockout
+  structuralFloorCeilingHeld: boolean; // S1 floor or R1 ceiling hold
+  riskRewardRatio: number;          // Min 1:3 for Grade A
+  primaryInstitutionalCatalysts: string[];
+  secondaryConfirmationFilters: string[];
+  deprecatedTriggersPenalized: string[];
+  gradingRationale: string;
+}
+
+export interface InstitutionalOrderFlowMetrics {
+  marketStructureShift: {
+    detected: boolean;
+    timeframe: string;
+    type: 'BULLISH_CHoCH' | 'BEARISH_CHoCH' | 'NONE';
+    displacementPips: number;
+  };
+  orderBlock: {
+    detected: boolean;
+    zoneType: 'BULLISH_DEMAND' | 'BEARISH_SUPPLY' | 'NONE';
+    priceLevel: number;
+    mitigated: boolean;
+    volumeMultiplier: number;
+  };
+  fairValueGap: {
+    detected: boolean;
+    type: 'BULLISH_FVG' | 'BEARISH_FVG' | 'NONE';
+    top: number;
+    bottom: number;
+    filledPercent: number;
+  };
+  liquiditySweep: {
+    detected: boolean;
+    side: 'BUY_SIDE' | 'SELL_SIDE' | 'NONE';
+    sweepPrice: number;
+    fakeoutReversal: boolean;
+  };
+  vwapBands: {
+    vwap: number;
+    upper1Sigma: number;
+    lower1Sigma: number;
+    upper2Sigma: number;
+    lower2Sigma: number;
+    upper3Sigma: number;
+    lower3Sigma: number;
+    currentBand: string;
+  };
+  pointOfControl: {
+    pocPrice: number;
+    vahPrice: number;
+    valPrice: number;
+    acceptanceStatus: 'IN_VALUE' | 'ABOVE_VAH' | 'BELOW_VAL';
+  };
+  cumulativeVolumeDelta: {
+    cvdValue: number;
+    divergenceDetected: boolean;
+    divergenceType: 'BULLISH_ABSORPTION' | 'BEARISH_EXHAUSTION' | 'NONE';
+  };
+  depthImbalance: {
+    bidAskDepthRatio: number;
+    heavyQueueSide: 'BIDS' | 'ASKS' | 'BALANCED';
+    imbalanceTriggered: boolean;
+  };
+  harmonicPattern: {
+    patternName: 'Gartley' | 'Bat' | 'Butterfly' | 'Crab' | 'None';
+    completionLevel: number;
+    fibonacciConfluence: number;
+    validated: boolean;
+  };
+  atrVolatilityFilter: {
+    atr14: number;
+    volatilityState: 'EXPANSION' | 'CONTRACTION' | 'NORMAL';
+    gatingPassed: boolean;
+  };
+  crossAssetMacro: {
+    realYieldDifferentialBps: number;
+    cotInstitutionalPositioning: {
+      commercialNetLongPct: number;
+      extremeDetected: boolean;
+      stance: 'BULLISH_EXTREME' | 'BEARISH_EXTREME' | 'NEUTRAL';
+    };
+    centralBankRateProbabilityShift: {
+      hikeProbPct: number;
+      cutProbPct: number;
+      impliedShiftBps: number;
+    };
+  };
+}
+
 export interface ExhaustiveStrategyCorpusEvaluation {
   totalEvaluatedStrategies: number; // 1,050+
   technicalEvaluatedCount: number;  // 525
@@ -495,6 +620,10 @@ export interface ExhaustiveStrategyCorpusEvaluation {
   evaluationTimestamp: number;
 
   categoryPerformanceBreakdown: ExhaustiveCategoryBreakdown[];
+  institutionalGrading?: StrictInstitutionalGradingResult;
+  institutionalOrderFlow?: InstitutionalOrderFlowMetrics;
+  activeStrategyPermutations?: string[];
+  prunedStrategyPermutationsCount?: number;
 }
 
 export interface OrderBookLiquidityWallSnapshot {
@@ -820,6 +949,9 @@ export interface UnifiedDecision {
     riskGovernance: string;
   };
   keyDriversList: string[];
+  institutionalGrading?: StrictInstitutionalGradingResult;
+  institutionalOrderFlow?: InstitutionalOrderFlowMetrics;
+  activeStrategyPermutations?: string[];
 }
 
 export interface MonteCarloProjection {
@@ -1538,6 +1670,10 @@ export interface JournalEntry {
   invalidationTriggers?: string[];
   atomicVerification?: PreExecutionAtomicVerification;
   executionBidAsk?: Position['executionBidAsk'];
+  confluenceScore?: number;
+  strategyPermutations?: string[];
+  smcOrderFlowMetrics?: Partial<InstitutionalOrderFlowMetrics>;
+  isInstitutionalGrade?: boolean;
 }
 
 export interface HistoricalJournalAnalysis {
@@ -1554,6 +1690,26 @@ export interface HistoricalJournalAnalysis {
   primaryLossCauses: Array<{ category: JournalLossCategory; count: number; percentage: number }>;
   recurringMistakesWarning?: string;
   activeGuardrailAction?: string;
+  strategyPermutationStats?: Record<string, {
+    strategyId: string;
+    strategyName: string;
+    category: string;
+    trades: number;
+    wins: number;
+    losses: number;
+    winRate: number;
+    avgPnl: number;
+    isPruned: boolean;
+    pruneReason?: string;
+  }>;
+  prunedStrategiesList?: Array<{
+    strategyId: string;
+    name: string;
+    winRate: number;
+    tradesCount: number;
+    reason: string;
+  }>;
+  confluenceGradeWinRates?: Record<string, { count: number; wins: number; losses: number; winRate: number }>;
 }
 
 // ============================================================================

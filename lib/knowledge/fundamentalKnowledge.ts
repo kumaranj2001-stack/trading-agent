@@ -1,21 +1,44 @@
 import { KnowledgeRule, SignalDirection } from '../types';
 
 // Structured generation of 525 distinct institutional fundamental rules across 10 key categories:
-// 1. Central Bank Monetary Policy & Rate Differentials (Rules 1-60)
+// 1. Central Bank Monetary Policy & Rate Probability Shifts (Rules 1-60)
+//    - FedWatch / OIS implied path shifts > 25 bps
+//    - Policy divergence & terminal rate recalibration
 // 2. Inflation Dynamics (CPI, Core PCE, WPI) (Rules 61-120)
-// 3. Sovereign Bond Yields, Curve Inversions & Spreads (Rules 121-175)
-// 4. Institutional Flows: FII & DII Cash Market Dynamics (Rules 176-230)
+// 3. Real Sovereign Bond Yield Differentials & Curve Models (Rules 121-175)
+//    - Nominal 10Y Yield minus Inflation Expectations (Real Rate Spread)
+// 4. Institutional Positioning: COT Extremes & Institutional Flows (Rules 176-230)
+//    - Commitment of Traders (COT) Commercial Hedgers Percentiles (>85th / <15th)
+//    - FII & DII Cash Market Net Inflows
 // 5. Reserve Bank of India (RBI) Monetary Policy & Indian Macro (Rules 231-285)
 // 6. Commodity Linkages: Crude Oil, Gold & Energy Impact (Rules 286-340)
 // 7. Balance of Payments, Forex Reserves & Current Account (Rules 341-395)
 // 8. Corporate Earnings Beats/Misses & Sectoral Guidance (Rules 396-445)
 // 9. Geopolitical Risk Premium & Sovereign Debt Ratings (Rules 446-490)
-// 10. Global Dollar Index (DXY) Transmission & Carry Parity (Rules 491-525)
+// 10. Global Dollar Index (DXY) Transmission & Cross-Asset Carry (Rules 491-525)
 
-const CB_SUBCATEGORIES = ['Hawkish Rate Hike', 'Dovish Pivot / Cut', 'Forward Guidance Revision', 'Quantitative Tightening (QT)', 'Intervention Warning'];
+const CB_SUBCATEGORIES = [
+  'Central Bank Rate Probability Shift (OIS / FedWatch)',
+  'Hawkish Guidance / Terminal Rate Expansion',
+  'Dovish Pivot / Easing Probability Surge',
+  'Quantitative Tightening (QT) Balance Sheet Runoff',
+  'Emergency FX Intervention Directive'
+];
 const INFLATION_SUBCATEGORIES = ['CPI Print Surprise Beat', 'CPI Core Deceleration', 'Wage Price Index Pressure', 'Producer Price Index (PPI) Surge', 'Stagflation Risk'];
-const YIELD_SUBCATEGORIES = ['2Y/10Y Curve Inversion', 'Real Rate Widening', 'Term Premium Spike', 'Sovereign Spread Expansion', 'Flight to Quality'];
-const FII_DII_SUBCATEGORIES = ['Aggressive FII Net Buying (>₹2000 Cr)', 'Heavy FII Cash Selling (>₹3000 Cr)', 'DII SIP Counter-Flow Absorption', 'F&O Index Long/Short Ratio', 'FII Sector Rotation'];
+const YIELD_SUBCATEGORIES = [
+  'Real Sovereign Yield Differential (10Y minus Inflation)',
+  '2Y/10Y Yield Curve Inversion / Steepener',
+  'Term Premium & Real Rate Widening',
+  'Sovereign CDS Spread Compression',
+  'Cross-Border Flight to Quality'
+];
+const COT_SUBCATEGORIES = [
+  'COT Commercial Hedgers Bullish Extreme (>85th Percentile)',
+  'COT Non-Commercial Leveraged Short Squeeze',
+  'Aggressive FII Net Buying (>₹2000 Cr)',
+  'Heavy FII Cash Distribution (>₹3000 Cr)',
+  'DII SIP Structural Counter-Flow Absorption'
+];
 const RBI_SUBCATEGORIES = ['RBI Repo Rate Stance', 'Liquidity Adjustment Facility (LAF)', 'Forex Intervention to Support INR', 'Bank Credit Growth Trajectory', 'Monsoon & Kharif Agricultural Output'];
 const COMMODITY_SUBCATEGORIES = ['Brent Crude Spike >$85/bbl', 'Crude Deflation <$70/bbl', 'Gold Safe-Haven Flight', 'Base Metals Cyclical Demand', 'Agricultural Import Price Shock'];
 const BOP_SUBCATEGORIES = ['Current Account Deficit (CAD) Expansion', 'Record RBI FX Reserves (> $700B)', 'Trade Deficit Contraction', 'External Debt Servicing Pressure', 'Remittance & Services Surplus'];
@@ -86,23 +109,28 @@ export function generateFundamentalKnowledgeBase(): KnowledgeRule[] {
     });
   }
 
-  // 4. FII & DII Institutional Flows (55 rules)
+  // 4. Institutional Flows & COT Positioning Extremes (55 rules)
   for (let i = 1; i <= 55; i++) {
     const isBull = i % 2 === 1;
-    const sub = FII_DII_SUBCATEGORIES[i % FII_DII_SUBCATEGORIES.length];
+    const sub = COT_SUBCATEGORIES[i % COT_SUBCATEGORIES.length];
+    const isIndian = i > 30;
     rules.push({
       id: `FUND-FLOW-${String(i).padStart(3, '0')}`,
       category: 'FUNDAMENTAL',
       subcategory: `Institutional Flows: ${sub}`,
-      marketScope: 'INDIAN_MARKET',
-      ruleName: isBull ? `Indian Market Institutional Liquidity Confluence #${i}` : `Heavy FII Outflow Distribution Pressure #${i}`,
+      marketScope: isIndian ? 'INDIAN_MARKET' : 'GLOBAL',
+      ruleName: isBull ? `Institutional ${sub} Confluence #${i}` : `Institutional ${sub} Distribution Warning #${i}`,
       conditionDescription: isBull
-        ? `Foreign Institutional Investors (FIIs) record net purchases > ₹1,500 Cr in Indian cash market while DII SIP flows exceed ₹2,000 Cr daily run-rate.`
-        : `FII net selling exceeds ₹3,000 Cr in a single session with F&O Index Long/Short ratio dropping below 20% indicating heavy institutional hedging.`,
+        ? isIndian
+          ? `Foreign Institutional Investors (FIIs) record net purchases > ₹1,500 Cr in Indian cash market while DII SIP flows exceed ₹2,000 Cr daily run-rate.`
+          : `Commitment of Traders (COT) report shows Commercial Hedgers holding extreme net long positions (>85th percentile), confirming smart money accumulation.`
+        : isIndian
+          ? `FII net selling exceeds ₹3,000 Cr in a single session with F&O Index Long/Short ratio dropping below 20% indicating heavy institutional hedging.`
+          : `Commitment of Traders (COT) report shows Commercial Hedgers at net short extremes (<15th percentile), anticipating cyclical macro rollover.`,
       confidenceWeight: 10,
       expectedWinRate: Number((78.0 + (i % 6) * 1.4).toFixed(1)),
       signalAction: isBull ? 'STRONG_BUY' : 'STRONG_SELL',
-      invalidationCriteria: 'FII flow reversal in subsequent consecutive trading sessions.',
+      invalidationCriteria: 'Contrarian weekly institutional flow shift or sudden FII liquidity reversal.',
     });
   }
 

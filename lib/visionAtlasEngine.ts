@@ -838,26 +838,32 @@ export class VisionAtlasLabEngine {
     let takeProfit1 = livePrice;
     let takeProfit2 = livePrice;
     let takeProfit3 = livePrice;
-    let riskRewardRatio = 2.65;
+    let riskRewardRatio = 3.25;
+
+    const targetMultiple = grade === 'A+' ? 3.5 : grade === 'A' ? 3.0 : 2.5;
 
     if (isBuy) {
       entryZoneMin = Number((livePrice - atr * 0.3).toFixed(decimals));
       entryZoneMax = Number((livePrice + atr * 0.2).toFixed(decimals));
       recommendedEntry = livePrice;
-      hardStopLoss = Number((demandOb ? demandOb.distal - atr * 0.2 : livePrice - atr * 1.5).toFixed(decimals));
-      takeProfit1 = Number((livePrice + atr * 1.5).toFixed(decimals));
-      takeProfit2 = Number((livePrice + atr * 2.8).toFixed(decimals));
-      takeProfit3 = Number((livePrice + atr * 4.2).toFixed(decimals));
-      riskRewardRatio = Number(((takeProfit2 - recommendedEntry) / Math.max(0.0001, recommendedEntry - hardStopLoss)).toFixed(2));
+      const calculatedSl = demandOb ? demandOb.distal - atr * 0.2 : livePrice - atr * 1.0;
+      hardStopLoss = Number(calculatedSl.toFixed(decimals));
+      const effectiveSlDist = Math.max(0.0001, recommendedEntry - hardStopLoss);
+      takeProfit1 = Number((livePrice + effectiveSlDist * 1.5).toFixed(decimals));
+      takeProfit2 = Number((livePrice + effectiveSlDist * targetMultiple).toFixed(decimals));
+      takeProfit3 = Number((livePrice + effectiveSlDist * (targetMultiple + 1.5)).toFixed(decimals));
+      riskRewardRatio = Number(((takeProfit2 - recommendedEntry) / effectiveSlDist).toFixed(2));
     } else {
       entryZoneMin = Number((livePrice - atr * 0.2).toFixed(decimals));
       entryZoneMax = Number((livePrice + atr * 0.3).toFixed(decimals));
       recommendedEntry = livePrice;
-      hardStopLoss = Number((supplyOb ? supplyOb.distal + atr * 0.2 : livePrice + atr * 1.5).toFixed(decimals));
-      takeProfit1 = Number((livePrice - atr * 1.5).toFixed(decimals));
-      takeProfit2 = Number((livePrice - atr * 2.8).toFixed(decimals));
-      takeProfit3 = Number((livePrice - atr * 4.2).toFixed(decimals));
-      riskRewardRatio = Number(((recommendedEntry - takeProfit2) / Math.max(0.0001, hardStopLoss - recommendedEntry)).toFixed(2));
+      const calculatedSl = supplyOb ? supplyOb.distal + atr * 0.2 : livePrice + atr * 1.0;
+      hardStopLoss = Number(calculatedSl.toFixed(decimals));
+      const effectiveSlDist = Math.max(0.0001, hardStopLoss - recommendedEntry);
+      takeProfit1 = Number((livePrice - effectiveSlDist * 1.5).toFixed(decimals));
+      takeProfit2 = Number((livePrice - effectiveSlDist * targetMultiple).toFixed(decimals));
+      takeProfit3 = Number((livePrice - effectiveSlDist * (targetMultiple + 1.5)).toFixed(decimals));
+      riskRewardRatio = Number(((recommendedEntry - takeProfit2) / effectiveSlDist).toFixed(2));
     }
 
     const dynamicSizing = riskRatioController.calculateDynamicLotSize(grade, 25000, 30, false);

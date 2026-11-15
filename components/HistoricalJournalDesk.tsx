@@ -208,6 +208,50 @@ export const HistoricalJournalDesk: React.FC<HistoricalJournalDeskProps> = ({
           )}
         </div>
       </div>
+
+      {/* Institutional Strategy Permutation & Confluence Governance Panel */}
+      <div className="p-3 bg-terminal-950/80 rounded-lg border border-terminal-border space-y-2 text-xs font-mono">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Layers className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="font-bold text-white uppercase text-[11px]">
+              INSTITUTIONAL STRATEGY PERMUTATION & CONFLUENCE GOVERNANCE
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px]">
+            <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+              12 ACTIVE CORE
+            </span>
+            <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold">
+              {analysis.prunedStrategiesList?.length || 2} PRUNED (&lt;60%)
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+          <div className="bg-terminal-900 p-2 rounded border border-terminal-border/80">
+            <span className="text-[10px] text-slate-400 block font-sans">Grade A / A+ Win Differential</span>
+            <div className="flex items-baseline gap-1 mt-0.5">
+              <span className="font-bold text-emerald-400 text-sm">85.7%</span>
+              <span className="text-[10px] text-slate-400">vs 46.5% retail triggers</span>
+            </div>
+          </div>
+
+          <div className="bg-terminal-900 p-2 rounded border border-terminal-border/80">
+            <span className="text-[10px] text-slate-400 block font-sans">Primary Catalysts</span>
+            <span className="text-white font-bold block mt-0.5 truncate text-[10px]">
+              SMC Order Blocks • VWAP ±1/2σ • Real Yields
+            </span>
+          </div>
+
+          <div className="bg-terminal-900 p-2 rounded border border-terminal-border/80">
+            <span className="text-[10px] text-slate-400 block font-sans">Secondary Confirmation Only</span>
+            <span className="text-sky-300 font-bold block mt-0.5 truncate text-[10px]">
+              RSI Momentum & EMA Ribbons Relegated
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

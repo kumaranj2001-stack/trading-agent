@@ -13,6 +13,7 @@ import {
 import { db } from './firebase';
 import { doc, setDoc, getDocs, collection, query, orderBy, limit, deleteDoc } from 'firebase/firestore';
 import { diagnosticReasoningEngine } from './diagnosticReasoningEngine';
+import { strategyRegistry } from './strategyRegistry';
 
 const STORAGE_KEY = 'qri_storage_journal_v1';
 const LEGACY_STORAGE_KEY = 'apex_storage_journal_v1';
@@ -55,6 +56,9 @@ export const INITIAL_JOURNALS: JournalEntry[] = [
     outcome: 'WIN',
     confluenceGrade: 'A+',
     confidenceScore: 84,
+    confluenceScore: 88,
+    isInstitutionalGrade: true,
+    strategyPermutations: ['SMC-MSS-01', 'SMC-OB-02', 'AMT-VWAP-01', 'MACRO-YIELD-01'],
     swarmDirection: 'BUY',
     riskManagerVerdict: 'APPROVED',
     keyReasons: [
@@ -90,6 +94,9 @@ export const INITIAL_JOURNALS: JournalEntry[] = [
     outcome: 'LOSS',
     confluenceGrade: 'B',
     confidenceScore: 68,
+    confluenceScore: 66,
+    isInstitutionalGrade: false,
+    strategyPermutations: ['CONF-RSI-01', 'DEP-MACROSS-STANDALONE'],
     swarmDirection: 'BUY',
     riskManagerVerdict: 'MODIFIED',
     keyReasons: [
@@ -124,6 +131,9 @@ export const INITIAL_JOURNALS: JournalEntry[] = [
     outcome: 'WIN',
     confluenceGrade: 'A+',
     confidenceScore: 91,
+    confluenceScore: 93,
+    isInstitutionalGrade: true,
+    strategyPermutations: ['SMC-SWEEP-04', 'AMT-CVD-03', 'HARM-GARTLEY-01', 'MACRO-YIELD-01'],
     swarmDirection: 'BUY',
     riskManagerVerdict: 'APPROVED',
     keyReasons: [
@@ -323,6 +333,11 @@ export class JournalStorageManager {
         invalidationTriggers: options?.invalidationTriggers,
       };
 
+      // Record trade execution in the modular strategy registry to update rolling win rates & prune status
+      if (updated.strategyPermutations && updated.strategyPermutations.length > 0) {
+        strategyRegistry.recordTradeExecution(updated.strategyPermutations, outcome === 'WIN' ? 'WIN' : 'LOSS', realizedPnl);
+      }
+
       this.saveJournal(updated);
       return { updatedEntry: updated, diagnosticAudit };
     }
@@ -378,6 +393,78 @@ export class JournalStorageManager {
       }))
       .sort((a, b) => b.count - a.count);
 
+    // Track Strategy Permutations & Confluence Scores across Trade History
+    const strategyPermutationStats: Record<string, {
+      strategyId: string;
+      strategyName: string;
+      category: string;
+      trades: number;
+      wins: number;
+      losses: number;
+      winRate: number;
+      avgPnl: number;
+      isPruned: boolean;
+      pruneReason?: string;
+    }> = {};
+
+    const confluenceGradeWinRates: Record<string, { count: number; wins: number; losses: number; winRate: number }> = {};
+
+    all.forEach(j => {
+      const g = j.confluenceGrade || 'B';
+      if (!confluenceGradeWinRates[g]) {
+        confluenceGradeWinRates[g] = { count: 0, wins: 0, losses: 0, winRate: 0 };
+      }
+      confluenceGradeWinRates[g].count++;
+      if (j.outcome === 'WIN') confluenceGradeWinRates[g].wins++;
+      if (j.outcome === 'LOSS') confluenceGradeWinRates[g].losses++;
+      confluenceGradeWinRates[g].winRate = Number(((confluenceGradeWinRates[g].wins / confluenceGradeWinRates[g].count) * 100).toFixed(1));
+
+      const perms = (j.strategyPermutations && j.strategyPermutations.length > 0)
+        ? j.strategyPermutations
+        : (j.confluenceGrade === 'A+' || j.confluenceGrade === 'A')
+        ? ['SMC-MSS-01', 'SMC-OB-02', 'AMT-VWAP-01']
+        : ['CONF-RSI-01', 'DEP-MACROSS-STANDALONE'];
+
+      perms.forEach(permId => {
+        if (!strategyPermutationStats[permId]) {
+          const stratDef = strategyRegistry.getAllStrategies().find(s => s.id === permId);
+          strategyPermutationStats[permId] = {
+            strategyId: permId,
+            strategyName: stratDef?.name || permId,
+            category: stratDef?.category || 'SMART_MONEY_CONCEPTS',
+            trades: 0,
+            wins: 0,
+            losses: 0,
+            winRate: 0,
+            avgPnl: 0,
+            isPruned: stratDef?.pruneStatus === 'PRUNED_UNDERPERFORMING',
+            pruneReason: stratDef?.pruneReason,
+          };
+        }
+        const s = strategyPermutationStats[permId];
+        s.trades++;
+        if (j.outcome === 'WIN') s.wins++;
+        if (j.outcome === 'LOSS') s.losses++;
+        s.winRate = Number(((s.wins / s.trades) * 100).toFixed(1));
+        s.avgPnl = Number((((s.avgPnl * (s.trades - 1)) + (j.realizedPnl || 0)) / s.trades).toFixed(2));
+
+        if (s.trades >= 3 && s.winRate < 60.0) {
+          s.isPruned = true;
+          s.pruneReason = `Pruned by Governance: Win rate (${s.winRate}%) falls below 60% institutional threshold across ${s.trades} trades.`;
+        }
+      });
+    });
+
+    const prunedStrategiesList = Object.values(strategyPermutationStats)
+      .filter(s => s.isPruned)
+      .map(s => ({
+        strategyId: s.strategyId,
+        name: s.strategyName,
+        winRate: s.winRate,
+        tradesCount: s.trades,
+        reason: s.pruneReason || 'Sub-threshold win rate',
+      }));
+
     // Identify recurring mistakes & compute active Swarm guardrail
     let recurringMistakesWarning: string | undefined = undefined;
     let activeGuardrailAction: string | undefined = undefined;
@@ -414,7 +501,10 @@ export class JournalStorageManager {
       symbolStats,
       primaryLossCauses,
       recurringMistakesWarning,
-      activeGuardrailAction
+      activeGuardrailAction,
+      strategyPermutationStats,
+      prunedStrategiesList,
+      confluenceGradeWinRates,
     };
   }
 

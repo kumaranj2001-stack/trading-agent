@@ -299,6 +299,8 @@ export class ChiefReviewerAgent extends BaseAgent {
     // Absolute capital preservation is the mandatory gating requirement.
     // ===============================================================
     let status: ChiefReviewerAuditResult['status'] = 'APPROVED';
+    const institutionalGrading = exhaustiveCorpus?.institutionalGrading;
+
     if (capitalPreservationGate && !capitalPreservationGate.passed) {
       status = 'VETOED';
       consensusDirective = 'AVOID_TRADE';
@@ -306,6 +308,13 @@ export class ChiefReviewerAgent extends BaseAgent {
       contradictionType = 'CAPITAL_PRESERVATION_TRIGGERED';
       resolutionAction = 'FORCE_VETO';
       contradictionExplanation = `CAPITAL PRESERVATION VETO: ${capitalPreservationGate.invalidationAndExitDirective}`;
+    } else if (institutionalGrading?.isRetailFiltered && agreeCount < 4) {
+      status = 'VETOED';
+      consensusDirective = 'AVOID_TRADE';
+      hasContradiction = true;
+      contradictionType = 'SPECIALIST_CONSENSUS_FAILURE';
+      resolutionAction = 'FORCE_VETO';
+      contradictionExplanation = `INSTITUTIONAL GATE VETO: ${institutionalGrading.gradingRationale}`;
     } else if (!consensusRuleSatisfied || resolutionAction === 'FORCE_VETO' || risk.verdict === 'VETOED' || confidenceScore < 68) {
       status = 'VETOED';
       consensusDirective = 'AVOID_TRADE';
@@ -318,7 +327,10 @@ export class ChiefReviewerAgent extends BaseAgent {
 
     const totalStrats = exhaustiveCorpus ? exhaustiveCorpus.totalEvaluatedStrategies : 1051;
     const topRulesSummary = topConfluenceRules.slice(0, 4).map(r => `${r.id} (${r.expectedWinRate}%)`).join(', ');
-    const crossExaminationNotes = `Continuous 24/7 cross-examination of all ${totalStrats} strategies (${exhaustiveCorpus?.technicalEvaluatedCount || 525} Technical + ${exhaustiveCorpus?.fundamentalEvaluatedCount || 525} Fundamental models) with zero heuristic pruning. Meta-consensus score: ${exhaustiveCorpus?.metaConsensusScore ?? confidenceScore}%, dialectical friction: ${exhaustiveCorpus?.debateFrictionIndex ?? 22.5}%. Capital preservation gate: ${capitalPreservationGate?.status || 'VERIFIED'}. Cross-desk debate audited: ${agreeCount}/5 desks agree, ${disagreeCount}/5 desks disagree.`;
+    const institutionalTierNote = institutionalGrading
+      ? ` | Calibrated Tier: ${institutionalGrading.grade} (${institutionalGrading.isGradeAPlus ? 'Grade A+ Unanimous/Supermajority Core' : institutionalGrading.isGradeA ? 'Grade A Primary Institutional' : 'Retail Dilution Filtered'}) | Dialectical Friction: ${institutionalGrading.dialecticalFriction}% | Order Book Depth Wall: ${institutionalGrading.liquidityWallVerified ? 'CONFIRMED' : 'UNVERIFIED'}`
+      : '';
+    const crossExaminationNotes = `Continuous 24/7 cross-examination of all ${totalStrats} strategies (${exhaustiveCorpus?.technicalEvaluatedCount || 525} Technical + ${exhaustiveCorpus?.fundamentalEvaluatedCount || 525} Fundamental models) with zero heuristic pruning. Meta-consensus score: ${exhaustiveCorpus?.metaConsensusScore ?? confidenceScore}%, dialectical friction: ${exhaustiveCorpus?.debateFrictionIndex ?? 22.5}%. Capital preservation gate: ${capitalPreservationGate?.status || 'VERIFIED'}. Cross-desk debate audited: ${agreeCount}/5 desks agree, ${disagreeCount}/5 desks disagree.${institutionalTierNote}`;
 
     return {
       auditorName: this.name,

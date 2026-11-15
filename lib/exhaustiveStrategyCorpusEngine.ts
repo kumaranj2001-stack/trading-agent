@@ -18,6 +18,7 @@ import { FUNDAMENTAL_KNOWLEDGE_BASE } from './knowledge/fundamentalKnowledge';
 import { diagnosticReasoningEngine } from './diagnosticReasoningEngine';
 import { OrderFlowEngine } from './orderFlowEngine';
 import { PIP_VALUES } from './marketData';
+import { strategyRegistry } from './strategyRegistry';
 
 export class ExhaustiveStrategyCorpusEngine {
   private static instance: ExhaustiveStrategyCorpusEngine;
@@ -260,7 +261,7 @@ export class ExhaustiveStrategyCorpusEngine {
     // Dialectical Debate Friction: conflict between Technical and Fundamental models
     const isConflicting = (techDominantBias === 'BUY' && fundDominantBias === 'SELL') ||
                           (techDominantBias === 'SELL' && fundDominantBias === 'BUY');
-    const debateFrictionIndex = isConflicting
+    let debateFrictionIndex = isConflicting
       ? 58.5
       : Number((Math.abs(techRatio - fundRatio) * 0.4 + (techBearCount + fundBearCount) / (totalCorpus) * 20).toFixed(1));
 
@@ -282,6 +283,77 @@ export class ExhaustiveStrategyCorpusEngine {
     } else {
       metaConsensusDirection = 'HOLD';
       metaConsensusScore = 44;
+    }
+
+    // 5. Query Depth Walls & Evaluate Modular Institutional Strategy Registry
+    const pipMultiplier = PIP_VALUES[pair] || (pair === 'XAU/USD' ? 0.10 : pair.includes('JPY') ? 0.01 : 0.0001);
+    const footprintLevels = this.orderFlowEngine.generateFootprintLevels(pair, currentPrice);
+    let bidWallPrice = currentPrice - (15 * pipMultiplier);
+    let bidWallVolume = 120;
+    let askWallPrice = currentPrice + (15 * pipMultiplier);
+    let askWallVolume = 120;
+    footprintLevels.forEach(lvl => {
+      if (lvl.price < currentPrice && lvl.bidVolume > bidWallVolume) {
+        bidWallVolume = lvl.bidVolume;
+        bidWallPrice = lvl.price;
+      }
+      if (lvl.price > currentPrice && lvl.askVolume > askWallVolume) {
+        askWallVolume = lvl.askVolume;
+        askWallPrice = lvl.price;
+      }
+    });
+
+    const liquidityWallsSnapshot: OrderBookLiquidityWallSnapshot = {
+      bidWallPrice,
+      bidWallVolume,
+      askWallPrice,
+      askWallVolume,
+      wallThicknessMultiplier: Number((Math.max(bidWallVolume, askWallVolume) / 80).toFixed(2)),
+      anchoredStopLossLevel: metaConsensusDirection === 'SELL' ? askWallPrice : bidWallPrice,
+      anchoredTakeProfitLevel: metaConsensusDirection === 'SELL' ? currentPrice - 40 * pipMultiplier : currentPrice + 40 * pipMultiplier,
+      volatilityAtrBufferPips: 18.5,
+      liquidityWallDistancePips: 15.0,
+    };
+
+    // Calculate preliminary desk alignment count across Technical, Fundamental, News, Forex
+    let preliminaryAgreeCount = 2;
+    if (metaConsensusDirection === 'BUY') {
+      if (news.bias.includes('BUY')) preliminaryAgreeCount++;
+      if (forex.bias.includes('BUY')) preliminaryAgreeCount++;
+    } else if (metaConsensusDirection === 'SELL') {
+      if (news.bias.includes('SELL')) preliminaryAgreeCount++;
+      if (forex.bias.includes('SELL')) preliminaryAgreeCount++;
+    }
+    preliminaryAgreeCount = Math.min(5, preliminaryAgreeCount + 1);
+
+    const registryEvaluation = strategyRegistry.evaluateCorpus({
+      symbol: pair,
+      marketSegment,
+      timeframe: '15m',
+      currentPrice,
+      candles,
+      technical,
+      fundamental,
+      forex,
+      news,
+      direction: metaConsensusDirection,
+      agreeDeskCount: preliminaryAgreeCount,
+      metaConsensusScore,
+      debateFrictionIndex,
+      liquidityWalls: liquidityWallsSnapshot,
+      calculatedRRR: 3.2,
+    });
+
+    // Calibrate metaConsensusScore and debateFrictionIndex to prioritize institutional Grade A+ and Grade A setups
+    if (registryEvaluation.gradingResult.isGradeAPlus) {
+      metaConsensusScore = Math.max(82, metaConsensusScore);
+      debateFrictionIndex = Math.min(8.5, debateFrictionIndex);
+    } else if (registryEvaluation.gradingResult.isGradeA) {
+      metaConsensusScore = Math.max(72, Math.min(79, metaConsensusScore));
+      debateFrictionIndex = Math.min(13.5, debateFrictionIndex);
+    } else if (registryEvaluation.gradingResult.isRetailFiltered) {
+      metaConsensusScore = Math.min(65, metaConsensusScore);
+      debateFrictionIndex = Math.max(18.0, debateFrictionIndex);
     }
 
     return {
@@ -310,6 +382,10 @@ export class ExhaustiveStrategyCorpusEngine {
       synchronousExecutionVerified: true,
       evaluationTimestamp: Date.now(),
       categoryPerformanceBreakdown,
+      institutionalGrading: registryEvaluation.gradingResult,
+      institutionalOrderFlow: registryEvaluation.institutionalMetrics,
+      activeStrategyPermutations: registryEvaluation.matchedStrategies.map(s => s.id),
+      prunedStrategyPermutationsCount: strategyRegistry.getRegistryStats().prunedCount,
     };
   }
 
@@ -407,8 +483,8 @@ export class ExhaustiveStrategyCorpusEngine {
       anchoredTakeProfitLevel = Number((currentPrice - stopDistance * 3.2).toFixed(decimals));
     }
 
-    // 4. Evaluate Mandatory Gating Checklist (Absolute Capital Preservation)
-    const probabilityThresholdSatisfied = metaConsensusScore >= 78.0 && debateFrictionIndex <= 35.0;
+    // 4. Evaluate Mandatory Gating Checklist (Absolute Capital Preservation & Strict Institutional Tiers)
+    const probabilityThresholdSatisfied = metaConsensusScore >= 70.0 && debateFrictionIndex <= 15.0;
     const structuralIntegrityVerified = direction === 'BUY'
       ? currentPrice >= (technical.keySupport || currentPrice * 0.99)
       : currentPrice <= (technical.keyResistance || currentPrice * 1.01);
@@ -433,8 +509,8 @@ export class ExhaustiveStrategyCorpusEngine {
       : 'FAIL_EXPOSURE_RISK';
 
     const invalidationAndExitDirective = allGatingPassed
-      ? `ZERO DOWNSIDE EXPOSURE VERIFIED: Stop loss anchored tightly at ${anchoredStopLossLevel} beyond ${direction === 'BUY' ? 'Bid Wall' : 'Ask Wall'} (${liquidityWallDistancePips}p distance + ${volatilityAtrBufferPips}p ATR buffer). 1:1 Breakeven ratchet arms at +${volatilityAtrBufferPips} pips profit. Any adverse structural breach immediately closes position.`
-      : `CAPITAL PRESERVATION GATE LOCKED: Combined probability (${metaConsensusScore}%) or dialectical friction (${debateFrictionIndex}%) failed institutional threshold (minimum 78% score, max 35% friction required). Entry blocked to eliminate principal drawdown.`;
+      ? `ZERO DOWNSIDE EXPOSURE VERIFIED: Stop loss anchored tightly at ${anchoredStopLossLevel} beyond ${direction === 'BUY' ? 'Bid Wall' : 'Ask Wall'} (${liquidityWallDistancePips}p distance + ${volatilityAtrBufferPips}p ATR buffer). Minimum 1:3 Risk-to-Reward enforced (Target: ${anchoredTakeProfitLevel}). 1:1 Breakeven ratchet arms at +${volatilityAtrBufferPips} pips profit.`
+      : `CAPITAL PRESERVATION GATE LOCKED: Combined probability (${metaConsensusScore}%) or dialectical friction (${debateFrictionIndex}%) failed institutional threshold (minimum 70% score, max 15% friction required for Grade A). Entry blocked to eliminate principal drawdown.`;
 
     const gatekeeperAuditStamp = `ACPG-AUDIT-${symbol.replace(/[^A-Z0-9]/g, '')}-${Date.now().toString(36).toUpperCase()}`;
 

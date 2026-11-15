@@ -277,12 +277,19 @@ export class SwarmCoordinator {
       consensusDirection
     );
 
-    // Dynamic Tiered Confidence Grading strictly enforcing 7 tiers (A+ down to F)
-    const isVetoOrCaution = risk.verdict === 'DYNAMIC_TIER_APPROVED';
-    let confluenceGrade: ConfluenceGrade = riskRatioController.deriveGradeFromConfidence(
-      overallConfidence,
-      hasMomentumFundamentalDivergence || isVetoOrCaution
-    );
+    // Prioritize institutional Grade A+ and Grade A setups from exhaustive strategy corpus
+    const institutionalGrading = exhaustiveCorpus.institutionalGrading;
+    let confluenceGrade: ConfluenceGrade;
+    if (institutionalGrading) {
+      confluenceGrade = institutionalGrading.grade;
+      overallConfidence = institutionalGrading.metaConsensusProbability;
+    } else {
+      const isVetoOrCaution = risk.verdict === 'DYNAMIC_TIER_APPROVED';
+      confluenceGrade = riskRatioController.deriveGradeFromConfidence(
+        overallConfidence,
+        hasMomentumFundamentalDivergence || isVetoOrCaution
+      );
+    }
     const tierParams = riskRatioController.getTierParameters(confluenceGrade);
 
     // Top confluence knowledge rules
@@ -362,6 +369,9 @@ export class SwarmCoordinator {
         `Market Mechanics: ${forex.activeTradingSession.session} session (${forex.activeTradingSession.liquidityRating} liquidity)`,
         `Risk Governance: ${risk.verdict} — R:R ${risk.parameters.riskRewardRatio}:1, Max Risk $${risk.parameters.maxLossUsd}`,
       ],
+      institutionalGrading,
+      institutionalOrderFlow: exhaustiveCorpus.institutionalOrderFlow,
+      activeStrategyPermutations: exhaustiveCorpus.activeStrategyPermutations,
     };
 
     // Build 5-Agent Debate Transcript and Definitive Price Threshold Synthesis with DAG Terminal Node
