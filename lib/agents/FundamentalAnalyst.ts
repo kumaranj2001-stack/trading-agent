@@ -15,9 +15,16 @@ export class FundamentalAnalystAgent extends BaseAgent {
   public analyze(pair: CurrencyPair): FundamentalAnalysis {
     const segment: MarketSegment = getMarketSegmentForSymbol(pair);
     const isIndian = segment === 'INDIAN_MARKET';
+    const isCommodity = segment === 'METALS_COMMODITIES';
+    const isCopper = pair === 'COPPER';
+    const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
+    const isGold = pair === 'XAU/USD';
+    const isSilver = pair === 'XAG/USD';
+    const isPlatinum = pair === 'XPT/USD';
+
     const parts = pair.split('/');
-    const base = parts[0];
-    const quote = parts[1] || 'INR';
+    const base = parts[0] || pair;
+    const quote = parts[1] || (isIndian ? 'INR' : 'USD');
 
     const centralBanks: Record<string, { stance: 'HAWKISH' | 'NEUTRAL' | 'DOVISH'; rate: number; inflation: number; sentiment: string }> = {
       USD: { stance: 'HAWKISH', rate: 4.75, inflation: 2.4, sentiment: 'Resilient services demand and sticky labor costs keeping Fed cautious on further cuts.' },
@@ -40,6 +47,7 @@ export class FundamentalAnalystAgent extends BaseAgent {
     const realRateSpread = Number((baseRealRate - quoteRealRate).toFixed(2));
 
     let macroScore = 0;
+    let macroRegime = 'Monetary Policy Divergence Dynamic';
 
     if (isIndian) {
       // Indian Market specific fundamental driver scoring
@@ -54,6 +62,22 @@ export class FundamentalAnalystAgent extends BaseAgent {
 
       if (telemetry.niftyPcr > 1.0) macroScore += 15; // Bullish Put-Call Ratio
       else if (telemetry.niftyPcr < 0.8) macroScore -= 15;
+
+      macroRegime = 'Indian Pro-Growth Capex & Domestic SIP Inflow Regime';
+    } else if (isCommodity) {
+      if (isCopper) {
+        macroScore = 42;
+        macroRegime = 'Global Electrification & Structural Mine Deficit Regime';
+      } else if (isOil) {
+        macroScore = 32;
+        macroRegime = 'OPEC+ Supply Restraint & Geopolitical Logistics Premium';
+      } else if (isGold || isSilver || isPlatinum) {
+        macroScore = 45;
+        macroRegime = 'Sovereign Bullion Reserve Accumulation & Real Yield Compression';
+      } else {
+        macroScore = 25;
+        macroRegime = 'Physical Commodity Supply/Demand Balancing Dynamics';
+      }
     } else {
       const stanceValue = { 'HAWKISH': 1, 'NEUTRAL': 0, 'DOVISH': -1 };
       const stanceDiff = stanceValue[baseOutlook.stance] - stanceValue[quoteOutlook.stance];
@@ -61,11 +85,8 @@ export class FundamentalAnalystAgent extends BaseAgent {
       macroScore += stanceDiff * 35;
       macroScore += nominalDiff * 15;
       macroScore += realRateSpread * 10;
+      macroRegime = 'Monetary Policy Divergence Dynamic';
     }
-
-    let macroRegime = isIndian 
-      ? 'Indian Pro-Growth Capex & Domestic SIP Inflow Regime' 
-      : 'Monetary Policy Divergence Dynamic';
 
     let geopoliticalRiskLevel: FundamentalAnalysis['geopoliticalRiskLevel'] = 'MODERATE';
     if (pair.includes('JPY') || pair.includes('CHF')) {
@@ -94,6 +115,8 @@ export class FundamentalAnalystAgent extends BaseAgent {
 
     const thesis = isIndian
       ? `Indian Macro Regime: ${macroRegime}. FII net cash inflow at +₹${INDIAN_MARKET_TELEMETRY.fiiNetFlowCr} Cr, counterbalanced by domestic SIP inflow of +₹${INDIAN_MARKET_TELEMETRY.diiNetFlowCr} Cr. India VIX at ${INDIAN_MARKET_TELEMETRY.indiaVix} indicates stable market breadth. RBI repo rate steady at 6.50%. Matched ${knowledgeMatch.matchedCount} fundamental rules from the 500+ Fundamental Knowledge Base. Conviction: ${bias.replace('_', ' ')}.`
+      : isCommodity
+      ? `Commodity Macro Regime: ${macroRegime}. Physical supply/demand dynamics: LME warehouse inventories, global energy transition off-take, and dollar-liquidity sensitivity driving institutional accumulation. Matched ${knowledgeMatch.matchedCount} fundamental rules. Primary driver: "${knowledgeMatch.topRules[0]?.ruleName || 'Physical Market Balance'}".`
       : `Macroeconomic regime: ${macroRegime}. Benchmark spread: ${nominalDiff > 0 ? '+' : ''}${nominalDiff.toFixed(2)}%, Real rate spread: ${realRateSpread > 0 ? '+' : ''}${realRateSpread}%. Matched ${knowledgeMatch.matchedCount} fundamental rules. Primary trigger: "${knowledgeMatch.topRules[0]?.ruleName || 'Policy Spread Advantage'}".`;
 
     return {

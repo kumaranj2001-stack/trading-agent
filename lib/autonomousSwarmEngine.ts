@@ -103,12 +103,36 @@ class AutonomousSwarmEngineImpl {
    * Update active pair/timeframe in running loop without restart jitter
    */
   public updateScope(pair: CurrencyPair, timeframe: TimeFrame): void {
-    const changed = this.activePair !== pair || this.activeTimeframe !== timeframe;
+    const pairChanged = this.activePair !== pair;
+    const tfChanged = this.activeTimeframe !== timeframe;
+    if (pairChanged) {
+      this.lastResult = null;
+      this.isProcessingCycle = false;
+    }
     this.activePair = pair;
     this.activeTimeframe = timeframe;
-    if (changed && this.isRunning) {
+    if ((pairChanged || tfChanged) && this.isRunning) {
       this.executeAutonomousCycle();
     }
+  }
+
+  /**
+   * Execute autonomous cycle explicitly for a target currency pair and timeframe.
+   * Clears legacy results if targeting a different instrument to guarantee zero stale data leakage.
+   */
+  public async executeAutonomousCycleForPair(
+    pair: CurrencyPair,
+    timeframe?: TimeFrame,
+    providedCandles?: Candle[]
+  ): Promise<SwarmConsensusResult | null> {
+    const targetTf = timeframe || this.activeTimeframe;
+    if (this.activePair !== pair || this.activeTimeframe !== targetTf) {
+      this.activePair = pair;
+      this.activeTimeframe = targetTf;
+      this.lastResult = null;
+      this.isProcessingCycle = false;
+    }
+    return this.executeAutonomousCycle(providedCandles);
   }
 
   /**
@@ -116,12 +140,12 @@ class AutonomousSwarmEngineImpl {
    */
   public async executeAutonomousCycle(providedCandles?: Candle[]): Promise<SwarmConsensusResult | null> {
     if (this.isProcessingCycle) {
-      return this.lastResult;
+      return (this.lastResult && this.lastResult.pair === this.activePair) ? this.lastResult : null;
     }
 
     // ❄️ Global State Freeze: if market for this asset is closed, suppress active calculation drift
     if (MarketSessionManager.isMarketFrozen(this.activePair)) {
-      if (this.lastResult) {
+      if (this.lastResult && this.lastResult.pair === this.activePair) {
         return this.lastResult;
       }
     }
@@ -231,7 +255,7 @@ class AutonomousSwarmEngineImpl {
    */
   public subscribe(listener: AutonomousSwarmListener): () => void {
     this.listeners.add(listener);
-    if (this.lastResult) {
+    if (this.lastResult && this.lastResult.pair === this.activePair) {
       const telemetry: AutonomousSwarmTelemetry = {
         cycleCount: this.cycleCount,
         isRunning: this.isRunning,

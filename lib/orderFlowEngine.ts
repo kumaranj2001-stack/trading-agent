@@ -42,17 +42,25 @@ export class OrderFlowEngine {
    * Generates discrete Footprint Price Levels (Bid Vol x Ask Vol) around current market price
    */
   public generateFootprintLevels(symbol: CurrencyPair, currentPrice: number): FootprintPriceLevel[] {
-    const isGold = symbol.includes('XAU');
+    const isGold = symbol === 'XAU/USD';
+    const isSilver = symbol === 'XAG/USD';
+    const isPlatinum = symbol === 'XPT/USD';
+    const isCopper = symbol === 'COPPER';
+    const isOil = symbol === 'WTI_CRUDE' || symbol === 'BRENT_CRUDE';
     const isCrypto = symbol.includes('BTC');
-    const isIndia = symbol.includes('NIFTY');
+    const isIndia = symbol.includes('NIFTY') || symbol === 'RELIANCE' || symbol === 'TCS' || symbol === 'HDFC BANK' || symbol === 'INFY';
     const isJpy = symbol.includes('JPY');
 
-    // Dynamic step size per asset class
+    // Dynamic step size and decimal precision per asset class
     let step = 0.0005;
-    if (isGold) step = 1.0;
-    else if (isCrypto) step = 50.0;
-    else if (isIndia) step = 10.0;
-    else if (isJpy) step = 0.05;
+    let decimals = 5;
+    if (isGold) { step = 1.0; decimals = 2; }
+    else if (isSilver) { step = 0.05; decimals = 3; }
+    else if (isPlatinum || isOil) { step = 0.25; decimals = 2; }
+    else if (isCopper) { step = 0.001; decimals = 4; }
+    else if (isCrypto) { step = 50.0; decimals = 0; }
+    else if (isIndia) { step = 2.0; decimals = 2; }
+    else if (isJpy) { step = 0.02; decimals = 3; }
 
     const levelsCount = 14;
     const half = Math.floor(levelsCount / 2);
@@ -63,7 +71,7 @@ export class OrderFlowEngine {
     let pocIndex = half;
 
     for (let i = -half; i <= half; i++) {
-      const price = Number((baseRound + (i * step)).toFixed(isGold ? 2 : isIndia ? 1 : isCrypto ? 0 : 5));
+      const price = Number((baseRound + (i * step)).toFixed(decimals));
       const distanceFromCenter = Math.abs(i);
       
       // Volume distribution peaks near center (bell curve / Gaussian profile)
@@ -360,7 +368,20 @@ export class OrderFlowEngine {
     }
 
     // Mathematical Stop-Loss & Targets anchored to Value Area
-    const pipMultiplier = symbol.includes('JPY') ? 0.01 : symbol.includes('XAU') ? 0.1 : symbol.includes('NIFTY') ? 1.0 : 0.0001;
+    const isGold = symbol === 'XAU/USD';
+    const isSilver = symbol === 'XAG/USD';
+    const isPlatinum = symbol === 'XPT/USD';
+    const isCopper = symbol === 'COPPER';
+    const isOil = symbol === 'WTI_CRUDE' || symbol === 'BRENT_CRUDE';
+    const isIndia = symbol.includes('NIFTY') || symbol === 'RELIANCE' || symbol === 'TCS' || symbol === 'HDFC BANK' || symbol === 'INFY';
+    const isJpy = symbol.includes('JPY');
+
+    let decimals = 5;
+    if (isGold || isOil || isPlatinum || isIndia) decimals = 2;
+    else if (isSilver || isJpy) decimals = 3;
+    else if (isCopper) decimals = 4;
+
+    const pipMultiplier = isJpy ? 0.01 : isGold ? 0.1 : isIndia ? 1.0 : isCopper ? 0.001 : 0.0001;
     const isBuy = entryConfirmationStatus === 'CONFIRMED_BUY';
     const isSell = entryConfirmationStatus === 'CONFIRMED_SELL';
 
@@ -370,18 +391,18 @@ export class OrderFlowEngine {
 
     if (isBuy) {
       // SL anchored below Value Area Low (VAL)
-      orderFlowAnchorStopLoss = Number(Math.min(currentPrice * 0.996, volumeProfile.valueAreaLow * 0.998).toFixed(2));
-      orderFlowTarget1 = Number(Math.max(currentPrice * 1.008, volumeProfile.valueAreaHigh * 1.005).toFixed(2));
-      orderFlowTarget2 = Number((currentPrice + (orderFlowTarget1 - currentPrice) * 1.6).toFixed(2));
+      orderFlowAnchorStopLoss = Number(Math.min(currentPrice * 0.996, volumeProfile.valueAreaLow * 0.998).toFixed(decimals));
+      orderFlowTarget1 = Number(Math.max(currentPrice * 1.008, volumeProfile.valueAreaHigh * 1.005).toFixed(decimals));
+      orderFlowTarget2 = Number((currentPrice + (orderFlowTarget1 - currentPrice) * 1.6).toFixed(decimals));
     } else if (isSell) {
       // SL anchored above Value Area High (VAH)
-      orderFlowAnchorStopLoss = Number(Math.max(currentPrice * 1.004, volumeProfile.valueAreaHigh * 1.002).toFixed(2));
-      orderFlowTarget1 = Number(Math.min(currentPrice * 0.992, volumeProfile.valueAreaLow * 0.995).toFixed(2));
-      orderFlowTarget2 = Number((currentPrice - (currentPrice - orderFlowTarget1) * 1.6).toFixed(2));
+      orderFlowAnchorStopLoss = Number(Math.max(currentPrice * 1.004, volumeProfile.valueAreaHigh * 1.002).toFixed(decimals));
+      orderFlowTarget1 = Number(Math.min(currentPrice * 0.992, volumeProfile.valueAreaLow * 0.995).toFixed(decimals));
+      orderFlowTarget2 = Number((currentPrice - (currentPrice - orderFlowTarget1) * 1.6).toFixed(decimals));
     } else {
-      orderFlowAnchorStopLoss = Number((currentPrice * 0.995).toFixed(2));
-      orderFlowTarget1 = Number((currentPrice * 1.010).toFixed(2));
-      orderFlowTarget2 = Number((currentPrice * 1.018).toFixed(2));
+      orderFlowAnchorStopLoss = Number((currentPrice * 0.995).toFixed(decimals));
+      orderFlowTarget1 = Number((currentPrice * 1.010).toFixed(decimals));
+      orderFlowTarget2 = Number((currentPrice * 1.018).toFixed(decimals));
     }
 
     const riskDistance = Math.abs(currentPrice - orderFlowAnchorStopLoss);
@@ -504,11 +525,26 @@ export class OrderFlowEngine {
     candles: Array<{ time: number | string; open: number; high: number; low: number; close: number; volume?: number }> = []
   ): import('./types').OrderFlowSessionAnalysis {
     const basePrice = BASE_PRICES[symbol] || 2734.50;
-    const isGold = symbol.includes('XAU');
-    const isForex = symbol.includes('/');
-    const tickStep = isForex ? 0.0002 : isGold ? 0.50 : 0.25;
+    const isGold = symbol === 'XAU/USD';
+    const isSilver = symbol === 'XAG/USD';
+    const isPlatinum = symbol === 'XPT/USD';
+    const isCopper = symbol === 'COPPER';
+    const isOil = symbol === 'WTI_CRUDE' || symbol === 'BRENT_CRUDE';
+    const isIndian = symbol.includes('NIFTY') || symbol === 'RELIANCE' || symbol === 'TCS' || symbol === 'HDFC BANK' || symbol === 'INFY';
+    const isForex = symbol.includes('/') && !isGold && !isSilver && !isPlatinum && !symbol.includes('INR');
 
-    const sourceCandles = candles && candles.length >= 5 ? candles.slice(-10) : [
+    let tickStep = 0.0002;
+    let decimals = 5;
+    if (isGold) { tickStep = 0.50; decimals = 2; }
+    else if (isSilver) { tickStep = 0.05; decimals = 3; }
+    else if (isPlatinum || isOil) { tickStep = 0.25; decimals = 2; }
+    else if (isCopper) { tickStep = 0.001; decimals = 4; }
+    else if (isIndian) { tickStep = 1.0; decimals = 2; }
+
+    const lastClose = candles && candles.length > 0 ? Number(candles[candles.length - 1].close) : 0;
+    const isMismatchedCandle = Math.abs(lastClose - basePrice) / basePrice > 0.5;
+
+    const sourceCandles = (candles && candles.length >= 5 && !isMismatchedCandle) ? candles.slice(-10) : [
       { time: Date.now() - 25 * 60000, open: basePrice - tickStep * 3, high: basePrice - tickStep, low: basePrice - tickStep * 4, close: basePrice - tickStep * 2, volume: 1450 },
       { time: Date.now() - 20 * 60000, open: basePrice - tickStep * 2, high: basePrice, low: basePrice - tickStep * 3, close: basePrice - tickStep, volume: 1680 },
       { time: Date.now() - 15 * 60000, open: basePrice - tickStep, high: basePrice + tickStep * 2, low: basePrice - tickStep * 2, close: basePrice + tickStep, volume: 2100 },
@@ -532,7 +568,7 @@ export class OrderFlowEngine {
       let candleBuy = 0;
       let candleSell = 0;
 
-      for (let p = cLow; p <= cHigh + 0.00001; p = Number((p + tickStep).toFixed(isForex ? 5 : 2))) {
+      for (let p = cLow; p <= cHigh + 0.00001; p = Number((p + tickStep).toFixed(decimals))) {
         const baseVol = 30 + Math.floor(Math.random() * 80);
         let askVol = Math.floor(baseVol * (isBull ? 0.62 : 0.38));
         let bidVol = Math.floor(baseVol * (isBull ? 0.38 : 0.62));

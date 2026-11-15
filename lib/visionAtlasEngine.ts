@@ -51,7 +51,9 @@ export class VisionAtlasLabEngine {
     candles: Candle[] = []
   ): VisionAtlasPayload {
     const livePrice = BASE_PRICES[symbol] || 2734.50;
-    const safeCandles = candles && candles.length >= 10 ? candles : this.generateBaselineCandles(symbol, livePrice, 60);
+    const lastClose = candles && candles.length > 0 ? candles[candles.length - 1].close : 0;
+    const isMismatched = Math.abs(lastClose - livePrice) / livePrice > 0.50;
+    const safeCandles = candles && candles.length >= 10 && !isMismatched ? candles : this.generateBaselineCandles(symbol, livePrice, 60);
     const closes = safeCandles.map(c => c.close);
     const highs = safeCandles.map(c => c.high);
     const lows = safeCandles.map(c => c.low);

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { TradingProvider } from '@/lib/tradingContext';
 
 export const metadata: Metadata = {
   title: 'Qri Trader // Autonomous Multi-Agent Trading Swarm',
@@ -45,7 +46,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-terminal-950 text-slate-100 antialiased selection:bg-cyan-500/30 selection:text-cyan-200 transition-colors duration-200">
-        {children}
+        <TradingProvider>
+          {children}
+        </TradingProvider>
       </body>
     </html>
   );

@@ -1,5 +1,5 @@
 import { Candle, CurrencyPair, MarketSegment, Position, SwarmConsensusResult, TimeFrame } from './types';
-import { BASE_PRICES, PIP_VALUES, getMarketSegmentForSymbol } from './marketData';
+import { BASE_PRICES, PIP_VALUES, getMarketSegmentForSymbol, generateCandles } from './marketData';
 import { MarketSessionManager } from './marketSessionManager';
 import { stateLatchingEngine, RECALIBRATION_INTERVAL_SECONDS } from './stateLatchingEngine';
 
@@ -334,7 +334,11 @@ export class LiveMarketFeedManager {
       }
 
       const key = `${this.currentPair}_${this.currentTimeframe}`;
-      const candles = this.canonicalCandles.get(key);
+      let candles = this.canonicalCandles.get(key);
+      if (!candles || candles.length === 0) {
+        candles = generateCandles(this.currentPair, this.currentTimeframe, 60);
+        this.canonicalCandles.set(key, candles);
+      }
       if (!candles || candles.length === 0) return;
 
       const lastCandle = candles[candles.length - 1];
@@ -430,6 +434,13 @@ export class LiveMarketFeedManager {
     if (!consensus || !livePrice || Number.isNaN(livePrice)) return consensus;
 
     const pair = consensus.pair;
+
+    // Strict Cross-Instrument Parity Guard: Prevent calibrating consensus with a live price belonging to another instrument
+    const expectedBasePrice = BASE_PRICES[pair] || 1.0;
+    if (Math.abs(livePrice - expectedBasePrice) / expectedBasePrice > 0.50) {
+      console.warn(`[LiveMarketFeedManager] Blocked cross-instrument price pollution: livePrice ${livePrice} does not match expected range for ${pair} (~${expectedBasePrice})`);
+      return consensus;
+    }
     const isJpy = pair.includes('JPY');
     const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY' || 
                      pair === 'RELIANCE' || pair === 'TCS' || 

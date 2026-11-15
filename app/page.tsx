@@ -16,7 +16,7 @@ import {
   DebatePriceThresholds,
   NavigationTab
 } from '@/lib/types';
-import { ArrowLeft, Bot } from 'lucide-react';
+import { ArrowLeft, Bot, RefreshCw } from 'lucide-react';
 import { INITIAL_PORTFOLIO, PortfolioState } from '@/lib/store';
 import { DEFAULT_RISK_CONFIG, RiskManagerConfig } from '@/lib/agents/RiskManager';
 import { BrowserStorageManager } from '@/lib/browserStorage';
@@ -46,7 +46,7 @@ import { LeftNavigationDrawer } from '@/components/LeftNavigationDrawer';
 import { JournalModal } from '@/components/JournalModal';
 import { HistoricalJournalDesk } from '@/components/HistoricalJournalDesk';
 import { JournalStorageManager } from '@/lib/journalStorage';
-import { getMarketSegmentForSymbol, PIP_VALUES } from '@/lib/marketData';
+import { getMarketSegmentForSymbol, PIP_VALUES, generateCandles } from '@/lib/marketData';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 import { MarketSessionInfo, TradeHistoryItem } from '@/lib/types';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
@@ -57,11 +57,14 @@ import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
 import { ExecutionTelemetryEngine } from '@/lib/executionTelemetryEngine';
 import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 import { preExecutionVerificationEngine } from '@/lib/preExecutionVerificationEngine';
+import { tradingStore } from '@/lib/tradingStore';
 
 const executionTelemetryEngine = ExecutionTelemetryEngine.getInstance();
 
 export default function Home() {
   const [selectedPair, setSelectedPair] = useState<CurrencyPair>('XAU/USD');
+  const selectedPairRef = useRef<CurrencyPair>(selectedPair);
+  selectedPairRef.current = selectedPair;
   const [marketSegment, setMarketSegment] = useState<MarketSegment>('METALS_COMMODITIES');
   const [timeframe, setTimeframe] = useState<TimeFrame>('1h');
   const [sessionInfo, setSessionInfo] = useState<MarketSessionInfo | null>(null);
@@ -215,6 +218,7 @@ export default function Home() {
     try {
       const res = await fetch(`/api/market?pair=${encodeURIComponent(pair)}&timeframe=${tf}&count=60`);
       const json = await res.json();
+      if (pair !== selectedPairRef.current) return; // Discard out-of-order response for mutated instrument
       if (json.success && json.data) {
         if (json.data.sessionInfo) {
           setSessionInfo(json.data.sessionInfo);
@@ -428,7 +432,9 @@ export default function Home() {
     const stopLoop = AutonomousSwarmEngine.startAutonomousLoop(selectedPair, timeframe, 2000);
 
     const unsubscribe = AutonomousSwarmEngine.subscribe((result, telemetry) => {
+      if (result.pair !== selectedPairRef.current) return;
       setConsensus(result);
+      setIsAnalyzing(false);
       setSwarmTelemetry(telemetry);
       BrowserStorageManager.saveConsensusResult(result);
 
@@ -493,18 +499,16 @@ export default function Home() {
   // Technical (525 strategies), Fundamental (525 engines), News (38 wires), Forex/Order Flow, and Risk Management
   useEffect(() => {
     const recalibrationTimer = setInterval(() => {
-      if (MarketSessionManager.isMarketFrozen(selectedPair)) {
+      if (MarketSessionManager.isMarketFrozen(selectedPairRef.current)) {
         return;
       }
 
       // Expire old latch and trigger instant 5-desk high-confluence synthesis
-      stateLatchingEngine.releaseLatch(
-        selectedPair,
-        '15-Second Recalibration Triggered: Automated 5-engine multi-desk synthesis cycle elapsed.'
-      );
+      stateLatchingEngine.purgeLatch(selectedPairRef.current);
 
-      triggerSwarm(selectedPair, timeframe, candles).then((freshConsensus) => {
-        if (freshConsensus) {
+      triggerSwarm(selectedPairRef.current, timeframe, candles).then((freshConsensus) => {
+        if (freshConsensus && freshConsensus.pair === selectedPairRef.current) {
+          setConsensus(freshConsensus);
           const isHighConfluence =
             freshConsensus.confluenceGrade === 'A+' ||
             freshConsensus.confluenceGrade === 'A' ||
@@ -535,7 +539,7 @@ export default function Home() {
     const stopTicker = LiveMarketFeedManager.startLiveFeed(selectedPair, timeframe, 1500);
 
     const unsubscribe = LiveMarketFeedManager.subscribe((event) => {
-      if (event.pair !== selectedPair || event.timeframe !== timeframe) return;
+      if (event.pair !== selectedPairRef.current || event.timeframe !== timeframe) return;
 
       // Track live WebSocket heartbeat and previous price for circuit breaker
       lastWebSocketHeartbeatRef.current = Date.now();
@@ -545,10 +549,10 @@ export default function Home() {
       setCandles(event.candles);
 
       // 2. Synchronize TickerBar rates
-      setRates(prevRates => LiveMarketFeedManager.synchronizeRates(prevRates, selectedPair, event.livePrice));
+      setRates(prevRates => LiveMarketFeedManager.synchronizeRates(prevRates, selectedPairRef.current, event.livePrice));
 
       // 3. Dynamically calibrate Swarm Matrix & Unified Decision Banner
-      setConsensus(prev => prev ? LiveMarketFeedManager.calibrateSwarmConsensus(prev, event.livePrice) : null);
+      setConsensus(prev => (prev && prev.pair === selectedPairRef.current) ? LiveMarketFeedManager.calibrateSwarmConsensus(prev, event.livePrice) : null);
 
       // 4. Dynamically calibrate active position values, P&L, and Second-by-Second Technical/Fundamental Invalidation
       setPortfolio(prev => {
@@ -626,21 +630,64 @@ export default function Home() {
     };
   }, [selectedPair, timeframe]);
 
-  // Handle Pair Switch
-  const handleSelectPair = (newPair: CurrencyPair) => {
+  // Handle Pair Switch with comprehensive state invalidation & reactive propagation
+  const handleSelectPair = useCallback(async (newPair: CurrencyPair) => {
+    if (!newPair || newPair === selectedPairRef.current) return;
+
+    // 1. Immediately invalidate stale consensus to prevent displaying legacy metrics (e.g. Gold floors/ceilings)
+    setConsensus(null);
+    setIsAnalyzing(true);
+
+    // 2. Synchronously purge state latches for both old and new pairs
+    stateLatchingEngine.purgeLatch(selectedPairRef.current);
+    stateLatchingEngine.purgeLatch(newPair);
+
+    // 3. Immediately synthesize initial canonical candles for 0ms visual latency
+    let newCandles = LiveMarketFeedManager.getCanonicalCandles(newPair, timeframe);
+    if (!newCandles || newCandles.length === 0) {
+      newCandles = generateCandles(newPair, timeframe, 60);
+      LiveMarketFeedManager.setCanonicalFeed(newPair, timeframe, newCandles);
+    }
+    setCandles(newCandles);
+
+    // 4. Update selected pair, ref, and segment
     setSelectedPair(newPair);
-    setMarketSegment(getMarketSegmentForSymbol(newPair));
-  };
+    selectedPairRef.current = newPair;
+    const newSegment = getMarketSegmentForSymbol(newPair);
+    setMarketSegment(newSegment);
+
+    // 5. Update tradingStore Single Source of Truth
+    tradingStore.setActivePair(newPair);
+
+    // 6. Notify Autonomous Swarm and Live Feed of instrument switch
+    AutonomousSwarmEngine.updateScope(newPair, timeframe);
+    LiveMarketFeedManager.startLiveFeed(newPair, timeframe);
+
+    // 7. Trigger immediate fetch & swarm cycle for new pair
+    try {
+      await fetchMarketData(newPair, timeframe);
+      const fresh = await triggerSwarm(newPair, timeframe, newCandles);
+      if (selectedPairRef.current === newPair && fresh) {
+        setConsensus(fresh);
+      }
+    } finally {
+      if (selectedPairRef.current === newPair) {
+        setIsAnalyzing(false);
+      }
+    }
+  }, [timeframe, fetchMarketData, triggerSwarm]);
 
   // Handle Market Segment Switch (Forex vs Metals vs Indian Market)
-  const handleSelectMarketSegment = (newSegment: MarketSegment) => {
+  const handleSelectMarketSegment = useCallback((newSegment: MarketSegment) => {
     setMarketSegment(newSegment);
-  };
+    tradingStore.setMarketSegment(newSegment);
+  }, []);
 
   // Handle Timeframe Switch
-  const handleSelectTimeframe = (newTf: TimeFrame) => {
+  const handleSelectTimeframe = useCallback((newTf: TimeFrame) => {
     setTimeframe(newTf);
-  };
+    tradingStore.setTimeframe(newTf);
+  }, []);
 
   // Toggle execution mode
   const handleToggleExecutionMode = () => {
@@ -1130,7 +1177,7 @@ export default function Home() {
         {activeTab === 'terminal' && (
           <div className="space-y-4">
             {/* 🌟 UNIFIED 5-ROLE BUY/SELL DECISION BANNER (Directly on Dashboard) */}
-            {consensus && (
+            {consensus && consensus.pair === selectedPair ? (
               <UnifiedDecisionBanner
                 consensus={consensus}
                 onExecuteTrade={handleExecuteTrade}
@@ -1141,7 +1188,24 @@ export default function Home() {
                 sessionInfo={sessionInfo}
                 theme={theme}
               />
-            )}
+            ) : isAnalyzing ? (
+              <div className="rounded-xl border border-cyan-500/20 bg-terminal-900/80 p-5 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono shadow-lg animate-pulse">
+                <div className="flex items-center gap-3 text-cyan-400">
+                  <RefreshCw className="h-5 w-5 animate-spin shrink-0" />
+                  <div>
+                    <span className="font-bold uppercase tracking-wider text-white block">
+                      Recalibrating 5-Agent Swarm Consensus for {selectedPair}
+                    </span>
+                    <span className="text-slate-400 text-[11px]">
+                      Purged legacy state latches • Evaluating 1,050+ institutional technical & fundamental models...
+                    </span>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold">
+                  0ms RE-ANCHOR IN PROGRESS
+                </span>
+              </div>
+            ) : null}
 
             {/* 🛡️ Active Running Entry Real-Time Invalidation Monitor */}
             {portfolio.positions.find(p => p.symbol === selectedPair) && (
@@ -1164,10 +1228,10 @@ export default function Home() {
               candles={candles}
               pair={selectedPair}
               timeframe={timeframe}
-              stopLoss={consensus?.agents.risk.parameters.stopLoss}
-              takeProfit={consensus?.agents.risk.parameters.takeProfit1}
-              entryPrice={consensus?.agents.risk.parameters.entryPrice}
-              signalBias={consensus?.agents.technical.bias}
+              stopLoss={consensus?.pair === selectedPair ? consensus.agents.risk.parameters.stopLoss : undefined}
+              takeProfit={consensus?.pair === selectedPair ? consensus.agents.risk.parameters.takeProfit1 : undefined}
+              entryPrice={consensus?.pair === selectedPair ? consensus.agents.risk.parameters.entryPrice : undefined}
+              signalBias={consensus?.pair === selectedPair ? consensus.agents.technical.bias : undefined}
               theme={theme}
             />
 
@@ -1175,11 +1239,11 @@ export default function Home() {
             <HistoricalJournalDesk
               selectedPair={selectedPair}
               onOpenJournalModal={() => setActiveTab('journals')}
-              journalAnalysis={consensus?.journalAnalysis}
+              journalAnalysis={consensus?.pair === selectedPair ? consensus.journalAnalysis : undefined}
             />
 
             {/* 5 Specialized Agent Cards (Technical, Fundamental, News, Forex, Risk) */}
-            {consensus && (
+            {consensus && consensus.pair === selectedPair && (
               <AgentSwarmPanel
                 technical={consensus.agents.technical}
                 fundamental={consensus.agents.fundamental}
@@ -1255,7 +1319,7 @@ export default function Home() {
               </button>
             </div>
 
-            {consensus && (
+            {consensus && consensus.pair === selectedPair && (
               <UnifiedDecisionBanner
                 consensus={consensus}
                 onExecuteTrade={handleExecuteTrade}
@@ -1268,7 +1332,7 @@ export default function Home() {
               />
             )}
 
-            {consensus && (
+            {consensus && consensus.pair === selectedPair && (
               <AgentSwarmPanel
                 technical={consensus.agents.technical}
                 fundamental={consensus.agents.fundamental}
@@ -1304,7 +1368,7 @@ export default function Home() {
           <MonteCarloModal
             isFullPage={true}
             onClose={() => setActiveTab('terminal')}
-            monteCarlo={consensus?.agents.risk.monteCarlo}
+            monteCarlo={consensus?.pair === selectedPair ? consensus.agents.risk.monteCarlo : undefined}
             pair={selectedPair}
           />
         )}
@@ -1312,11 +1376,11 @@ export default function Home() {
         {/* Tab 6: Autonomous 5-Agent Debate Feed */}
         {(activeTab === 'debate' || (activeTab as string) === 'five-agent-debate') && (
           <AgentDebateFeed
-            messages={consensus?.debateTranscript || []}
+            messages={(consensus && consensus.pair === selectedPair) ? consensus.debateTranscript : []}
             candles={candles}
             pair={selectedPair}
             timeframe={timeframe}
-            synthesis={consensus?.debateSynthesis}
+            synthesis={(consensus && consensus.pair === selectedPair) ? consensus.debateSynthesis : undefined}
             activeScenario={activeDebateScenario}
             executionMode={executionMode}
             onExecuteTrade={handleExecuteTrade}

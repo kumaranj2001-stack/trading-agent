@@ -227,9 +227,9 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
     }, 1400);
   };
 
-  // Generate initial default report on first load if none active
+  // Generate report on first load or when active pair / event changes
   useEffect(() => {
-    if (!activeReport) {
+    if (!activeReport || activeReport.selectedPair !== selectedPair || activeReport.catalystEvent?.id !== selectedEventId) {
       const rep = macroIntelligenceEngine.generateMacroIntelligenceReport(selectedEventId, selectedPair);
       setActiveReport(rep);
     }

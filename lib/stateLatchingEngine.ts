@@ -79,7 +79,7 @@ export class StateLatchingEngine {
    */
   public getLatchedState(pair: CurrencyPair): LatchedTradeState | null {
     const state = this.latchedStates.get(pair);
-    if (!state) return null;
+    if (!state || !state.isLatched || state.pair !== pair) return null;
 
     // Check expiration (15-second institutional recalibration interval)
     const now = Date.now();
@@ -102,7 +102,7 @@ export class StateLatchingEngine {
    */
   public isLatchedValid(pair: CurrencyPair, currentPrice: number, currentConsensusDirection?: string): boolean {
     const state = this.getLatchedState(pair);
-    if (!state || !state.isLatched) return false;
+    if (!state || !state.isLatched || state.pair !== pair) return false;
 
     // 0. Check Consensus Bias Flip: If live multi-desk consensus flipped opposing the latched state, invalidate immediately
     if (currentConsensusDirection && (currentConsensusDirection === 'BUY' || currentConsensusDirection === 'SELL')) {
@@ -340,12 +340,37 @@ export class StateLatchingEngine {
       existing.isLatched = false;
       existing.latchStatus = 'UNLATCHED_INVALIDATED';
       existing.invalidationTriggerReason = reason;
-      this.persistState(existing);
-      // Remove from active map after brief grace period
-      setTimeout(() => {
-        this.latchedStates.delete(pair);
-        this.removePersistedState(pair);
-      }, 5000);
+      this.latchedStates.delete(pair);
+      this.removePersistedState(pair);
+    }
+  }
+
+  /**
+   * Immediately purges any latched state for the specified pair with zero latency.
+   */
+  public purgeLatch(pair: CurrencyPair): void {
+    this.latchedStates.delete(pair);
+    this.removePersistedState(pair);
+  }
+
+  /**
+   * Purges all latched trade states across all instruments.
+   */
+  public purgeAllLatches(): void {
+    this.latchedStates.clear();
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < window.localStorage.length; i++) {
+          const key = window.localStorage.key(i);
+          if (key && key.startsWith(STORAGE_PREFIX)) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((k) => window.localStorage.removeItem(k));
+      } catch (e) {
+        // Non-blocking
+      }
     }
   }
 
@@ -353,8 +378,7 @@ export class StateLatchingEngine {
    * Forces an immediate recalculation and fresh re-anchor for the specified pair.
    */
   public forceRecalibrate(pair: CurrencyPair): void {
-    this.latchedStates.delete(pair);
-    this.removePersistedState(pair);
+    this.purgeLatch(pair);
   }
 }
 

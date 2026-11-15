@@ -65,6 +65,11 @@ export const OrderFlowDesk: React.FC<OrderFlowDeskProps> = ({
   useEffect(() => {
     if (initialPair && initialPair !== symbol) {
       setSymbol(initialPair);
+      setReport(null); // Purge stale report immediately to prevent displaying legacy depth walls
+      setIsLoading(true);
+      const base = BASE_PRICES[initialPair] || 1.0;
+      setLiveBid(base);
+      setLiveAsk(base + (initialPair.includes('XAU') ? 0.25 : initialPair === 'COPPER' ? 0.002 : 0.0002));
     }
   }, [initialPair]);
 
