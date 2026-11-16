@@ -199,6 +199,47 @@ export interface MacroIndicator {
   isLiveNow?: boolean;
   releaseWindowActive?: boolean;
   country?: string;
+  credibilityScore?: number;
+  reportingPortals?: string[];
+  verifiedSourcesCount?: number;
+  discrepancyFlag?: boolean;
+  consensusStatus?: 'FULL_CONSENSUS' | 'HIGH_CONFIDENCE' | 'SINGLE_SOURCE';
+  dstRegime?: string;
+  timeEST?: string;
+  timeCET?: string;
+}
+
+export interface FinancialPortalInfo {
+  id: string;
+  name: string;
+  domain: string;
+  category: 'CALENDAR_AGGREGATOR' | 'CENTRAL_BANK' | 'SPEED_WIRE' | 'COMMODITY_CONSORTIUM';
+  status: 'ONLINE' | 'STREAMING' | 'AUTHORITATIVE' | 'MIRROR_FALLBACK';
+  latencyMs: number;
+  healthScore: number;
+  eventsParsedCount: number;
+  lastIngestionTimestamp: number;
+}
+
+export interface MultiPortalAggregationTelemetry {
+  totalPortalsOnline: number;
+  totalPortalsConfigured: number;
+  portals: FinancialPortalInfo[];
+  totalUniqueEvents: number;
+  crossValidatedEventsCount: number;
+  highImpactCount: number;
+  mediumImpactCount: number;
+  lowImpactCount: number;
+  todayReleasesCount: number;
+  currentTradingDate: string;
+  dstStatus: {
+    usDstActive: boolean;
+    euDstActive: boolean;
+    timeZoneLabel: string;
+  };
+  cacheState: 'LIVE_STREAMING' | 'TTL_VALIDATED' | 'REDUNDANT_MIRROR_FALLBACK';
+  lastSyncTimestamp: number;
+  averageAggregationLatencyMs: number;
 }
 
 // ==========================================
