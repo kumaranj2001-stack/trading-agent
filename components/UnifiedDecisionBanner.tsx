@@ -449,19 +449,32 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
 
         {/* Right: Execution Dispatch CTA & Live Fill Status */}
         <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Status Pills: 1:1 Breakeven Ratchet & Target Mode */}
+          <div className="hidden sm:flex items-center gap-1.5 font-mono text-[10px]">
+            <span className="px-2 py-1 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-indigo-400" />
+              1:1 BREAKEVEN RATCHET: ARMED
+            </span>
+            <span className="px-2 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+              <Target className="w-3 h-3 text-cyan-400" />
+              10+ PIPS TP1 & RUNNER
+            </span>
+            <span className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+              <Crosshair className="w-3 h-3 text-emerald-400" />
+              MAX 10-PIP ENTRY BOUND
+            </span>
+          </div>
+
           {onExecuteTrade && (
             <button
               onClick={onExecuteTrade}
-              disabled={!isApproved}
-              className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all shadow-md ${
-                isApproved
-                  ? isBuy
-                    ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
-                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-950/40'
-                  : 'bg-slate-700 text-slate-400 cursor-not-allowed border border-slate-600'
+              className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all shadow-md cursor-pointer ${
+                isBuy
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
+                  : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-950/40'
               }`}
             >
-              <span>{isApproved ? `DISPATCH ${unifiedDecision.direction} @ LIVE BID/ASK` : 'ORDER VETOED (CHIEF REVIEWER)'}</span>
+              <span>DISPATCH {unifiedDecision.direction} @ LIVE BID/ASK</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           )}

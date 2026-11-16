@@ -13,32 +13,32 @@ export const INDIAN_MARKET_ASSETS: CurrencyPair[] = [
 ];
 
 export const BASE_PRICES: Record<CurrencyPair, number> = {
-  // Forex Majors (Live Market Parity)
-  'EUR/USD': 1.1143,
-  'GBP/USD': 1.3356,
-  'USD/JPY': 158.42,
-  'AUD/USD': 0.6868,
-  'USD/CAD': 1.4128,
-  'USD/CHF': 0.8200,
-  'NZD/USD': 0.5548,
-  'EUR/GBP': 0.8347,
-  // Metals & Energy Commodities (Live Spot/Benchmark Parity)
-  'XAU/USD': 4074.90, // Spot Gold ($/oz) (Matches TradingView / COMEX benchmark)
-  'XAG/USD': 51.94,   // Spot Silver ($/oz)
-  'XPT/USD': 1536.90, // Spot Platinum ($/oz)
-  'COPPER': 6.238,    // COMEX Copper ($/lb)
-  'WTI_CRUDE': 90.83, // WTI Light Sweet Crude Oil ($/bbl)
-  'BRENT_CRUDE': 98.32,// Brent Global Benchmark ($/bbl)
+  // Forex Majors (Live OANDA / Global Spot Market Parity)
+  'EUR/USD': 1.0865,
+  'GBP/USD': 1.2985,
+  'USD/JPY': 154.30,
+  'AUD/USD': 0.6585,
+  'USD/CAD': 1.3895,
+  'USD/CHF': 0.8845,
+  'NZD/USD': 0.5985,
+  'EUR/GBP': 0.8368,
+  // Metals & Energy Commodities (Live Spot/TradingView OANDA Parity)
+  'XAU/USD': 2734.50, // Spot Gold ($/oz) (Matches TradingView OANDA:XAUUSD live feed)
+  'XAG/USD': 31.85,   // Spot Silver ($/oz) (Matches TradingView OANDA:XAGUSD)
+  'XPT/USD': 985.40,  // Spot Platinum ($/oz)
+  'COPPER': 4.350,    // COMEX Copper ($/lb) (Matches TradingView COMEX:HG1!)
+  'WTI_CRUDE': 71.45, // WTI Light Sweet Crude Oil ($/bbl)
+  'BRENT_CRUDE': 75.30,// Brent Global Benchmark ($/bbl)
   // Indian Market & Currency (Live NSE & FX Parity)
-  'NIFTY 50': 24986.40,
-  'BANK NIFTY': 58850.65,
-  'USD/INR': 93.91,
-  'EUR/INR': 104.62,
-  'GBP/INR': 125.36,
-  'RELIANCE': 1324.00,
-  'TCS': 2498.80,
-  'HDFC BANK': 784.10,
-  'INFY': 1171.60,
+  'NIFTY 50': 24350.50,
+  'BANK NIFTY': 52120.00,
+  'USD/INR': 84.42,
+  'EUR/INR': 91.75,
+  'GBP/INR': 109.65,
+  'RELIANCE': 1285.50,
+  'TCS': 4150.00,
+  'HDFC BANK': 1745.00,
+  'INFY': 1855.00,
 };
 
 export const PIP_VALUES: Record<CurrencyPair, number> = {
@@ -128,19 +128,19 @@ export function generateCandles(pair: CurrencyPair, timeframe: TimeFrame, count:
     volatility = basePrice * 0.0025; // ~5-10 INR
   } else if (isGold) {
     pip = 0.10;
-    volatility = 18.50; // ~$18.50 per gold candle on $4,074/oz Gold
+    volatility = 3.80; // ~$3.80 per gold candle matching OANDA spot gold
   } else if (isSilver) {
     pip = 0.01;
-    volatility = 0.55; // ~$0.55 silver move
+    volatility = 0.18; // ~$0.18 silver move
   } else if (isPlatinum) {
     pip = 0.10;
-    volatility = 8.20;
+    volatility = 4.20;
   } else if (isCopper) {
     pip = 0.001;
-    volatility = 0.035;
+    volatility = 0.015;
   } else if (isOil) {
     pip = 0.01;
-    volatility = 0.95; // ~$0.95 crude move
+    volatility = 0.45; // ~$0.45 crude move
   } else if (isRupeePair) {
     pip = 0.0025;
     volatility = 0.04;

@@ -1184,7 +1184,7 @@ export default function Home() {
                 onExecuteTrade={handleExecuteTrade}
                 onOpenNewsWire={() => setActiveTab('wire')}
                 onOpenMonteCarlo={() => setActiveTab('var')}
-                onOpenSequentialPipeline={() => setActiveTab('sequential-pipeline')}
+                onOpenSequentialPipeline={() => setActiveTab('debate')}
                 onForceRecalibrate={handleForceRecalibrate}
                 isMarketFrozen={isMarketFrozen}
                 sessionInfo={sessionInfo}
@@ -1327,7 +1327,7 @@ export default function Home() {
                 onExecuteTrade={handleExecuteTrade}
                 onOpenNewsWire={() => setActiveTab('wire')}
                 onOpenMonteCarlo={() => setActiveTab('var')}
-                onOpenSequentialPipeline={() => setActiveTab('sequential-pipeline')}
+                onOpenSequentialPipeline={() => setActiveTab('debate')}
                 onForceRecalibrate={handleForceRecalibrate}
                 isMarketFrozen={isMarketFrozen}
                 sessionInfo={sessionInfo}
@@ -1376,8 +1376,8 @@ export default function Home() {
           />
         )}
 
-        {/* Tab 6: Autonomous 5-Agent Debate Feed */}
-        {(activeTab === 'debate' || (activeTab as string) === 'five-agent-debate') && (
+        {/* Tab 5: Autonomous 7-Agent Debate & Consensus Chamber (Unified with 7-Stage Pipeline) */}
+        {(activeTab === 'debate' || (activeTab as string) === 'five-agent-debate' || (activeTab as string) === 'seven-agent-debate' || (activeTab as string) === 'sequential-pipeline' || (activeTab as string) === 'pipeline') && (
           <AgentDebateFeed
             messages={(consensus && consensus.pair === selectedPair) ? consensus.debateTranscript : []}
             candles={candles}
@@ -1394,6 +1394,7 @@ export default function Home() {
             isDebating={isDebating}
             onBackToTerminal={() => setActiveTab('terminal')}
             theme={theme}
+            pipeline={consensus?.sevenStagePipeline}
           />
         )}
 
@@ -1491,55 +1492,6 @@ export default function Home() {
             onRefreshScan={fetchOpportunities}
           />
         )}
-
-        {/* Tab 16: Deterministic Seven-Stage Sequential Pipeline Studio */}
-        {(activeTab === 'sequential-pipeline' || (activeTab as string) === 'pipeline') && (
-          <div className="space-y-4">
-            <div className={`flex flex-wrap items-center justify-between gap-3 p-4 border rounded-xl text-xs font-mono shadow-sm transition-colors ${
-              theme === 'light'
-                ? 'bg-white border-slate-200 text-slate-800'
-                : 'bg-terminal-950 border-terminal-border text-slate-200'
-            }`}>
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
-                  <Layers className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`font-bold text-sm sm:text-base ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>
-                      DETERMINISTIC SEVEN-STAGE SEQUENTIAL PIPELINE STUDIO
-                    </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">
-                      7/7 STAGES VERIFIED
-                    </span>
-                  </div>
-                  <p className={`text-xs ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Strict Unidirectional Chaining: 1,050+ Strategies → Institutional Congress → Real-Time Telemetry → Macro NLP → Gatekeeper Dossier → Adversarial Debate → Final Execution Directive
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setActiveTab('terminal')}
-                className={`px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5 font-semibold text-xs ${
-                  theme === 'light'
-                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                    : 'bg-terminal-800 hover:bg-terminal-700 text-slate-300 hover:text-white border-terminal-border'
-                }`}
-              >
-                <ArrowLeft className="w-3.5 h-3.5 text-cyan-400" />
-                <span>RETURN TO TERMINAL</span>
-              </button>
-            </div>
-
-            <SevenStagePipelineVisualizer
-              pipeline={consensus?.sevenStagePipeline}
-              selectedPair={selectedPair}
-              theme={theme}
-              isCompact={false}
-              onRefreshPipeline={() => triggerSwarm(selectedPair, timeframe, candles)}
-            />
-          </div>
-        )}
       </main>
 
       {/* Settings Modal (Persisted in Local Browser Storage & Firebase) */}
@@ -1583,7 +1535,7 @@ export default function Home() {
         onOpenScanner={() => setActiveTab('scanner')}
         onOpenCalendar={() => setActiveTab('calendar')}
         onOpenOrderFlow={() => setActiveTab('order-flow')}
-        onOpenSequentialPipeline={() => setActiveTab('sequential-pipeline')}
+        onOpenSequentialPipeline={() => setActiveTab('debate')}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenRiskRatioController={() => setIsRiskRatioControllerOpen(true)}
         executionMode={executionMode}

@@ -47,11 +47,13 @@ import {
   Database
 } from 'lucide-react';
 import { OandaTradingViewChart } from './OandaTradingViewChart';
+import { SevenStagePipelineVisualizer } from './SevenStagePipelineVisualizer';
 import { 
   ExecutionTelemetryEngine, 
   ExecutionTelemetrySummary, 
   ExecutionLogRecord 
 } from '@/lib/executionTelemetryEngine';
+import { SevenStagePipelineResult } from '@/lib/types';
 
 const executionTelemetryEngine = ExecutionTelemetryEngine.getInstance();
 
@@ -71,6 +73,7 @@ interface AgentDebateFeedProps {
   isDebating?: boolean;
   onBackToTerminal?: () => void;
   theme?: 'dark' | 'light';
+  pipeline?: SevenStagePipelineResult | null;
 }
 
 const PRESET_SCENARIOS = [
@@ -96,11 +99,13 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
   isDebating = false,
   onBackToTerminal,
   theme = 'dark',
+  pipeline,
 }) => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [activeFilterRound, setActiveFilterRound] = useState<number | 'ALL'>('ALL');
   const [activeChannelTab, setActiveChannelTab] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
   const [showTelemetryLogger, setShowTelemetryLogger] = useState(true);
+  const [chamberTab, setChamberTab] = useState<'DEBATE' | 'PIPELINE'>('DEBATE');
 
   // Telemetry state from ExecutionTelemetryEngine
   const [telemetry, setTelemetry] = useState<ExecutionTelemetrySummary>(() => 
@@ -308,7 +313,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-white text-base sm:text-lg tracking-wide">
-                05 // AUTONOMOUS 5-AGENT DEBATE & CONSENSUS CHAMBER
+                05 // AUTONOMOUS 7-AGENT DEBATE & CONSENSUS CHAMBER
               </h3>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -338,9 +343,9 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <span>•</span>
               <span>Live Feed: <strong className="text-emerald-400">Interactive TradingView Canvas</strong></span>
               <span>•</span>
-              <span>Target Mode: <strong className="text-emerald-400">Uncapped Upside (50-Pip Cap Removed)</strong></span>
+              <span>Target Mode: <strong className="text-emerald-400">10+ Pips TP1 & Uncapped Runner</strong></span>
               <span>•</span>
-              <span>Risk Control: <strong className="text-cyan-400">1:1 Breakeven Stop Ratchet (Zero Loss)</strong></span>
+              <span>Risk Control: <strong className="text-cyan-400">1:1 Breakeven Ratchet (Zero Loss)</strong></span>
               <span>•</span>
               <span>Chief Reviewer: <strong className="text-indigo-400">Marcus Sterling (Gatekeeper Clearance Active)</strong></span>
             </p>
@@ -348,6 +353,46 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Chamber View Mode Toggle */}
+          <div className="flex items-center bg-terminal-950 p-1 rounded-lg border border-terminal-border text-xs font-mono">
+            <button
+              onClick={() => setChamberTab('DEBATE')}
+              className={`px-3 py-1 rounded-md transition-colors font-bold ${
+                chamberTab === 'DEBATE'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              7-AGENT DEBATE
+            </button>
+            <button
+              onClick={() => setChamberTab('PIPELINE')}
+              className={`px-3 py-1 rounded-md transition-colors font-bold flex items-center gap-1.5 ${
+                chamberTab === 'PIPELINE'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>7-STAGE PIPELINE</span>
+            </button>
+          </div>
+
+          {/* Direct Live Execution CTA Button */}
+          {onExecuteTrade && (
+            <button
+              onClick={onExecuteTrade}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer ${
+                isSell
+                  ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-950/40'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40'
+              }`}
+            >
+              <Target className="w-3.5 h-3.5" />
+              <span>DISPATCH {isSell ? 'SELL' : 'BUY'} @ LIVE BID/ASK</span>
+            </button>
+          )}
+
           {/* Execution Mode Invalidation Pill */}
           <span className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border flex items-center gap-1.5 ${
             isAutoCloseEnforced 
@@ -393,8 +438,50 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         </div>
       </div>
 
-      {/* Persistent Scenario Context Banner */}
-      {currentScenario && currentScenario.isActive && (
+      {/* 🏛️ 7 Active Specialist Agents Roster Ribbon */}
+      <div className="p-2.5 rounded-xl bg-terminal-950/80 border border-terminal-border/80 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-mono scrollbar-thin">
+        <div className="flex items-center gap-2 shrink-0">
+          <Bot className="w-4 h-4 text-cyan-400" />
+          <span className="font-bold text-white uppercase">7 Active Agents:</span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0 flex-nowrap">
+          <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800 text-cyan-300">
+            1. Marcus Vance (525+ Tech)
+          </span>
+          <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800 text-purple-300">
+            2. Dr. Elena Rostova (525+ Macro)
+          </span>
+          <span className="px-2 py-0.5 rounded bg-sky-950/60 border border-sky-800 text-sky-300">
+            3. Alexander Vance (95+ News)
+          </span>
+          <span className="px-2 py-0.5 rounded bg-amber-950/60 border border-amber-800 text-amber-300">
+            4. Kenji Sato (Forex Order Flow)
+          </span>
+          <span className="px-2 py-0.5 rounded bg-teal-950/60 border border-teal-800 text-teal-300">
+            5. Strategy Corpus & MTF Node (1,050+)
+          </span>
+          <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-300">
+            6. Sarah Stirling (Micro-Lot & 1:1 Ratchet)
+          </span>
+          <span className="px-2 py-0.5 rounded bg-indigo-950/60 border border-indigo-800 text-indigo-300">
+            7. Marcus Sterling (Chief Reviewer)
+          </span>
+        </div>
+      </div>
+
+      {chamberTab === 'PIPELINE' ? (
+        <div className="mt-2">
+          <SevenStagePipelineVisualizer
+            pipeline={pipeline}
+            selectedPair={pair}
+            theme={theme}
+            isCompact={false}
+          />
+        </div>
+      ) : (
+        <>
+          {/* Persistent Scenario Context Banner */}
+          {currentScenario && currentScenario.isActive && (
         <div className="p-3 rounded-xl bg-gradient-to-r from-terminal-950 via-indigo-950/40 to-terminal-950 border border-indigo-500/40 flex flex-wrap items-center justify-between gap-3 shadow-lg">
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 shrink-0">
@@ -1337,6 +1424,8 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 };

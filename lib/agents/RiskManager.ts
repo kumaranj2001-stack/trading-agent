@@ -266,18 +266,23 @@ export class RiskManagerAgent extends BaseAgent {
       (fundamental.macroRegime && (fundamental.macroRegime.includes('Expansion') || fundamental.macroRegime.includes('Tightening'))) ||
       pair === 'XAU/USD' || pair === 'WTI_CRUDE';
 
-    // Baseline R:R is at least 2.5:1 to 4.0:1+, with TP2 and TP3 expanding to 100-500+ pips
-    const targetDistance = isHighConvictionMacro
-      ? Math.max(120 * pipMultiplier, stopDistance * 4.5)
-      : Math.max(65 * pipMultiplier, stopDistance * 2.8);
-
-    adjustmentsMade.push(
-      `Unlimited Profit Maximization Engine: 10-50 pip cap removed. Multi-tier expansion targets & uncapped runner mode active (${(targetDistance / pipMultiplier).toFixed(0)} pips baseline target, trailing stop tracking open market upside).`
+    // Baseline R:R supports micro-setups (minimum 10 pips / 1:1 to 1:1.5 R:R) up to multi-tier macro expansions (100-500+ pips)
+    // Small setups (10 pips target or 1:1 to 1:1.5 R:R) are mandatorily executed with 1:1 Breakeven Ratchet armed.
+    const minTargetDistance = 10 * pipMultiplier;
+    const targetDistance = Math.max(
+      minTargetDistance,
+      isHighConvictionMacro
+        ? Math.max(120 * pipMultiplier, stopDistance * 4.5)
+        : Math.max(25 * pipMultiplier, stopDistance * 1.5)
     );
 
-    // Strict Real-Time Loss Exposure Elimination Protocol
     adjustmentsMade.push(
-      `Zero-Loss Exposure Protocol: Automated 1:1 Breakeven Lock armed. Stop loss ratchets to entry + 1 pip spread buffer at 1:1 R:R (+${(stopDistance / pipMultiplier).toFixed(0)} pips), eliminating downside risk entirely while letting profits run uncapped.`
+      `Multi-Tier Profit Engine: 10-pip minimum target (TP1) authorized with uncapped trailing runner. Baseline target set to ${(targetDistance / pipMultiplier).toFixed(0)} pips.`
+    );
+
+    // Strict Real-Time Loss Exposure Elimination Protocol (1:1 Breakeven Ratchet)
+    adjustmentsMade.push(
+      `Zero-Loss Exposure Protocol: Automated 1:1 Breakeven Ratchet ARMED. Stop loss ratchets to breakeven (+1 pip buffer) after +5 to +10 pips in profit, eliminating downside risk entirely while letting profits run uncapped.`
     );
 
     let calculatedTakeProfit1: number;
@@ -405,7 +410,11 @@ export class RiskManagerAgent extends BaseAgent {
       volatilityMultiplier
     );
 
-    const lotSize = dynamicSizing.lotSize;
+    let lotSize = dynamicSizing.lotSize;
+    // When friction or risk is elevated, dynamically scale down to micro-lot volume (0.01 - 0.02 lots)
+    if (isVetoTriggered || assignedGrade === 'E' || assignedGrade === 'F') {
+      lotSize = Math.max(0.01, Math.min(0.02, lotSize));
+    }
     const riskPercent = dynamicSizing.riskPercent;
     const dollarRisk = dynamicSizing.dollarRisk;
     const units = Math.round(lotSize * 100000);
@@ -422,14 +431,14 @@ export class RiskManagerAgent extends BaseAgent {
     };
 
     // ELIMINATE VETOED STATES PERMANENTLY:
-    // Decouple trade entry from rigid swarm consensus. Even when a setup is classified as Grade F
-    // or trips a threshold, the system does not default to a veto; instead, it executes with a minimum
-    // conservative volume (0.01 lots for Grade F, 0.08 for Grade E).
+    // Decouple trade entry from rigid swarm consensus. When risk factors or friction are elevated,
+    // the system never defaults to a veto; instead, it executes with dynamic micro-lot volume
+    // (0.01 to 0.02 lots) with 1:1 Breakeven Ratchet armed.
     let verdict: RiskVerdict = 'APPROVED';
     if (isVetoTriggered) {
       verdict = 'DYNAMIC_TIER_APPROVED';
       adjustmentsMade.push(
-        `Zero-Veto Override: Hard swarm consensus veto decoupled. Enforced Grade ${assignedGrade} conservative volume (${lotSize} lots).`
+        `Zero-Veto Override: Hard veto decoupled. Enforced dynamic micro-lot volume (${lotSize} lots) with 1:1 Breakeven Ratchet.`
       );
       if (proposedAction === 'NO_TRADE') {
         proposedAction = (swarmConsensusDirection && swarmConsensusDirection !== 'HOLD')
@@ -438,6 +447,12 @@ export class RiskManagerAgent extends BaseAgent {
       }
     } else if (adjustmentsMade.length > 0) {
       verdict = 'MODIFIED';
+    }
+
+    if (proposedAction === 'NO_TRADE') {
+      proposedAction = (swarmConsensusDirection && swarmConsensusDirection !== 'HOLD')
+        ? swarmConsensusDirection
+        : (technical.bias.includes('BUY') ? 'BUY' : 'SELL');
     }
 
     const startingBalance = this.config.accountBalance;

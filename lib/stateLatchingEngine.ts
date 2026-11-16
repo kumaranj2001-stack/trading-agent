@@ -136,12 +136,14 @@ export class StateLatchingEngine {
       }
     }
 
-    // 2. Parity Drift Invalidation: If price moved > 0.35% from initial anchor, unlatch to prevent stale orders
-    const priceDrift = Math.abs(currentPrice - state.anchoredEntryPrice) / state.anchoredEntryPrice;
-    if (priceDrift > 0.0035) {
+    // 2. Parity Drift Invalidation: Mandatory 10-pip maximum execution boundary
+    const isJpy = pair.includes('JPY');
+    const pipMultiplier = PIP_VALUES[pair] || (isJpy ? 0.01 : 0.0001);
+    const pipDrift = Math.abs(currentPrice - state.anchoredEntryPrice) / pipMultiplier;
+    if (pipDrift > 10.0) {
       this.releaseLatch(
         pair,
-        `Parity Drift Invalidation: Market moved ${(priceDrift * 100).toFixed(2)}% from anchored price (${state.anchoredEntryPrice}). Real-time recalibration required.`
+        `Mandatory 10-Pip Parity Invalidation: Market moved ${pipDrift.toFixed(1)} pips from anchored price (${state.anchoredEntryPrice}). Real-time live execution recalibration enforced.`
       );
       return false;
     }

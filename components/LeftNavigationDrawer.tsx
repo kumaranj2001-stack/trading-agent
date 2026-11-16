@@ -207,16 +207,16 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'five-agent-debate',
+      id: 'debate',
       number: '05',
-      label: 'Five-Agent Debate',
-      description: 'Interactive Multi-Role Consensus Stream',
+      label: '7-Agent Debate',
+      description: 'Autonomous 7-Agent Debate & Consensus Chamber',
       icon: MessageSquare,
       color: 'text-sky-400',
       activeBg: 'bg-sky-500/15 border-sky-500/40 text-sky-300 font-semibold',
-      isActive: activeTab === 'debate' || activeTab === 'five-agent-debate',
-      badge: 'ACTIVE',
-      badgeColor: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+      isActive: activeTab === 'debate' || activeTab === 'five-agent-debate' || activeTab === 'seven-agent-debate' || activeTab === 'sequential-pipeline' || activeTab === 'pipeline',
+      badge: '7 AGENTS',
+      badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
       action: () => {
         setActiveTab('debate');
         onClose();
@@ -241,29 +241,8 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'sequential-pipeline',
-      number: '07',
-      label: '7-Stage Pipeline',
-      description: 'Deterministic 7-Stage Sequential Execution Pipeline',
-      icon: Layers,
-      color: 'text-emerald-400',
-      activeBg: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300 font-semibold',
-      isActive: activeTab === 'sequential-pipeline' || activeTab === 'pipeline',
-      badge: '7 STAGES',
-      badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      action: () => {
-        if (onOpenSequentialPipeline) {
-          onOpenSequentialPipeline();
-        } else {
-          setActiveTab('sequential-pipeline');
-        }
-        onClose();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      },
-    },
-    {
       id: 'journals',
-      number: '08',
+      number: '07',
       label: 'Journals',
       description: 'Persistent Trade Journal & Loss Review',
       icon: BookOpen,
@@ -280,7 +259,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'wire',
-      number: '09',
+      number: '08',
       label: 'Wire',
       description: 'Wire with 38 Live Financial Outlets & Institutional Feeds',
       icon: Radio,
@@ -297,7 +276,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'order-flow',
-      number: '10',
+      number: '09',
       label: 'Order Flow',
       description: 'Footprint Charts, Volume Profile & Dual Confluence Execution',
       icon: BarChart2,
@@ -314,7 +293,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'calendar',
-      number: '11',
+      number: '10',
       label: 'Macro Calendar',
       description: 'Institutional Macro Economic Release Pulse',
       icon: Calendar,
@@ -331,7 +310,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'macro-intelligence',
-      number: '12',
+      number: '11',
       label: 'Macro Intelligence',
       description: 'Event-Driven Macro Intelligence & Execution Engine',
       icon: Zap,
@@ -348,7 +327,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'scanner',
-      number: '13',
+      number: '12',
       label: 'Scanner',
       description: 'Multi-Asset Screener & Confluence Hunter',
       icon: Radar,
@@ -365,7 +344,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'var',
-      number: '14',
+      number: '13',
       label: 'VAR',
       description: '1,000-Path Monte Carlo Value-at-Risk',
       icon: Shield,
@@ -382,7 +361,7 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     },
     {
       id: 'firebase',
-      number: '15',
+      number: '14',
       label: 'Firebase',
       description: 'Firestore Cloud Realtime State Sync',
       icon: Cloud,
