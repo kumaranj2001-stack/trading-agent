@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BASE_PRICES, CURRENCY_STRENGTH_INDEX, getActiveTradingSession, MACRO_ECONOMIC_CALENDAR } from '@/lib/marketData';
+import { macroCalendarIngestionEngine } from '@/lib/macroCalendarIngestionEngine';
 import { CurrencyPair, TimeFrame } from '@/lib/types';
 import { RealMarketDataService } from '@/lib/realMarketDataService';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
         activeSession: session,
         sessionInfo,
         isMarketFrozen: sessionInfo.isFrozen,
-        calendar: MACRO_ECONOMIC_CALENDAR,
+        calendar: macroCalendarIngestionEngine.getMergedCalendar({ todayOnly: false, limit: 25 }).events,
         ssotVerification: {
           provider: 'UNIFIED_BROKER_BENCHMARK_STREAM',
           verifiedPrice: livePrice,

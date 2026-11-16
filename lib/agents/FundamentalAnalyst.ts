@@ -2,6 +2,7 @@ import { BaseAgent } from './BaseAgent';
 import { CurrencyPair, FundamentalAnalysis, IndianMarketMetrics, MarketSegment, SignalDirection } from '../types';
 import { getMarketSegmentForSymbol, INDIAN_MARKET_TELEMETRY, MACRO_ECONOMIC_CALENDAR } from '../marketData';
 import { knowledgeEngine } from '../knowledge/KnowledgeEngine';
+import { macroCalendarIngestionEngine } from '../macroCalendarIngestionEngine';
 
 export class FundamentalAnalystAgent extends BaseAgent {
   constructor() {
@@ -111,7 +112,11 @@ export class FundamentalAnalystAgent extends BaseAgent {
       isIndian ? INDIAN_MARKET_TELEMETRY.indiaVix : undefined
     );
 
-    const events = MACRO_ECONOMIC_CALENDAR.filter(e => e.region === base || e.region === quote || (isIndian && e.region === 'INR'));
+    // Ingest live high-impact dispatches from the Dual-Pipeline Macro Calendar Engine (November 16 Live Dispatches)
+    const liveDualPipelineEvents = macroCalendarIngestionEngine.getHighImpactEventsForSymbol(pair);
+    const events = liveDualPipelineEvents.length > 0
+      ? liveDualPipelineEvents
+      : MACRO_ECONOMIC_CALENDAR.filter(e => e.region === base || e.region === quote || (isIndian && e.region === 'INR'));
 
     const thesis = isIndian
       ? `Indian Macro Regime: ${macroRegime}. FII net cash inflow at +₹${INDIAN_MARKET_TELEMETRY.fiiNetFlowCr} Cr, counterbalanced by domestic SIP inflow of +₹${INDIAN_MARKET_TELEMETRY.diiNetFlowCr} Cr. India VIX at ${INDIAN_MARKET_TELEMETRY.indiaVix} indicates stable market breadth. RBI repo rate steady at 6.50%. Matched ${knowledgeMatch.matchedCount} fundamental rules from the 500+ Fundamental Knowledge Base. Conviction: ${bias.replace('_', ' ')}.`

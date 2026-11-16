@@ -183,6 +183,22 @@ export interface MacroIndicator {
   timeUTC?: string;   // 24-hour UTC, e.g. "13:30 UTC"
   timestampEpochMs?: number; // Unix timestamp in milliseconds
   dateTimeIST?: string; // Formatted combined string for responsive display
+  id?: string;
+  canonicalId?: string;
+  source?: 'FOREX_FACTORY' | 'MACRO_FEED' | 'DUAL_MERGED' | string;
+  fastestSourceUpdated?: string;
+  deviationDelta?: number;
+  secondsUntilRelease?: number;
+  releaseStatus?: 'UPCOMING' | 'ACTIVE_RELEASE_WINDOW' | 'RELEASED';
+  rawActual?: number;
+  rawForecast?: number;
+  rawPrevious?: number;
+  actualNumeric?: number;
+  forecastNumeric?: number;
+  previousNumeric?: number;
+  isLiveNow?: boolean;
+  releaseWindowActive?: boolean;
+  country?: string;
 }
 
 // ==========================================

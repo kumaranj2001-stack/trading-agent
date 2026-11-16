@@ -5,6 +5,7 @@ import {
   MacroCatalystEvent 
 } from './types';
 import { PIP_VALUES, BASE_PRICES } from './marketData';
+import { macroCalendarIngestionEngine } from './macroCalendarIngestionEngine';
 
 export class EventDrivenRiskProtocolsManager {
   private static instance: EventDrivenRiskProtocolsManager;
@@ -81,7 +82,23 @@ export class EventDrivenRiskProtocolsManager {
     const atrExpansionRatio = Number((Math.max(1.0, currentAtrPips / baselineAtr14Pips)).toFixed(2));
 
     // 2. Pre-Release Calendar Lockout Engine (15 mins pre-release to 5 mins post-release)
-    const secondsUntil = catalyst.secondsUntilRelease ?? 1200;
+    let secondsUntil = catalyst.secondsUntilRelease ?? 1200;
+    
+    // Cross-validate with live dual-pipeline calendar active release windows
+    const activeCalendarEvents = macroCalendarIngestionEngine.getActiveReleaseWindowEvents();
+    const symbolParts = symbol.split('/');
+    const activeMatchingCalendarEvent = activeCalendarEvents.find(e => 
+      symbolParts.includes(e.region) || 
+      (e.region === 'USD' && (symbol.includes('USD') || symbol === 'XAU/USD' || symbol === 'WTI_CRUDE' || symbol.includes('CRUDE'))) ||
+      (e.region === 'EUR' && symbol.includes('EUR')) ||
+      (e.region === 'GBP' && symbol.includes('GBP')) ||
+      (e.region === 'JPY' && symbol.includes('JPY')) ||
+      (e.region === 'INR' && (symbol.includes('INR') || symbol.includes('NIFTY')))
+    );
+    if (activeMatchingCalendarEvent && typeof activeMatchingCalendarEvent.secondsUntilRelease === 'number') {
+      secondsUntil = activeMatchingCalendarEvent.secondsUntilRelease;
+    }
+
     const isLockoutActive = secondsUntil >= -300 && secondsUntil <= 900; // -5 mins to +15 mins
     const tradingAllowed = !isLockoutActive;
 
