@@ -16,12 +16,13 @@ import {
   DebatePriceThresholds,
   NavigationTab
 } from '@/lib/types';
-import { ArrowLeft, Bot, RefreshCw, Layers } from 'lucide-react';
+import { ArrowLeft, Bot, RefreshCw, Layers, ChevronDown, ChevronUp } from 'lucide-react';
 import { INITIAL_PORTFOLIO, PortfolioState } from '@/lib/store';
 import { DEFAULT_RISK_CONFIG, RiskManagerConfig } from '@/lib/agents/RiskManager';
 import { BrowserStorageManager } from '@/lib/browserStorage';
 import { Header } from '@/components/Header';
 import { TickerBar } from '@/components/TickerBar';
+import { TradingSessionClockTimeline } from '@/components/TradingSessionClockTimeline';
 import { UnifiedDecisionBanner } from '@/components/UnifiedDecisionBanner';
 import { ChartView } from '@/components/ChartView';
 import { AgentSwarmPanel } from '@/components/AgentSwarmPanel';
@@ -111,6 +112,7 @@ export default function Home() {
   const [isRiskRatioControllerOpen, setIsRiskRatioControllerOpen] = useState<boolean>(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [activeDebateScenario, setActiveDebateScenario] = useState<DebateScenarioContext | null>(null);
+  const [showIntermediateAnalysis, setShowIntermediateAnalysis] = useState<boolean>(false);
 
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
@@ -1203,37 +1205,12 @@ export default function Home() {
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
           <div className="space-y-4">
-            {/* 🌟 UNIFIED 5-ROLE BUY/SELL DECISION BANNER (Directly on Dashboard) */}
-            {consensus && consensus.pair === selectedPair ? (
-              <UnifiedDecisionBanner
-                consensus={consensus}
-                onExecuteTrade={handleExecuteTrade}
-                onOpenNewsWire={() => setActiveTab('wire')}
-                onOpenMonteCarlo={() => setActiveTab('var')}
-                onOpenSequentialPipeline={() => setActiveTab('debate')}
-                onForceRecalibrate={handleForceRecalibrate}
-                isMarketFrozen={isMarketFrozen}
-                sessionInfo={sessionInfo}
-                theme={theme}
-              />
-            ) : isAnalyzing ? (
-              <div className="rounded-xl border border-cyan-500/20 bg-terminal-900/80 p-5 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono shadow-lg animate-pulse">
-                <div className="flex items-center gap-3 text-cyan-400">
-                  <RefreshCw className="h-5 w-5 animate-spin shrink-0" />
-                  <div>
-                    <span className="font-bold uppercase tracking-wider text-white block">
-                      Recalibrating 5-Agent Swarm Consensus for {selectedPair}
-                    </span>
-                    <span className="text-slate-400 text-[11px]">
-                      Purged legacy state latches • Evaluating 1,050+ institutional technical & fundamental models...
-                    </span>
-                  </div>
-                </div>
-                <span className="px-2.5 py-1 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold">
-                  0ms RE-ANCHOR IN PROGRESS
-                </span>
-              </div>
-            ) : null}
+            {/* 🕒 Dynamic Trading Session Clock Timeline (Global Session Clocks & Overlap Corridors) */}
+            <TradingSessionClockTimeline
+              theme={theme}
+              selectedPair={selectedPair}
+              isMarketFrozen={isMarketFrozen}
+            />
 
             {/* 🛡️ Active Running Entry Real-Time Invalidation Monitor */}
             {portfolio.positions.find(p => p.symbol === selectedPair) && (
@@ -1270,24 +1247,6 @@ export default function Home() {
               journalAnalysis={consensus?.pair === selectedPair ? consensus.journalAnalysis : undefined}
             />
 
-            {/* 7 Specialized Agent Desks */}
-            {consensus && consensus.pair === selectedPair && (
-              <AgentSwarmPanel
-                technical={consensus.agents.technical}
-                fundamental={consensus.agents.fundamental}
-                forex={consensus.agents.forex}
-                news={consensus.agents.news}
-                risk={consensus.agents.risk}
-                orderFlow={consensus.agents.orderFlow}
-                chiefReviewerAudit={consensus.chiefReviewerAudit}
-                onExecuteTrade={handleExecuteTrade}
-                onOpenMonteCarlo={() => setActiveTab('var')}
-                onOpenNewsWire={() => setActiveTab('wire')}
-                telemetry={consensus.autonomousLoopTelemetry}
-                theme={theme}
-              />
-            )}
-
             {/* Portfolio & Position Management (Saved in Local Browser) */}
             <PortfolioPanel
               portfolio={portfolio}
@@ -1295,6 +1254,88 @@ export default function Home() {
               executionMode={executionMode}
               theme={theme}
             />
+
+            {/* 🔬 Collapsible Intermediate Analysis Modules (7-Agent Debate, Strategy Compass, Chief Reviewer Audit) */}
+            {/* Hidden by default to declutter the front end while preserving all operational execution and telemetry */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowIntermediateAnalysis(prev => !prev)}
+                className={`w-full py-2.5 px-4 rounded-xl border text-xs font-mono flex items-center justify-between transition-all shadow-sm ${
+                  theme === 'light'
+                    ? 'bg-slate-100/90 border-slate-300 text-slate-700 hover:bg-slate-200'
+                    : 'bg-terminal-900/60 border-slate-800 text-slate-400 hover:bg-terminal-800 hover:text-slate-200'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Bot className="w-4 h-4 text-cyan-400" />
+                  <span className="font-semibold uppercase tracking-wider">
+                    {showIntermediateAnalysis
+                      ? 'Hide Intermediate Analysis Modules (7-Agent Debate & Strategy Compass)'
+                      : 'Inspect Intermediate Analysis Modules (7-Agent Debate, Strategy Compass & Chief Reviewer) [Hidden]'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1.5 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    AUTONOMOUS CORE ACTIVE
+                  </span>
+                  {showIntermediateAnalysis ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </div>
+              </button>
+
+              <div className={showIntermediateAnalysis ? "space-y-4 mt-4" : "hidden"} aria-hidden={!showIntermediateAnalysis}>
+                {/* 🌟 UNIFIED 5-ROLE BUY/SELL DECISION BANNER (Directly on Dashboard) */}
+                {consensus && consensus.pair === selectedPair ? (
+                  <UnifiedDecisionBanner
+                    consensus={consensus}
+                    onExecuteTrade={handleExecuteTrade}
+                    onOpenNewsWire={() => setActiveTab('wire')}
+                    onOpenMonteCarlo={() => setActiveTab('var')}
+                    onOpenSequentialPipeline={() => setActiveTab('debate')}
+                    onForceRecalibrate={handleForceRecalibrate}
+                    isMarketFrozen={isMarketFrozen}
+                    sessionInfo={sessionInfo}
+                    theme={theme}
+                  />
+                ) : isAnalyzing ? (
+                  <div className="rounded-xl border border-cyan-500/20 bg-terminal-900/80 p-5 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono shadow-lg animate-pulse">
+                    <div className="flex items-center gap-3 text-cyan-400">
+                      <RefreshCw className="h-5 w-5 animate-spin shrink-0" />
+                      <div>
+                        <span className="font-bold uppercase tracking-wider text-white block">
+                          Recalibrating 5-Agent Swarm Consensus for {selectedPair}
+                        </span>
+                        <span className="text-slate-400 text-[11px]">
+                          Purged legacy state latches • Evaluating 1,050+ institutional technical & fundamental models...
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[10px] font-bold">
+                      0ms RE-ANCHOR IN PROGRESS
+                    </span>
+                  </div>
+                ) : null}
+
+                {/* 7 Specialized Agent Desks */}
+                {consensus && consensus.pair === selectedPair && (
+                  <AgentSwarmPanel
+                    technical={consensus.agents.technical}
+                    fundamental={consensus.agents.fundamental}
+                    forex={consensus.agents.forex}
+                    news={consensus.agents.news}
+                    risk={consensus.agents.risk}
+                    orderFlow={consensus.agents.orderFlow}
+                    chiefReviewerAudit={consensus.chiefReviewerAudit}
+                    onExecuteTrade={handleExecuteTrade}
+                    onOpenMonteCarlo={() => setActiveTab('var')}
+                    onOpenNewsWire={() => setActiveTab('wire')}
+                    telemetry={consensus.autonomousLoopTelemetry}
+                    theme={theme}
+                  />
+                )}
+              </div>
+            </div>
           </div>
         )}
 
