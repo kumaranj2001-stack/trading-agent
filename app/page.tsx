@@ -1270,7 +1270,7 @@ export default function Home() {
               journalAnalysis={consensus?.pair === selectedPair ? consensus.journalAnalysis : undefined}
             />
 
-            {/* 5 Specialized Agent Cards (Technical, Fundamental, News, Forex, Risk) */}
+            {/* 7 Specialized Agent Desks */}
             {consensus && consensus.pair === selectedPair && (
               <AgentSwarmPanel
                 technical={consensus.agents.technical}
@@ -1278,6 +1278,8 @@ export default function Home() {
                 forex={consensus.agents.forex}
                 news={consensus.agents.news}
                 risk={consensus.agents.risk}
+                orderFlow={consensus.agents.orderFlow}
+                chiefReviewerAudit={consensus.chiefReviewerAudit}
                 onExecuteTrade={handleExecuteTrade}
                 onOpenMonteCarlo={() => setActiveTab('var')}
                 onOpenNewsWire={() => setActiveTab('wire')}
@@ -1368,6 +1370,8 @@ export default function Home() {
                 forex={consensus.agents.forex}
                 news={consensus.agents.news}
                 risk={consensus.agents.risk}
+                orderFlow={consensus.agents.orderFlow}
+                chiefReviewerAudit={consensus.chiefReviewerAudit}
                 onExecuteTrade={handleExecuteTrade}
                 onOpenMonteCarlo={() => setActiveTab('var')}
                 onOpenNewsWire={() => setActiveTab('wire')}

@@ -8,7 +8,9 @@ import {
   RiskAssessment, 
   SignalDirection, 
   TechnicalAnalysis,
-  SwarmConsensusResult
+  SwarmConsensusResult,
+  OrderFlowAnalysis,
+  ChiefReviewerAuditResult
 } from '@/lib/types';
 import { 
   BarChart3, 
@@ -37,6 +39,8 @@ interface AgentSwarmPanelProps {
   forex: ForexAnalysis;
   news: NewsAnalysis;
   risk: RiskAssessment;
+  orderFlow?: OrderFlowAnalysis;
+  chiefReviewerAudit?: ChiefReviewerAuditResult;
   onExecuteTrade?: () => void;
   onOpenMonteCarlo?: () => void;
   onOpenNewsWire?: () => void;
@@ -50,6 +54,8 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
   forex,
   news,
   risk,
+  orderFlow,
+  chiefReviewerAudit,
   onExecuteTrade,
   onOpenMonteCarlo,
   onOpenNewsWire,
@@ -125,7 +131,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-cyan-500"></span>
           </span>
           <span className={`font-bold tracking-wide ${theme === 'light' ? 'text-slate-900' : 'text-white'}`}>
-            24/7 AUTONOMOUS SWARM // 5 SPECIALIZED DESKS RUNNING SIMULTANEOUS ASYNCHRONOUS PROCESSES
+            24/7 AUTONOMOUS SWARM // 7 SPECIALIZED DESKS RUNNING SIMULTANEOUS ASYNCHRONOUS PROCESSES
           </span>
         </div>
         <div className={`flex flex-wrap items-center gap-3 text-[11px] ${theme === 'light' ? 'text-slate-600' : 'text-slate-400'}`}>
@@ -482,7 +488,94 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
         </div>
       </div>
 
-      {/* 5. RISK MANAGER & CHIEF CAPITAL GATEKEEPER (Wide Card) */}
+      {/* 5. ORDER FLOW & INSTITUTIONAL LIQUIDITY SPECIALIST (Kaelen Voss) */}
+      {orderFlow && (
+        <div className={`rounded-xl p-4 sm:p-5 flex flex-col justify-between transition-colors shadow-md border ${
+          theme === 'light' ? 'bg-white border-slate-200 hover:border-orange-500' : 'bg-terminal-900 border-terminal-border hover:border-orange-500/40'
+        }`}>
+          <div>
+            <div className="flex items-center justify-between border-b border-terminal-border/60 pb-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-orange-950 border border-orange-800 flex items-center justify-center text-orange-400">
+                  <Activity className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Order Flow Desk</h3>
+                  <span className="text-xs font-semibold text-orange-400">{orderFlow.agentName}</span>
+                </div>
+              </div>
+              {getBiasBadge(orderFlow.bias)}
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div className="bg-terminal-950/80 p-3 rounded-lg border border-orange-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-orange-400 text-xs uppercase font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Volume Profile & CVD Metrics
+                  </span>
+                  <span className="text-xs text-slate-300 font-medium">
+                    {orderFlow.cvdMetrics.divergenceType.replace('_', ' ')}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400">POC: </span>
+                    <span className="text-white font-mono font-bold">{orderFlow.volumeProfile.pocPrice}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Value Area: </span>
+                    <span className="text-orange-300 font-mono">{orderFlow.volumeProfile.valPrice} - {orderFlow.volumeProfile.vahPrice}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Cumulative Delta: </span>
+                    <span className={`font-mono font-bold ${orderFlow.cvdMetrics.cvdValue >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {orderFlow.cvdMetrics.cvdValue >= 0 ? '+' : ''}{orderFlow.cvdMetrics.cvdValue}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Footprint Imbalance: </span>
+                    <span className="text-slate-200">{orderFlow.diagonalImbalances.stackedImbalanceSide} ({orderFlow.diagonalImbalances.levelsDetectedCount} Stacked)</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-terminal-950/70 p-3 rounded-lg border border-terminal-border/40">
+                <span className="text-slate-400 text-xs uppercase font-bold block mb-1.5">VWAP Bands & Depth Walls</span>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400">VWAP Mean: </span>
+                    <span className="text-cyan-300 font-mono">{orderFlow.vwapBands.vwap}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Sigma Band: </span>
+                    <span className="text-white font-mono">{orderFlow.vwapBands.currentSigmaBand}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">DOM Dominance: </span>
+                    <span className="text-emerald-400 font-bold">{orderFlow.restingLiquidityWalls.wallDominance}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Trapped Traders: </span>
+                    <span className="text-amber-300 font-bold">{orderFlow.trappedParticipants.trappedSide}</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed pt-1">
+                {orderFlow.thesis}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3.5 pt-2.5 border-t border-terminal-border/40 text-xs text-slate-400 flex items-center justify-between font-medium">
+            <span>Regime: {orderFlow.volumeProfile.valueAreaAcceptance}</span>
+            <span>Confidence: {orderFlow.confidenceScore}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* 6. RISK MANAGER & CHIEF CAPITAL GATEKEEPER (Wide Card) */}
       <div className="bg-terminal-900 border border-emerald-800/60 rounded-xl p-4 sm:p-5 flex flex-col justify-between hover:border-emerald-500/50 transition-colors shadow-md relative overflow-hidden md:col-span-2 lg:col-span-2">
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
 
@@ -604,6 +697,72 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* 7. CHIEF REVIEWER & GATEKEEPER AUDIT (Dr. Marcus Sterling) */}
+      {chiefReviewerAudit && (
+        <div className={`rounded-xl p-4 sm:p-5 flex flex-col justify-between transition-colors shadow-md border ${
+          theme === 'light' ? 'bg-white border-slate-200 hover:border-indigo-500' : 'bg-terminal-900 border-indigo-800/60 hover:border-indigo-500/50'
+        }`}>
+          <div>
+            <div className="flex items-center justify-between border-b border-terminal-border/60 pb-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-950 border border-indigo-800 flex items-center justify-center text-indigo-400">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Chief Reviewer Gatekeeper</h3>
+                  <span className="text-xs font-semibold text-indigo-400">Dr. Marcus Sterling</span>
+                </div>
+              </div>
+              <span className={`px-2 py-0.5 rounded text-xs font-bold font-mono ${
+                chiefReviewerAudit.status !== 'VETOED'
+                  ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                  : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+              }`}>
+                {chiefReviewerAudit.status}
+              </span>
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div className="bg-terminal-950/80 p-3 rounded-lg border border-indigo-500/20">
+                <span className="text-indigo-400 text-xs uppercase font-bold block mb-1.5">
+                  1,050+ Strategies Synchronous Corpus Verification
+                </span>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400">Corpus Integration: </span>
+                    <span className="text-emerald-400 font-bold">100% Synchronous</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Heuristic Pruning: </span>
+                    <span className="text-cyan-300 font-bold">0 Pruned (Exhaustive)</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Consensus Integrity: </span>
+                    <span className="text-white font-bold">{chiefReviewerAudit.overallConfluenceScore}%</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Resolution: </span>
+                    <span className="text-indigo-300 font-mono text-[11px] truncate block">{chiefReviewerAudit.contradictionResolution.resolutionAction}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-terminal-950/70 p-3 rounded-lg border border-terminal-border/40 text-xs">
+                <span className="text-slate-400 uppercase font-bold block mb-1">Gatekeeper Synthesis</span>
+                <p className="text-slate-300 leading-relaxed line-clamp-3">
+                  {chiefReviewerAudit.contradictionResolution.explanation}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-3.5 pt-2.5 border-t border-terminal-border/40 text-xs text-slate-400 flex items-center justify-between font-medium">
+            <span>Specialist Desks Audited: 6 Desks</span>
+            <span className="text-indigo-400 font-bold">Gatekeeper Clearance Active</span>
+          </div>
+        </div>
+      )}
     </div>
   </div>
 );

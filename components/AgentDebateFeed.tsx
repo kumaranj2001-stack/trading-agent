@@ -124,6 +124,8 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
     return () => clearInterval(timer);
   }, []);
 
+  const isLight = theme === 'light';
+
   // Format price with appropriate decimals based on pair
   const formatPrice = (val?: number) => {
     if (val === undefined || val === null || isNaN(val)) return '0.00';
@@ -346,16 +348,24 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
   }, [messages, activeFilterRound]);
 
   return (
-    <div className="bg-terminal-900 border border-terminal-border rounded-xl p-3 sm:p-5 flex flex-col space-y-4 shadow-2xl">
+    <div className={`rounded-xl p-3 sm:p-5 flex flex-col space-y-4 transition-colors ${
+      isLight 
+        ? 'bg-white border border-slate-200 shadow-xl' 
+        : 'bg-terminal-900 border border-terminal-border shadow-2xl'
+    }`}>
       {/* Top Header: Ingestion Status & Swarm State */}
-      <div className="flex flex-wrap items-center justify-between border-b border-terminal-border/60 pb-3 gap-3">
+      <div className={`flex flex-wrap items-center justify-between border-b pb-3 gap-3 ${
+        isLight ? 'border-slate-200' : 'border-terminal-border/60'
+      }`}>
         <div className="flex items-center gap-2.5">
           <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
             <Bot className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-white text-base sm:text-lg tracking-wide">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className={`font-bold text-base sm:text-lg tracking-wide ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}>
                 05 // AUTONOMOUS 7-AGENT DEBATE & CONSENSUS CHAMBER
               </h3>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
@@ -379,31 +389,35 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                 ZERO-PRUNING CERTIFIED
               </span>
             </div>
-            <p className="text-[11px] font-mono text-slate-400 flex items-center gap-2 flex-wrap">
-              <span>Pair: <strong className="text-white">{pair}</strong></span>
+            <p className={`text-[11px] font-mono flex items-center gap-2 flex-wrap ${
+              isLight ? 'text-slate-600' : 'text-slate-400'
+            }`}>
+              <span>Pair: <strong className={isLight ? 'text-slate-900' : 'text-white'}>{pair}</strong></span>
               <span>•</span>
-              <span>Timeframe: <strong className="text-cyan-300">{timeframe.toUpperCase()}</strong></span>
+              <span>Timeframe: <strong className="text-cyan-500 font-bold">{timeframe.toUpperCase()}</strong></span>
               <span>•</span>
-              <span>Decision Engine: <strong className="text-emerald-400">7-Agent Autonomous Consensus Chamber (SSOT)</strong></span>
+              <span>Decision Engine: <strong className="text-emerald-500 font-bold">7-Agent Autonomous Consensus Chamber (SSOT)</strong></span>
               <span>•</span>
-              <span>Target Mode: <strong className="text-emerald-400">10+ Pips TP1 & Uncapped Runner</strong></span>
+              <span>Target Mode: <strong className="text-emerald-500 font-bold">10+ Pips TP1 & Uncapped Runner</strong></span>
               <span>•</span>
-              <span>Risk Control: <strong className="text-cyan-400">1:1 Breakeven Ratchet (Zero Loss)</strong></span>
+              <span>Risk Control: <strong className="text-cyan-500 font-bold">1:1 Breakeven Ratchet (Zero Loss)</strong></span>
               <span>•</span>
-              <span>Chief Reviewer: <strong className="text-indigo-400">Marcus Sterling (Gatekeeper Clearance Active)</strong></span>
+              <span>Chief Reviewer: <strong className="text-indigo-500 font-bold">Marcus Sterling (Gatekeeper Clearance Active)</strong></span>
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* Chamber View Mode Toggle */}
-          <div className="flex items-center bg-terminal-950 p-1 rounded-lg border border-terminal-border text-xs font-mono">
+          <div className={`flex items-center p-1 rounded-lg border text-xs font-mono ${
+            isLight ? 'bg-slate-100 border-slate-300' : 'bg-terminal-950 border-terminal-border'
+          }`}>
             <button
               onClick={() => setChamberTab('DEBATE')}
               className={`px-3 py-1 rounded-md transition-colors font-bold ${
                 chamberTab === 'DEBATE'
                   ? 'bg-indigo-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
               7-AGENT DEBATE
@@ -413,7 +427,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               className={`px-3 py-1 rounded-md transition-colors font-bold flex items-center gap-1.5 ${
                 chamberTab === 'PIPELINE'
                   ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -531,7 +545,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <Flame className="w-4 h-4" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] font-mono font-bold text-indigo-300 uppercase tracking-wider">
                   Active Persistent Scenario Context:
                 </span>
@@ -568,16 +582,22 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
       {/* Grid: Left = Dialectical Pressure Engine & 7-Agent Active Specialist Roster; Right = Unified Risk Manager Directives */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left (7 cols): Autonomous 7-Agent Specialist Chamber & Dialectical Pressure Engine */}
-        <div className="lg:col-span-7 bg-terminal-950 border border-terminal-border/80 rounded-xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden space-y-3">
+        <div className={`lg:col-span-7 border rounded-xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden space-y-3 ${
+          isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-terminal-950 border-terminal-border/80'
+        }`}>
           {/* Chamber Header & WebSocket Stream Telemetry */}
-          <div className="flex flex-wrap items-center justify-between pb-2 border-b border-terminal-border/40 text-xs font-mono gap-2">
-            <div className="flex items-center gap-2">
+          <div className={`flex flex-wrap items-center justify-between pb-2 border-b text-xs font-mono gap-2 ${
+            isLight ? 'border-slate-200' : 'border-terminal-border/40'
+          }`}>
+            <div className="flex items-center gap-2 flex-wrap">
               <Bot className="w-4 h-4 text-indigo-400" />
-              <span className="font-bold text-white uppercase tracking-wider">
+              <span className={`font-bold uppercase tracking-wider ${
+                isLight ? 'text-slate-900' : 'text-white'
+              }`}>
                 Autonomous 7-Agent Debate Chamber (SSOT Decision Engine)
               </span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {failSafeActive ? (
                 <span className="text-[10px] text-rose-300 font-bold bg-rose-500/20 px-2 py-0.5 rounded border border-rose-500/40 flex items-center gap-1 animate-pulse">
                   <WifiOff className="w-3 h-3 text-rose-400" />
@@ -600,8 +620,8 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
             <div className="flex items-center gap-2 min-w-0">
               <ShieldCheck className="w-4 h-4 text-indigo-400 shrink-0" />
               <div className="min-w-0">
-                <span className="font-bold text-white block truncate">SSOT ARCHITECTURAL OVERRIDE ACTIVE</span>
-                <span className="text-[10px] text-slate-300 block truncate">
+                <span className={`font-bold block truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>SSOT ARCHITECTURAL OVERRIDE ACTIVE</span>
+                <span className={`text-[10px] block truncate ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
                   Actionable trade execution derived exclusively from this 7-Agent Chamber. Auxiliary modules are strictly read-only.
                 </span>
               </div>
@@ -612,15 +632,17 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
           </div>
 
           {/* Dialectical Pressure Comparison & Exact Channel Weight Percentages */}
-          <div className="p-3 rounded-lg bg-terminal-900 border border-terminal-border space-y-2">
+          <div className={`p-3 rounded-lg border space-y-2 ${
+            isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-terminal-900 border-terminal-border'
+          }`}>
             <div className="flex items-center justify-between text-xs font-mono">
               <div className="flex items-center gap-1.5">
                 <Gauge className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="font-bold text-white uppercase tracking-wider">
+                <span className={`font-bold uppercase tracking-wider ${isLight ? 'text-slate-900' : 'text-white'}`}>
                   Dialectical Pressure Comparison & Channel Weights
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
                   buyPressurePct >= sellPressurePct
                     ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
@@ -776,14 +798,18 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         </div>
 
         {/* Right (5 cols): Actionable Directive & Chief Risk Manager Unified Report */}
-        <div className="lg:col-span-5 bg-terminal-950/90 border border-terminal-border rounded-xl p-4 flex flex-col justify-between space-y-3">
+        <div className={`lg:col-span-5 border rounded-xl p-4 flex flex-col justify-between space-y-3 ${
+          isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-terminal-950/90 border-terminal-border'
+        }`}>
           {/* Directive Header */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-mono uppercase text-slate-400 tracking-wider">
+              <span className={`text-[10px] font-mono uppercase tracking-wider ${
+                isLight ? 'text-slate-600 font-bold' : 'text-slate-400'
+              }`}>
                 Chief Risk Manager Unified Directive
               </span>
-              <span className="text-[10px] font-mono text-slate-400">
+              <span className={`text-[10px] font-mono ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
                 Dialectical Synthesis Report
               </span>
             </div>
@@ -835,52 +861,60 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
           {/* 4 Explicit Institutional Parameters */}
           <div className="grid grid-cols-2 gap-2 font-mono text-xs">
             {/* 1. Entry Level */}
-            <div className="p-2.5 rounded-lg bg-terminal-900 border border-terminal-border">
-              <span className="text-[10px] text-slate-400 block mb-0.5">1. ENTRY LEVEL</span>
-              <div className="font-bold text-cyan-400 text-sm">{formatPrice(thresholds.entryPrice)}</div>
+            <div className={`p-2.5 rounded-lg border ${
+              isLight ? 'bg-slate-50 border-slate-200' : 'bg-terminal-900 border-terminal-border'
+            }`}>
+              <span className={`text-[10px] block mb-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>1. ENTRY LEVEL</span>
+              <div className="font-bold text-cyan-500 text-sm">{formatPrice(thresholds.entryPrice)}</div>
               <span className="text-[9px] text-slate-500 block truncate">Live market fill target</span>
             </div>
 
             {/* 2. Profit Target */}
-            <div className="p-2.5 rounded-lg bg-terminal-900 border border-emerald-500/30">
+            <div className={`p-2.5 rounded-lg border ${
+              isLight ? 'bg-emerald-50/50 border-emerald-300' : 'bg-terminal-900 border-emerald-500/30'
+            }`}>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-emerald-400 block mb-0.5">2. TARGET (TP)</span>
-                <span className="text-[9px] font-mono text-emerald-400/80">
+                <span className="text-[10px] text-emerald-600 font-bold block mb-0.5">2. TARGET (TP)</span>
+                <span className="text-[9px] font-mono text-emerald-600/80">
                   {isSell ? 'BELOW ENTRY' : 'ABOVE ENTRY'}
                 </span>
               </div>
-              <div className="font-bold text-emerald-400 text-sm">{formatPrice(thresholds.takeProfit)}</div>
-              <span className="text-[9px] text-emerald-500/90 block truncate">
+              <div className="font-bold text-emerald-600 text-sm">{formatPrice(thresholds.takeProfit)}</div>
+              <span className="text-[9px] text-emerald-600/90 block truncate">
                 +${thresholds.projectedGainUsd} USD projected
               </span>
             </div>
 
             {/* 3. Hard Stop-Loss */}
-            <div className={`p-2.5 rounded-lg bg-terminal-900 border ${
-              isModifyPosition ? 'border-amber-500/50 bg-amber-950/20' : 'border-rose-500/30'
+            <div className={`p-2.5 rounded-lg border ${
+              isModifyPosition 
+                ? (isLight ? 'border-amber-400 bg-amber-50' : 'border-amber-500/50 bg-amber-950/20')
+                : (isLight ? 'border-rose-300 bg-rose-50/50' : 'border-rose-500/30 bg-terminal-900')
             }`}>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-rose-400 block mb-0.5">3. STOP-LOSS (SL)</span>
-                <span className="text-[9px] font-bold text-rose-400">
+                <span className="text-[10px] text-rose-500 font-bold block mb-0.5">3. STOP-LOSS (SL)</span>
+                <span className="text-[9px] font-bold text-rose-500">
                   {isModifyPosition ? 'TIGHTENED' : isSell ? 'ABOVE ENTRY' : 'BELOW ENTRY'}
                 </span>
               </div>
-              <div className="font-bold text-rose-400 text-sm">{formatPrice(thresholds.stopLoss)}</div>
-              <span className="text-[9px] text-rose-500/90 block truncate">
+              <div className="font-bold text-rose-500 text-sm">{formatPrice(thresholds.stopLoss)}</div>
+              <span className="text-[9px] text-rose-600/90 block truncate">
                 Max risk: -${thresholds.maxLossUsd} USD
               </span>
             </div>
 
             {/* 4. Risk / Reward & Volatility Sizing */}
-            <div className="p-2.5 rounded-lg bg-terminal-900 border border-indigo-500/30">
+            <div className={`p-2.5 rounded-lg border ${
+              isLight ? 'bg-indigo-50/50 border-indigo-200' : 'bg-terminal-900 border-indigo-500/30'
+            }`}>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-indigo-300 block mb-0.5">4. R:R & VOL SIZING</span>
-                <span className="text-[9px] font-bold text-cyan-400">
+                <span className={`text-[10px] block mb-0.5 ${isLight ? 'text-indigo-800 font-bold' : 'text-indigo-300'}`}>4. R:R & VOL SIZING</span>
+                <span className="text-[9px] font-bold text-cyan-600">
                   {volatilitySizing.regime === 'HIGH_VOLATILITY' ? 'VOL REDUCED' : 'STANDARD'}
                 </span>
               </div>
-              <div className="font-bold text-indigo-400 text-sm">{thresholds.riskRewardRatio}:1 R:R</div>
-              <span className="text-[9px] text-indigo-300/80 block truncate">
+              <div className="font-bold text-indigo-500 text-sm">{thresholds.riskRewardRatio}:1 R:R</div>
+              <span className="text-[9px] text-indigo-500/80 block truncate">
                 {volatilitySizing.adjustedLots} Lots (base {thresholds.positionSizeLots})
               </span>
             </div>
@@ -890,7 +924,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
           <div className={`p-2 rounded-lg border text-[11px] font-mono ${
             isAutoCloseEnforced 
               ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' 
-              : 'bg-terminal-900 border-terminal-border text-slate-400'
+              : isLight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-terminal-900 border-terminal-border text-slate-400'
           }`}>
             {isAutoCloseEnforced ? (
               <div className="flex items-center gap-1.5">
@@ -1030,7 +1064,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         {/* Left: BUY-SIDE CHANNEL */}
         <div className="bg-terminal-950 border border-emerald-500/30 rounded-xl p-3 flex flex-col space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-emerald-500/20">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                 <TrendingUp className="w-4 h-4" />
               </div>
@@ -1101,7 +1135,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         {/* Right: SELL-SIDE CHANNEL */}
         <div className="bg-terminal-950 border border-rose-500/30 rounded-xl p-3 flex flex-col space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-rose-500/20">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30">
                 <TrendingDown className="w-4 h-4" />
               </div>
@@ -1219,12 +1253,12 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                 >
                   {/* Terminal Node Header */}
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-terminal-border/60 pb-2.5 mb-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <div className="p-1.5 rounded-lg bg-black/40 border border-current">
                         <Zap className="w-4 h-4 text-amber-400" />
                       </div>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider">
                             Consolidated Terminal Node (DAG Conclusion Node)
                           </span>
@@ -1238,7 +1272,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${directiveBadgeColor}`}>
                         {nodeDir.replace('_', ' ')}
                       </span>
@@ -1361,7 +1395,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                       Urgency: <strong className={isExit ? 'text-rose-400' : 'text-amber-400'}>{node.executionGuidance.urgency}</strong> • Action: <strong className="text-white">{node.executionGuidance.action}</strong>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {isExit ? (
                         <button
                           onClick={onStrategicExit}
