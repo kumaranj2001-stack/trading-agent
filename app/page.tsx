@@ -29,6 +29,7 @@ import { AgentDebateFeed } from '@/components/AgentDebateFeed';
 import { PortfolioPanel } from '@/components/PortfolioPanel';
 import { ActiveEntryInvalidationBanner } from '@/components/ActiveEntryInvalidationBanner';
 import { MultiAssetIngestionTelemetryCard } from '@/components/MultiAssetIngestionTelemetryCard';
+import { DynamicTradingSessionTimeline } from '@/components/DynamicTradingSessionTimeline';
 import { BacktestView } from '@/components/BacktestModal';
 import { ArchitectureView } from '@/components/ArchitectureView';
 import { SettingsModal } from '@/components/SettingsModal';
@@ -1203,7 +1204,13 @@ export default function Home() {
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
           <div className="space-y-4">
-            {/* 🌟 UNIFIED 5-ROLE BUY/SELL DECISION BANNER (Directly on Dashboard) */}
+            {/* 🌐 Dynamic Trading Session Clock Timeline & Overlap Matrix (Placed at the very top) */}
+            <DynamicTradingSessionTimeline
+              currentPair={selectedPair}
+              theme={theme}
+            />
+
+            {/* 🌟 UNIFIED 5-ROLE BUY/SELL DECISION BANNER (Preserved Institutional Real-Time Engine Layer) */}
             {consensus && consensus.pair === selectedPair ? (
               <UnifiedDecisionBanner
                 consensus={consensus}
@@ -1270,22 +1277,24 @@ export default function Home() {
               journalAnalysis={consensus?.pair === selectedPair ? consensus.journalAnalysis : undefined}
             />
 
-            {/* 7 Specialized Agent Desks */}
+            {/* 7 Specialized Agent Desks - Retained in DOM for full operational background execution, but hidden to declutter the Terminal UI */}
             {consensus && consensus.pair === selectedPair && (
-              <AgentSwarmPanel
-                technical={consensus.agents.technical}
-                fundamental={consensus.agents.fundamental}
-                forex={consensus.agents.forex}
-                news={consensus.agents.news}
-                risk={consensus.agents.risk}
-                orderFlow={consensus.agents.orderFlow}
-                chiefReviewerAudit={consensus.chiefReviewerAudit}
-                onExecuteTrade={handleExecuteTrade}
-                onOpenMonteCarlo={() => setActiveTab('var')}
-                onOpenNewsWire={() => setActiveTab('wire')}
-                telemetry={consensus.autonomousLoopTelemetry}
-                theme={theme}
-              />
+              <div className="hidden" aria-hidden="true">
+                <AgentSwarmPanel
+                  technical={consensus.agents.technical}
+                  fundamental={consensus.agents.fundamental}
+                  forex={consensus.agents.forex}
+                  news={consensus.agents.news}
+                  risk={consensus.agents.risk}
+                  orderFlow={consensus.agents.orderFlow}
+                  chiefReviewerAudit={consensus.chiefReviewerAudit}
+                  onExecuteTrade={handleExecuteTrade}
+                  onOpenMonteCarlo={() => setActiveTab('var')}
+                  onOpenNewsWire={() => setActiveTab('wire')}
+                  telemetry={consensus.autonomousLoopTelemetry}
+                  theme={theme}
+                />
+              </div>
             )}
 
             {/* Portfolio & Position Management (Saved in Local Browser) */}
