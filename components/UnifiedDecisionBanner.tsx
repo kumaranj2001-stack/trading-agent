@@ -57,6 +57,7 @@ interface UnifiedDecisionBannerProps {
   isMarketFrozen?: boolean;
   sessionInfo?: MarketSessionInfo | null;
   theme?: 'dark' | 'light';
+  suppressIntermediateModules?: boolean;
 }
 
 export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
@@ -69,6 +70,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   isMarketFrozen = false,
   sessionInfo = null,
   theme = 'dark',
+  suppressIntermediateModules = false,
 }) => {
   const [showInvalidationChecklist, setShowInvalidationChecklist] = useState(false);
   const [showDebateBreakdown, setShowDebateBreakdown] = useState(true);
@@ -675,7 +677,12 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
         </div>
       )}
 
-      {/* 🏛️ 1,050+ EXHAUSTIVE STRATEGY CORPUS & ABSOLUTE CAPITAL PRESERVATION GATE */}
+      {/* 🔬 Intermediate Analysis & Multi-Agent Debate Modules - Visually suppressed on Terminal interface while fully executing all underlying pipelines in background */}
+      <div 
+        className={suppressIntermediateModules ? 'hidden' : undefined} 
+        aria-hidden={suppressIntermediateModules ? 'true' : undefined}
+      >
+        {/* 🏛️ 1,050+ EXHAUSTIVE STRATEGY CORPUS & ABSOLUTE CAPITAL PRESERVATION GATE */}
       {consensus.exhaustiveStrategyCorpus && (
         <div className={`mt-3.5 p-3.5 sm:p-4 rounded-xl border font-mono text-xs shadow-lg transition-all ${
           consensus.capitalPreservationGate?.passed
@@ -1591,6 +1598,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
