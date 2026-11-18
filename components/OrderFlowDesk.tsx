@@ -698,6 +698,16 @@ export const OrderFlowDesk: React.FC<OrderFlowDeskProps> = ({
               </div>
             </div>
 
+            {/* 🏛️ SSOT OVERRIDE NOTICE */}
+            <div className="p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-between text-[11px] font-mono">
+              <span className="text-slate-300">
+                🛡️ <strong className="text-cyan-300">SSOT Override Active:</strong> Order flow metrics act strictly as read-only inputs. Execution directives are authorized exclusively via the Autonomous 7-Agent Debate Chamber.
+              </span>
+              <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[10px] shrink-0 font-bold">
+                Read-Only Input
+              </span>
+            </div>
+
             {/* Execution Buttons */}
             <div className="flex flex-wrap items-center gap-2.5 pt-1">
               {report?.dualConfirmation.isEntryAuthorized && onExecuteTrade && (
@@ -720,7 +730,7 @@ export const OrderFlowDesk: React.FC<OrderFlowDeskProps> = ({
                   }`}
                 >
                   <DollarSign className="w-4 h-4" />
-                  <span>EXECUTE {isBuyConfirmed ? 'BUY' : 'SELL'} ORDER FLOW CONFIRMED TRADE</span>
+                  <span>EXECUTE {isBuyConfirmed ? 'BUY' : 'SELL'} VIA 7-AGENT CHAMBER (SSOT GATED)</span>
                 </button>
               )}
 

@@ -1266,6 +1266,116 @@ export interface SwarmConsensusResult {
   exhaustiveStrategyCorpus?: ExhaustiveStrategyCorpusEvaluation;
   capitalPreservationGate?: AbsoluteCapitalPreservationGateResult;
   sevenStagePipeline?: SevenStagePipelineResult;
+  chiefRiskManagerDirective?: ChiefRiskManagerUnifiedDirective;
+  dialecticalChannelMetrics?: DialecticalChannelMetrics;
+}
+
+// ============================================================================
+// 🏛️ SINGLE-SOURCE-OF-TRUTH (SSOT) OVERRIDE & DIALECTICAL CHANNEL METRICS
+// Mandates that final actionable trading decisions & execution directives
+// must be derived exclusively from and analyzed through the Autonomous 7-Agent
+// Debate and Consensus Chamber module. Auxiliary modules act strictly as read-only inputs.
+// ============================================================================
+
+export interface AgentStanceContribution {
+  agentName: string;
+  role: AgentRole;
+  stance: 'BUY' | 'SELL' | 'NEUTRAL';
+  confidence: number;
+  weightContribution: number;
+  citedRuleId?: string;
+  citedRuleName?: string;
+  winRate?: number;
+  rationale?: string;
+}
+
+export interface DialecticalChannelMetrics {
+  buySidePressure: number;
+  sellSidePressure: number;
+  buySidePressurePercent: number; // e.g. 64.8%
+  sellSidePressurePercent: number; // e.g. 35.2%
+  dominantChannel: 'BUY_SIDE' | 'SELL_SIDE' | 'CONTESTED_NEUTRAL';
+  netDialecticalPressure: number; // buySidePressurePercent - sellSidePressurePercent
+  confluenceDelta: number;
+  agentStances: AgentStanceContribution[];
+  strategyCorpusMetrics: {
+    totalBullishRules: number;
+    totalBearishRules: number;
+    bullishAverageWinRate: number;
+    bearishAverageWinRate: number;
+    corpusConfluenceRatio: number;
+    activeCorpusStrategiesEvaluated: number; // 1,050+
+  };
+  calculatedAt: string;
+}
+
+export interface ChiefRiskManagerUnifiedDirective {
+  directiveId: string;
+  timestamp: string;
+  symbol: CurrencyPair;
+  action: 'BUY' | 'SELL' | 'HOLD';
+  orderType: 'BUY_MARKET' | 'SELL_MARKET' | 'NONE';
+  status: 'APPROVED_FOR_EXECUTION' | 'RISK_CURTAILED_EXECUTION' | 'EXECUTION_HALTED' | 'STALE_DATA_PAUSE';
+  authorized: boolean;
+  isSingleSourceOfTruth: true;
+  allocatedLots: number; // Zero-veto dynamic lot allocation
+  entryPrice: number;
+  stopLoss: number; // Hardcoded structural boundary
+  takeProfit: number;
+  riskRewardRatio: number;
+  maxRiskUsd: number;
+  channelMetrics: DialecticalChannelMetrics;
+  sixStageAudit: {
+    round1SpecialistThesesCompleted: boolean;
+    round2CrossExaminationCompleted: boolean;
+    round3RebuttalCompleted: boolean;
+    round4RiskOfficerSynthesisCompleted: boolean;
+    round5TerminalNodeVerified: boolean;
+    round6ChiefReviewerAudited: boolean;
+    auditorName: string;
+    clearanceStatus: 'CLEARED' | 'CONDITIONAL_PASS' | 'VETO_SUPERSEDED_BY_DYNAMIC_SIZING';
+    zeroVetoAllocationApplied: boolean;
+    hardcodedStopLossPips: number;
+    auditSummary: string;
+  };
+  failSafeStatus: {
+    latencyMs: number;
+    freshnessLatencyMs: number;
+    isStale: boolean;
+    isExecutionPaused: boolean;
+    failSafeReason?: string;
+  };
+  executionRouting: {
+    governingBody: 'AUTONOMOUS_7_AGENT_CONSENSUS_CHAMBER';
+    bypassAllowed: false;
+    readOnlyInputsIngested: string[];
+    enforcementNotice: string;
+  };
+}
+
+export interface AuxiliaryExecutionProposal {
+  sourceModule: 'OpportunityScanner' | 'MacroIntelligenceDesk' | 'OrderFlowDesk' | 'TechnicalChart' | 'ManualTrigger';
+  symbol: CurrencyPair;
+  proposedDirection: 'BUY' | 'SELL';
+  proposedEntry?: number;
+  proposedStopLoss?: number;
+  proposedTakeProfit?: number;
+  proposedLots?: number;
+  timestamp: string;
+  status: 'INGESTED_AS_READ_ONLY_PROPOSAL' | 'ROUTED_TO_CHAMBER';
+}
+
+export interface SSOTExecutionVerification {
+  authorized: boolean;
+  directive?: ChiefRiskManagerUnifiedDirective;
+  executionAction: 'PROCEED_WITH_SSOT_EXECUTION' | 'BLOCK_UNAUTHORIZED_AUXILIARY_EXECUTION' | 'FAIL_SAFE_LATENCY_PAUSE';
+  dynamicLots: number;
+  hardcodedStopLoss: number;
+  takeProfit: number;
+  liveFillPrice: number;
+  latencyMs: number;
+  freshnessLatencyMs: number;
+  verificationMessage: string;
 }
 
 // ============================================================================

@@ -33,6 +33,7 @@ import { automatedSignalValidationModule } from '../automatedSignalValidationMod
 import { multiAssetIngestionEngine } from '../multiAssetIngestionEngine';
 import { macroTelemetryBridge } from '../macroTelemetryBridge';
 import { sevenStagePipelineEngine } from '../sevenStagePipelineEngine';
+import { consensusSSOTManager } from '../consensusSSOTManager';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -674,6 +675,19 @@ export class SwarmCoordinator {
         isAutonomousLooping: true,
       },
     };
+
+    // ⚖️ Synthesize Dialectical Pressure Comparison & Chief Risk Manager Unified Directive (SSOT Mandate)
+    const dialecticalChannelMetrics = consensusSSOTManager.calculateDialecticalPressure(
+      debateOutcome.transcript,
+      consensusResult
+    );
+    const chiefRiskManagerDirective = consensusSSOTManager.buildChiefRiskManagerDirective(
+      consensusResult,
+      dialecticalChannelMetrics
+    );
+
+    consensusResult.dialecticalChannelMetrics = dialecticalChannelMetrics;
+    consensusResult.chiefRiskManagerDirective = chiefRiskManagerDirective;
 
     // Attach or initialize the deterministic latched state
     const finalLatched = (isStateLatched && existingLatched) 

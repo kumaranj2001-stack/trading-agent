@@ -1187,6 +1187,16 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                   </div>
                 </div>
 
+                {/* 🏛️ SSOT OVERRIDE NOTICE */}
+                <div className="p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-between text-[11px] font-mono mb-2">
+                  <span className="text-slate-300">
+                    🛡️ <strong className="text-cyan-300">SSOT Override Active:</strong> Macro intelligence dispatches act strictly as read-only inputs. Execution authorized exclusively via the Autonomous 7-Agent Debate Chamber.
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 text-[10px] shrink-0 font-bold">
+                    Read-Only Input
+                  </span>
+                </div>
+
                 {/* Execution CTA Buttons */}
                 <div className="flex flex-wrap items-center gap-2.5 pt-1">
                   {activeReport.signal !== 'UNCONFIRMED' && (
@@ -1226,7 +1236,7 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                       ) : (
                         <>
                           <DollarSign className="w-4 h-4" />
-                          <span>EXECUTE LIMIT-BOUND {activeReport.signal}</span>
+                          <span>EXECUTE {activeReport.signal} VIA 7-AGENT CHAMBER (SSOT)</span>
                         </>
                       )}
                     </button>

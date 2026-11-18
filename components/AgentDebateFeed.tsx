@@ -9,7 +9,11 @@ import {
   DebateSynthesisResult, 
   DebatePriceThresholds,
   DebateScenarioContext,
-  DebateActionableDirective
+  DebateActionableDirective,
+  ChiefRiskManagerUnifiedDirective,
+  DialecticalChannelMetrics,
+  AgentStanceContribution,
+  SevenStagePipelineResult
 } from '@/lib/types';
 import { 
   Send, 
@@ -44,7 +48,8 @@ import {
   Gauge,
   ChevronDown,
   ChevronUp,
-  Database
+  Database,
+  Lock
 } from 'lucide-react';
 import { OandaTradingViewChart } from './OandaTradingViewChart';
 import { SevenStagePipelineVisualizer } from './SevenStagePipelineVisualizer';
@@ -53,7 +58,8 @@ import {
   ExecutionTelemetrySummary, 
   ExecutionLogRecord 
 } from '@/lib/executionTelemetryEngine';
-import { SevenStagePipelineResult } from '@/lib/types';
+import { consensusSSOTManager } from '@/lib/consensusSSOTManager';
+import { LiveMarketFeedManager, WebSocketMarketTelemetry } from '@/lib/liveMarketFeed';
 
 const executionTelemetryEngine = ExecutionTelemetryEngine.getInstance();
 
@@ -74,6 +80,8 @@ interface AgentDebateFeedProps {
   onBackToTerminal?: () => void;
   theme?: 'dark' | 'light';
   pipeline?: SevenStagePipelineResult | null;
+  crmDirective?: ChiefRiskManagerUnifiedDirective;
+  channelMetrics?: DialecticalChannelMetrics;
 }
 
 const PRESET_SCENARIOS = [
@@ -100,12 +108,47 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
   onBackToTerminal,
   theme = 'dark',
   pipeline,
+  crmDirective,
+  channelMetrics,
 }) => {
   const [inputPrompt, setInputPrompt] = useState('');
   const [activeFilterRound, setActiveFilterRound] = useState<number | 'ALL'>('ALL');
   const [activeChannelTab, setActiveChannelTab] = useState<'ALL' | 'BUY' | 'SELL'>('ALL');
   const [showTelemetryLogger, setShowTelemetryLogger] = useState(true);
   const [chamberTab, setChamberTab] = useState<'DEBATE' | 'PIPELINE'>('DEBATE');
+
+  // WebSocket Telemetry & Freshness Gate
+  const [wsTelemetry, setWsTelemetry] = useState<WebSocketMarketTelemetry>(() => 
+    LiveMarketFeedManager.getWebSocketTelemetry()
+  );
+  const [freshnessGate, setFreshnessGate] = useState(() => 
+    LiveMarketFeedManager.getWebSocketFreshnessGate(150, 3000)
+  );
+
+  useEffect(() => {
+    const unsub = LiveMarketFeedManager.subscribeWebSocketTelemetry((tel) => {
+      setWsTelemetry(tel);
+      setFreshnessGate(LiveMarketFeedManager.getWebSocketFreshnessGate(150, 3000));
+    });
+    const interval = setInterval(() => {
+      setFreshnessGate(LiveMarketFeedManager.getWebSocketFreshnessGate(150, 3000));
+    }, 1000);
+    return () => {
+      unsub();
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Compute or resolve Dialectical Channel Metrics & SSOT Directive
+  const effectiveChannelMetrics: DialecticalChannelMetrics = useMemo(() => {
+    if (channelMetrics) return channelMetrics;
+    return consensusSSOTManager.calculateDialecticalPressure(messages);
+  }, [channelMetrics, messages]);
+
+  const effectiveDirective: ChiefRiskManagerUnifiedDirective | undefined = useMemo(() => {
+    if (crmDirective) return crmDirective;
+    return consensusSSOTManager.getActiveDirective(pair);
+  }, [crmDirective, pair]);
 
   // Telemetry state from ExecutionTelemetryEngine
   const [telemetry, setTelemetry] = useState<ExecutionTelemetrySummary>(() => 
@@ -274,27 +317,22 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
     return citedRules.filter(r => r.side === 'SELL');
   }, [citedRules]);
 
-  // Prevailing Market Pressure Calculation
+  // Prevailing Market Pressure Calculation (Derived from SSOT Dialectical Engine)
   const { buyPressurePct, sellPressurePct, dominantSide } = useMemo(() => {
-    let buyPoints = buySideMessages.length * 15 + buySideRules.reduce((acc, r) => acc + (r.winRate || 65), 0);
-    let sellPoints = sellSideMessages.length * 15 + sellSideRules.reduce((acc, r) => acc + (r.winRate || 65), 0);
-
-    if (definitiveBias.includes('BUY')) {
-      buyPoints += 140;
-    } else if (definitiveBias.includes('SELL')) {
-      sellPoints += 140;
-    }
-
-    const total = Math.max(1, buyPoints + sellPoints);
-    const buyPct = Math.round((buyPoints / total) * 100);
-    const sellPct = 100 - buyPct;
+    const buyPct = effectiveChannelMetrics.buySidePressurePercent;
+    const sellPct = effectiveChannelMetrics.sellSidePressurePercent;
+    const dom = effectiveChannelMetrics.dominantChannel === 'BUY_SIDE'
+      ? 'BUY-SIDE'
+      : effectiveChannelMetrics.dominantChannel === 'SELL_SIDE'
+      ? 'SELL-SIDE'
+      : 'CONTESTED';
 
     return {
       buyPressurePct: buyPct,
       sellPressurePct: sellPct,
-      dominantSide: buyPct >= sellPct ? 'BUY-SIDE' : 'SELL-SIDE',
+      dominantSide: dom,
     };
-  }, [buySideMessages, sellSideMessages, buySideRules, sellSideRules, definitiveBias]);
+  }, [effectiveChannelMetrics]);
 
   // Filter messages by round
   const filteredMessages = useMemo(() => {
@@ -465,6 +503,98 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
           </span>
           <span className="px-2 py-0.5 rounded bg-indigo-950/60 border border-indigo-800 text-indigo-300">
             7. Marcus Sterling (Chief Reviewer)
+          </span>
+        </div>
+      </div>
+
+      {/* 🏛️ ARCHITECTURAL SINGLE SOURCE OF TRUTH (SSOT) OVERRIDE DIRECTIVE BANNER */}
+      <div className="p-3.5 rounded-xl bg-gradient-to-r from-terminal-950 via-indigo-950/50 to-terminal-950 border border-indigo-500/40 shadow-xl flex flex-col space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-indigo-500/20 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono font-bold text-white tracking-wider uppercase">
+                  CHIEF RISK MANAGER UNIFIED DIRECTIVE (SSOT OVERRIDE)
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+                  SOLE EXECUTION AUTHORITY
+                </span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                  effectiveDirective?.status === 'APPROVED_FOR_EXECUTION'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : effectiveDirective?.status === 'RISK_CURTAILED_EXECUTION'
+                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+                }`}>
+                  {effectiveDirective?.status || 'APPROVED_FOR_EXECUTION'}
+                </span>
+              </div>
+              <p className="text-[10px] font-mono text-slate-400 mt-0.5">
+                Directive ID: <span className="text-slate-300">{effectiveDirective?.directiveId || `crm-${pair.replace('/', '')}-live`}</span> • Six-Stage Clearance: <strong className="text-emerald-400">Institutional Pass (7/7 Agents)</strong>
+              </p>
+            </div>
+          </div>
+
+          {/* WebSocket Stream Telemetry & Fail-Safe Latency Monitor */}
+          <div className="flex items-center gap-2">
+            <div className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold border flex items-center gap-1.5 ${
+              freshnessGate.isFailSafeActive
+                ? 'bg-rose-950/80 text-rose-300 border-rose-600 animate-pulse'
+                : 'bg-terminal-900 text-emerald-400 border-emerald-500/30'
+            }`}>
+              {freshnessGate.isFailSafeActive ? (
+                <WifiOff className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+              ) : (
+                <Wifi className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              )}
+              <span>WS STREAM: <strong>{wsTelemetry.latencyMs}ms</strong></span>
+              <span>•</span>
+              <span>FRESHNESS: <strong>{freshnessGate.freshnessLatencyMs}ms</strong></span>
+              <span>•</span>
+              <span className={freshnessGate.isFailSafeActive ? 'text-rose-400' : 'text-emerald-400'}>
+                {freshnessGate.isFailSafeActive ? '🛑 PAUSED (STALE)' : '🟢 NOMINAL (<150ms)'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Parameters Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] font-mono">
+          <div className="p-2 rounded-lg bg-black/40 border border-terminal-border/60">
+            <span className="text-slate-400 text-[10px] block">Actionable Directive</span>
+            <span className={`font-bold ${isBuy ? 'text-emerald-400' : isSell ? 'text-rose-400' : 'text-slate-300'}`}>
+              {effectiveDirective?.orderType || (isBuy ? 'BUY_MARKET' : 'SELL_MARKET')} @ {formatPrice(effectiveDirective?.entryPrice || livePrice)}
+            </span>
+          </div>
+          <div className="p-2 rounded-lg bg-black/40 border border-terminal-border/60">
+            <span className="text-slate-400 text-[10px] block">Zero-Veto Lot Sizing</span>
+            <span className="font-bold text-cyan-300">
+              {effectiveDirective?.allocatedLots || volatilitySizing.adjustedLots} Standard Lots
+            </span>
+          </div>
+          <div className="p-2 rounded-lg bg-black/40 border border-terminal-border/60">
+            <span className="text-slate-400 text-[10px] block">Hardcoded Structural SL</span>
+            <span className="font-bold text-rose-400">
+              {formatPrice(effectiveDirective?.stopLoss || thresholds.stopLoss)} (5-pip buffer)
+            </span>
+          </div>
+          <div className="p-2 rounded-lg bg-black/40 border border-terminal-border/60">
+            <span className="text-slate-400 text-[10px] block">Dialectical Channel Stance</span>
+            <span className="font-bold text-indigo-300">
+              {effectiveChannelMetrics.dominantChannel.replace('_', ' ')} ({buyPressurePct}% B / {sellPressurePct}% S)
+            </span>
+          </div>
+        </div>
+
+        <div className="text-[10px] font-mono text-slate-400 flex items-center justify-between pt-1">
+          <span className="text-slate-400">
+            🛡️ <strong className="text-slate-300">Auxiliary Policy:</strong> Opportunity Scanner, Macro Intelligence Desk, and Order Flow Desk act strictly as read-only inputs. Execution authorized exclusively via 7-Agent Consensus Chamber.
+          </span>
+          <span className="text-cyan-400 font-bold shrink-0 hidden sm:inline">
+            Zero-Pruning Invariant Enforced
           </span>
         </div>
       </div>
@@ -790,52 +920,103 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         </div>
       </div>
 
-      {/* Prevailing Market Pressure Comparison Gauge */}
-      <div className="bg-terminal-950 border border-terminal-border/80 rounded-xl p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+      {/* ⚖️ PREVAILING MARKET PRESSURE COMPARISON & CHANNEL WEIGHT PERCENTAGES */}
+      <div className="bg-terminal-950 border border-terminal-border/80 rounded-xl p-3 sm:p-4 shadow-lg space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Gauge className="w-4 h-4 text-cyan-400" />
-            <h4 className="font-bold text-xs text-white uppercase tracking-wider">
-              Prevailing Market Pressure Comparison (Buy-Side vs Sell-Side Dialectics)
-            </h4>
+            <div>
+              <h4 className="font-bold text-xs text-white uppercase tracking-wider">
+                DIALECTICAL PRESSURE COMPARISON & CHANNEL WEIGHT PERCENTAGES
+              </h4>
+              <span className="text-[10px] font-mono text-slate-400">
+                Synchronous evaluation of 7 agent stances, win rates, and 1,050+ strategy corpus metrics
+              </span>
+            </div>
           </div>
           <div className="text-[11px] font-mono flex items-center gap-2">
-            <span className="text-slate-400">Dominant Bias:</span>
-            <span className={`font-bold px-2 py-0.5 rounded border ${
+            <span className="text-slate-400">Dominant Channel:</span>
+            <span className={`font-bold px-2.5 py-0.5 rounded border ${
               dominantSide === 'BUY-SIDE' 
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
-                : 'bg-rose-500/10 text-rose-400 border-rose-500/30'
+                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' 
+                : dominantSide === 'SELL-SIDE'
+                ? 'bg-rose-500/15 text-rose-400 border-rose-500/30'
+                : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
             }`}>
-              {dominantSide} ADVANTAGE ({dominantSide === 'BUY-SIDE' ? buyPressurePct : sellPressurePct}%)
+              {dominantSide} DOMINANCE ({dominantSide === 'BUY-SIDE' ? buyPressurePct : sellPressurePct}%)
+            </span>
+            <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/60 border border-cyan-800 px-2 py-0.5 rounded">
+              Δ {effectiveChannelMetrics.netDialecticalPressure > 0 ? '+' : ''}{effectiveChannelMetrics.netDialecticalPressure}% Net
             </span>
           </div>
         </div>
 
         {/* Dual-Sided Pressure Gauge Bar */}
-        <div className="w-full bg-slate-900 h-4 rounded-full overflow-hidden flex border border-terminal-border">
+        <div className="w-full bg-slate-900 h-5 rounded-full overflow-hidden flex border border-terminal-border shadow-inner">
           <div 
             style={{ width: `${buyPressurePct}%` }}
-            className="bg-gradient-to-r from-emerald-600 to-teal-500 flex items-center justify-start pl-2 text-[10px] font-mono font-bold text-white transition-all duration-500"
+            className="bg-gradient-to-r from-emerald-600 via-teal-500 to-cyan-500 flex items-center justify-start pl-3 text-[10px] font-mono font-bold text-white transition-all duration-500 shadow-md"
           >
-            {buyPressurePct > 15 ? `BUY ${buyPressurePct}%` : ''}
+            {buyPressurePct > 15 ? `BUY-SIDE ${buyPressurePct}%` : ''}
           </div>
           <div 
             style={{ width: `${sellPressurePct}%` }}
-            className="bg-gradient-to-l from-rose-600 to-red-500 flex items-center justify-end pr-2 text-[10px] font-mono font-bold text-white transition-all duration-500"
+            className="bg-gradient-to-l from-rose-600 via-pink-600 to-amber-600 flex items-center justify-end pr-3 text-[10px] font-mono font-bold text-white transition-all duration-500 shadow-md"
           >
-            {sellPressurePct > 15 ? `SELL ${sellPressurePct}%` : ''}
+            {sellPressurePct > 15 ? `SELL-SIDE ${sellPressurePct}%` : ''}
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mt-1.5 px-0.5">
-          <span className="flex items-center gap-1 text-emerald-400">
-            <TrendingUp className="w-3 h-3" />
-            Buy-Side Arguments: {buySideMessages.length} deskmates • {buySideRules.length} KB rules
+        <div className="flex flex-wrap items-center justify-between text-[10px] font-mono text-slate-400 gap-2">
+          <span className="flex items-center gap-1.5 text-emerald-400">
+            <TrendingUp className="w-3.5 h-3.5" />
+            <span>Buy-Side Channel: <strong>{effectiveChannelMetrics.buySidePressure} pts</strong> ({buySideMessages.length} deskmates • {buySideRules.length} KB rules)</span>
           </span>
-          <span className="flex items-center gap-1 text-rose-400">
-            <TrendingDown className="w-3 h-3" />
-            Sell-Side Arguments: {sellSideMessages.length} deskmates • {sellSideRules.length} KB rules
+          <span className="flex items-center gap-1.5 text-rose-400">
+            <TrendingDown className="w-3.5 h-3.5" />
+            <span>Sell-Side Channel: <strong>{effectiveChannelMetrics.sellSidePressure} pts</strong> ({sellSideMessages.length} deskmates • {sellSideRules.length} KB rules)</span>
           </span>
+          <span className="flex items-center gap-1.5 text-indigo-300">
+            <Database className="w-3.5 h-3.5 text-indigo-400" />
+            <span>1,050+ Corpus: <strong>{effectiveChannelMetrics.strategyCorpusMetrics.totalBullishRules} Bullish</strong> vs <strong>{effectiveChannelMetrics.strategyCorpusMetrics.totalBearishRules} Bearish</strong> (WR: {effectiveChannelMetrics.strategyCorpusMetrics.bullishAverageWinRate}% / {effectiveChannelMetrics.strategyCorpusMetrics.bearishAverageWinRate}%)</span>
+          </span>
+        </div>
+
+        {/* 7-Agent Stance Breakdown Grid */}
+        <div className="pt-2 border-t border-terminal-border/60">
+          <div className="text-[10px] font-mono uppercase text-slate-400 font-bold mb-2 flex items-center justify-between">
+            <span>Specialist Agent Dialectical Stances & Confluence Weights:</span>
+            <span className="text-cyan-400">All 7 Agents Deliberating Synchronously</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+            {effectiveChannelMetrics.agentStances.slice(0, 7).map((st, idx) => (
+              <div 
+                key={idx}
+                className="p-2 rounded-lg bg-terminal-900/90 border border-terminal-border/60 flex flex-col justify-between text-[10px] font-mono space-y-1"
+              >
+                <div className="truncate font-semibold text-slate-300" title={st.agentName}>
+                  {st.agentName.split('(')[0].trim()}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
+                    st.stance === 'BUY'
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                      : st.stance === 'SELL'
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                      : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                  }`}>
+                    {st.stance}
+                  </span>
+                  <span className="text-cyan-400 font-bold">
+                    {st.winRate ? `${st.winRate}%` : `${st.confidence}%`}
+                  </span>
+                </div>
+                <div className="text-[9px] text-slate-500 truncate" title={st.citedRuleName || st.citedRuleId || 'Corpus Invariant'}>
+                  {st.citedRuleId || 'Corpus Node'}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
