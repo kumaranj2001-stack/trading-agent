@@ -48,8 +48,8 @@ import { HistoricalJournalDesk } from '@/components/HistoricalJournalDesk';
 import { SevenStagePipelineVisualizer } from '@/components/SevenStagePipelineVisualizer';
 import { JournalStorageManager } from '@/lib/journalStorage';
 import { getMarketSegmentForSymbol, PIP_VALUES, generateCandles } from '@/lib/marketData';
-import { LiveMarketFeedManager, WebSocketMarketTelemetry } from '@/lib/liveMarketFeed';
-import { MarketSessionInfo, TradeHistoryItem, ChiefRiskManagerUnifiedDirective, DialecticalChannelMetrics, AuxiliaryExecutionProposal } from '@/lib/types';
+import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { MarketSessionInfo, TradeHistoryItem } from '@/lib/types';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
 import { MarketCloseFreezeBanner } from '@/components/MarketCloseFreezeBanner';
 import { AutonomousSwarmEngine, AutonomousSwarmTelemetry } from '@/lib/autonomousSwarmEngine';
@@ -59,7 +59,6 @@ import { ExecutionTelemetryEngine } from '@/lib/executionTelemetryEngine';
 import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 import { preExecutionVerificationEngine } from '@/lib/preExecutionVerificationEngine';
 import { tradingStore } from '@/lib/tradingStore';
-import { consensusSSOTManager } from '@/lib/consensusSSOTManager';
 
 const executionTelemetryEngine = ExecutionTelemetryEngine.getInstance();
 
@@ -114,28 +113,6 @@ export default function Home() {
   const [activeDebateScenario, setActiveDebateScenario] = useState<DebateScenarioContext | null>(null);
 
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
-
-  // WebSocket Telemetry & Freshness Monitor (SSOT Latency Guardrail)
-  const [wsTelemetry, setWsTelemetry] = useState<WebSocketMarketTelemetry>(() =>
-    LiveMarketFeedManager.getWebSocketTelemetry()
-  );
-  const [wsFreshnessGate, setWsFreshnessGate] = useState(() =>
-    LiveMarketFeedManager.getWebSocketFreshnessGate(150, 3000)
-  );
-
-  useEffect(() => {
-    const unsubWs = LiveMarketFeedManager.subscribeWebSocketTelemetry((tel) => {
-      setWsTelemetry(tel);
-      setWsFreshnessGate(LiveMarketFeedManager.getWebSocketFreshnessGate(150, 3000));
-    });
-    const interval = setInterval(() => {
-      setWsFreshnessGate(LiveMarketFeedManager.getWebSocketFreshnessGate(150, 3000));
-    }, 1000);
-    return () => {
-      unsubWs();
-      clearInterval(interval);
-    };
-  }, []);
 
   // Hydrate theme from localStorage
   useEffect(() => {
@@ -307,6 +284,18 @@ export default function Home() {
     if (executionModeRef.current !== 'FULL_AUTOPILOT') return;
     if (!calibratedResult.executionSignal.authorized) return;
     if (MarketSessionManager.isMarketFrozen(calibratedResult.pair)) return;
+
+    // 🛑 Live WebSocket Stream Fail-Safe Pause Check (>1500ms Stale Data Protection)
+    if (calibratedResult.failSafePauseActive || (calibratedResult.streamLatencyMs && calibratedResult.streamLatencyMs > 1500)) {
+      console.warn(`[AUTOPILOT_FAIL_SAFE_PAUSE] Stream latency > 1500ms (${calibratedResult.streamLatencyMs}ms). Stale data lockout engaged.`);
+      return;
+    }
+
+    // 🏛️ SSOT Single-Source-of-Truth Clearance Check: Consensus Chamber Directive
+    if (calibratedResult.chiefRiskManagerUnifiedDirective && calibratedResult.chiefRiskManagerUnifiedDirective.institutionalClearanceStatus === 'FAIL_SAFE_PAUSED') {
+      console.warn(`[AUTOPILOT_SSOT_CLEARANCE_LOCK] 7-Agent Consensus Chamber institutional clearance not granted (FAIL_SAFE_PAUSED).`);
+      return;
+    }
 
     const currentPositions = portfolioRef.current.positions;
     const alreadyOpen = currentPositions.some(p => p.symbol === calibratedResult.pair);
@@ -872,44 +861,24 @@ export default function Home() {
     }
   };
 
-  // 📥 Auxiliary Module Proposal Ingestion (Enforces SSOT Read-Only Input Policy)
-  const handleAuxiliaryModuleProposal = (proposal: {
-    sourceModule: 'OpportunityScanner' | 'MacroIntelligenceDesk' | 'OrderFlowDesk' | 'TechnicalChart' | 'ManualTrigger';
-    symbol: CurrencyPair;
-    direction: 'BUY' | 'SELL';
-    entry?: number;
-    stopLoss?: number;
-    takeProfit?: number;
-  }) => {
-    const outcome = consensusSSOTManager.ingestAuxiliaryModuleProposal({
-      sourceModule: proposal.sourceModule,
-      symbol: proposal.symbol,
-      proposedDirection: proposal.direction,
-      proposedEntry: proposal.entry,
-      proposedStopLoss: proposal.stopLoss,
-      proposedTakeProfit: proposal.takeProfit,
-      timestamp: new Date().toISOString(),
-      status: 'INGESTED_AS_READ_ONLY_PROPOSAL',
-    }, (consensus && consensus.pair === proposal.symbol) ? consensus : undefined);
-
-    showNotification(outcome.responseMessage);
-
-    if (outcome.authorizedForDispatch && outcome.activeDirective) {
-      handleExecuteTrade();
-    }
-  };
-
   // Execute Approved Trade into Simulated Portfolio (strictly calibrated against live chart feed)
   const handleExecuteTrade = () => {
     if (!consensus || !consensus.executionSignal.authorized) return;
-    const signal = consensus.executionSignal;
 
-    // 0. 🏛️ MANDATORY ARCHITECTURAL SINGLE-SOURCE-OF-TRUTH (SSOT) OVERRIDE & WEBSOCKET FRESHNESS CHECK
-    const ssotVerification = consensusSSOTManager.verifyExecutionAuthorization(selectedPair, consensus);
-    if (!ssotVerification.authorized) {
-      showNotification(ssotVerification.verificationMessage);
+    // 🛑 Fail-Safe Pause: Inhibit execution during stale market conditions (>1500ms)
+    if (consensus.failSafePauseActive || (consensus.streamLatencyMs && consensus.streamLatencyMs > 1500)) {
+      showNotification(`🛑 FAIL-SAFE PAUSE ENGAGED: Live WebSocket stream latency exceeds threshold (${consensus.streamLatencyMs || 1500}ms > 1500ms). Execution locked to prevent stale-state fills.`);
       return;
     }
+
+    // 🏛️ SSOT Architectural Gatekeeper Check:
+    // Actionable trade execution is derived EXCLUSIVELY from the Autonomous 7-Agent Debate and Consensus Chamber
+    if (consensus.chiefRiskManagerUnifiedDirective && consensus.chiefRiskManagerUnifiedDirective.institutionalClearanceStatus === 'FAIL_SAFE_PAUSED') {
+      showNotification(`🛑 SSOT GATEKEEPER LOCK: 7-Agent Consensus Chamber clearance paused due to stale data.`);
+      return;
+    }
+
+    const signal = consensus.executionSignal;
 
     // 1. Strict API Rate Limiter
     const rateCheck = executionTelemetryEngine.checkApiRateLimit();
@@ -1231,61 +1200,6 @@ export default function Home() {
           />
         )}
 
-        {/* 🏛️ PLATFORM-WIDE SINGLE-SOURCE-OF-TRUTH (SSOT) OVERRIDE & WEBSOCKET TELEMETRY STATUS BAR */}
-        <div className={`p-2.5 sm:p-3 rounded-xl border flex flex-wrap items-center justify-between gap-3 shadow-md ${
-          theme === 'light'
-            ? 'bg-white border-slate-300 text-slate-800'
-            : 'bg-terminal-950/80 border-indigo-500/30 text-slate-200'
-        }`}>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-400 border border-indigo-500/40 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse" />
-              SSOT OVERRIDE ACTIVE
-            </span>
-            <span className="text-xs font-mono font-semibold">
-              Sole Execution Authority: <strong className="text-cyan-400">Autonomous 7-Agent Consensus Chamber</strong>
-            </span>
-            <span className="text-[11px] font-mono text-slate-400 hidden md:inline">
-              (Auxiliary Desks: Read-Only Inputs)
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Live Dialectical Pressure Pill */}
-            {consensus?.dialecticalChannelMetrics && (
-              <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-terminal-900 border border-terminal-border flex items-center gap-1.5">
-                <span className="text-slate-400">CHANNELS:</span>
-                <span className="text-emerald-400">BUY {consensus.dialecticalChannelMetrics.buySidePressurePercent}%</span>
-                <span className="text-slate-500">|</span>
-                <span className="text-rose-400">SELL {consensus.dialecticalChannelMetrics.sellSidePressurePercent}%</span>
-                <span className={`px-1.5 py-0.2 rounded text-[9px] ${
-                  consensus.dialecticalChannelMetrics.dominantChannel === 'BUY_SIDE'
-                    ? 'bg-emerald-500/20 text-emerald-300'
-                    : consensus.dialecticalChannelMetrics.dominantChannel === 'SELL_SIDE'
-                    ? 'bg-rose-500/20 text-rose-300'
-                    : 'bg-amber-500/20 text-amber-300'
-                }`}>
-                  {consensus.dialecticalChannelMetrics.dominantChannel === 'BUY_SIDE' ? 'BUY DOMINANT' : consensus.dialecticalChannelMetrics.dominantChannel === 'SELL_SIDE' ? 'SELL DOMINANT' : 'CONTESTED'}
-                </span>
-              </span>
-            )}
-
-            {/* Live WebSocket Latency & Stale Fail-Safe Badge */}
-            <div className={`px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold border flex items-center gap-1.5 ${
-              wsFreshnessGate.isFailSafeActive
-                ? 'bg-rose-950/80 text-rose-300 border-rose-600 animate-pulse'
-                : 'bg-terminal-900 text-emerald-400 border-emerald-500/30'
-            }`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${wsFreshnessGate.isFailSafeActive ? 'bg-rose-400 animate-ping' : 'bg-emerald-400'}`} />
-              <span>WS: <strong>{wsTelemetry.latencyMs}ms</strong></span>
-              <span>•</span>
-              <span>AGE: <strong>{wsFreshnessGate.freshnessLatencyMs}ms</strong></span>
-              <span>•</span>
-              <span>{wsFreshnessGate.isFailSafeActive ? '🛑 PAUSED' : '🟢 NOMINAL'}</span>
-            </div>
-          </div>
-        </div>
-
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
           <div className="space-y-4">
@@ -1507,8 +1421,6 @@ export default function Home() {
             onBackToTerminal={() => setActiveTab('terminal')}
             theme={theme}
             pipeline={consensus?.sevenStagePipeline}
-            crmDirective={consensus?.chiefRiskManagerDirective}
-            channelMetrics={consensus?.dialecticalChannelMetrics}
           />
         )}
 
@@ -1539,14 +1451,12 @@ export default function Home() {
             selectedPair={selectedPair}
             onSelectPair={handleSelectPair}
             onExecuteTrade={(trade) => {
-              handleAuxiliaryModuleProposal({
-                sourceModule: 'OrderFlowDesk',
-                symbol: trade.symbol,
-                direction: trade.direction,
-                entry: trade.entry,
-                stopLoss: trade.stopLoss,
-                takeProfit: trade.takeProfit,
-              });
+              if (trade.symbol !== selectedPair) {
+                handleSelectPair(trade.symbol);
+                showNotification(`ORDER FLOW ROUTED: ${trade.symbol} loaded into 7-Agent Consensus Chamber for debate synthesis.`);
+              } else {
+                handleExecuteTrade();
+              }
             }}
           />
         )}
@@ -1586,14 +1496,8 @@ export default function Home() {
             onSelectPair={handleSelectPair}
             onExecuteTrade={(tradeParams) => {
               if (tradeParams) {
-                handleAuxiliaryModuleProposal({
-                  sourceModule: 'MacroIntelligenceDesk',
-                  symbol: tradeParams.symbol,
-                  direction: tradeParams.direction,
-                  entry: tradeParams.entry,
-                  stopLoss: tradeParams.stopLoss,
-                  takeProfit: tradeParams.takeProfit,
-                });
+                handleExecuteTrade();
+                showNotification(`MACRO TRADE EXECUTED: ${tradeParams.direction} ${tradeParams.symbol} @ ${tradeParams.entry}`);
               }
             }}
             onSyncToTerminal={(params) => {

@@ -227,12 +227,12 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       id: 'roles',
       number: '06',
       label: 'Role',
-      description: '5-Role Governance & Architecture',
+      description: '7-Role Governance & Architecture',
       icon: Layers,
       color: 'text-rose-400',
       activeBg: 'bg-rose-500/15 border-rose-500/40 text-rose-300 font-semibold',
       isActive: activeTab === 'roles' || activeTab === 'architecture',
-      badge: '5 AGENTS',
+      badge: '7 AGENTS',
       badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
       action: () => {
         setActiveTab('roles');

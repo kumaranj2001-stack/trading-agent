@@ -124,18 +124,7 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
         </div>
       </div>
 
-      {/* 🏛️ SSOT OVERRIDE NOTICE BANNER */}
-      <div className="px-3 sm:px-4 py-2 bg-indigo-950/30 border-b border-indigo-500/20 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono">
-        <div className="flex items-center gap-2 text-indigo-300">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
-          <span><strong>SSOT OVERRIDE ACTIVE:</strong> Scanner alerts act strictly as read-only candidate feeds. Trade execution authorized exclusively via the Autonomous 7-Agent Debate Chamber.</span>
-        </div>
-        <span className="px-2 py-0.5 rounded text-[10px] bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 shrink-0">
-          Read-Only Auxiliary Feed
-        </span>
-      </div>
-
-      {/* Filter Segment Tabs */}
+        {/* Filter Segment Tabs */}
         <div className="p-2 sm:p-3 bg-terminal-950/60 border-b border-terminal-border flex items-center gap-1.5 font-mono text-xs overflow-x-auto scrollbar-none whitespace-nowrap">
           <button
             onClick={() => setFilterSegment('ALL')}
@@ -210,7 +199,7 @@ export const OpportunityScannerModal: React.FC<OpportunityScannerModalProps> = (
                   }}
                   className="px-3 py-1.5 rounded-lg bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 border border-cyan-500/30 flex items-center justify-center gap-1.5 transition-all text-xs font-bold shrink-0"
                 >
-                  <span>Submit to 7-Agent Chamber (SSOT)</span>
+                  <span>Load Chart</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>

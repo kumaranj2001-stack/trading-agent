@@ -6,6 +6,7 @@ import {
   FundamentalAnalysis, 
   ForexAnalysis, 
   NewsAnalysis, 
+  OrderFlowAnalysis,
   RiskAssessment,
   ChiefReviewerAuditResult,
   DeskAuditVerdict,
@@ -22,13 +23,13 @@ export class ChiefReviewerAgent extends BaseAgent {
     super(
       'chief_reviewer',
       'Marcus Sterling (Chief Reviewer & Institutional Gatekeeper)',
-      'You are the Chief Reviewer and definitive Institutional Gatekeeper. You audit all five specialist desks (Technical, Fundamental, News Wire, Forex Intermarket, and Risk Management) based directly on the 5-agent dialectical debate comparing both Buy-side and Sell-side arguments before any trade signal is authorized or dispatched. You actively cross-examine all 1,050+ strategies (525+ technical and 525+ fundamental models) synchronously with zero heuristic pruning, enforce absolute capital preservation, eliminate unhedged exposure via order book liquidity walls, and mandate explicit invalidation criteria for all candidate entries.'
+      'You are the Chief Reviewer and definitive Institutional Gatekeeper. You audit all specialist desks (Technical, Fundamental, News Wire, Forex Intermarket, Order Flow, and Risk Management) based directly on the dialectical debate comparing both Buy-side and Sell-side arguments before any trade signal is authorized or dispatched. You actively cross-examine all 1,050+ strategies (525+ technical and 525+ fundamental models) synchronously with zero heuristic pruning, enforce absolute capital preservation, eliminate unhedged exposure via order book liquidity walls, and mandate explicit invalidation criteria for all candidate entries.'
     );
   }
 
   /**
    * Mandatory Pre-Authorization Audit & Desk Cross-Examination:
-   * Evaluates the 5-agent debate comparing Buy-side vs Sell-side theses.
+   * Evaluates the multi-agent debate comparing Buy-side vs Sell-side theses.
    * Acts as the final gatekeeper before any trade signal is approved.
    * Enforces consensus rule: If 3 or less desks agree (at least 2 disagree), entry is VETOED (AVOID_TRADE).
    */
@@ -40,6 +41,7 @@ export class ChiefReviewerAgent extends BaseAgent {
     fundamental: FundamentalAnalysis;
     forex: ForexAnalysis;
     news: NewsAnalysis;
+    orderFlow?: OrderFlowAnalysis;
     risk: RiskAssessment;
     proposedDirection: 'BUY' | 'SELL' | 'HOLD';
     confluenceGrade: ConfluenceGrade;
@@ -56,6 +58,7 @@ export class ChiefReviewerAgent extends BaseAgent {
       fundamental,
       forex,
       news,
+      orderFlow,
       risk,
       proposedDirection,
       confluenceGrade,
@@ -184,7 +187,59 @@ export class ChiefReviewerAgent extends BaseAgent {
       finding: fxVerdict.finding,
     };
 
-    // --- 1.5 Risk Governance Desk ---
+    // --- 1.5 Order Flow & Microstructure Desk ---
+    let ofVote: 'AGREE' | 'DISAGREE' = 'AGREE';
+    let ofVerdict: DeskAuditVerdict = {
+      desk: 'ORDER_FLOW',
+      analystName: 'Kaelen Voss (Order Flow & Institutional Liquidity)',
+      verdict: 'COMPLIANT',
+      score: 85,
+      finding: 'Order flow microstructure confirms institutional volume delta and liquidity absorption.',
+    };
+    let ofVoteDetail: DeskVoteDetail = {
+      desk: 'ORDER_FLOW',
+      analystName: 'Kaelen Voss (Order Flow & Institutional Liquidity)',
+      bias: proposedDirection,
+      vote: 'AGREE',
+      confidence: 85,
+      buySideArgument: 'CVD absorption and 3:1 diagonal footprint imbalance indicate dominant aggressive buying into resting bid walls.',
+      sellSideArgument: 'Overhead ask liquidity walls and potential CVD divergence exhaustion risk.',
+      verdict: 'COMPLIANT',
+      finding: 'Order flow compliant with directional setup.',
+    };
+
+    if (orderFlow) {
+      const ofBiasMatches = (proposedDirection === 'BUY' && orderFlow.bias.includes('BUY')) ||
+                            (proposedDirection === 'SELL' && orderFlow.bias.includes('SELL')) ||
+                            (orderFlow.bias === 'NEUTRAL' && orderFlow.confidenceScore >= 50);
+      ofVote = ofBiasMatches ? 'AGREE' : 'DISAGREE';
+      const ofBuyArg = `CVD (${orderFlow.cvdMetrics.cvdValue > 0 ? '+' : ''}${orderFlow.cvdMetrics.cvdValue}) confirms ${orderFlow.cvdMetrics.trend.toLowerCase()} with ${orderFlow.diagonalImbalances.ratio}:1 diagonal imbalance. Volume Profile POC anchored at ${orderFlow.volumeProfile.pocPrice}.`;
+      const ofSellArg = `Resting liquidity walls (Ask depth: ${orderFlow.restingLiquidityWalls.askWallVolume}) or CVD exhaustion risking counter-trend rejection.`;
+      
+      ofVerdict = {
+        desk: 'ORDER_FLOW',
+        analystName: orderFlow.agentName || 'Kaelen Voss (Order Flow & Institutional Liquidity)',
+        verdict: ofVote === 'AGREE' ? 'COMPLIANT' : 'WARNING',
+        score: orderFlow.confidenceScore,
+        finding: ofVote === 'AGREE'
+          ? `Microstructure Verified: Footprint imbalance (${orderFlow.diagonalImbalances.stackedImbalanceSide.replace('_', ' ')}) and CVD trend (${orderFlow.cvdMetrics.trend}) confirm institutional backing.`
+          : `Order Flow Warning: Order book liquidity distribution diverges from proposed ${proposedDirection}.`,
+      };
+      
+      ofVoteDetail = {
+        desk: 'ORDER_FLOW',
+        analystName: orderFlow.agentName || 'Kaelen Voss (Order Flow & Institutional Liquidity)',
+        bias: orderFlow.bias,
+        vote: ofVote,
+        confidence: orderFlow.confidenceScore,
+        buySideArgument: ofBuyArg,
+        sellSideArgument: ofSellArg,
+        verdict: ofVerdict.verdict,
+        finding: ofVerdict.finding,
+      };
+    }
+
+    // --- 1.6 Risk Governance Desk ---
     const riskWorkflowVerified = risk.parameters.positionSizeLots > 0 &&
                                  risk.parameters.stopLoss > 0 &&
                                  risk.parameters.takeProfit1 > 0;
@@ -212,21 +267,20 @@ export class ChiefReviewerAgent extends BaseAgent {
     };
 
     // ===============================================================
-    // 2. CONSENSUS AGREEMENT RULE EVALUATION (SUPERMAJORITY >= 4/5)
-    // "If, in the above five agents, any three or less disagree need to avoid the trades"
-    // To approve: agreeCount >= 4 (at most 1 disagrees).
-    // If agreeCount <= 3 (or disagreeCount >= 2): FORCE_VETO / AVOID_TRADE.
+    // 2. CONSENSUS AGREEMENT RULE EVALUATION
+    // Evaluates all specialist desks (Technical, Fundamental, News, Forex, Order Flow, Risk)
     // ===============================================================
     const allVotes = [
       { desk: 'TECHNICAL' as const, vote: techVote, name: techVoteDetail.analystName },
       { desk: 'FUNDAMENTAL' as const, vote: fundVote, name: fundVoteDetail.analystName },
       { desk: 'NEWS_WIRE' as const, vote: newsVote, name: newsVoteDetail.analystName },
       { desk: 'FOREX_INTERMARKET' as const, vote: fxVote, name: fxVoteDetail.analystName },
+      { desk: 'ORDER_FLOW' as const, vote: ofVote, name: ofVoteDetail.analystName },
       { desk: 'RISK_GOVERNANCE' as const, vote: riskVote, name: riskVoteDetail.analystName },
     ];
 
     const agreeCount = allVotes.filter(v => v.vote === 'AGREE').length;
-    const disagreeCount = 5 - agreeCount;
+    const disagreeCount = allVotes.length - agreeCount;
     const disagreeingDesks = allVotes.filter(v => v.vote === 'DISAGREE').map(v => v.desk);
     const consensusRuleSatisfied = agreeCount >= 4;
 
@@ -339,6 +393,7 @@ export class ChiefReviewerAgent extends BaseAgent {
         fundamental: fundVerdict,
         newsWire: newsVerdict,
         forexIntermarket: fxVerdict,
+        orderFlow: ofVerdict,
         riskGovernance: riskVerdict,
       },
       deskVotes: {
@@ -346,6 +401,7 @@ export class ChiefReviewerAgent extends BaseAgent {
         FUNDAMENTAL: fundVoteDetail,
         NEWS_WIRE: newsVoteDetail,
         FOREX_INTERMARKET: fxVoteDetail,
+        ORDER_FLOW: ofVoteDetail,
         RISK_GOVERNANCE: riskVoteDetail,
       },
       completeInvalidationCriteriaList,

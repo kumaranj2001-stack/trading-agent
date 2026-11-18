@@ -194,7 +194,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
       'Standalone Single RSI Oscillator (Penalized)',
       'Basic Moving Average Crossover (Penalized)',
     ],
-    gradingRationale: 'Supermajority 5/5 desks aligned with meta-consensus probability >=80% and dialectical friction <10%, backed by institutional order book depth walls.',
+    gradingRationale: 'Supermajority 7-agent consensus aligned with meta-consensus probability >=80% and dialectical friction <10%, backed by institutional order book depth walls.',
   };
 
   const bgGradient =
@@ -1269,14 +1269,14 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                     : 'bg-terminal-900 hover:bg-terminal-800 text-indigo-300 border-indigo-500/40'
                 }`}
               >
-                <span>5-Agent Debate & Desk Votes</span>
+                <span>7-Agent Debate & Desk Votes</span>
                 {showDebateBreakdown ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
               </button>
             </div>
           </div>
 
-          {/* 5 Specialist Desk Voting Breakdown Chips with Zoom-Safe Wrap */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 text-[10px] mb-2.5">
+          {/* 6 Specialist Desk Voting Breakdown Chips with Zoom-Safe Wrap */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-[10px] mb-2.5">
             {Object.values(chiefAudit.deskVotes).map((deskVote) => (
               <div 
                 key={deskVote.desk}
@@ -1465,10 +1465,10 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             theme === 'light' ? 'text-slate-800 font-extrabold' : 'text-slate-300'
           }`}>
             <Flame className="w-3.5 h-3.5 text-amber-500" />
-            Core Drivers Behind the {unifiedDecision.direction} Decision (5-Desk Synthesis)
+            Core Drivers Behind the {unifiedDecision.direction} Decision (7-Agent Synthesis)
           </h4>
           <span className="text-[10px] font-mono text-cyan-500 font-bold">
-            5/5 AGENTS SYNCHRONIZED
+            7/7 AGENTS SYNCHRONIZED
           </span>
         </div>
 

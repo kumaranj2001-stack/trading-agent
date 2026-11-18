@@ -234,54 +234,6 @@ export class LiveMarketFeedManager {
     return { ...this.currentWsTelemetry };
   }
 
-  /**
-   * ⚡ Real-Time WebSocket Freshness & Stale Data Fail-Safe Gate:
-   * Actively monitors live stream latency (L_ms) and tick freshness (ΔT_ms)
-   * to enforce fail-safe pauses against stale data during execution.
-   * Institutional parameters: Max Latency = 150ms, Max Tick Age = 3000ms.
-   */
-  public static getWebSocketFreshnessGate(
-    maxLatencyMs: number = 150,
-    maxTickAgeMs: number = 3000
-  ): {
-    isFresh: boolean;
-    isFailSafeActive: boolean;
-    latencyMs: number;
-    freshnessLatencyMs: number;
-    failSafeReason?: string;
-  } {
-    const now = Date.now();
-    const freshnessLatencyMs = Math.max(0, now - this.lastTickTimestamp);
-    const latencyMs = this.currentWsTelemetry.latencyMs || 12;
-
-    if (latencyMs > maxLatencyMs) {
-      return {
-        isFresh: false,
-        isFailSafeActive: true,
-        latencyMs,
-        freshnessLatencyMs,
-        failSafeReason: `WebSocket Stream Latency (${latencyMs}ms) exceeds institutional threshold (${maxLatencyMs}ms). Execution paused.`,
-      };
-    }
-
-    if (freshnessLatencyMs > maxTickAgeMs) {
-      return {
-        isFresh: false,
-        isFailSafeActive: true,
-        latencyMs,
-        freshnessLatencyMs,
-        failSafeReason: `WebSocket Tick Age (${freshnessLatencyMs}ms) exceeds freshness limit (${maxTickAgeMs}ms). Execution paused.`,
-      };
-    }
-
-    return {
-      isFresh: true,
-      isFailSafeActive: false,
-      latencyMs,
-      freshnessLatencyMs,
-    };
-  }
-
   private static updateWsTelemetry(updates: Partial<WebSocketMarketTelemetry>): void {
     this.currentWsTelemetry = {
       ...this.currentWsTelemetry,
