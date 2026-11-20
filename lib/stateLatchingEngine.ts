@@ -258,58 +258,13 @@ export class StateLatchingEngine {
       }
     }
 
-    // Enforce Capital Preservation: Sub-optimal setups (Grade C to F or retail-filtered) are suppressed from active latching
-    const isSubOptimal = consensus.gradeExclusivityFilter?.subOptimalSuppressed ||
-                         consensus.confluenceGrade === 'C' || 
-                         consensus.confluenceGrade === 'D' || 
-                         consensus.confluenceGrade === 'E' || 
-                         consensus.confluenceGrade === 'F';
-
-    if (isSubOptimal && consensus.gradeExclusivityFilter?.isDispatchUnlocked === false) {
-      const now = Date.now();
-      const latchedState: LatchedTradeState = {
-        pair,
-        isLatched: false,
-        latchStatus: 'UNLATCHED_INVALIDATED',
-        latchedAtEpochMs: now,
-        timeWindowExpiryEpochMs: now,
-        timeWindowMinutes,
-        timeRemainingSeconds: 0,
-        anchoredDirection: direction,
-        anchoredGrade: consensus.confluenceGrade,
-        anchoredEntryPrice: livePrice,
-        anchoredStopLoss: livePrice,
-        anchoredTakeProfit: livePrice,
-        anchoredRiskReward: 0,
-        anchoredLots: 0,
-        resistanceCeiling,
-        s1Floor,
-        winProbabilityPercent: calculatedWinProb,
-        probabilityFirstBoost: false,
-        invalidationLevel: livePrice,
-        invalidationDistancePips: 0,
-        synthesisSources: {
-          fundamentalRegime: consensus.agents.fundamental?.macroRegime || 'Suppressed',
-          newsSentimentScore: consensus.agents.news?.sentimentScore || 0,
-          technicalPocLevel: livePrice,
-          valueAreaHigh: livePrice,
-          valueAreaLow: livePrice,
-          intermarketBullionYield: 'Sub-Optimal Setup Suppressed',
-          monteCarloVar95Usd: 0,
-          matchedRulesCount: 0,
-        },
-      };
-      this.latchedStates.set(pair, latchedState);
-      return latchedState;
-    }
-
-    // 4. Anchor Static Entry, Stop-Loss, and Take-Profit using Single Deterministic Target & 5-Pip Buffered Stop
+    // 4. Anchor Static Entry, Stop-Loss, and Take-Profit
     const rawEntry = consensus.executionSignal.entry;
     const anchoredEntryPrice = rawEntry > 0 ? rawEntry : livePrice;
 
-    // Direct binding to Single Deterministic Institutional Target & Volatility Stop Loss
-    let anchoredStopLoss = consensus.volatilityStopLoss?.stopLossPrice || consensus.executionSignal.stopLoss;
-    let anchoredTakeProfit = consensus.singleInstitutionalTarget?.targetPrice || consensus.executionSignal.takeProfit;
+    // Ensure mathematical rigor for anchored levels
+    let anchoredStopLoss = consensus.executionSignal.stopLoss;
+    let anchoredTakeProfit = consensus.executionSignal.takeProfit;
 
     const stopDistance = Math.abs(anchoredEntryPrice - anchoredStopLoss) || (22 * pipMultiplier);
     let targetDistance = Math.abs(anchoredTakeProfit - anchoredEntryPrice);

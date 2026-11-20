@@ -487,7 +487,7 @@ export class RiskManagerAgent extends BaseAgent {
         entryPrice: currentPrice,
         stopLoss: calculatedStopLoss,
         takeProfit1: calculatedTakeProfit1,
-        takeProfit2: calculatedTakeProfit2,
+        takeProfit2: calculatedTakeProfit1, // Single deterministic target routing
         riskRewardRatio: Math.max(dynamicSizing.targetRR, riskRewardRatio),
         positionSizeLots: lotSize, // Never 0! Always >= 0.01 lots
         positionUnits: units,

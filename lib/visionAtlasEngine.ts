@@ -851,10 +851,10 @@ export class VisionAtlasLabEngine {
       const calculatedSl = demandOb ? demandOb.distal - atr * 0.2 : livePrice - atr * 1.0;
       hardStopLoss = Number(calculatedSl.toFixed(decimals));
       const effectiveSlDist = Math.max(0.0001, recommendedEntry - hardStopLoss);
-      takeProfit1 = Number((livePrice + effectiveSlDist * 1.5).toFixed(decimals));
-      takeProfit2 = Number((livePrice + effectiveSlDist * targetMultiple).toFixed(decimals));
-      takeProfit3 = Number((livePrice + effectiveSlDist * (targetMultiple + 1.5)).toFixed(decimals));
-      riskRewardRatio = Number(((takeProfit2 - recommendedEntry) / effectiveSlDist).toFixed(2));
+      takeProfit1 = Number((livePrice + effectiveSlDist * targetMultiple).toFixed(decimals));
+      takeProfit2 = takeProfit1;
+      takeProfit3 = takeProfit1;
+      riskRewardRatio = Number(((takeProfit1 - recommendedEntry) / effectiveSlDist).toFixed(2));
     } else {
       entryZoneMin = Number((livePrice - atr * 0.2).toFixed(decimals));
       entryZoneMax = Number((livePrice + atr * 0.3).toFixed(decimals));
@@ -862,10 +862,10 @@ export class VisionAtlasLabEngine {
       const calculatedSl = supplyOb ? supplyOb.distal + atr * 0.2 : livePrice + atr * 1.0;
       hardStopLoss = Number(calculatedSl.toFixed(decimals));
       const effectiveSlDist = Math.max(0.0001, hardStopLoss - recommendedEntry);
-      takeProfit1 = Number((livePrice - effectiveSlDist * 1.5).toFixed(decimals));
-      takeProfit2 = Number((livePrice - effectiveSlDist * targetMultiple).toFixed(decimals));
-      takeProfit3 = Number((livePrice - effectiveSlDist * (targetMultiple + 1.5)).toFixed(decimals));
-      riskRewardRatio = Number(((recommendedEntry - takeProfit2) / effectiveSlDist).toFixed(2));
+      takeProfit1 = Number((livePrice - effectiveSlDist * targetMultiple).toFixed(decimals));
+      takeProfit2 = takeProfit1;
+      takeProfit3 = takeProfit1;
+      riskRewardRatio = Number(((recommendedEntry - takeProfit1) / effectiveSlDist).toFixed(2));
     }
 
     const dynamicSizing = riskRatioController.calculateDynamicLotSize(grade, 25000, 30, false);

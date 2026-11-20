@@ -1969,12 +1969,6 @@ export interface EntryProximityFilterResult {
   dynamicTrailingRunnerActive: boolean; // Dynamic ATR/structural trailing stop active
   singleInstitutionalTarget?: SingleInstitutionalTarget; // Deterministic single high-credibility institutional target
   volatilityStopLoss?: DynamicVolatilityStopLoss; // Volatility-paired dynamic ATR stop loss
-  expansionTargets?: {
-    tp1: number;
-    tp2: number;
-    tp3: number;
-    openRunnerPips: string;
-  }; // DEPRECATED: Retained strictly for backward compatibility
 }
 
 // ============================================================================
@@ -2012,33 +2006,14 @@ export interface TelemetryBridgeOverrideStatus {
   explanation: string;
 }
 
-export interface PreTradeCapitalProtectionGateResult {
-  passed: boolean;
-  status: 'CLEARED_FOR_EXECUTION' | 'BLOCKED_SENTIMENT_DIVERGENCE' | 'BLOCKED_LOW_LIQUIDITY_WINDOW' | 'BLOCKED_HIGH_FAILURE_RATE' | 'BLOCKED_WEAK_MTF';
-  sentimentDivergenceDetected: boolean;
-  lowLiquidityWindowDetected: boolean;
-  activeSession: string;
-  liquidityRating: 'OPTIMAL' | 'MODERATE' | 'LOW' | 'THIN';
-  blockReason?: string;
-  protectiveAction: 'EXECUTION_ALLOWED' | 'EXECUTION_BLOCKED';
-}
-
 export interface TechnicalCorpusCrossReferenceValidation {
-  totalStrategiesCrossReferenced: number; // 1,250 technical + 1,250 fundamental
+  totalStrategiesCrossReferenced: number; // 1,250
   maxHistoricalFailureRateThreshold: number; // 30.0%
   minimumRequiredWinRate: number; // 70.0%
   concordantStrategiesCount: number;
   averageHistoricalWinRate: number; // e.g. 78.4%
   averageHistoricalFailureRate: number; // e.g. 21.6%
   historicalFailureRatePassed: boolean; // failureRate <= 30%
-  multiDimensionalConfluence: {
-    smcOrderBlockConfirmed: boolean;
-    fvgImbalanceConfirmed: boolean;
-    structuralShiftConfirmed: boolean;
-    macroYieldDifferentialConfirmed: boolean;
-    realTimeSentimentAligned: boolean;
-    confluenceSummary: string;
-  };
   multiTimeframeAlignment: {
     dailyTrend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
     fourHourTrend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
@@ -2047,7 +2022,7 @@ export interface TechnicalCorpusCrossReferenceValidation {
     isAligned: boolean;
     alignmentStatus: 'STRONG_MTF_ALIGNMENT' | 'WEAK_MTF_ALIGNMENT_DISCARD';
   };
-  overallCrossReferenceStatus: 'PASSED' | 'DISCARDED_HIGH_FAILURE_RATE' | 'DISCARDED_WEAK_MTF' | 'DISCARDED_CONFLUENCE_FAILURE';
+  overallCrossReferenceStatus: 'PASSED' | 'DISCARDED_HIGH_FAILURE_RATE' | 'DISCARDED_WEAK_MTF';
 }
 
 export interface BindingConsensusValidation {
@@ -2068,15 +2043,38 @@ export interface BindingConsensusValidation {
 }
 
 export interface InstitutionalGradeExclusivityFilter {
-  isVerifiedInstitutionalGrade: boolean; // Grade A+, Grade A, or Grade B verified
   isGradeAorAPlus: boolean;
-  isGradeBVerified: boolean;
   assignedGrade: ConfluenceGrade;
   confidenceScore: number;
-  minimumRequiredConfidence: number; // 75.0% for A/A+, 70.0% for B
+  minimumRequiredConfidence: number; // 75.0%
   isDispatchUnlocked: boolean;
   lockoutReason?: string;
-  subOptimalSuppressed: boolean; // Grade C to F and retail-filtered suppressed
+  subOptimalSuppressed: boolean; // Grades B to F suppressed
+}
+
+export interface PreTradeCapitalProtectionGateResult {
+  isPassed: boolean;
+  action: 'CLEARED_FOR_EXECUTION' | 'BLOCK_EXECUTION';
+  sentimentDivergenceTriggered: boolean;
+  lowLiquidityWindowActive: boolean;
+  sessionLiquidityRating: 'OPTIMAL' | 'MODERATE' | 'LOW' | 'THIN';
+  activeSessionName: string;
+  multiDimensionalConfluence: {
+    smcOrderBlockVerified: boolean;
+    fvgConfirmed: boolean;
+    mssConfirmed: boolean;
+    macroYieldDifferentialAligned: boolean;
+    realTimeSentimentAligned: boolean;
+  };
+  corpusStatisticalValidation: {
+    totalEvaluatedStrategies: number;
+    averageFailureRatePercent: number;
+    failureRateThresholdPercent: number;
+    isFailureRatePassed: boolean;
+    multiTimeframeAligned: boolean;
+  };
+  lockoutReasons: string[];
+  detailedExplanation: string;
 }
 
 export interface RiskGovernanceGatekeeperResult {

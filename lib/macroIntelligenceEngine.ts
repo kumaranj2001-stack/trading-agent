@@ -527,28 +527,28 @@ export class EventDrivenMacroIntelligenceEngine {
       // Anchor stop loss to anti-liquidity sweep price from risk protocols
       stopLoss = riskProtocols.antiLiquiditySweepProtection.widenedStopLossPrice;
       takeProfit1 = riskProtocols.multiTierTakeProfitScaling.tp1.price;
-      takeProfit2 = riskProtocols.multiTierTakeProfitScaling.tp2.price;
-      takeProfit3 = riskProtocols.multiTierTakeProfitScaling.tp3.price;
-      riskRewardRatio = Number(((takeProfit2 - recommendedEntry) / (recommendedEntry - stopLoss)).toFixed(2));
+      takeProfit2 = takeProfit1;
+      takeProfit3 = takeProfit1;
+      riskRewardRatio = Number(((takeProfit1 - recommendedEntry) / (recommendedEntry - stopLoss)).toFixed(2));
     } else if (signal === 'SELL') {
       entryZoneMin = Number((livePrice - (volatilityPips * 0.10)).toFixed(symbol.includes('JPY') ? 3 : 5));
       entryZoneMax = Number((livePrice + (volatilityPips * 0.15)).toFixed(symbol.includes('JPY') ? 3 : 5));
       recommendedEntry = livePrice;
       stopLoss = riskProtocols.antiLiquiditySweepProtection.widenedStopLossPrice;
       takeProfit1 = riskProtocols.multiTierTakeProfitScaling.tp1.price;
-      takeProfit2 = riskProtocols.multiTierTakeProfitScaling.tp2.price;
-      takeProfit3 = riskProtocols.multiTierTakeProfitScaling.tp3.price;
-      riskRewardRatio = Number(((recommendedEntry - takeProfit2) / (stopLoss - recommendedEntry)).toFixed(2));
+      takeProfit2 = takeProfit1;
+      takeProfit3 = takeProfit1;
+      riskRewardRatio = Number(((recommendedEntry - takeProfit1) / (stopLoss - recommendedEntry)).toFixed(2));
     } else {
       // Unconfirmed fallback
       entryZoneMin = livePrice;
       entryZoneMax = livePrice;
       recommendedEntry = livePrice;
       stopLoss = Number((livePrice - volatilityPips).toFixed(symbol.includes('JPY') ? 3 : 5));
-      takeProfit1 = Number((livePrice + volatilityPips).toFixed(symbol.includes('JPY') ? 3 : 5));
-      takeProfit2 = Number((livePrice + (volatilityPips * 2)).toFixed(symbol.includes('JPY') ? 3 : 5));
-      takeProfit3 = Number((livePrice + (volatilityPips * 3)).toFixed(symbol.includes('JPY') ? 3 : 5));
-      riskRewardRatio = 1.0;
+      takeProfit1 = Number((livePrice + volatilityPips * 1.5).toFixed(symbol.includes('JPY') ? 3 : 5));
+      takeProfit2 = takeProfit1;
+      takeProfit3 = takeProfit1;
+      riskRewardRatio = 1.5;
     }
 
     // 8. Relevant Headlines

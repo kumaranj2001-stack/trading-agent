@@ -93,13 +93,12 @@ export class AutomatedSignalValidationModule {
       status = 'APPROVED_WITHIN_BAND';
     }
 
-    const toleranceBandDescription = `Institutional Single Target Active. Live variance: ${pipDistance} pips. Single deterministic institutional target & 5-pip buffered dynamic ATR volatility stop loss engaged.`;
+    const toleranceBandDescription = `Institutional Deterministic Target Active (Multi-Tier Deprecated & Removed). Live variance: ${pipDistance} pips. Single deterministic take-profit target anchored to Volume Profile POC / Order Block liquidity zone.`;
 
-    // Multi-tier expansion roadmaps are completely deprecated and removed in favor of single deterministic target
     const isSellDirection = direction === 'SELL' || (direction === undefined && proposedEntry < livePrice);
+    const effectiveDir: 'BUY' | 'SELL' = isSellDirection ? 'SELL' : 'BUY';
 
     // Calculate Single Deterministic Institutional Target & Dynamic Volatility Stop Loss
-    const effectiveDir: 'BUY' | 'SELL' = isSellDirection ? 'SELL' : 'BUY';
     const singleInstitutionalTarget = institutionalCapitalPreservationEngine.calculateSingleInstitutionalTarget({
       symbol,
       direction: effectiveDir,

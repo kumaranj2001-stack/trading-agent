@@ -1016,26 +1016,26 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                       </div>
                     </div>
 
-                    {/* 4. Single Deterministic Institutional Target */}
+                    {/* 4. Single Deterministic Institutional Target (POC / Liquidity Zone Anchored) */}
                     <div className="p-3 rounded-xl bg-terminal-950 border border-emerald-500/30 space-y-1.5">
                       <div className="flex items-center justify-between text-emerald-300 font-bold text-[11px]">
                         <span>SINGLE INSTITUTIONAL TARGET</span>
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-200 border border-emerald-800">
-                          DETERMINISTIC
+                          A+ ANCHOR
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-300 space-y-1">
-                        <div className="flex justify-between items-center">
+                      <div className="text-[11px] text-slate-300 space-y-0.5">
+                        <div className="flex justify-between">
                           <span className="text-slate-400">Target Price:</span>
-                          <span className="text-emerald-400 font-bold text-xs">${activeReport.executionParameters.takeProfit1}</span>
+                          <span className="text-emerald-400 font-bold">${activeReport.riskProtocols.multiTierTakeProfitScaling.tp1.price}</span>
                         </div>
                         <div className="flex justify-between text-[10px]">
-                          <span className="text-slate-400">Liquidity Anchor:</span>
-                          <span className="text-cyan-300 font-semibold truncate max-w-[130px]">Volume Profile POC</span>
+                          <span className="text-slate-400">Liquidity Zone:</span>
+                          <span className="text-emerald-300 font-semibold">Volume Profile POC</span>
                         </div>
-                        <div className="flex justify-between text-[10px] pt-1 border-t border-terminal-border/60">
-                          <span className="text-amber-400">Certainty / R:R:</span>
-                          <span className="text-emerald-300 font-bold">84.5% (2.45:1 R:R)</span>
+                        <div className="flex justify-between pt-1 border-t border-terminal-border/60 text-[10px]">
+                          <span className="text-cyan-400">Certainty Score:</span>
+                          <span className="text-cyan-300 font-bold">84.5% Execution Certainty</span>
                         </div>
                       </div>
                     </div>
@@ -1162,14 +1162,14 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                     </span>
                   </div>
 
-                  {/* Single Institutional Target */}
+                  {/* Single Deterministic Take Profit Target */}
                   <div className="p-2.5 rounded-lg bg-terminal-950 border border-emerald-500/40">
-                    <span className="text-[10px] text-emerald-300 block uppercase font-semibold">Institutional Target</span>
+                    <span className="text-[10px] text-emerald-300 block uppercase font-semibold">Single Institutional Target</span>
                     <span className="text-base font-bold text-emerald-400">
-                      ${activeReport.executionParameters.takeProfit1}
+                      ${activeReport.riskProtocols?.multiTierTakeProfitScaling.tp1.price || activeReport.executionParameters.takeProfit1}
                     </span>
-                    <span className="text-[9px] text-slate-400 block">
-                      Single Deterministic Anchor
+                    <span className="text-[9px] text-emerald-300/80 block">
+                      Volume Profile POC Anchor (84.5% Certainty)
                     </span>
                   </div>
 
@@ -1206,7 +1206,7 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                         direction: activeReport.signal,
                         entry: activeReport.riskProtocols?.entryExecutionMode.boundLimitPrice || activeReport.executionParameters.entryZone.recommendedEntry,
                         stopLoss: activeReport.riskProtocols?.antiLiquiditySweepProtection.widenedStopLossPrice || activeReport.executionParameters.stopLoss,
-                        takeProfit: activeReport.executionParameters.takeProfit1,
+                        takeProfit: activeReport.riskProtocols?.multiTierTakeProfitScaling.tp1.price || activeReport.executionParameters.takeProfit1,
                         lots: activeReport.riskProtocols?.volatilityAdaptedSizing.adaptedLots || activeReport.executionParameters.recommendedLotSize,
                       })}
                       disabled={Boolean(activeReport.riskProtocols?.calendarLockout.isLockoutActive)}

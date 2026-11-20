@@ -355,23 +355,15 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </span>
           </span>
 
-          {/* ⚡ Pre-Trade Capital-Protection Gate Status Pill */}
+          {/* ⚡ Telemetry Bridge Override Status Pill */}
           <span className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border ${
-            consensus.preTradeCapitalProtectionGate?.passed === false
-              ? 'bg-rose-500/25 text-rose-300 border-rose-500 animate-pulse'
-              : consensus.telemetryBridgeOverride?.isTriggered
+            consensus.telemetryBridgeOverride?.isTriggered
               ? 'bg-rose-500/25 text-rose-300 border-rose-500 animate-pulse'
               : theme === 'light' ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
           }`}>
             <Activity className="w-3 h-3 text-amber-400" />
             <span>
-              PRE-TRADE PROTECTION: {
-                consensus.preTradeCapitalProtectionGate?.passed === false
-                  ? (consensus.preTradeCapitalProtectionGate.status === 'BLOCKED_LOW_LIQUIDITY_WINDOW' ? 'LOW LIQUIDITY TRANSITION (BLOCKED)' : 'SENTIMENT DIVERGENCE (BLOCKED)')
-                  : consensus.telemetryBridgeOverride?.isTriggered
-                  ? 'SENTIMENT DIVERGENCE (BLOCKED)'
-                  : 'SYNCHRONIZED & LIQUID'
-              }
+              TELEMETRY BRIDGE: {consensus.telemetryBridgeOverride?.isTriggered ? 'SENTIMENT DIVERGENCE (EXECUTION BLOCKED)' : 'SENTIMENT SYNCHRONIZED'}
             </span>
           </span>
 
@@ -390,6 +382,18 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                 : consensus.bindingConsensusValidation?.isSupermajorityAchieved !== false
                 ? `SUPERMAJORITY (${consensus.bindingConsensusValidation?.actualAgreeCount || 5}/6 DESKS)`
                 : 'SUPERMAJORITY DEFICIT'}
+            </span>
+          </span>
+
+          {/* 🛡️ Pre-Trade Capital-Protection Gate Pill (Sentiment Alignment & Low-Liquidity Window Protection) */}
+          <span className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border ${
+            consensus.preTradeCapitalProtectionGate?.isPassed !== false
+              ? theme === 'light' ? 'bg-emerald-100 text-emerald-900 border-emerald-300' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+              : 'bg-rose-500/25 text-rose-300 border-rose-500 animate-pulse'
+          }`}>
+            <ShieldAlert className="w-3 h-3 text-cyan-400" />
+            <span>
+              PRE-TRADE CAPITAL GATE: {consensus.preTradeCapitalProtectionGate?.isPassed !== false ? 'CLEARED (OPTIMAL LIQUIDITY & ALIGNED)' : 'LOCKED (DIVERGENCE / LOW LIQUIDITY)'}
             </span>
           </span>
 
@@ -602,11 +606,11 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </span>
             <span className="px-2 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
               <Target className="w-3 h-3 text-cyan-400" />
-              DETERMINISTIC SINGLE TARGET
+              10+ PIPS TP1 & RUNNER
             </span>
             <span className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
               <Crosshair className="w-3 h-3 text-emerald-400" />
-              5-PIP BUFFERED ATR SL
+              MAX 10-PIP ENTRY BOUND
             </span>
           </div>
 
@@ -621,7 +625,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                   CAPITAL PRESERVATION GATEWAY LOCKED
                 </span>
                 <span className="text-[10px] opacity-90 font-medium">
-                  {consensus.gradeExclusivityFilter?.lockoutReason || 'Sub-optimal setup suppressed. Terminal exclusively unlocks Grade A, Grade A+, and Grade B setups backed by high confidence & supermajority consensus.'}
+                  {consensus.gradeExclusivityFilter?.lockoutReason || 'Sub-optimal setup suppressed. Terminal exclusively unlocks Grade A & A+ institutional setups (≥75% confidence).'}
                 </span>
               </div>
             </div>
@@ -906,7 +910,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             <div className="flex items-center justify-between text-[11px] font-bold flex-wrap gap-2">
               <span className="text-indigo-400 flex items-center gap-1.5">
                 <Target className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Single Deterministic Institutional Target & 5-Pip Buffered Volatility Stop Loss</span>
+                <span>Deterministic Institutional Target & Dynamic Volatility SL (Multi-Tier Expansion Deprecated)</span>
               </span>
               <span className="text-emerald-400 text-[10px] flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3 text-emerald-400" />

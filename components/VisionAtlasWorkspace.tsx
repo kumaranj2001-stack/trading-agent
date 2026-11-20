@@ -1062,20 +1062,12 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                           <div className="text-[9px] text-slate-500">Structural Invalidation</div>
                         </div>
 
-                        <div className="p-2 bg-terminal-950 border border-emerald-500/30 rounded space-y-0.5">
-                          <div className="text-[10px] text-emerald-300">TAKE PROFIT 1</div>
+                        <div className="p-2 bg-terminal-950 border border-emerald-500/30 rounded space-y-0.5 col-span-2 sm:col-span-1">
+                          <div className="text-[10px] text-emerald-300">SINGLE INSTITUTIONAL TARGET</div>
                           <div className="font-bold text-emerald-400">
                             ${payload?.executionBlueprint.takeProfit1}
                           </div>
-                          <div className="text-[9px] text-slate-500">1:1.5 RR</div>
-                        </div>
-
-                        <div className="p-2 bg-terminal-950 border border-emerald-500/30 rounded space-y-0.5">
-                          <div className="text-[10px] text-emerald-300">TAKE PROFIT 2 / 3</div>
-                          <div className="font-bold text-emerald-400">
-                            ${payload?.executionBlueprint.takeProfit2}
-                          </div>
-                          <div className="text-[9px] text-slate-500">${payload?.executionBlueprint.takeProfit3} Max</div>
+                          <div className="text-[9px] text-slate-400">POC Liquidity Zone (84.5% Certainty)</div>
                         </div>
                       </div>
 

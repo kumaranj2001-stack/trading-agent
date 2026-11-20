@@ -315,13 +315,13 @@ export default function Home() {
       return;
     }
 
-    // 🏛️ Pre-Trade Capital-Protection Gate (Sentiment Divergence & Low-Liquidity Transition Window)
-    if (calibratedResult.preTradeCapitalProtectionGate && !calibratedResult.preTradeCapitalProtectionGate.passed) {
-      console.warn(`[AUTOPILOT_PRE_TRADE_GATE_BLOCKED] ${calibratedResult.preTradeCapitalProtectionGate.blockReason}`);
+    // 🏛️ Pre-Trade Capital-Protection Gate (Sentiment Divergence & Low-Liquidity Window Block)
+    if (calibratedResult.preTradeCapitalProtectionGate && !calibratedResult.preTradeCapitalProtectionGate.isPassed) {
+      console.warn(`[AUTOPILOT_PRE_TRADE_CAPITAL_GATE_BLOCKED] ${calibratedResult.preTradeCapitalProtectionGate.detailedExplanation}`);
       return;
     }
 
-    // 🏛️ Capital Preservation & Grade Exclusivity Gate (Grade A+, Grade A, and Grade B verified)
+    // 🏛️ Capital Preservation & Grade Exclusivity Gate (Grade A/A+ with confidence >= 75%)
     if (calibratedResult.gradeExclusivityFilter && !calibratedResult.gradeExclusivityFilter.isDispatchUnlocked) {
       console.warn(`[AUTOPILOT_GRADE_EXCLUSIVITY_BLOCKED] ${calibratedResult.gradeExclusivityFilter.lockoutReason}`);
       return;
@@ -929,15 +929,15 @@ export default function Home() {
       return;
     }
 
-    // 🏛️ Pre-Trade Capital-Protection Gate (Sentiment Divergence & Low-Liquidity Transition Window)
-    if (consensus.preTradeCapitalProtectionGate && !consensus.preTradeCapitalProtectionGate.passed) {
-      showNotification(`🛑 PRE-TRADE PROTECTION GATE: ${consensus.preTradeCapitalProtectionGate.blockReason || 'Execution blocked during low-liquidity window or sentiment divergence.'}`);
+    // 🏛️ Pre-Trade Capital-Protection Gate (Sentiment Divergence & Low-Liquidity Window Block)
+    if (consensus.preTradeCapitalProtectionGate && !consensus.preTradeCapitalProtectionGate.isPassed) {
+      showNotification(`🛑 PRE-TRADE CAPITAL GATE LOCK: ${consensus.preTradeCapitalProtectionGate.detailedExplanation}`);
       return;
     }
 
-    // 🏛️ Grade Exclusivity Gate: Exclusively execute verified Grade A+, Grade A, and Grade B institutional setups
+    // 🏛️ Grade Exclusivity Gate: Exclusively execute Grade A & A+ institutional setups (>= 75% confidence)
     if (consensus.gradeExclusivityFilter && !consensus.gradeExclusivityFilter.isDispatchUnlocked) {
-      showNotification(`🛑 CAPITAL PRESERVATION LOCKOUT: ${consensus.gradeExclusivityFilter.lockoutReason || 'Sub-optimal setup suppressed. Terminal exclusively unlocks Grade A+, Grade A, and Grade B setups.'}`);
+      showNotification(`🛑 CAPITAL PRESERVATION LOCKOUT: ${consensus.gradeExclusivityFilter.lockoutReason || 'Sub-optimal setup suppressed. Terminal exclusively unlocks Grade A & A+ setups.'}`);
       return;
     }
 
