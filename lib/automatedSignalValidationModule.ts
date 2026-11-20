@@ -3,9 +3,12 @@ import {
   TimeFrame, 
   SwarmConsensusResult, 
   EntryProximityFilterResult, 
-  RiskGovernanceGatekeeperResult 
+  RiskGovernanceGatekeeperResult,
+  TechnicalAnalysis,
+  OrderFlowAnalysis,
 } from './types';
 import { multiAssetIngestionEngine } from './multiAssetIngestionEngine';
+import { institutionalCapitalPreservationEngine } from './institutionalCapitalPreservationEngine';
 import { PIP_VALUES } from './marketData';
 
 export interface AutomatedSignalValidationResult {
@@ -47,6 +50,8 @@ export class AutomatedSignalValidationModule {
     direction?: 'BUY' | 'SELL';
     minBandPips?: number;
     maxBandPips?: number;
+    technical?: TechnicalAnalysis;
+    orderFlow?: OrderFlowAnalysis;
   }): EntryProximityFilterResult {
     const {
       symbol,
@@ -54,6 +59,8 @@ export class AutomatedSignalValidationModule {
       livePrice,
       direction,
       minBandPips = 10,
+      technical,
+      orderFlow,
     } = params;
 
     const pipMultiplier = PIP_VALUES[symbol] || (symbol.includes('JPY') ? 0.01 : symbol === 'XAU/USD' ? 0.10 : 0.0001);
@@ -86,11 +93,9 @@ export class AutomatedSignalValidationModule {
       status = 'APPROVED_WITHIN_BAND';
     }
 
-    const toleranceBandDescription = `Unlimited Profit Potential Active (50-pip cap removed). Live variance: ${pipDistance} pips. Uncapped multi-tier expansion & dynamic trailing runner engaged.`;
+    const toleranceBandDescription = `Unlimited Profit Potential Active (50-pip cap removed). Live variance: ${pipDistance} pips. Single deterministic institutional target & dynamic ATR volatility stop loss engaged.`;
 
-    // Multi-tier expansion target projections strictly aligned with trade direction
-    // For SELL orders: TP1, TP2, TP3 are BELOW entry (livePrice - pips)
-    // For BUY orders: TP1, TP2, TP3 are ABOVE entry (livePrice + pips)
+    // Multi-tier expansion target projections strictly aligned with trade direction (DEPRECATED fallback)
     const isSellDirection = direction === 'SELL' || (direction === undefined && proposedEntry < livePrice);
     const expansionTargets = {
       tp1: Number((livePrice + (isSellDirection ? -35 : 35) * pipMultiplier).toFixed(decimals)),
@@ -98,6 +103,23 @@ export class AutomatedSignalValidationModule {
       tp3: Number((livePrice + (isSellDirection ? -180 : 180) * pipMultiplier).toFixed(decimals)),
       openRunnerPips: 'UNCAPPED (Trailing ATR Pivots)',
     };
+
+    // Calculate Single Deterministic Institutional Target & Dynamic Volatility Stop Loss
+    const effectiveDir: 'BUY' | 'SELL' = isSellDirection ? 'SELL' : 'BUY';
+    const singleInstitutionalTarget = institutionalCapitalPreservationEngine.calculateSingleInstitutionalTarget({
+      symbol,
+      direction: effectiveDir,
+      livePrice,
+      technical: technical || { keySupport: livePrice - 30 * pipMultiplier, keyResistance: livePrice + 30 * pipMultiplier } as unknown as TechnicalAnalysis,
+      orderFlow: orderFlow || {} as unknown as OrderFlowAnalysis,
+    });
+
+    const volatilityStopLoss = institutionalCapitalPreservationEngine.calculateDynamicVolatilityStopLoss({
+      symbol,
+      direction: effectiveDir,
+      livePrice,
+      technical: technical || { keySupport: livePrice - 20 * pipMultiplier, keyResistance: livePrice + 20 * pipMultiplier, indicators: { atr: 15 * pipMultiplier } } as unknown as TechnicalAnalysis,
+    });
 
     return {
       passed,
@@ -115,6 +137,8 @@ export class AutomatedSignalValidationModule {
       zeroLossExposureEliminated: true,
       breakevenStopArmed: true,
       dynamicTrailingRunnerActive: true,
+      singleInstitutionalTarget,
+      volatilityStopLoss,
       expansionTargets,
     };
   }

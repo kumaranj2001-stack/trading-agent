@@ -315,6 +315,30 @@ export default function Home() {
       return;
     }
 
+    // 🏛️ Capital Preservation & Grade Exclusivity Gate (Grade A/A+ with confidence >= 75%)
+    if (calibratedResult.gradeExclusivityFilter && !calibratedResult.gradeExclusivityFilter.isDispatchUnlocked) {
+      console.warn(`[AUTOPILOT_GRADE_EXCLUSIVITY_BLOCKED] ${calibratedResult.gradeExclusivityFilter.lockoutReason}`);
+      return;
+    }
+
+    // 🏛️ Binding Consensus Gate: Critical Desk Dissent Lockout (Zero-Dissent Protocol)
+    if (calibratedResult.bindingConsensusValidation && calibratedResult.bindingConsensusValidation.hasCriticalDeskDissent) {
+      console.warn(`[AUTOPILOT_CRITICAL_DESK_DISSENT_BLOCKED] Dissent from ${calibratedResult.bindingConsensusValidation.dissentingCriticalDesks.join(', ')}`);
+      return;
+    }
+
+    // 🏛️ Telemetry Bridge Override Gate: Sentiment-Structure Divergence Block
+    if (calibratedResult.telemetryBridgeOverride && calibratedResult.telemetryBridgeOverride.isTriggered) {
+      console.warn(`[AUTOPILOT_TELEMETRY_BRIDGE_BLOCKED] ${calibratedResult.telemetryBridgeOverride.explanation}`);
+      return;
+    }
+
+    // 🏛️ 1,250+ Technical Strategies Corpus Validation (Failure Rate <= 30% & MTF Aligned)
+    if (calibratedResult.technicalCorpusValidation && calibratedResult.technicalCorpusValidation.overallCrossReferenceStatus !== 'PASSED') {
+      console.warn(`[AUTOPILOT_TECHNICAL_CORPUS_BLOCKED] Historical failure rate > 30% or weak MTF alignment`);
+      return;
+    }
+
     // 🧠 Persistent Memory Module: Pre-Trade Validation Gate against Stored Invalid Criteria
     if (calibratedResult.invalidCriteriaGate && !calibratedResult.invalidCriteriaGate.allowed) {
       console.warn(`[AUTOPILOT_INVALID_CRITERIA_GATE_BLOCKED] ${calibratedResult.invalidCriteriaGate.blockReason}`);
@@ -895,7 +919,31 @@ export default function Home() {
     // 🏛️ SSOT Architectural Gatekeeper Check:
     // Actionable trade execution is derived EXCLUSIVELY from the Autonomous 7-Agent Debate and Consensus Chamber
     if (consensus.chiefRiskManagerUnifiedDirective && consensus.chiefRiskManagerUnifiedDirective.institutionalClearanceStatus === 'FAIL_SAFE_PAUSED') {
-      showNotification(`🛑 SSOT GATEKEEPER LOCK: 7-Agent Consensus Chamber clearance paused due to stale data.`);
+      showNotification(`🛑 SSOT GATEKEEPER LOCK: 7-Agent Consensus Chamber clearance paused due to stale data or capital preservation gate.`);
+      return;
+    }
+
+    // 🏛️ Grade Exclusivity Gate: Exclusively execute Grade A & A+ institutional setups (>= 75% confidence)
+    if (consensus.gradeExclusivityFilter && !consensus.gradeExclusivityFilter.isDispatchUnlocked) {
+      showNotification(`🛑 CAPITAL PRESERVATION LOCKOUT: ${consensus.gradeExclusivityFilter.lockoutReason || 'Sub-optimal setup suppressed. Terminal exclusively unlocks Grade A & A+ setups.'}`);
+      return;
+    }
+
+    // 🏛️ Binding Consensus Gate: Critical Desk Dissent Lockout (Zero-Dissent Protocol)
+    if (consensus.bindingConsensusValidation && consensus.bindingConsensusValidation.hasCriticalDeskDissent) {
+      showNotification(`🛑 BINDING CONSENSUS VETO: Dissent detected from critical desk (${consensus.bindingConsensusValidation.dissentingCriticalDesks.join(', ')}). Execution blocked.`);
+      return;
+    }
+
+    // 🏛️ Telemetry Bridge Override Gate: Sentiment-Structure Divergence Block
+    if (consensus.telemetryBridgeOverride && consensus.telemetryBridgeOverride.isTriggered) {
+      showNotification(`🛑 TELEMETRY BRIDGE OVERRIDE: ${consensus.telemetryBridgeOverride.explanation}`);
+      return;
+    }
+
+    // 🏛️ 1,250+ Technical Strategies Corpus Validation (Historical Failure Rate <= 30% & MTF Aligned)
+    if (consensus.technicalCorpusValidation && consensus.technicalCorpusValidation.overallCrossReferenceStatus !== 'PASSED') {
+      showNotification(`🛑 1,250+ TECHNICAL CORPUS VETO: Setup discarded due to failure rate > 30% or weak MTF alignment.`);
       return;
     }
 

@@ -37,6 +37,7 @@ import { macroTelemetryBridge } from '../macroTelemetryBridge';
 import { sevenStagePipelineEngine } from '../sevenStagePipelineEngine';
 import { multiTierScreeningEngine } from '../multiTierScreeningEngine';
 import { invalidCriteriaMemoryModule } from '../invalidCriteriaMemoryModule';
+import { institutionalCapitalPreservationEngine } from '../institutionalCapitalPreservationEngine';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -657,8 +658,61 @@ export class SwarmCoordinator {
       centralBankBias: fundamental.baseCurrencyOutlook?.centralBankStance,
     });
 
+    // 🏛️ INSTITUTIONAL CAPITAL PRESERVATION & DETERMINISTIC TARGET ARCHITECTURE
+    // 1. Hardcoded Telemetry Bridge Override: blocks trades during sentiment-structure divergence
+    const telemetryBridgeOverride = institutionalCapitalPreservationEngine.validateTelemetryBridgeOverride({
+      symbol: pair,
+      direction: activeDirection,
+      technical,
+      news,
+    });
+
+    // 2. 1,250+ Technical Strategies Cross-Reference: failure rate <= 30% & multi-timeframe alignment
+    const technicalCorpusValidation = institutionalCapitalPreservationEngine.validateTechnicalStrategiesCorpus({
+      symbol: pair,
+      direction: activeDirection,
+      technical,
+      candles: marketCandles,
+    });
+
+    // 3. Binding 7-Agent Consensus: supermajority (>= 5/6) and zero critical desk dissent (News Wire)
+    const bindingConsensusValidation = institutionalCapitalPreservationEngine.validateBindingConsensus({
+      deskVotes: chiefReviewerAudit.deskVotes,
+      proposedDirection: activeDirection,
+    });
+
+    // 4. Single Deterministic Institutional Target: anchored to POC / Order Block liquidity zone
+    const singleInstitutionalTarget = institutionalCapitalPreservationEngine.calculateSingleInstitutionalTarget({
+      symbol: pair,
+      direction: activeDirection,
+      livePrice: currentPrice,
+      technical,
+      orderFlow,
+    });
+
+    // 5. Dynamic Volatility-Based Stop Loss: 1.5x ATR beyond structural boundaries
+    const volatilityStopLoss = institutionalCapitalPreservationEngine.calculateDynamicVolatilityStopLoss({
+      symbol: pair,
+      direction: activeDirection,
+      livePrice: currentPrice,
+      technical,
+    });
+
+    if (!isStateLatched) {
+      finalStopLoss = volatilityStopLoss.stopLossPrice;
+      finalTakeProfit = singleInstitutionalTarget.targetPrice;
+    }
+
+    // 6. Institutional Grade Exclusivity Filter: exclusively unlocks Grade A / A+ (>= 75% confidence)
+    const gradeExclusivityFilter = institutionalCapitalPreservationEngine.evaluateGradeExclusivityFilter({
+      confluenceGrade,
+      confidenceScore: overallConfidence,
+      bindingConsensus: bindingConsensusValidation,
+      telemetryBridge: telemetryBridgeOverride,
+      technicalCorpus: technicalCorpusValidation,
+    });
+
     // 🛡️ Strict Risk Management Workflow Priority & Absolute Capital Preservation Verification
-    // Sizing is never speculative but strictly proportional to validated risk parameters.
     const riskWorkflowCompleted = !!(
       risk &&
       risk.parameters &&
@@ -666,24 +720,6 @@ export class SwarmCoordinator {
       risk.parameters.stopLoss > 0 &&
       risk.parameters.takeProfit1 > 0
     );
-
-    // 🛡️ Zero-Veto Dynamic Position Sizing Architecture:
-    // Hard vetoes permanently eliminated: trades are never aborted due to friction, R:R, or gatekeeper warnings.
-    // Instead, position size dynamically scales down to micro-lots (0.01 - 0.02 lots),
-    // and entries remain mandatory with 1:1 Breakeven Ratchet armed.
-    executionAuthorized = !failSafePauseActive;
-    executionStatus = failSafePauseActive ? 'VETOED' : 'READY';
-
-    if (!riskWorkflowCompleted || overallConfidence < 68 || !capitalPreservationGate.passed || chiefReviewerAudit.status === 'VETOED' || !preExecutionFilter.allowed || !entryProximityFilter.passed || !riskGovernanceGatekeeper.passed) {
-      finalLots = Math.max(0.01, Math.min(0.02, finalLots));
-      if (!unifiedDecision.summary.includes('Micro-Lot Scaled')) {
-        unifiedDecision.summary = `Dynamic Micro-Lot Sizing: Sized to ${finalLots} lots with 1:1 Breakeven Ratchet armed. ${unifiedDecision.summary}`;
-      }
-    } else if (chiefReviewerAudit.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
-      finalLots = Math.max(0.01, Number((finalLots * 0.50).toFixed(2)));
-    } else if (preExecutionFilter.action === 'ADJUST_SIZING') {
-      finalLots = preExecutionFilter.adjustedLots || 0.01;
-    }
 
     // ⚡ Execute Strict Seven-Stage Deterministic Sequential Pipeline
     const sevenStagePipeline = sevenStagePipelineEngine.executePipeline({
@@ -716,11 +752,39 @@ export class SwarmCoordinator {
       news,
     });
 
-    if (!invalidCriteriaGate.allowed) {
+    // Mandatory Capital Preservation Gating:
+    // Any violation of Grade A/A+ exclusivity, critical desk dissent, sentiment-structure divergence,
+    // historical failure rate > 30%, or lack of supermajority strictly blocks execution!
+    const hasCapitalPreservationLockout = 
+      !gradeExclusivityFilter.isDispatchUnlocked ||
+      chiefReviewerAudit.status === 'VETOED' ||
+      telemetryBridgeOverride.isTriggered ||
+      bindingConsensusValidation.hasCriticalDeskDissent ||
+      !bindingConsensusValidation.isSupermajorityAchieved ||
+      technicalCorpusValidation.overallCrossReferenceStatus !== 'PASSED' ||
+      !capitalPreservationGate.passed ||
+      !invalidCriteriaGate.allowed ||
+      !riskWorkflowCompleted ||
+      failSafePauseActive;
+
+    if (hasCapitalPreservationLockout) {
       executionAuthorized = false;
       executionStatus = 'VETOED';
       failSafePauseActive = true;
-      unifiedDecision.summary = `${invalidCriteriaGate.blockReason} | ${unifiedDecision.summary}`;
+      if (gradeExclusivityFilter.lockoutReason) {
+        unifiedDecision.summary = `${gradeExclusivityFilter.lockoutReason} | ${unifiedDecision.summary}`;
+      } else if (!invalidCriteriaGate.allowed) {
+        unifiedDecision.summary = `${invalidCriteriaGate.blockReason} | ${unifiedDecision.summary}`;
+      }
+    } else {
+      executionAuthorized = true;
+      executionStatus = 'READY';
+      failSafePauseActive = false;
+      if (chiefReviewerAudit.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
+        finalLots = Math.max(0.01, Number((finalLots * 0.50).toFixed(2)));
+      } else if (preExecutionFilter.action === 'ADJUST_SIZING') {
+        finalLots = preExecutionFilter.adjustedLots || 0.01;
+      }
     }
 
     // 🎯 Chief Risk Manager Unified Directive
@@ -728,14 +792,14 @@ export class SwarmCoordinator {
       directive: debateOutcome.synthesis.terminalNode?.directive || 'MAINTAIN_POSITION',
       directiveTitle: debateOutcome.synthesis.terminalNode?.directiveTitle || 'MAINTAIN POSITION DIRECTIVE: CONFLUENCE RESILIENT ACROSS 7 SPECIALIST AGENTS',
       actionableSummary: debateOutcome.synthesis.terminalNode?.actionableSummary || 'Consensus verified across 7 autonomous agents',
-      institutionalClearanceStatus: failSafePauseActive
+      institutionalClearanceStatus: hasCapitalPreservationLockout
         ? ('FAIL_SAFE_PAUSED' as const)
-        : (finalLots <= 0.02 ? ('DYNAMIC_TIER_APPROVED' as const) : ('CLEARED_FOR_EXECUTION' as const)),
+        : ('CLEARED_FOR_EXECUTION' as const),
       zeroVetoAllocationLots: finalLots,
       hardcodedStopLoss: finalStopLoss,
       hardcodedTakeProfit: finalTakeProfit,
       riskRewardRatio: existingLatched?.anchoredRiskReward || finalRiskReward,
-      latencyGuaranteed: !failSafePauseActive,
+      latencyGuaranteed: !hasCapitalPreservationLockout,
       streamLatencyMs,
     };
 
@@ -776,6 +840,12 @@ export class SwarmCoordinator {
       streamLatencyMs,
       failSafePauseActive,
       chiefRiskManagerUnifiedDirective,
+      singleInstitutionalTarget,
+      volatilityStopLoss,
+      telemetryBridgeOverride,
+      technicalCorpusValidation,
+      bindingConsensusValidation,
+      gradeExclusivityFilter,
       agents: {
         technical,
         fundamental,
@@ -794,7 +864,7 @@ export class SwarmCoordinator {
         chiefRiskManagerUnifiedDirective,
       },
       executionSignal: {
-        authorized: !failSafePauseActive,
+        authorized: executionAuthorized,
         orderType,
         symbol: pair,
         lots: finalLots,
@@ -803,12 +873,10 @@ export class SwarmCoordinator {
         takeProfit: finalTakeProfit,
         riskReward: existingLatched?.anchoredRiskReward || finalRiskReward,
         riskAmountUsd: finalMaxRisk,
-        status: failSafePauseActive ? 'VETOED' : 'READY',
+        status: executionStatus,
         gradingTier: confluenceGrade,
-        tierDescription: failSafePauseActive
-          ? `FAIL-SAFE PAUSE ACTIVE: WebSocket/SSE stream latency (${streamLatencyMs}ms) exceeded 1500ms safety threshold. Execution paused against stale data.`
-          : (finalLots <= 0.02 && overallConfidence < 68)
-          ? `DYNAMIC MICRO-LOT ALLOCATION (${finalLots} Lots): Hard veto decoupled. 1:1 Breakeven Ratchet armed for zero-loss exposure.`
+        tierDescription: hasCapitalPreservationLockout
+          ? (gradeExclusivityFilter.lockoutReason || 'CAPITAL PRESERVATION GATE ENGAGED: Sub-optimal setup suppressed.')
           : tierParams.executionPolicy,
       },
       autonomousLoopTelemetry: {

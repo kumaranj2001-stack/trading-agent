@@ -1357,6 +1357,12 @@ export interface SwarmConsensusResult {
   sevenStagePipeline?: SevenStagePipelineResult;
   multiTierScreening?: MultiTierScreeningResult;
   invalidCriteriaGate?: PreTradeValidationGateResult;
+  singleInstitutionalTarget?: SingleInstitutionalTarget;
+  volatilityStopLoss?: DynamicVolatilityStopLoss;
+  telemetryBridgeOverride?: TelemetryBridgeOverrideStatus;
+  technicalCorpusValidation?: TechnicalCorpusCrossReferenceValidation;
+  bindingConsensusValidation?: BindingConsensusValidation;
+  gradeExclusivityFilter?: InstitutionalGradeExclusivityFilter;
 }
 
 // ============================================================================
@@ -1960,12 +1966,95 @@ export interface EntryProximityFilterResult {
   zeroLossExposureEliminated: boolean; // True: 1:1 breakeven ratchet + 5-pip structural stop
   breakevenStopArmed: boolean; // Automated breakeven trigger armed
   dynamicTrailingRunnerActive: boolean; // Dynamic ATR/structural trailing stop active
+  singleInstitutionalTarget?: SingleInstitutionalTarget; // Deterministic single high-credibility institutional target
+  volatilityStopLoss?: DynamicVolatilityStopLoss; // Volatility-paired dynamic ATR stop loss
   expansionTargets?: {
     tp1: number;
     tp2: number;
     tp3: number;
     openRunnerPips: string;
+  }; // DEPRECATED: Retained strictly for backward compatibility
+}
+
+// ============================================================================
+// 🏛️ INSTITUTIONAL CAPITAL PRESERVATION & DETERMINISTIC TARGET ARCHITECTURE
+// ============================================================================
+
+export interface SingleInstitutionalTarget {
+  targetPrice: number;
+  pipDistance: number;
+  riskRewardRatio: number;
+  liquidityZoneType: 'POC_HIGH_VOLUME_NODE' | 'ORDER_BLOCK_UNMITIGATED_BOUNDARY' | 'VALUE_AREA_EXTENDED' | 'STRUCTURAL_SWING_PIVOT';
+  liquidityZoneDescription: string;
+  executionCertaintyPercent: number; // e.g. 84.5%
+  isDeterministicSingleTarget: true;
+}
+
+export interface DynamicVolatilityStopLoss {
+  stopLossPrice: number;
+  pipDistance: number;
+  atrValue: number;
+  volatilityMultiplier: number; // e.g. 1.5x ATR
+  invalidationAnchor: string; // e.g. '5 Pips Beyond S1 Floor + 1.5x ATR Buffer'
+  maxLossCapitalCapUsd: number;
+  accountRiskPercent: number;
+}
+
+export interface TelemetryBridgeOverrideStatus {
+  isTriggered: boolean;
+  divergenceType: 'SENTIMENT_STRUCTURE_DIVERGENCE' | 'NONE';
+  newsSentimentPolarity: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  newsSentimentScore: number;
+  technicalStructurePolarity: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+  technicalStructureType: string;
+  action: 'BLOCK_EXECUTION' | 'CLEARED';
+  explanation: string;
+}
+
+export interface TechnicalCorpusCrossReferenceValidation {
+  totalStrategiesCrossReferenced: number; // 1,250
+  maxHistoricalFailureRateThreshold: number; // 30.0%
+  minimumRequiredWinRate: number; // 70.0%
+  concordantStrategiesCount: number;
+  averageHistoricalWinRate: number; // e.g. 78.4%
+  averageHistoricalFailureRate: number; // e.g. 21.6%
+  historicalFailureRatePassed: boolean; // failureRate <= 30%
+  multiTimeframeAlignment: {
+    dailyTrend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    fourHourTrend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    oneHourStructure: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    fifteenMinStructure: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
+    isAligned: boolean;
+    alignmentStatus: 'STRONG_MTF_ALIGNMENT' | 'WEAK_MTF_ALIGNMENT_DISCARD';
   };
+  overallCrossReferenceStatus: 'PASSED' | 'DISCARDED_HIGH_FAILURE_RATE' | 'DISCARDED_WEAK_MTF';
+}
+
+export interface BindingConsensusValidation {
+  isBinding: true;
+  supermajorityRequiredRatio: number; // 5/6 (83.3%)
+  actualAgreeCount: number;
+  actualDisagreeCount: number;
+  isSupermajorityAchieved: boolean;
+  criticalDesksStatus: {
+    newsWire: { analyst: string; vote: 'AGREE' | 'DISAGREE'; dissentBlocked: boolean; details: string };
+    technical: { analyst: string; vote: 'AGREE' | 'DISAGREE'; dissentBlocked: boolean; details: string };
+    riskGovernance: { analyst: string; vote: 'AGREE' | 'DISAGREE'; dissentBlocked: boolean; details: string };
+  };
+  hasCriticalDeskDissent: boolean;
+  dissentingCriticalDesks: string[];
+  finalBindingVerdict: 'CONSENSUS_AUTHORIZED' | 'BLOCKED_BY_CRITICAL_DESK_DISSENT' | 'BLOCKED_BY_LACK_OF_SUPERMAJORITY';
+  contradictoryConsensusCutOffArmed: boolean;
+}
+
+export interface InstitutionalGradeExclusivityFilter {
+  isGradeAorAPlus: boolean;
+  assignedGrade: ConfluenceGrade;
+  confidenceScore: number;
+  minimumRequiredConfidence: number; // 75.0%
+  isDispatchUnlocked: boolean;
+  lockoutReason?: string;
+  subOptimalSuppressed: boolean; // Grades B to F suppressed
 }
 
 export interface RiskGovernanceGatekeeperResult {
