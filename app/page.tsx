@@ -315,7 +315,13 @@ export default function Home() {
       return;
     }
 
-    // 🏛️ Capital Preservation & Grade Exclusivity Gate (Grade A/A+ with confidence >= 75%)
+    // 🏛️ Pre-Trade Capital-Protection Gate (Sentiment Divergence & Low-Liquidity Transition Window)
+    if (calibratedResult.preTradeCapitalProtectionGate && !calibratedResult.preTradeCapitalProtectionGate.passed) {
+      console.warn(`[AUTOPILOT_PRE_TRADE_GATE_BLOCKED] ${calibratedResult.preTradeCapitalProtectionGate.blockReason}`);
+      return;
+    }
+
+    // 🏛️ Capital Preservation & Grade Exclusivity Gate (Grade A+, Grade A, and Grade B verified)
     if (calibratedResult.gradeExclusivityFilter && !calibratedResult.gradeExclusivityFilter.isDispatchUnlocked) {
       console.warn(`[AUTOPILOT_GRADE_EXCLUSIVITY_BLOCKED] ${calibratedResult.gradeExclusivityFilter.lockoutReason}`);
       return;
@@ -336,12 +342,6 @@ export default function Home() {
     // 🏛️ 1,250+ Technical Strategies Corpus Validation (Failure Rate <= 30% & MTF Aligned)
     if (calibratedResult.technicalCorpusValidation && calibratedResult.technicalCorpusValidation.overallCrossReferenceStatus !== 'PASSED') {
       console.warn(`[AUTOPILOT_TECHNICAL_CORPUS_BLOCKED] Historical failure rate > 30% or weak MTF alignment`);
-      return;
-    }
-
-    // 🛡️ Pre-Trade Capital-Protection Gate: Blocks on Sentiment Divergence or Low-Liquidity Transition Windows
-    if (calibratedResult.preTradeCapitalProtectionGate && !calibratedResult.preTradeCapitalProtectionGate.isExecutionAllowed) {
-      console.warn(`[AUTOPILOT_CAPITAL_PROTECTION_BLOCKED] ${calibratedResult.preTradeCapitalProtectionGate.rejectionReason}`);
       return;
     }
 
@@ -379,8 +379,8 @@ export default function Home() {
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    let autoStopLoss = calibratedResult.volatilityStopLoss?.stopLossPrice || signal.stopLoss;
-    let autoTakeProfit = calibratedResult.singleInstitutionalTarget?.targetPrice || signal.takeProfit;
+    let autoStopLoss = signal.stopLoss;
+    let autoTakeProfit = signal.takeProfit;
     if (autoTradeType === 'SELL') {
       if (autoStopLoss <= liveFillPrice) {
         const stopDist = Math.abs(signal.entry - signal.stopLoss) || (liveFillPrice * 0.004);
@@ -929,9 +929,15 @@ export default function Home() {
       return;
     }
 
-    // 🏛️ Grade Exclusivity Gate: Exclusively execute Grade A & A+ institutional setups (>= 75% confidence)
+    // 🏛️ Pre-Trade Capital-Protection Gate (Sentiment Divergence & Low-Liquidity Transition Window)
+    if (consensus.preTradeCapitalProtectionGate && !consensus.preTradeCapitalProtectionGate.passed) {
+      showNotification(`🛑 PRE-TRADE PROTECTION GATE: ${consensus.preTradeCapitalProtectionGate.blockReason || 'Execution blocked during low-liquidity window or sentiment divergence.'}`);
+      return;
+    }
+
+    // 🏛️ Grade Exclusivity Gate: Exclusively execute verified Grade A+, Grade A, and Grade B institutional setups
     if (consensus.gradeExclusivityFilter && !consensus.gradeExclusivityFilter.isDispatchUnlocked) {
-      showNotification(`🛑 CAPITAL PRESERVATION LOCKOUT: ${consensus.gradeExclusivityFilter.lockoutReason || 'Sub-optimal setup suppressed. Terminal exclusively unlocks Grade A & A+ setups.'}`);
+      showNotification(`🛑 CAPITAL PRESERVATION LOCKOUT: ${consensus.gradeExclusivityFilter.lockoutReason || 'Sub-optimal setup suppressed. Terminal exclusively unlocks Grade A+, Grade A, and Grade B setups.'}`);
       return;
     }
 
@@ -950,12 +956,6 @@ export default function Home() {
     // 🏛️ 1,250+ Technical Strategies Corpus Validation (Historical Failure Rate <= 30% & MTF Aligned)
     if (consensus.technicalCorpusValidation && consensus.technicalCorpusValidation.overallCrossReferenceStatus !== 'PASSED') {
       showNotification(`🛑 1,250+ TECHNICAL CORPUS VETO: Setup discarded due to failure rate > 30% or weak MTF alignment.`);
-      return;
-    }
-
-    // 🛡️ Pre-Trade Capital-Protection Gate: Blocks on Sentiment Divergence or Low-Liquidity Transition Windows
-    if (consensus.preTradeCapitalProtectionGate && !consensus.preTradeCapitalProtectionGate.isExecutionAllowed) {
-      showNotification(`🛑 PRE-TRADE CAPITAL PROTECTION GATE: ${consensus.preTradeCapitalProtectionGate.rejectionReason || 'Execution blocked to preserve capital.'}`);
       return;
     }
 
@@ -1020,8 +1020,8 @@ export default function Home() {
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     // Strict Mathematical Invariant: Guarantee Stop Loss & Target orientation relative to real-time fill
-    let executionStopLoss = consensus.volatilityStopLoss?.stopLossPrice || signal.stopLoss;
-    let executionTakeProfit = consensus.singleInstitutionalTarget?.targetPrice || signal.takeProfit;
+    let executionStopLoss = signal.stopLoss;
+    let executionTakeProfit = signal.takeProfit;
 
     if (tradeType === 'SELL') {
       if (executionStopLoss <= liveFillPrice) {

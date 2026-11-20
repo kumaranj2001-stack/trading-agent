@@ -355,15 +355,23 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </span>
           </span>
 
-          {/* ⚡ Telemetry Bridge Override Status Pill */}
+          {/* ⚡ Pre-Trade Capital-Protection Gate Status Pill */}
           <span className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border ${
-            consensus.telemetryBridgeOverride?.isTriggered
+            consensus.preTradeCapitalProtectionGate?.passed === false
+              ? 'bg-rose-500/25 text-rose-300 border-rose-500 animate-pulse'
+              : consensus.telemetryBridgeOverride?.isTriggered
               ? 'bg-rose-500/25 text-rose-300 border-rose-500 animate-pulse'
               : theme === 'light' ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
           }`}>
             <Activity className="w-3 h-3 text-amber-400" />
             <span>
-              TELEMETRY BRIDGE: {consensus.telemetryBridgeOverride?.isTriggered ? 'SENTIMENT DIVERGENCE (EXECUTION BLOCKED)' : 'SENTIMENT SYNCHRONIZED'}
+              PRE-TRADE PROTECTION: {
+                consensus.preTradeCapitalProtectionGate?.passed === false
+                  ? (consensus.preTradeCapitalProtectionGate.status === 'BLOCKED_LOW_LIQUIDITY_WINDOW' ? 'LOW LIQUIDITY TRANSITION (BLOCKED)' : 'SENTIMENT DIVERGENCE (BLOCKED)')
+                  : consensus.telemetryBridgeOverride?.isTriggered
+                  ? 'SENTIMENT DIVERGENCE (BLOCKED)'
+                  : 'SYNCHRONIZED & LIQUID'
+              }
             </span>
           </span>
 
@@ -537,119 +545,88 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
       )}
 
       {/* Main Unified Signal Display Row */}
-      {consensus.gradeExclusivityFilter?.subOptimalSuppressed ? (
-        /* 🛡️ Sub-Optimal Setup Suppression Gateway (Grade B, C, D, Retail Filtered) */
-        <div className={`p-4 rounded-xl border flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 font-mono shadow-md ${
-          theme === 'light' 
-            ? 'bg-amber-50/90 border-amber-300 text-slate-800' 
-            : 'bg-gradient-to-r from-amber-950/50 via-terminal-950 to-slate-950 border-amber-500/50 text-slate-200'
-        }`}>
-          <div className="flex items-start sm:items-center gap-3.5">
-            <div className="p-3 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/50 shrink-0 shadow-inner">
-              <Lock className="w-8 h-8 animate-pulse" />
-            </div>
-
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xl sm:text-2xl font-black tracking-tight text-amber-400">
-                  CAPITAL PRESERVATION MODE
-                </span>
-                <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/50">
-                  SUB-OPTIMAL SETUP SUPPRESSED
-                </span>
-                <span className="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-terminal-800 text-slate-300 border border-terminal-border">
-                  GRADE {institutionalGrading.grade} ({consensus.overallConfidence}% CONFIDENCE)
-                </span>
-                <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-800 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                  <Sliders className="w-3 h-3 text-amber-400" />
-                  RETAIL FILTER: ACTIVE
-                </span>
-              </div>
-              <p className="text-xs mt-1.5 font-medium text-slate-300 max-w-3xl leading-relaxed">
-                {consensus.gradeExclusivityFilter.lockoutReason ||
-                  'Sub-optimal Grade B/C setup suppressed to eliminate the 60-70% drawdown rate. Execution terminal exclusively unlocks dispatch capabilities for verified Grade A and Grade A+ institutional setups backed by ≥75% confidence score and supermajority specialist consensus.'}
-              </p>
-            </div>
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* Left: Direction + Confluence Grade + Confidence Score */}
+        <div className="flex items-center gap-3.5">
+          <div className={`p-3 rounded-2xl border shadow-inner ${
+            isBuy 
+              ? theme === 'light' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
+              : isSell 
+              ? theme === 'light' ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-rose-500/20 text-rose-400 border-rose-500/40' 
+              : theme === 'light' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+          }`}>
+            {isBuy ? <TrendingUp className="w-8 h-8" /> : isSell ? <TrendingDown className="w-8 h-8" /> : <Scale className="w-8 h-8" />}
           </div>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 shrink-0">
-            <div className="px-3.5 py-2 rounded-xl bg-black/60 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>AWAITING GRADE A/A+ CONFLUENCE</span>
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${
+                isBuy 
+                  ? theme === 'light' ? 'text-emerald-700' : 'text-emerald-400' 
+                  : isSell 
+                  ? theme === 'light' ? 'text-rose-700' : 'text-rose-400' 
+                  : theme === 'light' ? 'text-amber-700' : 'text-amber-400'
+              }`}>
+                {unifiedDecision.direction}
+              </span>
+              <span className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold border ${
+                theme === 'light' ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+              }`}>
+                GRADE {institutionalGrading.grade} (INSTITUTIONAL)
+              </span>
+              <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border flex items-center gap-1 ${
+                theme === 'light' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+              }`} title="Standalone single-oscillator RSI & basic moving average crossovers strictly penalized and relegated to secondary confirmation">
+                <Sliders className="w-3 h-3 text-amber-400" />
+                <span>RETAIL FILTER: ARMED</span>
+              </span>
+              <span className={`px-2 py-0.5 rounded-lg text-xs font-mono font-bold border ${
+                theme === 'light' ? 'bg-cyan-100 text-cyan-900 border-cyan-300' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+              }`}>
+                {consensus.overallConfidence}% CONFIDENCE
+              </span>
             </div>
-            <div className="px-3 py-1.5 rounded-lg bg-terminal-900 border border-terminal-border text-[10px] text-slate-400">
-              Bias: <strong className="text-white">{unifiedDecision.direction} (Withheld)</strong>
-            </div>
+            <p className={`text-xs mt-1 font-mono font-medium ${theme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
+              {unifiedDecision.summary}
+            </p>
           </div>
         </div>
-      ) : (
-        /* 🚀 Verified Grade A / Grade A+ Unlocked Execution Interface */
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          {/* Left: Direction + Confluence Grade + Confidence Score */}
-          <div className="flex items-center gap-3.5">
-            <div className={`p-3 rounded-2xl border shadow-inner ${
-              isBuy 
-                ? theme === 'light' ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' 
-                : isSell 
-                ? theme === 'light' ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-rose-500/20 text-rose-400 border-rose-500/40' 
-                : theme === 'light' ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
-            }`}>
-              {isBuy ? <TrendingUp className="w-8 h-8" /> : isSell ? <TrendingDown className="w-8 h-8" /> : <Scale className="w-8 h-8" />}
-            </div>
 
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${
-                  isBuy 
-                    ? theme === 'light' ? 'text-emerald-700' : 'text-emerald-400' 
-                    : isSell 
-                    ? theme === 'light' ? 'text-rose-700' : 'text-rose-400' 
-                    : theme === 'light' ? 'text-amber-700' : 'text-amber-400'
-                }`}>
-                  {unifiedDecision.direction}
-                </span>
-                <span className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-bold border ${
-                  theme === 'light' ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
-                }`}>
-                  GRADE {institutionalGrading.grade} (INSTITUTIONAL UNLOCKED)
-                </span>
-                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold border flex items-center gap-1 ${
-                  theme === 'light' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                }`}>
-                  <Sliders className="w-3 h-3 text-amber-400" />
-                  <span>RETAIL FILTER: ARMED</span>
-                </span>
-                <span className={`px-2 py-0.5 rounded-lg text-xs font-mono font-bold border ${
-                  theme === 'light' ? 'bg-cyan-100 text-cyan-900 border-cyan-300' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
-                }`}>
-                  {consensus.overallConfidence}% CONFIDENCE
-                </span>
-              </div>
-              <p className={`text-xs mt-1 font-mono font-medium ${theme === 'light' ? 'text-slate-700' : 'text-slate-300'}`}>
-                {unifiedDecision.summary}
-              </p>
-            </div>
+        {/* Right: Execution Dispatch CTA & Live Fill Status */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Status Pills: 1:1 Breakeven Ratchet & Target Mode */}
+          <div className="hidden sm:flex items-center gap-1.5 font-mono text-[10px]">
+            <span className="px-2 py-1 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-indigo-400" />
+              1:1 BREAKEVEN RATCHET: ARMED
+            </span>
+            <span className="px-2 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+              <Target className="w-3 h-3 text-cyan-400" />
+              DETERMINISTIC SINGLE TARGET
+            </span>
+            <span className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+              <Crosshair className="w-3 h-3 text-emerald-400" />
+              5-PIP BUFFERED ATR SL
+            </span>
           </div>
 
-          {/* Right: Execution Dispatch CTA & Live Fill Status */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {/* Status Pills: 1:1 Breakeven Ratchet & Target Mode */}
-            <div className="hidden sm:flex items-center gap-1.5 font-mono text-[10px]">
-              <span className="px-2 py-1 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-                <ShieldCheck className="w-3 h-3 text-indigo-400" />
-                1:1 BREAKEVEN: ARMED
-              </span>
-              <span className="px-2 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
-                <Target className="w-3 h-3 text-cyan-400" />
-                SINGLE TARGET
-              </span>
-              <span className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                <Crosshair className="w-3 h-3 text-emerald-400" />
-                1.5x ATR VOLATILITY SL
-              </span>
+          {/* Capital Preservation Gateway & Execution Dispatch */}
+          {consensus.gradeExclusivityFilter?.isDispatchUnlocked === false || !consensus.executionSignal.authorized ? (
+            <div className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2.5 border shadow-md ${
+              theme === 'light' ? 'bg-amber-100/90 border-amber-300 text-amber-950' : 'bg-amber-950/50 border-amber-500/50 text-amber-300'
+            }`}>
+              <Lock className="w-5 h-5 text-amber-400 shrink-0 animate-pulse" />
+              <div className="flex flex-col text-left">
+                <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1">
+                  CAPITAL PRESERVATION GATEWAY LOCKED
+                </span>
+                <span className="text-[10px] opacity-90 font-medium">
+                  {consensus.gradeExclusivityFilter?.lockoutReason || 'Sub-optimal setup suppressed. Terminal exclusively unlocks Grade A, Grade A+, and Grade B setups backed by high confidence & supermajority consensus.'}
+                </span>
+              </div>
             </div>
-
-            {onExecuteTrade && (
+          ) : (
+            onExecuteTrade && (
               <button
                 onClick={onExecuteTrade}
                 className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all shadow-md cursor-pointer ${
@@ -662,10 +639,10 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                 <span>DISPATCH {unifiedDecision.direction} (GRADE {institutionalGrading.grade} UNLOCKED) @ LIVE BID/ASK</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
-            )}
-          </div>
+            )
+          )}
         </div>
-      )}
+      </div>
 
       {/* 🧬 Interactive Seven-Stage Sequential Pipeline Drawer */}
       {showPipelineDetails && (
@@ -848,7 +825,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
       )}
 
       {/* ⚓ Deterministic State-Latching Anchor Strip */}
-      {consensus.latchedState && consensus.latchedState.isLatched && !consensus.gradeExclusivityFilter?.subOptimalSuppressed && (
+      {consensus.latchedState && consensus.latchedState.isLatched && (
         <div className={`mt-3 p-3 rounded-xl border text-xs font-mono transition-all ${
           theme === 'light' ? 'bg-cyan-50/80 border-cyan-200 text-slate-800' : 'bg-terminal-950/80 border-cyan-500/30 text-cyan-200'
         }`}>
@@ -892,7 +869,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
       )}
 
       {/* 🚀 UNLIMITED PROFIT MAXIMIZATION & ZERO-LOSS EXPOSURE PROTOCOL */}
-      {consensus.entryProximityFilter && !consensus.gradeExclusivityFilter?.subOptimalSuppressed && (
+      {consensus.entryProximityFilter && (
         <div className={`mt-3 p-3.5 sm:p-4 rounded-xl border font-mono text-xs shadow-md transition-all ${
           theme === 'light' 
             ? 'bg-gradient-to-r from-emerald-50/80 via-indigo-50/60 to-cyan-50/80 border-indigo-200 text-slate-800' 
@@ -929,7 +906,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             <div className="flex items-center justify-between text-[11px] font-bold flex-wrap gap-2">
               <span className="text-indigo-400 flex items-center gap-1.5">
                 <Target className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Deterministic Institutional Target & Dynamic Volatility SL (Multi-Tier Expansion Deprecated)</span>
+                <span>Single Deterministic Institutional Target & 5-Pip Buffered Volatility Stop Loss</span>
               </span>
               <span className="text-emerald-400 text-[10px] flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3 text-emerald-400" />
@@ -1596,15 +1573,11 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                   INSTITUTIONAL STRATEGY CORPUS & ORDER FLOW GOVERNANCE
                 </span>
                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                  institutionalGrading.grade === 'A+' || institutionalGrading.grade === 'A'
+                  institutionalGrading.isGradeAPlus
                     ? 'bg-emerald-500/25 text-emerald-300 border-emerald-400/60 shadow-sm animate-pulse'
-                    : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                    : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
                 }`}>
-                  {institutionalGrading.grade === 'A+'
-                    ? 'GRADE A+ SETUP (INSTITUTIONAL UNLOCKED)'
-                    : institutionalGrading.grade === 'A'
-                    ? 'GRADE A SETUP (INSTITUTIONAL UNLOCKED)'
-                    : `GRADE ${institutionalGrading.grade} SETUP (SUB-OPTIMAL SUPPRESSED)`}
+                  GRADE {institutionalGrading.grade} SETUP ({institutionalGrading.isGradeAPlus ? 'GRADE A+' : 'GRADE A'})
                 </span>
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
                   CONFLUENCE: {institutionalGrading.metaConsensusProbability}%
@@ -1655,8 +1628,8 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 font-mono">
             {/* 1. Supermajority Alignment */}
             <div className="flex items-center gap-1.5 p-1 rounded bg-black/20">
-              <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${(chiefAudit?.agreeCount ?? institutionalGrading.agreeDeskCount) >= 5 ? 'text-emerald-400' : 'text-rose-400'}`} />
-              <span className="truncate">Desks: &ge;5/6 Agree ({(chiefAudit?.agreeCount ?? institutionalGrading.agreeDeskCount)}/6 VERIFIED)</span>
+              <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 ${institutionalGrading.agreeDeskCount >= 4 ? 'text-emerald-400' : 'text-rose-400'}`} />
+              <span className="truncate">Desks: &ge;4/5 Agree ({institutionalGrading.agreeDeskCount}/5 VERIFIED)</span>
             </div>
 
             {/* 2. Meta-Consensus Probability */}

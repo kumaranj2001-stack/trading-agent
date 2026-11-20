@@ -138,11 +138,11 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded font-bold border shrink-0 ${
                     confluenceGrade === 'A+' || confluenceGrade === 'A'
                       ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                      : 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : confluenceGrade === 'B'
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
+                      : 'bg-rose-500/20 text-rose-400 border-rose-500/40'
                   }`}>
-                    {confluenceGrade === 'A+' || confluenceGrade === 'A'
-                      ? `GRADE ${confluenceGrade} (UNLOCKED)`
-                      : `CAPITAL PRESERVATION (GRADE ${confluenceGrade} SUPPRESSED)`}
+                    GRADE {confluenceGrade}
                   </span>
                 )}
               </div>

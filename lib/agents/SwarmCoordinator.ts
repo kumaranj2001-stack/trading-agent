@@ -659,6 +659,15 @@ export class SwarmCoordinator {
     });
 
     // 🏛️ INSTITUTIONAL CAPITAL PRESERVATION & DETERMINISTIC TARGET ARCHITECTURE
+    // 0. Pre-Trade Capital-Protection Gate: blocks on sentiment divergence or low-liquidity transition window
+    const preTradeCapitalProtectionGate = institutionalCapitalPreservationEngine.validatePreTradeCapitalProtectionGate({
+      symbol: pair,
+      direction: activeDirection,
+      technical,
+      news,
+      forex,
+    });
+
     // 1. Hardcoded Telemetry Bridge Override: blocks trades during sentiment-structure divergence
     const telemetryBridgeOverride = institutionalCapitalPreservationEngine.validateTelemetryBridgeOverride({
       symbol: pair,
@@ -667,23 +676,14 @@ export class SwarmCoordinator {
       news,
     });
 
-    // 2. 1,250+ Technical Strategies Cross-Reference: failure rate <= 30%, MTF aligned & institutional confluence
+    // 2. 1,250+ Technical & Fundamental Strategies Cross-Reference: failure rate <= 30% & multi-timeframe alignment
     const technicalCorpusValidation = institutionalCapitalPreservationEngine.validateTechnicalStrategiesCorpus({
       symbol: pair,
       direction: activeDirection,
       technical,
-      candles: marketCandles,
       fundamental,
       news,
-    });
-
-    // 2.5 Pre-Trade Capital-Protection Gate: blocks on sentiment divergence or low-liquidity transition windows
-    const preTradeCapitalProtectionGate = institutionalCapitalPreservationEngine.validatePreTradeCapitalProtectionGate({
-      symbol: pair,
-      direction: activeDirection,
-      technical,
-      news,
-      forex,
+      candles: marketCandles,
     });
 
     // 3. Binding 7-Agent Consensus: supermajority (>= 5/6) and zero critical desk dissent (News Wire)
@@ -714,14 +714,14 @@ export class SwarmCoordinator {
       finalTakeProfit = singleInstitutionalTarget.targetPrice;
     }
 
-    // 6. Institutional Grade Exclusivity Filter: exclusively unlocks Grade A / A+ (>= 75% confidence)
+    // 6. Institutional Grade Exclusivity Filter: exclusively unlocks Grade A, A+, and verified Grade B setups
     const gradeExclusivityFilter = institutionalCapitalPreservationEngine.evaluateGradeExclusivityFilter({
       confluenceGrade,
       confidenceScore: overallConfidence,
       bindingConsensus: bindingConsensusValidation,
       telemetryBridge: telemetryBridgeOverride,
       technicalCorpus: technicalCorpusValidation,
-      capitalProtectionGate: preTradeCapitalProtectionGate,
+      preTradeGate: preTradeCapitalProtectionGate,
     });
 
     // 🛡️ Strict Risk Management Workflow Priority & Absolute Capital Preservation Verification
@@ -765,12 +765,20 @@ export class SwarmCoordinator {
     });
 
     // Mandatory Capital Preservation Gating:
-    // Any violation of Grade A/A+ exclusivity, critical desk dissent, sentiment-structure divergence,
+    // Any violation of Grade A/A+/B exclusivity, critical desk dissent, sentiment-structure divergence,
     // low-liquidity transition window, failure rate > 30%, or lack of supermajority strictly blocks execution!
     const hasCapitalPreservationLockout = 
       !gradeExclusivityFilter.isDispatchUnlocked ||
-      !preTradeCapitalProtectionGate.isExecutionAllowed ||
+      !preTradeCapitalProtectionGate.passed ||
       chiefReviewerAudit.status === 'VETOED' ||
+      telemetryBridgeOverride.isTriggered ||
+      bindingConsensusValidation.hasCriticalDeskDissent ||
+      !bindingConsensusValidation.isSupermajorityAchieved ||
+      technicalCorpusValidation.overallCrossReferenceStatus !== 'PASSED' ||
+      !capitalPreservationGate.passed ||
+      !invalidCriteriaGate.allowed ||
+      !riskWorkflowCompleted ||
+      failSafePauseActive;
       telemetryBridgeOverride.isTriggered ||
       bindingConsensusValidation.hasCriticalDeskDissent ||
       !bindingConsensusValidation.isSupermajorityAchieved ||

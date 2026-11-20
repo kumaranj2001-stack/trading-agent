@@ -1363,7 +1363,7 @@ export interface SwarmConsensusResult {
   technicalCorpusValidation?: TechnicalCorpusCrossReferenceValidation;
   bindingConsensusValidation?: BindingConsensusValidation;
   gradeExclusivityFilter?: InstitutionalGradeExclusivityFilter;
-  preTradeCapitalProtectionGate?: PreTradeCapitalProtectionGate;
+  preTradeCapitalProtectionGate?: PreTradeCapitalProtectionGateResult;
 }
 
 // ============================================================================
@@ -2012,14 +2012,33 @@ export interface TelemetryBridgeOverrideStatus {
   explanation: string;
 }
 
+export interface PreTradeCapitalProtectionGateResult {
+  passed: boolean;
+  status: 'CLEARED_FOR_EXECUTION' | 'BLOCKED_SENTIMENT_DIVERGENCE' | 'BLOCKED_LOW_LIQUIDITY_WINDOW' | 'BLOCKED_HIGH_FAILURE_RATE' | 'BLOCKED_WEAK_MTF';
+  sentimentDivergenceDetected: boolean;
+  lowLiquidityWindowDetected: boolean;
+  activeSession: string;
+  liquidityRating: 'OPTIMAL' | 'MODERATE' | 'LOW' | 'THIN';
+  blockReason?: string;
+  protectiveAction: 'EXECUTION_ALLOWED' | 'EXECUTION_BLOCKED';
+}
+
 export interface TechnicalCorpusCrossReferenceValidation {
-  totalStrategiesCrossReferenced: number; // 1,250
+  totalStrategiesCrossReferenced: number; // 1,250 technical + 1,250 fundamental
   maxHistoricalFailureRateThreshold: number; // 30.0%
   minimumRequiredWinRate: number; // 70.0%
   concordantStrategiesCount: number;
   averageHistoricalWinRate: number; // e.g. 78.4%
   averageHistoricalFailureRate: number; // e.g. 21.6%
   historicalFailureRatePassed: boolean; // failureRate <= 30%
+  multiDimensionalConfluence: {
+    smcOrderBlockConfirmed: boolean;
+    fvgImbalanceConfirmed: boolean;
+    structuralShiftConfirmed: boolean;
+    macroYieldDifferentialConfirmed: boolean;
+    realTimeSentimentAligned: boolean;
+    confluenceSummary: string;
+  };
   multiTimeframeAlignment: {
     dailyTrend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
     fourHourTrend: 'BULLISH' | 'BEARISH' | 'NEUTRAL';
@@ -2028,30 +2047,7 @@ export interface TechnicalCorpusCrossReferenceValidation {
     isAligned: boolean;
     alignmentStatus: 'STRONG_MTF_ALIGNMENT' | 'WEAK_MTF_ALIGNMENT_DISCARD';
   };
-  institutionalConfluence?: {
-    orderBlockVerified: boolean;
-    orderBlockDescription: string;
-    fairValueGapVerified: boolean;
-    fairValueGapDescription: string;
-    structuralShiftVerified: boolean;
-    structuralShiftDescription: string;
-    macroYieldDifferentialVerified: boolean;
-    macroYieldDifferentialDescription: string;
-    sentimentAlignmentVerified: boolean;
-    sentimentAlignmentDescription: string;
-    isFullyConfluent: boolean;
-  };
-  overallCrossReferenceStatus: 'PASSED' | 'DISCARDED_HIGH_FAILURE_RATE' | 'DISCARDED_WEAK_MTF' | 'DISCARDED_LACK_OF_CONFLUENCE';
-}
-
-export interface PreTradeCapitalProtectionGate {
-  isExecutionAllowed: boolean;
-  newsSentimentDivergence: boolean;
-  newsSentimentDivergenceReason?: string;
-  isLowLiquidityTransition: boolean;
-  lowLiquidityWindowName?: string;
-  lowLiquidityReason?: string;
-  rejectionReason?: string;
+  overallCrossReferenceStatus: 'PASSED' | 'DISCARDED_HIGH_FAILURE_RATE' | 'DISCARDED_WEAK_MTF' | 'DISCARDED_CONFLUENCE_FAILURE';
 }
 
 export interface BindingConsensusValidation {
@@ -2072,13 +2068,15 @@ export interface BindingConsensusValidation {
 }
 
 export interface InstitutionalGradeExclusivityFilter {
+  isVerifiedInstitutionalGrade: boolean; // Grade A+, Grade A, or Grade B verified
   isGradeAorAPlus: boolean;
+  isGradeBVerified: boolean;
   assignedGrade: ConfluenceGrade;
   confidenceScore: number;
-  minimumRequiredConfidence: number; // 75.0%
+  minimumRequiredConfidence: number; // 75.0% for A/A+, 70.0% for B
   isDispatchUnlocked: boolean;
   lockoutReason?: string;
-  subOptimalSuppressed: boolean; // Grades B to F suppressed
+  subOptimalSuppressed: boolean; // Grade C to F and retail-filtered suppressed
 }
 
 export interface RiskGovernanceGatekeeperResult {

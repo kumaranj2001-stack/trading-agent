@@ -93,16 +93,10 @@ export class AutomatedSignalValidationModule {
       status = 'APPROVED_WITHIN_BAND';
     }
 
-    const toleranceBandDescription = `Unlimited Profit Potential Active (50-pip cap removed). Live variance: ${pipDistance} pips. Single deterministic institutional target & dynamic ATR volatility stop loss engaged.`;
+    const toleranceBandDescription = `Institutional Single Target Active. Live variance: ${pipDistance} pips. Single deterministic institutional target & 5-pip buffered dynamic ATR volatility stop loss engaged.`;
 
-    // Multi-tier expansion target projections strictly aligned with trade direction (DEPRECATED fallback)
+    // Multi-tier expansion roadmaps are completely deprecated and removed in favor of single deterministic target
     const isSellDirection = direction === 'SELL' || (direction === undefined && proposedEntry < livePrice);
-    const expansionTargets = {
-      tp1: Number((livePrice + (isSellDirection ? -35 : 35) * pipMultiplier).toFixed(decimals)),
-      tp2: Number((livePrice + (isSellDirection ? -85 : 85) * pipMultiplier).toFixed(decimals)),
-      tp3: Number((livePrice + (isSellDirection ? -180 : 180) * pipMultiplier).toFixed(decimals)),
-      openRunnerPips: 'UNCAPPED (Trailing ATR Pivots)',
-    };
 
     // Calculate Single Deterministic Institutional Target & Dynamic Volatility Stop Loss
     const effectiveDir: 'BUY' | 'SELL' = isSellDirection ? 'SELL' : 'BUY';
@@ -139,7 +133,6 @@ export class AutomatedSignalValidationModule {
       dynamicTrailingRunnerActive: true,
       singleInstitutionalTarget,
       volatilityStopLoss,
-      expansionTargets,
     };
   }
 
