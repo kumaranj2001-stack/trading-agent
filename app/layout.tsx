@@ -4,7 +4,7 @@ import { TradingProvider } from '@/lib/tradingContext';
 
 export const metadata: Metadata = {
   title: 'Qri Trader // Autonomous Multi-Agent Trading Swarm',
-  description: 'Qri Trader - Autonomous multi-agent trading intelligence featuring Technical Analyst, Fundamental Analyst, Forex Market Analyst, News Analyst, and Risk Manager roles with 1,050+ rule institutional knowledge base.',
+  description: 'Qri Trader - Autonomous multi-agent trading intelligence featuring Technical Analyst, Fundamental Analyst, Forex Market Analyst, News Analyst, and Risk Manager roles with 2,500+ quantitative strategy institutional knowledge base.',
   keywords: ['Qri Trader', 'Forex', 'NSE', 'Trading Swarm', 'Multi-Agent AI', 'Risk Management', 'Algorithmic Trading', 'Technical Analysis'],
   authors: [{ name: 'Qri Trader' }],
 };

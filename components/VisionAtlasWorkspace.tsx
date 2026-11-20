@@ -352,15 +352,15 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
   if (workspaceMode === 'infinity-vision') {
     return (
       <div className="relative w-full rounded-xl border border-terminal-border bg-terminal-950/90 shadow-xl overflow-hidden">
-        {/* Switcher Pill to 1,050+ Strategies Matrix */}
+        {/* Switcher Pill to 2,500+ Strategies Matrix */}
         <div className="absolute top-2 right-4 z-40 hidden lg:flex items-center gap-1.5">
           <button
             onClick={() => setWorkspaceMode('confluence-matrix')}
             className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-slate-900/90 hover:bg-black text-cyan-300 border border-cyan-500/40 shadow-lg flex items-center gap-1 transition-all"
-            title="Switch to 1,050+ Multi-Factor Confluence Dashboard"
+            title="Switch to 2,500+ Multi-Factor Confluence Dashboard"
           >
             <Cpu className="w-3 h-3 text-cyan-400" />
-            <span>1,050+ MATRIX</span>
+            <span>2,500+ MATRIX</span>
           </button>
         </div>
 
@@ -428,7 +428,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-mono truncate">
-              525 Fundamental + 525 Technical Parallel Ingestion • Low-Latency WebSocket/SSE • Institutional Pattern Filtering
+              1,250 Fundamental + 1,250 Technical Parallel Ingestion • Low-Latency WebSocket/SSE • Institutional Pattern Filtering
             </p>
           </div>
         </div>
@@ -533,7 +533,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
           )}
 
           {/* ========================================================================= */}
-          {/* MULTI-FACTOR CONFLUENCE DASHBOARD: 1,050+ INSTITUTIONAL STRATEGIES */}
+          {/* MULTI-FACTOR CONFLUENCE DASHBOARD: 2,500+ INSTITUTIONAL STRATEGIES */}
           {/* ========================================================================= */}
 
           {/* Top Confluence Command & View Switcher Bar */}
@@ -599,9 +599,9 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                 }`}
               >
                 <Search className="w-3.5 h-3.5 text-cyan-200" />
-                <span>1,050+ Strategies</span>
+                <span>2,500+ Strategies</span>
                 <span className="ml-1 px-1.5 py-0.2 rounded bg-terminal-800 text-[10px] text-cyan-300 font-bold border border-cyan-500/30">
-                  1,050
+                  2,500
                 </span>
               </button>
             </div>
@@ -686,13 +686,13 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                           <span className="px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[10px] font-mono font-bold tracking-wider">
                             GRADE {payload?.multiFactorConfluence?.grade || 'A+'} PRIMED
                           </span>
-                          <span className="text-[10px] text-slate-400 font-mono">1,050+ STRATEGIES</span>
+                          <span className="text-[10px] text-slate-400 font-mono">2,500+ STRATEGIES</span>
                         </div>
                         <h3 className="text-sm sm:text-base font-bold text-white tracking-wide truncate">
                           {payload?.multiFactorConfluence?.activeSetupName || 'Multi-Factor Institutional Quant Setup'}
                         </h3>
                         <p className="text-xs text-slate-400 leading-snug line-clamp-2 max-w-xl">
-                          {payload?.multiFactorConfluence?.institutionalRationale || 'Unified pipeline synthesizing 525 technical heuristics and 525 fundamental models with institutional confidence weighting.'}
+                          {payload?.multiFactorConfluence?.institutionalRationale || 'Unified pipeline synthesizing 1,250 technical heuristics and 1,250 fundamental models with institutional confidence weighting.'}
                         </p>
                       </div>
                     </div>
@@ -762,7 +762,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                       {/* Dynamic Institutional Calibration Rationale Banner */}
                       <div className="p-2 bg-cyan-950/30 border border-cyan-500/20 rounded-lg text-[11px] text-cyan-200/90 font-mono flex items-start gap-2">
                         <Sparkles className="w-3.5 h-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                        <span>{payload?.multiFactorConfluence?.dynamicWeights.rationale || 'Weights dynamically allocated across 525 technical heuristics and 525 fundamental models based on real-time asset class and market regime.'}</span>
+                        <span>{payload?.multiFactorConfluence?.dynamicWeights.rationale || 'Weights dynamically allocated across 1,250 technical heuristics and 1,250 fundamental models based on real-time asset class and market regime.'}</span>
                       </div>
                     </div>
                   </div>
@@ -770,19 +770,19 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                   {/* 4 Summary Stat Pills */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 pt-1 text-xs font-mono">
                     <div className="p-2.5 bg-terminal-950/70 border border-terminal-border/80 rounded-lg space-y-0.5">
-                      <div className="text-[10px] text-slate-400 uppercase">525 Technical Rules</div>
+                      <div className="text-[10px] text-slate-400 uppercase">1,250 Technical Rules</div>
                       <div className="text-white font-bold flex items-center gap-1.5">
-                        <span className="text-cyan-300">{payload?.multiFactorConfluence?.technicalStream.passingRulesCount || 489}</span>
-                        <span className="text-slate-500">/ 525 Passing</span>
+                        <span className="text-cyan-300">{payload?.multiFactorConfluence?.technicalStream.passingRulesCount || 1160}</span>
+                        <span className="text-slate-500">/ 1,250 Passing</span>
                         <span className="text-[10px] text-emerald-400">({payload?.multiFactorConfluence?.technicalStream.streamConfidence || 93.1}%)</span>
                       </div>
                     </div>
 
                     <div className="p-2.5 bg-terminal-950/70 border border-terminal-border/80 rounded-lg space-y-0.5">
-                      <div className="text-[10px] text-slate-400 uppercase">525 Fundamental Models</div>
+                      <div className="text-[10px] text-slate-400 uppercase">1,250 Fundamental Models</div>
                       <div className="text-white font-bold flex items-center gap-1.5">
-                        <span className="text-indigo-300">{payload?.multiFactorConfluence?.fundamentalStream.passingRulesCount || 482}</span>
-                        <span className="text-slate-500">/ 525 Supportive</span>
+                        <span className="text-indigo-300">{payload?.multiFactorConfluence?.fundamentalStream.passingRulesCount || 1148}</span>
+                        <span className="text-slate-500">/ 1,250 Supportive</span>
                         <span className="text-[10px] text-emerald-400">({payload?.multiFactorConfluence?.fundamentalStream.streamConfidence || 91.8}%)</span>
                       </div>
                     </div>
@@ -807,7 +807,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                 {/* 2. DUAL-PANEL SIDE-BY-SIDE VISUAL MAPPING */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {/* ========================================================================= */}
-                  {/* LEFT PANEL: MACRO-FUNDAMENTAL DATA VISUALIZER (525 RULES STREAM) */}
+                  {/* LEFT PANEL: MACRO-FUNDAMENTAL DATA VISUALIZER (1,250 RULES STREAM) */}
                   {/* ========================================================================= */}
                   <div className="p-4 bg-terminal-900/90 border border-terminal-border rounded-xl shadow-lg space-y-3.5">
                     <div className="flex items-center justify-between pb-2 border-b border-terminal-border/80">
@@ -820,7 +820,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                             Macro-Fundamental Stream
                           </h4>
                           <span className="text-[10px] text-slate-400 font-mono">
-                            525 Institutional Models • Central Banks • Indian Market Flow
+                            1,250 Institutional Models • Central Banks • Indian Market Flow
                           </span>
                         </div>
                       </div>
@@ -944,7 +944,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                     <div className="space-y-1.5 font-mono">
                       <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
                         <span>TOP ACTIVE FUNDAMENTAL RULES ({payload?.multiFactorConfluence?.fundamentalStream.topMatchedRules.length || 0})</span>
-                        <span className="text-[10px] text-slate-400">Citations from 525 Models</span>
+                        <span className="text-[10px] text-slate-400">Citations from 1,250 Models</span>
                       </div>
                       <div className="space-y-1.5">
                         {payload?.multiFactorConfluence?.fundamentalStream.topMatchedRules.slice(0, 3).map(rule => (
@@ -968,7 +968,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                   </div>
 
                   {/* ========================================================================= */}
-                  {/* RIGHT PANEL: HIGH-ACCURACY TECHNICAL SETUPS VISUALIZER (525 RULES STREAM) */}
+                  {/* RIGHT PANEL: HIGH-ACCURACY TECHNICAL SETUPS VISUALIZER (1,250 RULES STREAM) */}
                   {/* ========================================================================= */}
                   <div className="p-4 bg-terminal-900/90 border border-terminal-border rounded-xl shadow-lg space-y-3.5">
                     <div className="flex items-center justify-between pb-2 border-b border-terminal-border/80">
@@ -981,7 +981,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                             High-Accuracy Technical Setups
                           </h4>
                           <span className="text-[10px] text-slate-400 font-mono">
-                            525 Technical Heuristics • SMC • Nifty Setups • MTF
+                            1,250 Technical Heuristics • SMC • Nifty Setups • MTF
                           </span>
                         </div>
                       </div>
@@ -997,7 +997,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                           <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
                           <span>10-CATEGORY TECHNICAL HEURISTICS HEATMAP</span>
                         </span>
-                        <span className="text-[10px] text-cyan-300 font-bold">525 TOTAL RULES</span>
+                        <span className="text-[10px] text-cyan-300 font-bold">1,250 TOTAL RULES</span>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 pt-1">
@@ -1103,7 +1103,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                     <div className="space-y-1.5 font-mono">
                       <div className="text-[11px] font-bold text-slate-300 flex items-center justify-between">
                         <span>TOP ACTIVE TECHNICAL HEURISTICS ({payload?.multiFactorConfluence?.technicalStream.topMatchedRules.length || 0})</span>
-                        <span className="text-[10px] text-slate-400">Citations from 525 Rules</span>
+                        <span className="text-[10px] text-slate-400">Citations from 1,250 Rules</span>
                       </div>
                       <div className="space-y-1.5">
                         {payload?.multiFactorConfluence?.technicalStream.topMatchedRules.slice(0, 3).map(rule => (
@@ -1137,7 +1137,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                       </h4>
                     </div>
                     <span className="text-[10px] text-slate-400">
-                      Synthesized Across 1,050+ Knowledge Rules
+                      Synthesized Across 2,500+ Knowledge Rules
                     </span>
                   </div>
 
@@ -1214,7 +1214,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                         Institutional 10-Factor Confluence Matrix & Correlation Weights
                       </h3>
                       <p className="text-xs text-slate-400">
-                        Multi-layered quantitative alignment across 525 Technical Heuristics and 525 Macro-Fundamental Models
+                        Multi-layered quantitative alignment across 1,250 Technical Heuristics and 1,250 Macro-Fundamental Models
                       </p>
                     </div>
                   </div>
@@ -1265,7 +1265,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
             )}
 
             {/* ========================================================================= */}
-            {/* VIEW 3: 1,050+ INSTITUTIONAL STRATEGY KNOWLEDGE EXPLORER */}
+            {/* VIEW 3: 2,500+ INSTITUTIONAL STRATEGY KNOWLEDGE EXPLORER */}
             {/* ========================================================================= */}
             {activeDashboardView === 'knowledge-explorer' && (
               <div className="p-5 bg-terminal-900/90 border border-terminal-border rounded-xl shadow-xl space-y-4 font-mono">
@@ -1274,10 +1274,10 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                     <Search className="w-5 h-5 text-cyan-400" />
                     <div>
                       <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                        1,050+ Institutional Strategy Knowledge Base
+                        2,500+ Institutional Strategy Knowledge Base
                       </h3>
                       <p className="text-xs text-slate-400">
-                        525 Technical Heuristics + 525 Macro-Fundamental Models • Real-Time Confluence Matcher
+                        1,250 Technical Heuristics + 1,250 Macro-Fundamental Models • Real-Time Confluence Matcher
                       </p>
                     </div>
                   </div>
@@ -1287,7 +1287,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                     <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                     <input
                       type="text"
-                      placeholder="Search 1,050 rules by ID, keyword..."
+                      placeholder="Search 2,500 rules by ID, keyword..."
                       value={strategySearchQuery}
                       onChange={(e) => setStrategySearchQuery(e.target.value)}
                       className="w-full pl-9 pr-3 py-1.5 bg-terminal-950 border border-terminal-border rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
@@ -1339,7 +1339,7 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                   return (
                     <div className="space-y-2">
                       <div className="text-[11px] text-slate-400 flex items-center justify-between">
-                        <span>Showing {filtered.length} of {allRules.length} institutional & operative rules (1,050 baseline + {dynamicRules.length} synthesized)</span>
+                        <span>Showing {filtered.length} of {allRules.length} institutional & operative rules (2,500 baseline + {dynamicRules.length} synthesized)</span>
                         <span className="text-cyan-400">Click any card to inspect full criteria & invalidation</span>
                       </div>
 
@@ -1663,10 +1663,10 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                 FOUR SPECIALIZED BACKEND ENGINES
               </span>
 
-              {/* Technical 525 */}
+              {/* Technical 1,250 */}
               <div className="p-2 rounded bg-terminal-900 border border-terminal-border text-[10px] space-y-0.5">
                 <div className="flex items-center justify-between text-cyan-300 font-bold">
-                  <span>1. TECHNICAL ENGINE (525 INDICATORS)</span>
+                  <span>1. TECHNICAL ENGINE (1,250 INDICATORS)</span>
                   <span className="text-emerald-400">{payload?.strategyEngines.technical.activeBullishSetups} Bullish</span>
                 </div>
                 <p className="text-slate-400 text-[9px] truncate">
@@ -1674,10 +1674,10 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                 </p>
               </div>
 
-              {/* Fundamental 525 */}
+              {/* Fundamental 1,250 */}
               <div className="p-2 rounded bg-terminal-900 border border-terminal-border text-[10px] space-y-0.5">
                 <div className="flex items-center justify-between text-indigo-300 font-bold">
-                  <span>2. FUNDAMENTAL ENGINE (525 MODELS)</span>
+                  <span>2. FUNDAMENTAL ENGINE (1,250 MODELS)</span>
                   <span className="text-cyan-400">Taylor Model</span>
                 </div>
                 <p className="text-slate-400 text-[9px] truncate">
@@ -1761,23 +1761,23 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                 </span>
               </div>
 
-              {/* 525 Technical Pipeline Stats */}
+              {/* 1,250 Technical Pipeline Stats */}
               <div className="p-2 rounded bg-terminal-900 border border-terminal-border text-[10px] space-y-1">
                 <div className="flex items-center justify-between text-cyan-300 font-bold">
-                  <span>525 TECHNICAL INDICATORS PIPELINE</span>
-                  <span className="text-emerald-400">{payload?.parallelTelemetry?.technicalPipeline.bullishCount || 497} Passing</span>
+                  <span>1,250 TECHNICAL INDICATORS PIPELINE</span>
+                  <span className="text-emerald-400">{payload?.parallelTelemetry?.technicalPipeline.bullishCount || 1160} Passing</span>
                 </div>
                 <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono">
                   <span>Execution: {payload?.parallelTelemetry?.technicalPipeline.executionTimeMs || 8.2}ms</span>
-                  <span>5 Dedicated Parallel Channels (105 ea)</span>
+                  <span>5 Dedicated Parallel Channels (250 ea)</span>
                 </div>
               </div>
 
-              {/* 525 Fundamental Pipeline Stats */}
+              {/* 1,250 Fundamental Pipeline Stats */}
               <div className="p-2 rounded bg-terminal-900 border border-terminal-border text-[10px] space-y-1">
                 <div className="flex items-center justify-between text-indigo-300 font-bold">
-                  <span>525 FUNDAMENTAL MODELS PIPELINE</span>
-                  <span className="text-cyan-400">{payload?.parallelTelemetry?.fundamentalPipeline.supportiveCount || 499} Supportive</span>
+                  <span>1,250 FUNDAMENTAL MODELS PIPELINE</span>
+                  <span className="text-cyan-400">{payload?.parallelTelemetry?.fundamentalPipeline.supportiveCount || 1148} Supportive</span>
                 </div>
                 <div className="flex items-center justify-between text-[9px] text-slate-400 font-mono">
                   <span>Execution: {payload?.parallelTelemetry?.fundamentalPipeline.executionTimeMs || 6.4}ms</span>

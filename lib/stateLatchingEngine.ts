@@ -231,27 +231,27 @@ export class StateLatchingEngine {
     const fundamentalScore = consensus.agents.fundamental.confidenceScore;
     const newsScore = consensus.agents.news.confidenceScore;
 
-    // Structural alignment bonus: Target closer to POC / conservative target boosts win probability
+    const baseConfidence = consensus.overallConfidence || 65;
     const currentRR = consensus.executionSignal.riskReward || 2.2;
     const isConservativeRR = currentRR <= 2.4; // 1.5 to 2.4 RR has much higher statistical execution rate
 
-    let calculatedWinProb = Number((
-      (baseWinRate * 0.35) +
-      (technicalScore * 0.25) +
-      (fundamentalScore * 0.20) +
-      (newsScore * 0.20) +
-      (isConservativeRR ? 7.5 : -3.0)
+    // Synchronize win probability with Monte Carlo and overallConfidence to maintain mathematical coherence
+    let calculatedWinProb = consensus.agents.risk.monteCarlo?.projectedProfitProbability || Number((
+      (baseConfidence * 0.70) +
+      (baseWinRate * 0.20) +
+      (isConservativeRR ? 2.5 : -2.0) +
+      ((technicalScore >= 70 ? 2 : 0) + (fundamentalScore >= 70 ? 2 : 0))
     ).toFixed(1));
 
-    // Cap between 45% and 88%
-    calculatedWinProb = Math.min(88.0, Math.max(45.0, calculatedWinProb));
+    // Cap between 35% and 94%
+    calculatedWinProb = Math.min(94.0, Math.max(35.0, calculatedWinProb));
 
     // Probability-First Elevation Rule:
-    // If Monte Carlo win probability exceeds 70%, elevate grade classification to Grade A or B
+    // Only elevate grade if both win probability and overall confidence are >= 70%
     let finalGrade: ConfluenceGrade = consensus.confluenceGrade;
     let probabilityFirstBoost = false;
 
-    if (calculatedWinProb >= 70.0) {
+    if (calculatedWinProb >= 70.0 && baseConfidence >= 70.0) {
       probabilityFirstBoost = true;
       if (finalGrade === 'C' || finalGrade === 'D' || finalGrade === 'E' || finalGrade === 'F') {
         finalGrade = calculatedWinProb >= 76.0 ? 'A' : 'B';

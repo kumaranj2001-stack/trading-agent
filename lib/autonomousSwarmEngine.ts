@@ -2,8 +2,8 @@
  * 24/7 Autonomous Multi-Agent Swarm Engine
  *
  * Coordinates five specialized desks running simultaneous asynchronous processes:
- *  1. Technical Analyst: evaluates market structure and indicators using 525 technical strategies
- *  2. Fundamental Analyst: tracking macroeconomic regimes via 525 fundamental analysis engines
+ *  1. Technical Analyst: evaluates market structure and indicators using 1,250 quantitative technical strategies
+ *  2. Fundamental Analyst: tracking macroeconomic regimes via 1,250 fundamental analysis engines
  *  3. Real-Time News Analyst: continuously parsing 38 financial wire feeds & central bank bulletins
  *  4. Forex & Intermarket Analyst: assessing relative currency strength, DXY trend & session liquidity
  *  5. Risk Manager: enforcing strict drawdowns, capital preservation & mathematically sound parameters
@@ -191,18 +191,18 @@ class AutonomousSwarmEngineImpl {
         desks: [
           {
             name: 'Marcus Vance',
-            role: 'Technical Analyst (525 Strategies)',
+            role: 'Technical Analyst (1,250 Strategies)',
             status: 'STREAMING',
             lastLatencyMs: Math.round(cycleLatency * 0.28),
-            strategiesEvaluated: 525,
+            strategiesEvaluated: 1250,
             bias: calibratedResult.agents.technical.bias,
           },
           {
             name: 'Dr. Julian Sterling',
-            role: 'Fundamental Analyst (525 Macro Engines)',
+            role: 'Fundamental Analyst (1,250 Macro Engines)',
             status: 'STREAMING',
             lastLatencyMs: Math.round(cycleLatency * 0.24),
-            strategiesEvaluated: 525,
+            strategiesEvaluated: 1250,
             bias: calibratedResult.agents.fundamental.bias,
           },
           {

@@ -25,16 +25,16 @@ const AUDITS_STORAGE_KEY = 'qri_diagnostic_failure_audits_v1';
 const isBrowser = typeof window !== 'undefined';
 
 /**
- * Baseline 1051st Operative Rule:
+ * Baseline 2501st Operative Rule:
  * Synthesized from historical Stop Loss event on EUR/USD during unexpected US Core CPI surge.
- * Dynamically expands Knowledge Base from 1,050 to 1,051 operative rules.
+ * Dynamically expands Knowledge Base from 2,500 to 2,501 operative rules.
  */
 export const INITIAL_SYNTHESIZED_RULE_1051: FailureConstraintRule = {
-  id: 'RULE-KB-1051',
+  id: 'RULE-KB-2501',
   category: 'FUNDAMENTAL',
   subcategory: 'Failure Attribution: Fundamental Misalignment',
   marketScope: 'FOREX',
-  ruleName: 'Self-Optimizing Failure Constraint #1051: US CPI Surprise vs Long EUR/USD',
+  ruleName: 'Self-Optimizing Failure Constraint #2501: US CPI Surprise vs Long EUR/USD',
   conditionDescription: 'Long EUR/USD setup during H1 bullish order block retest invalidated when US Core CPI prints >0.2% above forecast with Fed hawkish spread widening >140bps.',
   confidenceWeight: 9,
   expectedWinRate: 84.5,
@@ -325,8 +325,8 @@ export class DiagnosticReasoningEngine {
       mitigationDirective = `Require both technical fractal confirmation AND neutral-to-supportive macro sentiment before trade commitment.`;
     }
 
-    // Determine the next Operative Rule index: baseline 1,050 + current dynamic rules + 1
-    const nextRuleIndex = 1050 + this.dynamicRules.length + 1;
+    // Determine the next Operative Rule index: baseline 2,500 + current dynamic rules + 1
+    const nextRuleIndex = 2500 + this.dynamicRules.length + 1;
     const synthesizedRuleId = `RULE-KB-${nextRuleIndex}`;
     const synthesizedRuleName = `Self-Optimizing Failure Constraint #${nextRuleIndex}: ${pos.symbol} ${pos.type} ${classification.replace('_', ' ')}`;
 

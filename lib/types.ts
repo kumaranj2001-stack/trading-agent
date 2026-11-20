@@ -35,7 +35,7 @@ export type CurrencyPair = TradableSymbol;
 
 export type NavigationTab = 
   | 'terminal'             // 01. Terminal (Live SSOT Chart, Orders & 5-Agent Swarm Signal)
-  | 'knowledge'            // 02. Knowledge (1,050+ Strategies & Institutional Heuristics)
+  | 'knowledge'            // 02. Knowledge (2,500+ Strategies & Institutional Heuristics)
   | 'vision-atlas'         // 03. Vision Atlas Lab (Advanced Market Analysis & Interactive Simulation Module)
   | 'vision-atlas-lab'     // 03. Vision Atlas Lab alias
   | 'agent'                // 04. Agent (5-Role Multi-Agent Swarm Intelligence Command Desk)
@@ -651,9 +651,9 @@ export interface InstitutionalOrderFlowMetrics {
 }
 
 export interface ExhaustiveStrategyCorpusEvaluation {
-  totalEvaluatedStrategies: number; // 1,050+
-  technicalEvaluatedCount: number;  // 525
-  fundamentalEvaluatedCount: number; // 525
+  totalEvaluatedStrategies: number; // 2,500+
+  technicalEvaluatedCount: number;  // 1,250
+  fundamentalEvaluatedCount: number; // 1,250
   dynamicFailureConstraintsCount: number; // 1+
 
   technicalConcordance: {
@@ -1355,6 +1355,8 @@ export interface SwarmConsensusResult {
   exhaustiveStrategyCorpus?: ExhaustiveStrategyCorpusEvaluation;
   capitalPreservationGate?: AbsoluteCapitalPreservationGateResult;
   sevenStagePipeline?: SevenStagePipelineResult;
+  multiTierScreening?: MultiTierScreeningResult;
+  invalidCriteriaGate?: PreTradeValidationGateResult;
 }
 
 // ============================================================================
@@ -1365,11 +1367,11 @@ export interface SwarmConsensusResult {
 
 export interface Stage1StrategiesAnalysis {
   stage: 1;
-  stageName: '1,050+ Execution Strategies Analysis';
+  stageName: '2,500+ Execution Strategies Analysis (Multi-Tier Screened)';
   timestamp: number;
   symbol: CurrencyPair;
   timeframe: TimeFrame;
-  totalStrategiesEvaluated: number; // 1,050+ (525+ Technical + 525+ Fundamental)
+  totalStrategiesEvaluated: number; // 2,500+ (1,250+ Technical + 1,250+ Fundamental)
   technicalStrategiesEvaluated: number;
   fundamentalStrategiesEvaluated: number;
   rawTechnicalScore: number;
@@ -1939,6 +1941,7 @@ export interface Position {
   atomicVerification?: PreExecutionAtomicVerification;
   immutableState?: ImmutableTradeState;
   oandaParityMonitoring?: OandaParityMonitoringResult;
+  invalidCriteriaValidation?: PreTradeValidationGateResult;
 }
 
 export interface EntryProximityFilterResult {
@@ -2782,7 +2785,7 @@ export interface MultiFactorConfluenceReport {
     rationale: string;
   };
   technicalStream: {
-    totalRulesEvaluated: number; // 525
+    totalRulesEvaluated: number; // 1,250
     passingRulesCount: number;
     bullishCount: number;
     bearishCount: number;
@@ -2793,7 +2796,7 @@ export interface MultiFactorConfluenceReport {
     topMatchedRules: KnowledgeRule[];
   };
   fundamentalStream: {
-    totalRulesEvaluated: number; // 525
+    totalRulesEvaluated: number; // 1,250
     passingRulesCount: number;
     supportiveCount: number;
     restrictiveCount: number;
@@ -2835,7 +2838,7 @@ export interface VisionAtlasPayload {
   timestamp: number;
   timestampFormatted: string;
 
-  // Unified Multi-Factor Confluence Engine (Synthesizing 1,050+ Institutional Strategies)
+  // Unified Multi-Factor Confluence Engine (Synthesizing 2,500+ Institutional Strategies)
   multiFactorConfluence: MultiFactorConfluenceReport;
 
   // Real-Time Telemetry Grid
@@ -2887,13 +2890,13 @@ export interface VisionAtlasPayload {
   // Four Specialized Processing Engines
   strategyEngines: {
     technical: {
-      totalEvaluated: number; // 525 distinct indicator combinations
+      totalEvaluated: number; // 1,250 distinct indicator combinations
       activeBullishSetups: number;
       activeBearishSetups: number;
       topValidatedSetups: Array<{ name: string; score: number; timeframe: string }>;
     };
     fundamental: {
-      totalEvaluated: number; // 525 fundamental models
+      totalEvaluated: number; // 1,250 fundamental models
       regime: string;
       interestRateDifferential: string;
       monetaryPolicyShift: string;
@@ -2963,3 +2966,121 @@ export interface VisionAtlasPayload {
     executiveNarrative: string;
   };
 }
+
+// ============================================================================
+// 🔬 EXPANDED QUANTITATIVE LIBRARY, MULTI-TIER SCREENING & INVALID CRITERIA MEMORY
+// ============================================================================
+
+export type QuantitativeCategory =
+  | 'TECHNICAL_SMC'
+  | 'VOLUME_PROFILE_AMT'
+  | 'HARMONIC_GEOMETRIC'
+  | 'VOLATILITY_STAT_ARB'
+  | 'MACRO_YIELD_POLICY'
+  | 'CROSS_ASSET_FLOW'
+  | 'NEWS_CATALYST_REGIME'
+  | 'ORDER_BOOK_MICROSTRUCTURE';
+
+export type QuantitativeTier =
+  | 'TIER_1_INSTITUTIONAL_ALPHA'
+  | 'TIER_2_STATISTICAL_EDGE'
+  | 'TIER_3_MACRO_CONVICTION'
+  | 'TIER_4_CONFIRMATION_FILTER';
+
+export interface QuantitativeStrategyModel {
+  readonly id: string;
+  readonly name: string;
+  readonly category: QuantitativeCategory;
+  readonly subcategory: string;
+  readonly expectedWinRate: number; // e.g. 68.5% - 88.0%
+  readonly sharpeRatio: number;     // e.g. 1.85 - 3.40
+  readonly sortinoRatio: number;    // e.g. 2.10 - 4.10
+  readonly calmarRatio: number;     // e.g. 2.00 - 3.80
+  readonly maxDrawdownPercent: number; // e.g. 1.8% - 5.8%
+  readonly profitFactor: number;    // e.g. 1.75 - 3.20
+  readonly historicalTradesCount: number;
+  readonly confidenceWeight: number; // 1 to 15
+  readonly invalidationCriteria: string;
+  readonly tier: QuantitativeTier;
+  readonly screeningStatus: 'ACTIVE_RANKED' | 'SCREENED_OUT' | 'PENDING';
+  readonly screeningFailureReason?: string;
+  readonly compositeAlphaScore?: number;
+  readonly directionalBias?: 'BUY' | 'SELL' | 'NEUTRAL';
+}
+
+export interface MultiTierScreeningConfig {
+  readonly minWinRate: number;           // Default: 65.0%
+  readonly minProfitFactor: number;      // Default: 1.75
+  readonly minSharpeRatio: number;       // Default: 2.20
+  readonly minSortinoRatio: number;      // Default: 2.50
+  readonly maxDrawdownPercent: number;   // Default: 5.0%
+  readonly minTradesCount: number;       // Default: 25
+}
+
+export interface MultiTierScreeningResult {
+  readonly totalPoolSize: number;                // 2,500+ (1,250 Tech + 1,250 Fund)
+  readonly tier1ViabilityPassed: number;        // Met WinRate & ProfitFactor hurdle
+  readonly tier2SharpePassed: number;           // Met Sharpe >= 2.20 & Sortino >= 2.50
+  readonly tier3MaxDrawdownPassed: number;      // Met MaxDD <= 5.0%
+  readonly topRankedAlphaStrategies: QuantitativeStrategyModel[]; // Top filtered & ranked
+  readonly averagePoolSharpe: number;
+  readonly averagePoolDrawdown: number;
+  readonly poolWinRate: number;
+  readonly screenedTimestamp: number;
+  readonly activeLeaderboardGrade: 'GRADE_A_PLUS_ALPHA' | 'GRADE_A_INSTITUTIONAL' | 'FILTERED';
+}
+
+export interface InvalidCriterionPattern {
+  readonly id: string; // e.g. 'INV-CRIT-1795000000-XAUUSD'
+  readonly tradeId: string;
+  readonly symbol: CurrencyPair;
+  readonly direction: 'BUY' | 'SELL';
+  readonly timeframe: TimeFrame;
+  readonly lossAmountUsd: number;
+  readonly lossPips: number;
+  readonly exitReason: string;
+  readonly timestampEpochMs: number;
+  readonly timestampIso: string;
+  readonly technicalState: {
+    readonly rsi: number;
+    readonly macdHistogram: number;
+    readonly emaSpreadPercent: number;
+    readonly bbBandwidth: number;
+    readonly atrPips: number;
+    readonly candlestickPattern: string;
+    readonly smcStructure: string;
+    readonly orderBlockMitigation: string;
+    readonly fvgStatus: string;
+    readonly liquiditySweep: string;
+  };
+  readonly fundamentalState: {
+    readonly macroRegime: string;
+    readonly realYieldSpread: number;
+    readonly centralBankStance: string;
+    readonly newsSentimentScore: number;
+    readonly sentimentBias: string;
+  };
+  readonly orderFlowState: {
+    readonly cvdTrend: string;
+    readonly imbalanceRatio: string;
+    readonly wallThickness: number;
+  };
+  readonly session: string;
+  readonly normalizedVector: number[]; // 12-dimensional feature vector for similarity calculation
+  readonly matchedFailureArchetype: string;
+  readonly failureExplanation: string;
+  readonly preventativeAction: 'BLOCK_EXECUTION';
+}
+
+export interface PreTradeValidationGateResult {
+  readonly allowed: boolean;
+  readonly action: 'PROCEED' | 'BLOCK_EXECUTION';
+  readonly matchedPattern?: InvalidCriterionPattern;
+  readonly highestSimilarityPercent: number;
+  readonly similarityThresholdPercent: number; // e.g. 80.0%
+  readonly blockReason?: string;
+  readonly crossReferencedCount: number;
+  readonly evaluatedAtEpochMs: number;
+  readonly isLearningLoopActive: boolean;
+}
+

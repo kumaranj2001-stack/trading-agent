@@ -58,6 +58,8 @@ import { tradeInvalidationEngine } from '@/lib/tradeInvalidationEngine';
 import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
 import { immutableOrderLockEngine } from '@/lib/immutableOrderLockEngine';
 import { oandaBenchmarkSync } from '@/lib/oandaBenchmarkSync';
+import { invalidCriteriaMemoryModule } from '@/lib/invalidCriteriaMemoryModule';
+import { multiTierScreeningEngine } from '@/lib/multiTierScreeningEngine';
 import { ExecutionTelemetryEngine } from '@/lib/executionTelemetryEngine';
 import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 import { preExecutionVerificationEngine } from '@/lib/preExecutionVerificationEngine';
@@ -313,6 +315,12 @@ export default function Home() {
       return;
     }
 
+    // 🧠 Persistent Memory Module: Pre-Trade Validation Gate against Stored Invalid Criteria
+    if (calibratedResult.invalidCriteriaGate && !calibratedResult.invalidCriteriaGate.allowed) {
+      console.warn(`[AUTOPILOT_INVALID_CRITERIA_GATE_BLOCKED] ${calibratedResult.invalidCriteriaGate.blockReason}`);
+      return;
+    }
+
     // 2. 🛡️ Mandatory Atomic Pre-Execution Verification Gate (Identical Tick)
     // Decouples signal generation from order dispatch: validates risk workflow completeness,
     // enforces execution exclusively at real-time market Bid/Ask, and evaluates contradictory
@@ -517,7 +525,7 @@ export default function Home() {
 
   // 5b. Dedicated 15-Second Multi-Desk Institutional Recalibration Engine
   // Automatically triggers every 15 SECONDS to synthesize data across all five core analytical engines:
-  // Technical (525 strategies), Fundamental (525 engines), News (38 wires), Forex/Order Flow, and Risk Management
+  // Technical (1,250 strategies), Fundamental (1,250 engines), News (38 wires), Forex/Order Flow, and Risk Management
   useEffect(() => {
     const recalibrationTimer = setInterval(() => {
       if (MarketSessionManager.isMarketFrozen(selectedPairRef.current)) {
@@ -900,6 +908,12 @@ export default function Home() {
       return;
     }
 
+    // 🧠 Persistent Memory Module: Mandatory Pre-Trade Validation Gate (Zero-Repetition Assurance)
+    if (consensus.invalidCriteriaGate && !consensus.invalidCriteriaGate.allowed) {
+      showNotification(consensus.invalidCriteriaGate.blockReason || '🛑 PRE-TRADE GATE VETO: Candidate signal matches historical loss setup. Execution blocked to prevent failure repetition.');
+      return;
+    }
+
     // 2. 🛡️ Mandatory Atomic Pre-Execution Verification Gate (Identical Tick)
     // Evaluates risk management completeness, real-time bid/ask decoupling,
     // tick slippage guardrails, and contradictory news wire sentiment inversions atomically on the identical tick.
@@ -1155,6 +1169,20 @@ export default function Home() {
       );
     }
 
+    // 🧠 Persistent Memory Module: Automated Learning Loop captures loss pattern as Invalid Criteria
+    if (finalPnl < 0) {
+      const capturedPattern = invalidCriteriaMemoryModule.captureLossPattern({
+        position: pos,
+        exitPrice: liveExitPrice,
+        lossPnlUsd: finalPnl,
+        exitReason: exitReason || 'MANUAL_CLOSE',
+        consensus,
+      });
+      showNotification(
+        `🧠 LEARNING LOOP ARMED: Captured losing setup as Invalid Criterion [${capturedPattern.id}]. Pre-trade validation gate armed to prevent repeating this setup.`
+      );
+    }
+
     const pnlPrefix = finalPnl >= 0 ? '+' : '';
     const alertMsg = isAutoInvalidation
       ? `⚡ AUTONOMOUS EXIT ON INVALIDATION: Closed ${pos.symbol} @ ${liveExitPrice} | P&L: ${pnlPrefix}$${finalPnl.toFixed(2)} (${finalPnl >= 0 ? 'Small profit secured' : 'Capital preserved'})`
@@ -1283,7 +1311,7 @@ export default function Home() {
                       Recalibrating 5-Agent Swarm Consensus for {selectedPair}
                     </span>
                     <span className="text-slate-400 text-[11px]">
-                      Purged legacy state latches • Evaluating 1,050+ institutional technical & fundamental models...
+                      Purged legacy state latches • Evaluating 2,500+ institutional technical & fundamental models...
                     </span>
                   </div>
                 </div>
@@ -1358,7 +1386,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Tab 03: Vision Atlas Lab - Multi-Factor Confluence & 1,050+ Institutional Strategies */}
+        {/* Tab 03: Vision Atlas Lab - Multi-Factor Confluence & 2,500+ Institutional Strategies */}
         {(activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab') && (
           <VisionAtlasWorkspace
             pair={selectedPair}
@@ -1396,7 +1424,7 @@ export default function Home() {
                     </span>
                   </div>
                   <p className="text-slate-400 text-xs">
-                    Simultaneous asynchronous processes: Technical (525), Fundamental (525), 38 News Wires, Forex Relativity & CRO Risk Gatekeeper
+                    Simultaneous asynchronous processes: Technical (1,250), Fundamental (1,250), 38 News Wires, Forex Relativity & CRO Risk Gatekeeper
                   </p>
                 </div>
               </div>
@@ -1534,7 +1562,7 @@ export default function Home() {
           />
         )}
 
-        {/* Tab 10: Institutional Knowledge Base (1,050+ Rules) */}
+        {/* Tab 10: Institutional Knowledge Base (2,500+ Rules) */}
         {activeTab === 'knowledge' && (
           <KnowledgeBaseModal
             isFullPage={true}

@@ -23,7 +23,7 @@ export class ChiefReviewerAgent extends BaseAgent {
     super(
       'chief_reviewer',
       'Marcus Sterling (Chief Reviewer & Institutional Gatekeeper)',
-      'You are the Chief Reviewer and definitive Institutional Gatekeeper. You audit all specialist desks (Technical, Fundamental, News Wire, Forex Intermarket, Order Flow, and Risk Management) based directly on the dialectical debate comparing both Buy-side and Sell-side arguments before any trade signal is authorized or dispatched. You actively cross-examine all 1,050+ strategies (525+ technical and 525+ fundamental models) synchronously with zero heuristic pruning, enforce absolute capital preservation, eliminate unhedged exposure via order book liquidity walls, and mandate explicit invalidation criteria for all candidate entries.'
+      'You are the Chief Reviewer and definitive Institutional Gatekeeper. You audit all specialist desks (Technical, Fundamental, News Wire, Forex Intermarket, Order Flow, and Risk Management) based directly on the dialectical debate comparing both Buy-side and Sell-side arguments before any trade signal is authorized or dispatched. You actively cross-examine all 2,500+ quantitative strategies (1,250 technical and 1,250 fundamental models) synchronously with zero heuristic pruning, enforce absolute capital preservation, eliminate unhedged exposure via order book liquidity walls, and mandate explicit invalidation criteria for all candidate entries.'
     );
   }
 
@@ -293,7 +293,7 @@ export class ChiefReviewerAgent extends BaseAgent {
 
     let comparativeVerdict = '';
     if (agreeCount >= 4) {
-      comparativeVerdict = `CHIEF REVIEWER VERDICT: ${proposedDirection} DIRECTION AUTHORIZED (${agreeCount}/5 Specialist Desks in Alignment). The 7-agent debate rigorously evaluated both Buy-Side and Sell-Side arguments against 1,050+ technical and fundamental models alongside live 95-source wire feeds. The ${proposedDirection} thesis maintains a dominant mathematical edge. Mandatory execution authorized.`;
+      comparativeVerdict = `CHIEF REVIEWER VERDICT: ${proposedDirection} DIRECTION AUTHORIZED (${agreeCount}/5 Specialist Desks in Alignment). The 7-agent debate rigorously evaluated both Buy-Side and Sell-Side arguments against 2,500+ quantitative strategies (1,250 technical + 1,250 fundamental models) alongside live 95-source wire feeds. The ${proposedDirection} thesis maintains a dominant mathematical edge. Mandatory execution authorized.`;
     } else {
       comparativeVerdict = `CHIEF REVIEWER VERDICT: ${proposedDirection} MANDATORY EXECUTION AUTHORIZED (${agreeCount}/5 Desks Aligned). Dialectical friction safely absorbed via dynamic micro-lot sizing (0.01 - 0.02 Lots) and tight structural stops. Zero hard vetoes enforced.`;
     }
@@ -398,7 +398,7 @@ export class ChiefReviewerAgent extends BaseAgent {
     const institutionalTierNote = institutionalGrading
       ? ` | Calibrated Tier: ${institutionalGrading.grade} (${institutionalGrading.isGradeAPlus ? 'Grade A+ Unanimous/Supermajority Core' : institutionalGrading.isGradeA ? 'Grade A Primary Institutional' : 'Retail Dilution Filtered'}) | Dialectical Friction: ${institutionalGrading.dialecticalFriction}% | Order Book Depth Wall: ${institutionalGrading.liquidityWallVerified ? 'CONFIRMED' : 'UNVERIFIED'}`
       : '';
-    const crossExaminationNotes = `Continuous 24/7 cross-examination of all ${totalStrats} strategies (${exhaustiveCorpus?.technicalEvaluatedCount || 525} Technical + ${exhaustiveCorpus?.fundamentalEvaluatedCount || 525} Fundamental models) with zero heuristic pruning. Meta-consensus score: ${exhaustiveCorpus?.metaConsensusScore ?? confidenceScore}%, dialectical friction: ${exhaustiveCorpus?.debateFrictionIndex ?? 22.5}%. Capital preservation gate: ${capitalPreservationGate?.status || 'VERIFIED'}. Cross-desk debate audited: ${agreeCount}/5 desks agree, ${disagreeCount}/5 desks disagree.${institutionalTierNote}`;
+    const crossExaminationNotes = `Continuous 24/7 cross-examination of all ${totalStrats} strategies (${exhaustiveCorpus?.technicalEvaluatedCount || 1250} Technical + ${exhaustiveCorpus?.fundamentalEvaluatedCount || 1250} Fundamental models) with zero heuristic pruning. Meta-consensus score: ${exhaustiveCorpus?.metaConsensusScore ?? confidenceScore}%, dialectical friction: ${exhaustiveCorpus?.debateFrictionIndex ?? 22.5}%. Capital preservation gate: ${capitalPreservationGate?.status || 'VERIFIED'}. Cross-desk debate audited: ${agreeCount}/5 desks agree, ${disagreeCount}/5 desks disagree.${institutionalTierNote}`;
 
     return {
       auditorName: this.name,
