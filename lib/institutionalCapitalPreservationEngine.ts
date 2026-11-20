@@ -13,9 +13,11 @@ import {
   TechnicalCorpusCrossReferenceValidation,
   BindingConsensusValidation,
   InstitutionalGradeExclusivityFilter,
+  PreTradeCapitalProtectionGate,
   DeskVoteDetail,
 } from './types';
 import { quantitativeStrategyLibrary } from './quantitativeStrategyLibrary';
+import { MarketSessionManager } from './marketSessionManager';
 import { PIP_VALUES } from './marketData';
 
 // ============================================================================
@@ -116,15 +118,18 @@ export class InstitutionalCapitalPreservationEngine {
 
   /**
    * 2. Rigorous Cross-Reference against 1,250+ Technical Strategies in Knowledge Base:
-   * Discards any setup exhibiting a historical failure rate above 30% (Win Rate < 70%) or weak MTF alignment.
+   * Discards any setup exhibiting a historical failure rate above 30% (Win Rate < 70%),
+   * weak MTF alignment, or lacking multi-dimensional institutional confluence.
    */
   public validateTechnicalStrategiesCorpus(params: {
     symbol: CurrencyPair;
     direction: 'BUY' | 'SELL';
     technical: TechnicalAnalysis;
     candles: Candle[];
+    fundamental?: FundamentalAnalysis;
+    news?: NewsAnalysis;
   }): TechnicalCorpusCrossReferenceValidation {
-    const { direction, technical, candles } = params;
+    const { direction, technical, candles, fundamental, news } = params;
 
     const technicalModels = quantitativeStrategyLibrary.getTechnicalStrategies();
     const totalStrategiesCrossReferenced = technicalModels.length; // 1,250
@@ -180,11 +185,36 @@ export class InstitutionalCapitalPreservationEngine {
       ? (dailyTrend !== 'BEARISH' && fourHourTrend === 'BULLISH' && (oneHourStructure === 'BULLISH' || fifteenMinStructure === 'BULLISH'))
       : (dailyTrend !== 'BULLISH' && fourHourTrend === 'BEARISH' && (oneHourStructure === 'BEARISH' || fifteenMinStructure === 'BEARISH'));
 
+    // Multi-Dimensional Institutional Confluence Verification
+    const smc = technical.smartMoneyConcepts;
+    const hasOrderBlock = !!(smc?.orderBlock && smc.orderBlock !== 'NONE');
+    const orderBlockDescription = hasOrderBlock ? `SMC Order Block Verified: ${smc?.orderBlock}` : 'SMC Order Block unmitigated';
+
+    const hasFvg = !!(smc?.fvgStatus && smc.fvgStatus !== 'NONE');
+    const fairValueGapDescription = hasFvg ? `Institutional FVG Present: ${smc?.fvgStatus}` : 'Fair Value Gap secondary';
+
+    const hasStructureShift = direction === 'BUY'
+      ? (smc?.structure?.includes('BULL') || technical.trend === 'UPTREND' || technical.trend === 'STRONG_UPTREND' || technical.bias.includes('BUY'))
+      : (smc?.structure?.includes('BEAR') || technical.trend === 'DOWNTREND' || technical.trend === 'STRONG_DOWNTREND' || technical.bias.includes('SELL'));
+    const structuralShiftDescription = hasStructureShift ? `Structural Shift Aligned: ${smc?.structure || technical.trend}` : 'Structural Shift unaligned';
+
+    const realYield = fundamental?.realInterestRateSpread ?? 0;
+    const hasMacroYieldDiff = direction === 'BUY' ? realYield >= -0.5 : realYield <= 0.5;
+    const macroYieldDifferentialDescription = `Sovereign Real Yield Spread: ${realYield > 0 ? '+' : ''}${realYield}%`;
+
+    const sentimentScore = news?.sentimentScore ?? 0;
+    const hasSentimentAlignment = direction === 'BUY' ? sentimentScore >= -15 : sentimentScore <= 15;
+    const sentimentAlignmentDescription = `News Sentiment Alignment: Score ${sentimentScore > 0 ? '+' : ''}${sentimentScore} (${news?.marketMood || 'NEUTRAL'})`;
+
+    const isFullyConfluent = hasStructureShift && hasSentimentAlignment;
+
     let overallCrossReferenceStatus: TechnicalCorpusCrossReferenceValidation['overallCrossReferenceStatus'] = 'PASSED';
     if (!historicalFailureRatePassed) {
       overallCrossReferenceStatus = 'DISCARDED_HIGH_FAILURE_RATE';
     } else if (!isMtfAligned) {
       overallCrossReferenceStatus = 'DISCARDED_WEAK_MTF';
+    } else if (!isFullyConfluent) {
+      overallCrossReferenceStatus = 'DISCARDED_LACK_OF_CONFLUENCE';
     }
 
     return {
@@ -203,7 +233,71 @@ export class InstitutionalCapitalPreservationEngine {
         isAligned: isMtfAligned,
         alignmentStatus: isMtfAligned ? 'STRONG_MTF_ALIGNMENT' : 'WEAK_MTF_ALIGNMENT_DISCARD',
       },
+      institutionalConfluence: {
+        orderBlockVerified: hasOrderBlock,
+        orderBlockDescription,
+        fairValueGapVerified: hasFvg,
+        fairValueGapDescription,
+        structuralShiftVerified: hasStructureShift,
+        structuralShiftDescription,
+        macroYieldDifferentialVerified: hasMacroYieldDiff,
+        macroYieldDifferentialDescription,
+        sentimentAlignmentVerified: hasSentimentAlignment,
+        sentimentAlignmentDescription,
+        isFullyConfluent,
+      },
       overallCrossReferenceStatus,
+    };
+  }
+
+  /**
+   * 2.5 Pre-Trade Capital-Protection Gate:
+   * Blocks execution whenever live news sentiment diverges from technical structure
+   * OR during low-liquidity transition windows.
+   */
+  public validatePreTradeCapitalProtectionGate(params: {
+    symbol: CurrencyPair;
+    direction: 'BUY' | 'SELL';
+    technical: TechnicalAnalysis;
+    news: NewsAnalysis;
+    forex?: ForexAnalysis;
+  }): PreTradeCapitalProtectionGate {
+    const { symbol, direction, technical, news, forex } = params;
+
+    // 1. News Sentiment vs Technical Structure Divergence Check
+    const telemetry = this.validateTelemetryBridgeOverride({ symbol, direction, technical, news });
+    const newsSentimentDivergence = telemetry.isTriggered;
+    const newsSentimentDivergenceReason = newsSentimentDivergence ? telemetry.explanation : undefined;
+
+    // 2. Low-Liquidity Transition Window Check
+    const transitionCheck = MarketSessionManager.isLowLiquidityTransitionWindow(symbol);
+    const sessionRating = forex?.activeTradingSession?.liquidityRating;
+    const isThinSession = sessionRating === 'THIN' || sessionRating === 'LOW';
+
+    const isLowLiquidityTransition = transitionCheck.isTransition || isThinSession;
+    let lowLiquidityReason: string | undefined = undefined;
+    if (transitionCheck.isTransition) {
+      lowLiquidityReason = transitionCheck.reason;
+    } else if (isThinSession) {
+      lowLiquidityReason = `Low-Liquidity Session Window: Active session liquidity is rated ${sessionRating}. Spread expansion risk precludes safe market entry.`;
+    }
+
+    const isExecutionAllowed = !newsSentimentDivergence && !isLowLiquidityTransition;
+    let rejectionReason: string | undefined = undefined;
+    if (newsSentimentDivergence) {
+      rejectionReason = newsSentimentDivergenceReason;
+    } else if (isLowLiquidityTransition) {
+      rejectionReason = lowLiquidityReason;
+    }
+
+    return {
+      isExecutionAllowed,
+      newsSentimentDivergence,
+      newsSentimentDivergenceReason,
+      isLowLiquidityTransition,
+      lowLiquidityWindowName: transitionCheck.windowName || (isThinSession ? 'THIN_SESSION_WINDOW' : undefined),
+      lowLiquidityReason,
+      rejectionReason,
     };
   }
 
@@ -434,8 +528,9 @@ export class InstitutionalCapitalPreservationEngine {
     bindingConsensus: BindingConsensusValidation;
     telemetryBridge: TelemetryBridgeOverrideStatus;
     technicalCorpus: TechnicalCorpusCrossReferenceValidation;
+    capitalProtectionGate?: PreTradeCapitalProtectionGate;
   }): InstitutionalGradeExclusivityFilter {
-    const { confluenceGrade, confidenceScore, bindingConsensus, telemetryBridge, technicalCorpus } = params;
+    const { confluenceGrade, confidenceScore, bindingConsensus, telemetryBridge, technicalCorpus, capitalProtectionGate } = params;
 
     const minimumRequiredConfidence = 75.0;
     const isGradeAorAPlus = (confluenceGrade === 'A+' || confluenceGrade === 'A') && confidenceScore >= minimumRequiredConfidence;
@@ -446,6 +541,9 @@ export class InstitutionalCapitalPreservationEngine {
     if (!isGradeAorAPlus) {
       isDispatchUnlocked = false;
       lockoutReason = `Capital Preservation Gateway: Sub-optimal setup suppressed (Grade ${confluenceGrade}, ${confidenceScore}% confidence). Terminal exclusively executes Grade A & A+ institutional setups backed by >=75% confidence score.`;
+    } else if (capitalProtectionGate && !capitalProtectionGate.isExecutionAllowed) {
+      isDispatchUnlocked = false;
+      lockoutReason = `Pre-Trade Capital Protection Lockout: ${capitalProtectionGate.rejectionReason || 'Execution blocked during low-liquidity window or sentiment divergence.'}`;
     } else if (telemetryBridge.isTriggered) {
       isDispatchUnlocked = false;
       lockoutReason = `Telemetry Bridge Lockout: Live news sentiment diverges from technical structure. Execution paused.`;
@@ -457,7 +555,7 @@ export class InstitutionalCapitalPreservationEngine {
       lockoutReason = `Binding Consensus Lockout: Supermajority agreement not satisfied (${bindingConsensus.actualAgreeCount}/6 desks agree; minimum 5 required).`;
     } else if (technicalCorpus.overallCrossReferenceStatus !== 'PASSED') {
       isDispatchUnlocked = false;
-      lockoutReason = `Technical Corpus Rejection: Setup discarded due to ${technicalCorpus.overallCrossReferenceStatus === 'DISCARDED_HIGH_FAILURE_RATE' ? `failure rate > 30% (${technicalCorpus.averageHistoricalFailureRate}%)` : 'weak multi-timeframe alignment'}.`;
+      lockoutReason = `Technical Corpus Rejection: Setup discarded due to ${technicalCorpus.overallCrossReferenceStatus === 'DISCARDED_HIGH_FAILURE_RATE' ? `failure rate > 30% (${technicalCorpus.averageHistoricalFailureRate}%)` : technicalCorpus.overallCrossReferenceStatus === 'DISCARDED_WEAK_MTF' ? 'weak multi-timeframe alignment' : 'incomplete institutional confluence'}.`;
     }
 
     return {

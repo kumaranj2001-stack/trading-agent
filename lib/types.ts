@@ -1363,6 +1363,7 @@ export interface SwarmConsensusResult {
   technicalCorpusValidation?: TechnicalCorpusCrossReferenceValidation;
   bindingConsensusValidation?: BindingConsensusValidation;
   gradeExclusivityFilter?: InstitutionalGradeExclusivityFilter;
+  preTradeCapitalProtectionGate?: PreTradeCapitalProtectionGate;
 }
 
 // ============================================================================
@@ -2027,7 +2028,30 @@ export interface TechnicalCorpusCrossReferenceValidation {
     isAligned: boolean;
     alignmentStatus: 'STRONG_MTF_ALIGNMENT' | 'WEAK_MTF_ALIGNMENT_DISCARD';
   };
-  overallCrossReferenceStatus: 'PASSED' | 'DISCARDED_HIGH_FAILURE_RATE' | 'DISCARDED_WEAK_MTF';
+  institutionalConfluence?: {
+    orderBlockVerified: boolean;
+    orderBlockDescription: string;
+    fairValueGapVerified: boolean;
+    fairValueGapDescription: string;
+    structuralShiftVerified: boolean;
+    structuralShiftDescription: string;
+    macroYieldDifferentialVerified: boolean;
+    macroYieldDifferentialDescription: string;
+    sentimentAlignmentVerified: boolean;
+    sentimentAlignmentDescription: string;
+    isFullyConfluent: boolean;
+  };
+  overallCrossReferenceStatus: 'PASSED' | 'DISCARDED_HIGH_FAILURE_RATE' | 'DISCARDED_WEAK_MTF' | 'DISCARDED_LACK_OF_CONFLUENCE';
+}
+
+export interface PreTradeCapitalProtectionGate {
+  isExecutionAllowed: boolean;
+  newsSentimentDivergence: boolean;
+  newsSentimentDivergenceReason?: string;
+  isLowLiquidityTransition: boolean;
+  lowLiquidityWindowName?: string;
+  lowLiquidityReason?: string;
+  rejectionReason?: string;
 }
 
 export interface BindingConsensusValidation {

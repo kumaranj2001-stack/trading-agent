@@ -667,12 +667,23 @@ export class SwarmCoordinator {
       news,
     });
 
-    // 2. 1,250+ Technical Strategies Cross-Reference: failure rate <= 30% & multi-timeframe alignment
+    // 2. 1,250+ Technical Strategies Cross-Reference: failure rate <= 30%, MTF aligned & institutional confluence
     const technicalCorpusValidation = institutionalCapitalPreservationEngine.validateTechnicalStrategiesCorpus({
       symbol: pair,
       direction: activeDirection,
       technical,
       candles: marketCandles,
+      fundamental,
+      news,
+    });
+
+    // 2.5 Pre-Trade Capital-Protection Gate: blocks on sentiment divergence or low-liquidity transition windows
+    const preTradeCapitalProtectionGate = institutionalCapitalPreservationEngine.validatePreTradeCapitalProtectionGate({
+      symbol: pair,
+      direction: activeDirection,
+      technical,
+      news,
+      forex,
     });
 
     // 3. Binding 7-Agent Consensus: supermajority (>= 5/6) and zero critical desk dissent (News Wire)
@@ -710,6 +721,7 @@ export class SwarmCoordinator {
       bindingConsensus: bindingConsensusValidation,
       telemetryBridge: telemetryBridgeOverride,
       technicalCorpus: technicalCorpusValidation,
+      capitalProtectionGate: preTradeCapitalProtectionGate,
     });
 
     // 🛡️ Strict Risk Management Workflow Priority & Absolute Capital Preservation Verification
@@ -754,9 +766,10 @@ export class SwarmCoordinator {
 
     // Mandatory Capital Preservation Gating:
     // Any violation of Grade A/A+ exclusivity, critical desk dissent, sentiment-structure divergence,
-    // historical failure rate > 30%, or lack of supermajority strictly blocks execution!
+    // low-liquidity transition window, failure rate > 30%, or lack of supermajority strictly blocks execution!
     const hasCapitalPreservationLockout = 
       !gradeExclusivityFilter.isDispatchUnlocked ||
+      !preTradeCapitalProtectionGate.isExecutionAllowed ||
       chiefReviewerAudit.status === 'VETOED' ||
       telemetryBridgeOverride.isTriggered ||
       bindingConsensusValidation.hasCriticalDeskDissent ||
@@ -846,6 +859,7 @@ export class SwarmCoordinator {
       technicalCorpusValidation,
       bindingConsensusValidation,
       gradeExclusivityFilter,
+      preTradeCapitalProtectionGate,
       agents: {
         technical,
         fundamental,

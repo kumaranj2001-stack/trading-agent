@@ -339,6 +339,12 @@ export default function Home() {
       return;
     }
 
+    // 🛡️ Pre-Trade Capital-Protection Gate: Blocks on Sentiment Divergence or Low-Liquidity Transition Windows
+    if (calibratedResult.preTradeCapitalProtectionGate && !calibratedResult.preTradeCapitalProtectionGate.isExecutionAllowed) {
+      console.warn(`[AUTOPILOT_CAPITAL_PROTECTION_BLOCKED] ${calibratedResult.preTradeCapitalProtectionGate.rejectionReason}`);
+      return;
+    }
+
     // 🧠 Persistent Memory Module: Pre-Trade Validation Gate against Stored Invalid Criteria
     if (calibratedResult.invalidCriteriaGate && !calibratedResult.invalidCriteriaGate.allowed) {
       console.warn(`[AUTOPILOT_INVALID_CRITERIA_GATE_BLOCKED] ${calibratedResult.invalidCriteriaGate.blockReason}`);
@@ -373,8 +379,8 @@ export default function Home() {
     const now = new Date();
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
-    let autoStopLoss = signal.stopLoss;
-    let autoTakeProfit = signal.takeProfit;
+    let autoStopLoss = calibratedResult.volatilityStopLoss?.stopLossPrice || signal.stopLoss;
+    let autoTakeProfit = calibratedResult.singleInstitutionalTarget?.targetPrice || signal.takeProfit;
     if (autoTradeType === 'SELL') {
       if (autoStopLoss <= liveFillPrice) {
         const stopDist = Math.abs(signal.entry - signal.stopLoss) || (liveFillPrice * 0.004);
@@ -947,6 +953,12 @@ export default function Home() {
       return;
     }
 
+    // 🛡️ Pre-Trade Capital-Protection Gate: Blocks on Sentiment Divergence or Low-Liquidity Transition Windows
+    if (consensus.preTradeCapitalProtectionGate && !consensus.preTradeCapitalProtectionGate.isExecutionAllowed) {
+      showNotification(`🛑 PRE-TRADE CAPITAL PROTECTION GATE: ${consensus.preTradeCapitalProtectionGate.rejectionReason || 'Execution blocked to preserve capital.'}`);
+      return;
+    }
+
     const signal = consensus.executionSignal;
 
     // 1. Strict API Rate Limiter
@@ -1008,8 +1020,8 @@ export default function Home() {
     const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     // Strict Mathematical Invariant: Guarantee Stop Loss & Target orientation relative to real-time fill
-    let executionStopLoss = signal.stopLoss;
-    let executionTakeProfit = signal.takeProfit;
+    let executionStopLoss = consensus.volatilityStopLoss?.stopLossPrice || signal.stopLoss;
+    let executionTakeProfit = consensus.singleInstitutionalTarget?.targetPrice || signal.takeProfit;
 
     if (tradeType === 'SELL') {
       if (executionStopLoss <= liveFillPrice) {

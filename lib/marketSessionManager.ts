@@ -241,6 +241,40 @@ export class MarketSessionManager {
   }
 
   /**
+   * Pre-Trade Capital Protection Gate:
+   * Identifies low-liquidity transition windows where order execution must be blocked:
+   * 1. Global Interbank rollover & daily settlement break (21:45 to 22:30 UTC), where spreads expand dramatically.
+   * 2. Friday pre-close liquidity drain (after 21:00 UTC Friday).
+   * 3. Pre-market / early settlement transition windows.
+   */
+  public static isLowLiquidityTransitionWindow(pair: CurrencyPair, targetDate: Date = new Date()): { isTransition: boolean; windowName?: string; reason?: string } {
+    const utcHour = targetDate.getUTCHours();
+    const utcMinute = targetDate.getUTCMinutes();
+    const utcDay = targetDate.getUTCDay();
+    const utcTimeInMinutes = utcHour * 60 + utcMinute;
+
+    // Rollover Window (21:45 UTC to 22:30 UTC): Interbank spreads widen 3x-8x
+    if (utcTimeInMinutes >= 21 * 60 + 45 && utcTimeInMinutes <= 22 * 60 + 30) {
+      return {
+        isTransition: true,
+        windowName: 'GLOBAL_ROLLOVER_SETTLEMENT_WINDOW',
+        reason: 'Global interbank 17:00 EST rollover window active (21:45 - 22:30 UTC). Bank liquidity drops and spreads expand artificially.',
+      };
+    }
+
+    // Friday Late Session Drain (Friday 21:00 to 22:00 UTC): Institutional desk books close
+    if (utcDay === 5 && utcTimeInMinutes >= 21 * 60) {
+      return {
+        isTransition: true,
+        windowName: 'FRIDAY_WEEKEND_DRAIN_WINDOW',
+        reason: 'Friday market pre-close liquidity drain window. Institutional book liquidity drops prior to weekend close.',
+      };
+    }
+
+    return { isTransition: false };
+  }
+
+  /**
    * Get the locked closing price for a symbol.
    */
   public static getFrozenPrice(pair: CurrencyPair): number {

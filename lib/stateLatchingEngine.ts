@@ -246,25 +246,61 @@ export class StateLatchingEngine {
     // Cap between 35% and 94%
     calculatedWinProb = Math.min(94.0, Math.max(35.0, calculatedWinProb));
 
-    // Probability-First Elevation Rule:
-    // Only elevate grade if both win probability and overall confidence are >= 70%
-    let finalGrade: ConfluenceGrade = consensus.confluenceGrade;
-    let probabilityFirstBoost = false;
+    // 🛡️ Institutional Grade Exclusivity Gate:
+    // State-latch strictly suppresses and refuses to anchor any sub-optimal Grade B, Grade C, or retail setup.
+    // Exclusively anchors verified Grade A and Grade A+ setups backed by >=75% confidence score and supermajority consensus.
+    const isGradeAorAPlus = (consensus.confluenceGrade === 'A+' || consensus.confluenceGrade === 'A') && baseConfidence >= 75.0;
+    const isUnlocked = consensus.gradeExclusivityFilter?.isDispatchUnlocked !== false && isGradeAorAPlus;
 
-    if (calculatedWinProb >= 70.0 && baseConfidence >= 70.0) {
-      probabilityFirstBoost = true;
-      if (finalGrade === 'C' || finalGrade === 'D' || finalGrade === 'E' || finalGrade === 'F') {
-        finalGrade = calculatedWinProb >= 76.0 ? 'A' : 'B';
-      }
+    if (!isUnlocked) {
+      // Clear any prior latched state
+      this.latchedStates.delete(pair);
+      this.removePersistedState(pair);
+      return {
+        pair,
+        isLatched: false,
+        latchStatus: 'UNLATCHED_INVALIDATED',
+        latchedAtEpochMs: Date.now(),
+        timeWindowExpiryEpochMs: Date.now(),
+        timeWindowMinutes: 0,
+        timeRemainingSeconds: 0,
+        anchoredDirection: direction,
+        anchoredGrade: consensus.confluenceGrade,
+        anchoredEntryPrice: livePrice,
+        anchoredStopLoss: 0,
+        anchoredTakeProfit: 0,
+        anchoredRiskReward: 0,
+        anchoredLots: 0,
+        resistanceCeiling: 0,
+        s1Floor: 0,
+        winProbabilityPercent: calculatedWinProb,
+        probabilityFirstBoost: false,
+        invalidationLevel: 0,
+        invalidationDistancePips: 0,
+        invalidationTriggerReason: `Sub-Optimal Setup Suppressed: State-latch exclusively anchors verified Grade A and Grade A+ setups (≥75% confidence) with supermajority consensus.`,
+        synthesisSources: {
+          fundamentalRegime: consensus.agents.fundamental.macroRegime || 'Balanced Regime',
+          newsSentimentScore: consensus.agents.news.sentimentScore,
+          technicalPocLevel: Number(pocLevel.toFixed(decimals)),
+          valueAreaHigh: Number(vahLevel.toFixed(decimals)),
+          valueAreaLow: Number(valLevel.toFixed(decimals)),
+          intermarketBullionYield: `DXY ${consensus.agents.forex.dxyTrend} • Real Rates Aligned`,
+          monteCarloVar95Usd: 0,
+          matchedRulesCount: 0,
+        },
+      };
     }
 
-    // 4. Anchor Static Entry, Stop-Loss, and Take-Profit
+    let finalGrade: ConfluenceGrade = consensus.confluenceGrade;
+    let probabilityFirstBoost = true;
+
+    // 4. Anchor Static Entry, Stop-Loss, and Single Deterministic Target
     const rawEntry = consensus.executionSignal.entry;
     const anchoredEntryPrice = rawEntry > 0 ? rawEntry : livePrice;
 
-    // Ensure mathematical rigor for anchored levels
-    let anchoredStopLoss = consensus.executionSignal.stopLoss;
-    let anchoredTakeProfit = consensus.executionSignal.takeProfit;
+    // Route Single Deterministic Institutional Target & Dynamic Volatility Stop Loss
+    let anchoredStopLoss = consensus.volatilityStopLoss?.stopLossPrice || consensus.executionSignal.stopLoss;
+    let anchoredTakeProfit = consensus.singleInstitutionalTarget?.targetPrice || consensus.executionSignal.takeProfit;
 
     const stopDistance = Math.abs(anchoredEntryPrice - anchoredStopLoss) || (22 * pipMultiplier);
     let targetDistance = Math.abs(anchoredTakeProfit - anchoredEntryPrice);
@@ -280,7 +316,6 @@ export class StateLatchingEngine {
       if (anchoredTakeProfit >= anchoredEntryPrice) {
         anchoredTakeProfit = Number((anchoredEntryPrice - targetDistance).toFixed(decimals));
       }
-      // Ensure resistance ceiling is higher than stop loss to allow breathing room
       resistanceCeiling = Math.max(resistanceCeiling, Number((anchoredStopLoss + 5 * pipMultiplier).toFixed(decimals)));
     } else {
       if (anchoredStopLoss >= anchoredEntryPrice) {
@@ -289,11 +324,10 @@ export class StateLatchingEngine {
       if (anchoredTakeProfit <= anchoredEntryPrice) {
         anchoredTakeProfit = Number((anchoredEntryPrice + targetDistance).toFixed(decimals));
       }
-      // Ensure S1 floor is lower than stop loss
       s1Floor = Math.min(s1Floor, Number((anchoredStopLoss - 5 * pipMultiplier).toFixed(decimals)));
     }
 
-    const anchoredRiskReward = Number((targetDistance / stopDistance).toFixed(2));
+    const anchoredRiskReward = consensus.singleInstitutionalTarget?.riskRewardRatio || Number((targetDistance / stopDistance).toFixed(2));
     const anchoredLots = consensus.executionSignal.lots > 0 ? consensus.executionSignal.lots : 0.05;
 
     const now = Date.now();

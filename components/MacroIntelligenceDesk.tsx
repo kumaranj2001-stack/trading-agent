@@ -1017,25 +1017,26 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                     </div>
 
                     {/* 4. Multi-Tiered Take-Profit Scaling */}
-                    <div className="p-3 rounded-xl bg-terminal-950 border border-emerald-500/30 space-y-1.5">
+                    {/* Single Deterministic Take-Profit Target (Multi-Tier Deprecated) */}
+                    <div className="p-3 rounded-xl bg-terminal-950 border border-emerald-500/40 space-y-1.5">
                       <div className="flex items-center justify-between text-emerald-300 font-bold text-[11px]">
-                        <span>MULTI-TIER TARGETS</span>
+                        <span>SINGLE DETERMINISTIC TARGET</span>
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-200 border border-emerald-800">
-                          3 TIERS
+                          INSTITUTIONAL
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-300 space-y-0.5">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">TP1 (50% Out):</span>
-                          <span className="text-emerald-400 font-bold">${activeReport.riskProtocols.multiTierTakeProfitScaling.tp1.price}</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-slate-400">Target Price:</span>
+                          <span className="text-emerald-400 font-black text-sm">${activeReport.executionParameters.takeProfit1}</span>
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">TP2 (30% Out):</span>
-                          <span className="text-emerald-300">${activeReport.riskProtocols.multiTierTakeProfitScaling.tp2.price}</span>
+                        <div className="flex justify-between text-[10px]">
+                          <span className="text-slate-400">Liquidity Anchor:</span>
+                          <span className="text-cyan-300 font-semibold">Volume Profile POC Zone</span>
                         </div>
                         <div className="flex justify-between pt-1 border-t border-terminal-border/60 text-[10px]">
-                          <span className="text-cyan-400">TP3 Runner (20%):</span>
-                          <span className="text-cyan-300">${activeReport.riskProtocols.multiTierTakeProfitScaling.tp3.price}</span>
+                          <span className="text-emerald-400 font-bold">Execution Certainty:</span>
+                          <span className="text-emerald-300 font-bold">84.5% High-Certainty Target</span>
                         </div>
                       </div>
                     </div>
@@ -1162,14 +1163,14 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                     </span>
                   </div>
 
-                  {/* Target 1 */}
+                  {/* Single Deterministic Target */}
                   <div className="p-2.5 rounded-lg bg-terminal-950 border border-emerald-500/40">
-                    <span className="text-[10px] text-emerald-300 block uppercase font-semibold">Take Profit 1</span>
+                    <span className="text-[10px] text-emerald-300 block uppercase font-semibold">Institutional Target</span>
                     <span className="text-base font-bold text-emerald-400">
-                      ${activeReport.riskProtocols?.multiTierTakeProfitScaling.tp1.price || activeReport.executionParameters.takeProfit1}
+                      ${activeReport.executionParameters.takeProfit1}
                     </span>
-                    <span className="text-[9px] text-slate-500 block">
-                      TP2: ${activeReport.riskProtocols?.multiTierTakeProfitScaling.tp2.price || activeReport.executionParameters.takeProfit2}
+                    <span className="text-[9px] text-cyan-300 block">
+                      POC High-Volume Node (Deterministic)
                     </span>
                   </div>
 
