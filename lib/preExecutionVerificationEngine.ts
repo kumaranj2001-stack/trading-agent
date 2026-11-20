@@ -182,6 +182,7 @@ export class PreExecutionVerificationEngine {
       symbol: pair,
       proposedEntry: effectiveSignalPrice,
       livePrice: liveFillPrice,
+      direction: orderType,
       minBandPips: 10,
     });
 

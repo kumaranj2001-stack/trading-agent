@@ -329,10 +329,33 @@ export class ChiefReviewerAgent extends BaseAgent {
 
     // ===============================================================
     // 5. EXPLICIT INVALIDATION CRITERIA & COMPLETE 7-TRIGGER CHECKLIST
+    // Guarantee structural boundary orientation: Invalidation level is strictly ABOVE current price for SELL,
+    // and strictly BELOW current price for BUY, preventing immediate false-trigger liquidations.
     // ===============================================================
+    const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY' || 
+                     pair === 'RELIANCE' || pair === 'TCS' || 
+                     pair === 'HDFC BANK' || pair === 'INFY';
+    const isSilver = pair === 'XAG/USD';
+    const isPlatinum = pair === 'XPT/USD';
+    const isCopper = pair === 'COPPER';
+    const isOil = pair === 'WTI_CRUDE' || pair === 'BRENT_CRUDE';
+    const isRupee = pair.includes('/INR');
+
+    let decimals = 5;
+    if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
+    else if (isSilver || isJpy || isRupee) decimals = 3;
+    else if (isCopper) decimals = 4;
+
+    const rawResistance = (technical.keyResistance && technical.keyResistance > currentPrice)
+      ? technical.keyResistance
+      : (currentPrice + 15 * pipMultiplier);
+    const rawSupport = (technical.keySupport && technical.keySupport < currentPrice)
+      ? technical.keySupport
+      : (currentPrice - 15 * pipMultiplier);
+
     const invalidationPriceLevel = proposedDirection === 'BUY'
-      ? Number((technical.keySupport ? technical.keySupport - 5 * pipMultiplier : currentPrice - 10 * pipMultiplier).toFixed(5))
-      : Number((technical.keyResistance ? technical.keyResistance + 5 * pipMultiplier : currentPrice + 10 * pipMultiplier).toFixed(5));
+      ? Number((rawSupport - 5 * pipMultiplier).toFixed(decimals))
+      : Number((rawResistance + 5 * pipMultiplier).toFixed(decimals));
 
     const explicitInvalidationCriteria = proposedDirection === 'BUY'
       ? `MANDATORY INVALIDATION: Immediate autonomous exit triggered if price breaches S1 structural floor (${invalidationPriceLevel}) on execution candles, if confirmed Bearish CHoCH forms, or if high-impact adverse news shock prints.`

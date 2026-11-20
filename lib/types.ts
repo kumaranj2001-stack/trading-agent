@@ -1835,6 +1835,73 @@ export interface PositionInvalidationStatus {
   compressedTakeProfit?: number;
   unrealizedGainPips?: number;
   initialRiskPips?: number;
+  isOandaCorridorBreached?: boolean;
+  isInvalidationFrozen?: boolean;
+  freezeReason?: string;
+  oandaBenchmarkDiscrepancyPips?: number;
+}
+
+// ============================================================================
+// 🔒 IMMUTABLE TRADE STATE & OANDA BENCHMARK SYNCHRONIZATION TYPES
+// ============================================================================
+
+export interface ImmutableTradeSnapshot {
+  readonly bidPrice: number;
+  readonly askPrice: number;
+  readonly spreadPips: number;
+  readonly orderLots: number;
+  readonly executionFillPrice: number;
+  readonly executionSide: 'BID' | 'ASK';
+  readonly oandaBenchmarkPrice: number;
+  readonly oandaBenchmarkDiscrepancyPips: number;
+  readonly isWithinOandaCorridor: boolean;
+}
+
+export interface ImmutableTradeAnchors {
+  readonly anchoredEntryPrice: number;
+  readonly anchoredStopLoss: number;
+  readonly anchoredTakeProfit: number;
+  readonly anchoredInvalidationPriceLevel: number;
+  readonly anchoredRiskRewardRatio: number;
+  readonly anchoredInitialRiskAmountUsd: number;
+  readonly explicitInvalidationCriteria: string;
+  readonly chiefReviewerSignature: string;
+}
+
+export interface ImmutableTradeState {
+  readonly orderId: string;
+  readonly positionId: string;
+  readonly symbol: CurrencyPair;
+  readonly orderType: 'BUY' | 'SELL';
+  readonly lockedAtEpochMs: number;
+  readonly lockedAtIso: string;
+  readonly snapshot: ImmutableTradeSnapshot;
+  readonly anchors: ImmutableTradeAnchors;
+  readonly integrityHash: string;
+  readonly isWriteProtected: boolean;
+}
+
+export interface OandaToleranceCheckResult {
+  readonly symbol: CurrencyPair;
+  readonly executionPrice: number;
+  readonly oandaBenchmarkPrice: number;
+  readonly discrepancyPips: number;
+  readonly maxAllowedTolerancePips: number; // 20 to 50 pips corridor
+  readonly isWithinTolerance: boolean;
+  readonly status: 'IN_CORRIDOR_PERFECT' | 'IN_CORRIDOR_ELEVATED' | 'CORRIDOR_BREACHED_REJECT';
+  readonly action: 'PROCEED_DISPATCH' | 'REJECT_ORDER' | 'FREEZE_INVALIDATION';
+  readonly rejectionReason?: string;
+}
+
+export interface OandaParityMonitoringResult {
+  readonly symbol: CurrencyPair;
+  readonly liveDashboardPrice: number;
+  readonly confirmedOandaBenchmark: number;
+  readonly discrepancyPips: number;
+  readonly isParityMaintained: boolean;
+  readonly freezeAutomatedTriggers: boolean;
+  readonly parityStatusText: string;
+  readonly lastEvaluatedEpochMs: number;
 }
 
 export interface Position {
@@ -1870,6 +1937,8 @@ export interface Position {
     fillPrice: number;
   };
   atomicVerification?: PreExecutionAtomicVerification;
+  immutableState?: ImmutableTradeState;
+  oandaParityMonitoring?: OandaParityMonitoringResult;
 }
 
 export interface EntryProximityFilterResult {

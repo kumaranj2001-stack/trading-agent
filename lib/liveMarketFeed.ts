@@ -635,9 +635,12 @@ export class LiveMarketFeedManager {
       const isGold = pos.symbol === 'XAU/USD';
       const pipVal = PIP_VALUES[pos.symbol] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
       const pipDollar = 10;
+      
+      // 🔒 Strictly decouple baseline entry from incoming ticks using write-protected anchor
+      const lockedEntryPrice = pos.immutableState?.anchors.anchoredEntryPrice ?? pos.entryPrice;
       const pipDiff = pos.type === 'BUY'
-        ? (livePrice - pos.entryPrice) / pipVal
-        : (pos.entryPrice - livePrice) / pipVal;
+        ? (livePrice - lockedEntryPrice) / pipVal
+        : (lockedEntryPrice - livePrice) / pipVal;
 
       const pnl = Number((pipDiff * pipDollar * pos.lots).toFixed(2));
       const pnlPercent = Number(((pnl / (pos.lots * 1000)) * 100).toFixed(2));
@@ -646,6 +649,7 @@ export class LiveMarketFeedManager {
 
       return {
         ...pos,
+        entryPrice: lockedEntryPrice, // Write-protected deterministic anchor
         currentPrice: livePrice,
         pnl,
         pnlPercent,
