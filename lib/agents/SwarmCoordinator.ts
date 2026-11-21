@@ -35,8 +35,6 @@ import { automatedSignalValidationModule } from '../automatedSignalValidationMod
 import { multiAssetIngestionEngine } from '../multiAssetIngestionEngine';
 import { macroTelemetryBridge } from '../macroTelemetryBridge';
 import { sevenStagePipelineEngine } from '../sevenStagePipelineEngine';
-import { multiTierScreeningEngine } from '../multiTierScreeningEngine';
-import { invalidCriteriaMemoryModule } from '../invalidCriteriaMemoryModule';
 
 export class SwarmCoordinator {
   private technicalAnalyst: TechnicalAnalystAgent;
@@ -61,8 +59,8 @@ export class SwarmCoordinator {
   /**
    * 24/7 Autonomous 7-Agent Swarm Cycle:
    * Coordinates seven specialized desks running simultaneous asynchronous processes:
-   *  1. Technical Analyst: evaluates market structure & indicators using 1,250 technical strategies
-   *  2. Fundamental Analyst: tracks macroeconomic regimes via 1,250 fundamental engines
+   *  1. Technical Analyst: evaluates market structure & indicators using 525 technical strategies
+   *  2. Fundamental Analyst: tracks macroeconomic regimes via 525 fundamental engines
    *  3. News Analyst: continuously parses 38 premier financial wire feeds
    *  4. Forex & Intermarket Analyst: assesses currency strength relativity and session liquidity
    *  5. Order Flow Analyst: evaluates CVD divergences, 3:1 diagonal imbalances, Volume Profile & DOM walls
@@ -223,7 +221,7 @@ export class SwarmCoordinator {
     const fundIsSell = fundamental.bias.includes('SELL') || news.bias.includes('SELL');
 
     // 🧠 Exhaustive Synchronous Meta-Analysis Engine:
-    // Mandates the exhaustive integration and debate of all 2,500+ quantitative strategies (1,250+ Technical & 1,250+ Fundamental models)
+    // Mandates the exhaustive integration and debate of all 1,050+ strategies (525+ Technical & 525+ Fundamental models)
     // strictly deprecating any heuristic pruning or partial execution.
     const exhaustiveCorpus = knowledgeEngine.evaluateExhaustiveStrategyCorpus({
       pair,
@@ -287,7 +285,7 @@ export class SwarmCoordinator {
       overallConfidence = 45;
     }
 
-    // Synchronize overall confidence with exhaustive 2,500+ strategy corpus
+    // Synchronize overall confidence with exhaustive 1,050+ strategy corpus
     if (exhaustiveCorpus.metaConsensusDirection !== 'HOLD') {
       overallConfidence = Math.min(98, Math.round(overallConfidence * 0.45 + exhaustiveCorpus.metaConsensusScore * 0.55));
     }
@@ -398,7 +396,7 @@ export class SwarmCoordinator {
       }
     }
 
-    // 2,500+ Strategy Corpus metrics integration
+    // 1,050+ Strategy Corpus metrics integration
     const techBullishCount = exhaustiveCorpus.technicalConcordance.bullishCount;
     const techBearishCount = exhaustiveCorpus.technicalConcordance.bearishCount;
     const fundBullishCount = exhaustiveCorpus.fundamentalConcordance.bullishCount;
@@ -420,7 +418,7 @@ export class SwarmCoordinator {
     if (buySideChannelWeight > 88) { buySideChannelWeight = 88.0; sellSideChannelWeight = 12.0; }
 
     // Fail-safe pauses against stale data: if stream latency exceeds threshold (>1500ms or disconnected)
-    let failSafePauseActive = streamLatencyMs > 1500;
+    const failSafePauseActive = streamLatencyMs > 1500;
 
     const dynamicPositionLots = risk.parameters.positionSizeLots > 0 ? risk.parameters.positionSizeLots : tierParams.defaultLots;
 
@@ -522,22 +520,20 @@ export class SwarmCoordinator {
       confluenceGrade = existingLatched.anchoredGrade;
       activeDirection = existingLatched.anchoredDirection;
     } else {
-      const pipMult = PIP_VALUES[pair] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
-      const stopDistance = Math.max(
-        15 * pipMult,
-        Math.min(80 * pipMult, Math.abs(currentPrice - risk.parameters.stopLoss) || (22 * pipMult))
-      );
-      const rawTargetDist = Math.abs(currentPrice - risk.parameters.takeProfit1);
-      const targetDistance = (rawTargetDist >= stopDistance * 1.5 && rawTargetDist <= stopDistance * 3.5)
-        ? rawTargetDist
-        : stopDistance * 2.5;
-
       if (activeDirection === 'SELL') {
-        finalStopLoss = Number((currentPrice + stopDistance).toFixed(decimals));
-        finalTakeProfit = Number((currentPrice - targetDistance).toFixed(decimals));
+        if (finalStopLoss <= currentPrice) {
+          finalStopLoss = Number((currentPrice + Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
+        }
+        if (finalTakeProfit >= currentPrice) {
+          finalTakeProfit = Number((currentPrice - Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
+        }
       } else if (activeDirection === 'BUY') {
-        finalStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
-        finalTakeProfit = Number((currentPrice + targetDistance).toFixed(decimals));
+        if (finalStopLoss >= currentPrice) {
+          finalStopLoss = Number((currentPrice - Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
+        }
+        if (finalTakeProfit <= currentPrice) {
+          finalTakeProfit = Number((currentPrice + Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
+        }
       }
     }
 
@@ -695,36 +691,6 @@ export class SwarmCoordinator {
       scenarioPrompt: typeof scenarioInput === 'string' ? scenarioInput : scenarioInput?.prompt,
     });
 
-    // 📊 Multi-Tiered Screening & Dynamic Model Ranking (2,500+ Quant Strategy Library)
-    const multiTierScreening = multiTierScreeningEngine.screenAndRankStrategies({
-      symbol: pair,
-      timeframe,
-      currentPrice,
-      candles: marketCandles,
-      technical,
-      fundamental,
-      orderFlow,
-    });
-
-    // 🧠 Persistent Memory Module: Mandatory Pre-Trade Validation Gate (Zero-Repetition Assurance)
-    const invalidCriteriaGate = invalidCriteriaMemoryModule.validateCandidateSignal({
-      symbol: pair,
-      direction: activeDirection === 'SELL' ? 'SELL' : 'BUY',
-      timeframe,
-      currentPrice,
-      technical,
-      fundamental,
-      orderFlow,
-      news,
-    });
-
-    if (!invalidCriteriaGate.allowed) {
-      executionAuthorized = false;
-      executionStatus = 'VETOED';
-      failSafePauseActive = true;
-      unifiedDecision.summary = `${invalidCriteriaGate.blockReason} | ${unifiedDecision.summary}`;
-    }
-
     // 🎯 Chief Risk Manager Unified Directive
     const chiefRiskManagerUnifiedDirective = {
       directive: debateOutcome.synthesis.terminalNode?.directive || 'MAINTAIN_POSITION',
@@ -771,8 +737,6 @@ export class SwarmCoordinator {
       exhaustiveStrategyCorpus: exhaustiveCorpus,
       capitalPreservationGate,
       sevenStagePipeline,
-      multiTierScreening,
-      invalidCriteriaGate,
       buySideChannelWeight,
       sellSideChannelWeight,
       streamLatencyMs,
@@ -1040,7 +1004,7 @@ export class SwarmCoordinator {
       urgency = 'MONITOR';
     }
 
-    // Query Knowledge Engine for Opposing Rules from 1,250 Technical and 1,250 Fundamental Rule Bases
+    // Query Knowledge Engine for Opposing Rules from 525 Technical and 525 Fundamental Rule Bases
     const opposingRuleSets = knowledgeEngine.getOpposingRules(segment, dominantSide);
 
     // Primary Supporting Technical Rule
@@ -1210,13 +1174,13 @@ export class SwarmCoordinator {
       id: 'deb-corpus',
       round: 1,
       role: 'terminal_node',
-      agentName: 'Strategy Corpus & MTF Verification Node (2,500+ Strategies)',
+      agentName: 'Strategy Corpus & MTF Verification Node (1,050+ Strategies)',
       avatarColor: 'text-teal-400 bg-teal-950/60 border-teal-800',
-      content: `Synchronous Corpus Verification (2,500+ Strategies): Active ${pair} structure validated across all 1,250 technical heuristics (SMC, Order Blocks, FVGs, Liquidity Sweeps) and 1,250 fundamental models (real yields, central bank divergence, COT positioning). Dialectical channel pressure: Buy Channel ${buySideChannelWeight}% vs Sell Channel ${sellSideChannelWeight}%. Zero heuristic pruning certified. Directional confluence: ${overallConfidence}% ${dominantSide}.`,
+      content: `Synchronous Corpus Verification (1,050+ Strategies): Active ${pair} structure validated across all 525 technical heuristics (SMC, Order Blocks, FVGs, Liquidity Sweeps) and 525 fundamental models (real yields, central bank divergence, COT positioning). Dialectical channel pressure: Buy Channel ${buySideChannelWeight}% vs Sell Channel ${sellSideChannelWeight}%. Zero heuristic pruning certified. Directional confluence: ${overallConfidence}% ${dominantSide}.`,
       sentiment: dominantSide === 'BUY' ? 'BULLISH' : 'BEARISH',
       timestamp: '00:09s',
-      citedRuleId: 'CORPUS-MTF-2500',
-      citedRuleName: '2,500+ Exhaustive Strategy Corpus & MTF Alignment Invariant',
+      citedRuleId: 'CORPUS-MTF-1050',
+      citedRuleName: '1,050+ Exhaustive Strategy Corpus & MTF Alignment Invariant',
       strategyCategory: 'CONFLUENCE',
       winRate: 82.4,
       side: dominantSide,
@@ -1231,7 +1195,7 @@ export class SwarmCoordinator {
       role: 'technical_analyst',
       agentName: tech.agentName,
       avatarColor: 'text-cyan-400 bg-cyan-950/60 border-cyan-800',
-      content: `Rigorous Cross-Examination — Opposing ${opposingSide} Argument: Before committing capital, our 1,250 technical strategies library identifies an opposing counter-risk: Rule ${techOpposeRule.id} ("${techOpposeRule.ruleName}", Win Rate: ${techOpposeRule.expectedWinRate}%). ${techOpposeRule.conditionDescription}. If price violates structural invalidation boundaries, this counter-trend setup activates. Invalidation criteria: ${techOpposeRule.invalidationCriteria}.`,
+      content: `Rigorous Cross-Examination — Opposing ${opposingSide} Argument: Before committing capital, our 525 technical strategies library identifies an opposing counter-risk: Rule ${techOpposeRule.id} ("${techOpposeRule.ruleName}", Win Rate: ${techOpposeRule.expectedWinRate}%). ${techOpposeRule.conditionDescription}. If price violates structural invalidation boundaries, this counter-trend setup activates. Invalidation criteria: ${techOpposeRule.invalidationCriteria}.`,
       sentiment: opposingSide === 'BUY' ? 'BULLISH' : 'BEARISH',
       timestamp: '00:10s',
       citedRuleId: techOpposeRule.id,
@@ -1247,7 +1211,7 @@ export class SwarmCoordinator {
       role: 'fundamental_analyst',
       agentName: fund.agentName,
       avatarColor: 'text-purple-400 bg-purple-950/60 border-purple-800',
-      content: `Macro Counter-Examination: Cross-referencing against our 1,250 fundamental strategies, we must account for counter-risk under Rule ${fundOpposeRule.id} ("${fundOpposeRule.ruleName}", Win Rate: ${fundOpposeRule.expectedWinRate}%). ${fundOpposeRule.conditionDescription}. If sovereign yields re-widen against our thesis, temporary price compression could occur. Invalidation: ${fundOpposeRule.invalidationCriteria}.`,
+      content: `Macro Counter-Examination: Cross-referencing against our 525 fundamental strategies, we must account for counter-risk under Rule ${fundOpposeRule.id} ("${fundOpposeRule.ruleName}", Win Rate: ${fundOpposeRule.expectedWinRate}%). ${fundOpposeRule.conditionDescription}. If sovereign yields re-widen against our thesis, temporary price compression could occur. Invalidation: ${fundOpposeRule.invalidationCriteria}.`,
       sentiment: 'CAUTION',
       timestamp: '00:12s',
       citedRuleId: fundOpposeRule.id,
@@ -1460,7 +1424,7 @@ export class SwarmCoordinator {
         forexAnalyst: swarmSignOff.forexAnalyst,
         orderFlowAnalyst: swarmSignOff.orderFlowAnalyst,
         chiefRiskOfficer: swarmSignOff.chiefRiskOfficer,
-        chiefReviewer: `Dr. Marcus Sterling (Chief Reviewer): Institutional Gatekeeper Audit cleared. 2,500+ strategy corpus synchronously verified (1,250 technical + 1,250 fundamental, 0 pruned). Zero-veto parameterization authorized.`,
+        chiefReviewer: `Dr. Marcus Sterling (Chief Reviewer): Institutional Gatekeeper Audit cleared. 1,050+ strategy corpus synchronously verified (525 technical + 525 fundamental, 0 pruned). Zero-veto parameterization authorized.`,
       },
     };
 

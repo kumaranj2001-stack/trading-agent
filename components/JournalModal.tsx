@@ -122,7 +122,7 @@ export const JournalModal: React.FC<JournalModalProps> = ({
   if (!isOpen && !isFullPage) return null;
 
   const analysis = JournalStorageManager.analyzeHistoricalJournals(filterSymbol !== 'ALL' ? (filterSymbol as CurrencyPair) : undefined);
-  const totalOperativeRules = 2500 + dynamicRules.length;
+  const totalOperativeRules = 1050 + dynamicRules.length;
 
   // Filter journals
   const filteredJournals = journals.filter((item) => {
@@ -169,7 +169,7 @@ export const JournalModal: React.FC<JournalModalProps> = ({
                 IMMUTABLE AUDIT LEDGER
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 font-bold">
-                {totalOperativeRules} OPERATIVE RULES (2,500 + {dynamicRules.length} DYNAMIC)
+                {totalOperativeRules} OPERATIVE RULES (1,050 + {dynamicRules.length} DYNAMIC)
               </span>
             </div>
             <p className="text-xs text-slate-400">
@@ -306,7 +306,7 @@ export const JournalModal: React.FC<JournalModalProps> = ({
         <div className="bg-terminal-900/90 p-2.5 rounded-lg border border-terminal-border">
           <span className="text-slate-400 text-[10px] uppercase font-semibold block">Operative Rules</span>
           <span className="text-lg font-bold text-indigo-300 font-mono">{totalOperativeRules}</span>
-          <span className="text-[10px] text-indigo-400 block font-sans">2,500 + {dynamicRules.length} Learned</span>
+          <span className="text-[10px] text-indigo-400 block font-sans">1,050 + {dynamicRules.length} Learned</span>
         </div>
 
         <div className="bg-terminal-900/90 p-2.5 rounded-lg border border-terminal-border">
@@ -718,7 +718,7 @@ export const JournalModal: React.FC<JournalModalProps> = ({
                 </div>
                 <div>
                   <h3 className="font-bold text-white text-sm">
-                    Self-Optimizing Knowledge Base Expansion (Baseline 2,500 + {dynamicRules.length} Operative Rules)
+                    Self-Optimizing Knowledge Base Expansion (Baseline 1,050 + {dynamicRules.length} Operative Rules)
                   </h3>
                   <p className="text-xs text-slate-300">
                     Each realized stop-loss executes a recursive audit and dynamically synthesizes a permanent parametric failure constraint.

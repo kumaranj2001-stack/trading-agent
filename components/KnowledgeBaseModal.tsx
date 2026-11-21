@@ -107,20 +107,20 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-white text-sm sm:text-base truncate">
-                10 // INSTITUTIONAL QUANTITATIVE LIBRARY (2,500+ STRATEGIES & HEURISTICS)
+                10 // INSTITUTIONAL KNOWLEDGE BASE (1,050+ STRATEGIES & HEURISTICS)
               </h3>
               <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                2,500+ VERIFIED RULES (1,250 TECH + 1,250 FUND)
+                {allRules.length} VERIFIED RULES (525 TECH + 525 FUND)
               </span>
               <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
                 ZERO PRUNING CERTIFIED
               </span>
               <span className="hidden lg:inline px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                MULTI-TIER SCREENED
+                SYNCHRONOUS INTEGRATION
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">
-              1,250 Technical (SMC / AMT / Harmonics / Stat-Arb) • 1,250 Fundamental (Central Banks / Yields / Cross-Asset Flows)
+              525 Technical (SMC / Confluence) • 525 Fundamental (Central Banks / Indian Markets)
             </p>
           </div>
         </div>

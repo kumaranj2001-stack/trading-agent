@@ -276,7 +276,7 @@ export class LiveMarketFeedManager {
       const key = `${this.currentPair}_${this.currentTimeframe}`;
       const candles = this.canonicalCandles.get(key) || [];
       const lastCandle = candles.length > 0 ? candles[candles.length - 1] : null;
-      const lockedPrice = lastCandle ? lastCandle.close : (MarketSessionManager.getFrozenPrice(this.currentPair) || BASE_PRICES[this.currentPair] || 1.0);
+      const lockedPrice = lastCandle ? lastCandle.close : (BASE_PRICES[this.currentPair] || 1.0);
       MarketSessionManager.setFrozenPrice(this.currentPair, lockedPrice);
       const base = BASE_PRICES[this.currentPair] || lockedPrice;
       const change24h = Number((((lockedPrice - base) / base) * 100).toFixed(2));
@@ -487,21 +487,16 @@ export class LiveMarketFeedManager {
     const liveEntryPrice = Number(livePrice.toFixed(decimals));
 
     // Calculate verified structural stop and target distances anchored by the swarm
-    // Mandatory 10-pip maximum entry bound and realistic institutional target execution capability
+    // Mandatory 10-pip maximum entry bound and 10-pip target execution capability
     const max10PipDistance = pipMultiplier * 10;
-    const effectiveStopDist = Math.max(
-      pipMultiplier * 5,
-      Math.min(
-        Math.abs(latched.anchoredEntryPrice - latched.anchoredStopLoss) || (pipMultiplier * 8),
-        max10PipDistance
-      )
+    const effectiveStopDist = Math.min(
+      Math.abs(latched.anchoredEntryPrice - latched.anchoredStopLoss) || (pipMultiplier * 8),
+      max10PipDistance
     );
-    const rawTargetDist = Math.abs(latched.anchoredTakeProfit - latched.anchoredEntryPrice);
-    const maxTargetDist = Math.max(effectiveStopDist * 4.0, pipMultiplier * 50);
-    const minTargetDist = Math.max(effectiveStopDist * 1.5, pipMultiplier * 10);
-    const effectiveTargetDist = (rawTargetDist >= minTargetDist && rawTargetDist <= maxTargetDist)
-      ? rawTargetDist
-      : Number((effectiveStopDist * 2.5).toFixed(decimals));
+    const effectiveTargetDist = Math.max(
+      Math.abs(latched.anchoredTakeProfit - latched.anchoredEntryPrice) || (pipMultiplier * 10),
+      pipMultiplier * 10
+    );
 
     // Calculate dynamic Stop Loss and Take Profit strictly aligned to liveEntryPrice
     const dynamicStopLoss = isSell
@@ -512,7 +507,7 @@ export class LiveMarketFeedManager {
       ? Number((liveEntryPrice - effectiveTargetDist).toFixed(decimals))
       : Number((liveEntryPrice + effectiveTargetDist).toFixed(decimals));
 
-    const anchoredRiskReward = Number((effectiveTargetDist / (effectiveStopDist || 1)).toFixed(2));
+    const anchoredRiskReward = Math.max(1.0, latched.anchoredRiskReward || 1.25);
     const safeLots = Math.max(0.01, latched.anchoredLots || 0.05);
     const anchoredGrade = latched.anchoredGrade || 'A+';
 

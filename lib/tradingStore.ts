@@ -51,7 +51,7 @@ class TradingStoreImpl {
 
     // Initial safe candles
     const initialCandles = generateCandles(defaultPair, defaultTf, 60);
-    const initialPrice = initialCandles[initialCandles.length - 1]?.close || BASE_PRICES[defaultPair] || 3538.50;
+    const initialPrice = initialCandles[initialCandles.length - 1]?.close || BASE_PRICES[defaultPair] || 2734.50;
 
     LiveMarketFeedManager.setCanonicalFeed(defaultPair, defaultTf, initialCandles);
 

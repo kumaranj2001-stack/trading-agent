@@ -106,7 +106,7 @@ export class TechnicalAnalystAgent extends BaseAgent {
     else if (score <= -40) trend = 'STRONG_DOWNTREND';
     else if (score <= -10) trend = 'DOWNTREND';
 
-    // 7. Match against the 1,250 Technical Knowledge Base Models!
+    // 7. Match against the 525 Technical Knowledge Base Rules!
     const knowledgeMatch = knowledgeEngine.matchTechnicalKnowledge(
       pair,
       segment,

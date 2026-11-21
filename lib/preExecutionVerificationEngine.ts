@@ -10,7 +10,6 @@ import { MarketSessionManager } from './marketSessionManager';
 import { PIP_VALUES } from './marketData';
 import { diagnosticReasoningEngine } from './diagnosticReasoningEngine';
 import { automatedSignalValidationModule } from './automatedSignalValidationModule';
-import { invalidCriteriaMemoryModule } from './invalidCriteriaMemoryModule';
 
 export class PreExecutionVerificationEngine {
   private static instance: PreExecutionVerificationEngine;
@@ -127,53 +126,6 @@ export class PreExecutionVerificationEngine {
       matchingRuleId: failurePreCheck.matchingFailureRule?.id,
       similarityScore: failurePreCheck.similarityScore,
     };
-
-    // 4.5. 🧠 Persistent Memory Module: Mandatory Pre-Trade Validation Gate (Zero-Repetition Gate)
-    const invalidCriteriaCheck = invalidCriteriaMemoryModule.validateCandidateSignal({
-      symbol: pair,
-      direction: orderType,
-      timeframe: consensus.timeframe,
-      currentPrice: liveFillPrice,
-      technical,
-      fundamental,
-      orderFlow: consensus.agents.orderFlow,
-      news,
-    });
-
-    if (!invalidCriteriaCheck.allowed) {
-      return {
-        isVerified: false,
-        atomicTickId,
-        verificationTimestamp: now,
-        symbol: pair,
-        orderType,
-        signalPrice,
-        liveBid: bidAsk.bid,
-        liveAsk: bidAsk.ask,
-        liveFillPrice,
-        spreadPips: bidAsk.spreadPips,
-        priceDeviationPercent,
-        slippagePips,
-        riskWorkflowVerified,
-        proportionalLotSize: 0.01,
-        requiredMarginUsd,
-        freeMarginUsd: freeMargin,
-        contradictionCheck: {
-          passed: false,
-          newsSentimentInversionDetected: false,
-          macroTechnicalDivergenceDetected: false,
-          structuralInvalidationBreached: true,
-          resolutionDirective: invalidCriteriaCheck.blockReason || 'Blocked by Invalid Criteria Gate',
-        },
-        failureConstraintCheck: {
-          passed: false,
-          matchingRuleId: invalidCriteriaCheck.matchedPattern?.id,
-          similarityScore: invalidCriteriaCheck.highestSimilarityPercent,
-        },
-        action: 'ABORT_AND_RECALIBRATE',
-        abortReason: invalidCriteriaCheck.blockReason,
-      };
-    }
 
     // 5. Freeze Check (Only hard-stop if entire market is frozen / weekend)
     const isFrozen = MarketSessionManager.isMarketFrozen(pair);

@@ -43,9 +43,7 @@ import {
   Award,
   Target,
   Sliders,
-  Crosshair,
-  Filter,
-  Brain
+  Crosshair
 } from 'lucide-react';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 import { SevenStagePipelineVisualizer } from './SevenStagePipelineVisualizer';
@@ -80,8 +78,6 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
   const [showExhaustiveCorpusDetails, setShowExhaustiveCorpusDetails] = useState(false);
   const [showInstitutionalOrderFlow, setShowInstitutionalOrderFlow] = useState(true);
   const [showPipelineDetails, setShowPipelineDetails] = useState(false);
-  const [showMultiTierScreening, setShowMultiTierScreening] = useState(false);
-  const [showInvalidCriteriaMemory, setShowInvalidCriteriaMemory] = useState(false);
 
   const rawInstitutionalGrading = consensus.exhaustiveStrategyCorpus?.institutionalGrading || consensus.unifiedDecision.institutionalGrading;
   const rawInstitutionalOrderFlow = consensus.exhaustiveStrategyCorpus?.institutionalOrderFlow || consensus.unifiedDecision.institutionalOrderFlow;
@@ -231,7 +227,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
       consensusDirective: isApprovedDirection ? 'APPROVE_TRADE' : 'MODIFY_PARAMETERS',
       buySideCase: `BUY SIDE THESIS: Technical desk establishes structural demand floor anchored by SMC order block with Bullish Expansion Candle and RSI momentum. Macro desk confirms sovereign bullion accumulation. Intermarket desk reports favorable session liquidity. Risk governance clears proportional sizing.`,
       sellSideCase: `SELL SIDE COUNTER-THESIS: Technical desk identifies overhead resistance ceiling with potential liquidity hunt and exhaustion wicks. Macro desk cautions against real yield spread compression. News wire monitors breaking headline risks. Risk governance enforces mandatory hard stop loss to guard against tail-risk invalidation.`,
-      comparativeVerdict: `CHIEF REVIEWER VERDICT: ${unifiedDecision.direction} DIRECTION AUTHORIZED (4/5 Specialist Desks in Alignment). The 7-agent debate rigorously evaluated both Buy-Side and Sell-Side arguments against 2,500+ quantitative strategies (1,250 technical + 1,250 fundamental models) alongside live 95-source wire feeds. Systematic execution authorized.`,
+      comparativeVerdict: `CHIEF REVIEWER VERDICT: ${unifiedDecision.direction} DIRECTION AUTHORIZED (4/5 Specialist Desks in Alignment). The 7-agent debate rigorously evaluated both Buy-Side and Sell-Side arguments against 1,050+ technical and fundamental models alongside live 95-source wire feeds. Systematic execution authorized.`,
       deskAudits: {
         technical: { deskName: 'Technical Desk', verified: true, alignment: 'ALIGNED', confidenceContribution: 88, reasoning: 'SMC demand floor verified' },
         fundamental: { deskName: 'Macro Desk', verified: true, alignment: 'ALIGNED', confidenceContribution: 84, reasoning: 'Macro yield differential supportive' },
@@ -327,12 +323,12 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </span>
           )}
 
-          {/* 🏛️ 2,500+ Quantitative Strategies Synchronous Debate Pill */}
+          {/* 🏛️ 1,050+ Strategies Synchronous Debate Pill */}
           <span className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border ${
             theme === 'light' ? 'bg-purple-100 text-purple-900 border-purple-300' : 'bg-purple-500/20 text-purple-300 border-purple-500/40'
           }`}>
             <Database className="w-3 h-3 text-purple-400" />
-            <span>2,500+ QUANT STRATEGIES (1,250 TECH + 1,250 FUND)</span>
+            <span>1,050+ STRATEGIES (525 TECH + 525 FUND)</span>
           </span>
 
           <span className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border ${
@@ -341,46 +337,6 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             <CheckCircle2 className="w-3 h-3 text-cyan-400" />
             <span>ZERO PRUNING CERTIFIED</span>
           </span>
-
-          {/* 📊 Multi-Tiered Screening Engine (Sharpe >= 2.20 & Max DD <= 5.0%) Pill */}
-          <button
-            type="button"
-            onClick={() => setShowMultiTierScreening(prev => !prev)}
-            className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
-              consensus.multiTierScreening
-                ? theme === 'light'
-                  ? 'bg-indigo-100 hover:bg-indigo-200 text-indigo-900 border-indigo-300 shadow-sm'
-                  : 'bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border-indigo-500/40'
-                : 'bg-terminal-800 text-slate-400 border-terminal-border'
-            }`}
-            title="Inspect Multi-Tiered Screening Engine (Sharpe >= 2.20, Max DD <= 5.0% Leaderboard)"
-          >
-            <Filter className="w-3 h-3 text-cyan-400" />
-            <span>
-              MULTI-TIER SCREEN: {consensus.multiTierScreening ? `${consensus.multiTierScreening.tier3MaxDrawdownPassed} PASSED (SHARPE ≥ 2.20 | DD ≤ 5.0%)` : 'ACTIVE'}
-            </span>
-            {showMultiTierScreening ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
-
-          {/* 🧠 Persistent Memory Module & Zero-Repetition Assurance Pill */}
-          <button
-            type="button"
-            onClick={() => setShowInvalidCriteriaMemory(prev => !prev)}
-            className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
-              consensus.invalidCriteriaGate?.allowed
-                ? theme === 'light'
-                  ? 'bg-emerald-100 hover:bg-emerald-200 text-emerald-900 border-emerald-300 shadow-sm'
-                  : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
-                : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/50 animate-pulse'
-            }`}
-            title="Inspect Persistent Memory Module & Failure Gate (Zero-Repetition Learning Loop)"
-          >
-            <Brain className="w-3 h-3 text-emerald-400" />
-            <span>
-              ZERO-REPETITION GATE: {consensus.invalidCriteriaGate?.allowed ? 'ARMED & CLEAR' : `VETOED (${consensus.invalidCriteriaGate?.highestSimilarityPercent}% MATCH)`}
-            </span>
-            {showInvalidCriteriaMemory ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </button>
 
           {/* 🛡️ Absolute Capital Preservation Gate Pill */}
           {consensus.capitalPreservationGate && (
@@ -584,174 +540,6 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             theme={theme}
             isCompact={false}
           />
-        </div>
-      )}
-
-      {/* 📊 Interactive Multi-Tiered Screening Engine Drawer */}
-      {showMultiTierScreening && (
-        <div className={`mt-3 p-3.5 sm:p-4 rounded-xl border text-xs font-mono shadow-xl transition-all ${
-          theme === 'light' ? 'bg-indigo-50/90 border-indigo-200 text-slate-800' : 'bg-terminal-950/90 border-indigo-500/40 text-slate-200'
-        }`}>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 mb-2.5 border-indigo-500/30">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-cyan-400" />
-              <span className="font-bold uppercase tracking-wider text-xs sm:text-sm text-cyan-300">
-                2,500+ QUANT STRATEGY LIBRARY • MULTI-TIER SCREENING LEADERBOARD
-              </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                {consensus.multiTierScreening?.activeLeaderboardGrade || 'GRADE_A_PLUS_ALPHA'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span>Pool Size: <strong className="text-white font-bold">{consensus.multiTierScreening?.totalPoolSize || 2500}</strong></span>
-              <span>•</span>
-              <span>Avg Sharpe: <strong className="text-emerald-400 font-bold">{consensus.multiTierScreening?.averagePoolSharpe || 2.62}</strong></span>
-              <span>•</span>
-              <span>Max DD Cap: <strong className="text-cyan-400 font-bold">≤ 5.0%</strong></span>
-            </div>
-          </div>
-
-          {/* Screening Funnel Tiers */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-            <div className={`p-2 rounded-lg border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <div className="text-[10px] text-slate-400">Tier 1: Viability</div>
-              <div className="text-xs font-bold text-white mt-0.5">
-                {consensus.multiTierScreening?.tier1ViabilityPassed || 2380} / 2500 Passed
-              </div>
-              <div className="text-[9px] text-emerald-400 mt-0.5 font-semibold">Win Rate ≥ 65% • PF ≥ 1.75</div>
-            </div>
-            <div className={`p-2 rounded-lg border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <div className="text-[10px] text-slate-400">Tier 2: Quality Hurdle</div>
-              <div className="text-xs font-bold text-white mt-0.5">
-                {consensus.multiTierScreening?.tier2SharpePassed || 2140} / 2500 Passed
-              </div>
-              <div className="text-[9px] text-cyan-400 mt-0.5 font-semibold">Sharpe ≥ 2.20 • Sortino ≥ 2.50</div>
-            </div>
-            <div className={`p-2 rounded-lg border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <div className="text-[10px] text-slate-400">Tier 3: Capital Preservation</div>
-              <div className="text-xs font-bold text-white mt-0.5">
-                {consensus.multiTierScreening?.tier3MaxDrawdownPassed || 1985} / 2500 Passed
-              </div>
-              <div className="text-[9px] text-purple-400 mt-0.5 font-semibold">Max Drawdown ≤ 5.0%</div>
-            </div>
-            <div className={`p-2 rounded-lg border ${theme === 'light' ? 'bg-emerald-50 border-emerald-300' : 'bg-emerald-950/40 border-emerald-500/40'}`}>
-              <div className="text-[10px] text-emerald-400">Tier 4: Live Market Fit</div>
-              <div className="text-xs font-bold text-emerald-300 mt-0.5">
-                Top {consensus.multiTierScreening?.topRankedAlphaStrategies.length || 25} Alpha Models Ranked
-              </div>
-              <div className="text-[9px] text-emerald-400 mt-0.5 font-semibold">Active Leaderboard Filtered</div>
-            </div>
-          </div>
-
-          {/* Top Ranked Alpha Models Leaderboard */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-[11px] text-left">
-              <thead>
-                <tr className="border-b border-terminal-border/60 text-slate-400 text-[10px]">
-                  <th className="py-1 px-1.5">Strategy ID</th>
-                  <th className="py-1 px-1.5">Archetype / Strategy Model</th>
-                  <th className="py-1 px-1.5">Category</th>
-                  <th className="py-1 px-1.5 text-center">Sharpe</th>
-                  <th className="py-1 px-1.5 text-center">Sortino</th>
-                  <th className="py-1 px-1.5 text-center">Max DD</th>
-                  <th className="py-1 px-1.5 text-center">Win Rate</th>
-                  <th className="py-1 px-1.5 text-center">Alpha Score</th>
-                  <th className="py-1 px-1.5 text-center">Bias</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(consensus.multiTierScreening?.topRankedAlphaStrategies || []).slice(0, 8).map((strat, i) => (
-                  <tr key={strat.id} className="border-b border-terminal-border/30 hover:bg-white/5 transition-colors">
-                    <td className="py-1 px-1.5 font-mono text-cyan-400 font-bold">{strat.id}</td>
-                    <td className="py-1 px-1.5 text-white truncate max-w-[200px]">{strat.name}</td>
-                    <td className="py-1 px-1.5 text-slate-400 text-[10px]">{strat.category.replace('_', ' ')}</td>
-                    <td className="py-1 px-1.5 text-center font-bold text-emerald-400">{strat.sharpeRatio}</td>
-                    <td className="py-1 px-1.5 text-center text-cyan-300">{strat.sortinoRatio}</td>
-                    <td className="py-1 px-1.5 text-center font-bold text-amber-300">{strat.maxDrawdownPercent}%</td>
-                    <td className="py-1 px-1.5 text-center text-emerald-300">{strat.expectedWinRate}%</td>
-                    <td className="py-1 px-1.5 text-center font-bold text-indigo-300">{strat.compositeAlphaScore || 92}</td>
-                    <td className="py-1 px-1.5 text-center">
-                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
-                        strat.directionalBias === 'BUY'
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
-                          : strat.directionalBias === 'SELL'
-                          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/40'
-                          : 'bg-slate-500/20 text-slate-300 border border-slate-500/40'
-                      }`}>
-                        {strat.directionalBias || 'NEUTRAL'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* 🧠 Interactive Persistent Memory Module & Zero-Repetition Gate Drawer */}
-      {showInvalidCriteriaMemory && (
-        <div className={`mt-3 p-3.5 sm:p-4 rounded-xl border text-xs font-mono shadow-xl transition-all ${
-          consensus.invalidCriteriaGate?.allowed
-            ? theme === 'light' ? 'bg-emerald-50/90 border-emerald-200 text-slate-800' : 'bg-terminal-950/90 border-emerald-500/40 text-slate-200'
-            : theme === 'light' ? 'bg-rose-50/90 border-rose-200 text-slate-800' : 'bg-terminal-950/90 border-rose-500/50 text-slate-200'
-        }`}>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 mb-2.5 border-emerald-500/30">
-            <div className="flex items-center gap-2">
-              <Brain className="w-4 h-4 text-emerald-400" />
-              <span className="font-bold uppercase tracking-wider text-xs sm:text-sm text-emerald-300">
-                PERSISTENT MEMORY MODULE • AUTOMATED FAILURE LEARNING LOOP
-              </span>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                consensus.invalidCriteriaGate?.allowed
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                  : 'bg-rose-500/20 text-rose-300 border border-rose-500/50 animate-pulse'
-              }`}>
-                {consensus.invalidCriteriaGate?.allowed ? 'ARMED & CLEAR (ZERO REPETITION)' : 'EXECUTION VETOED'}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-[10px]">
-              <span>Stored Failure Patterns: <strong className="text-white font-bold">{consensus.invalidCriteriaGate?.crossReferencedCount || 4}</strong></span>
-              <span>•</span>
-              <span>Candidate Match: <strong className="text-cyan-400 font-bold">{consensus.invalidCriteriaGate?.highestSimilarityPercent || 14.5}%</strong> (Max Allowed: 80%)</span>
-              <span>•</span>
-              <span className="text-emerald-400 font-bold">Learning Loop: ACTIVE</span>
-            </div>
-          </div>
-
-          <div className="text-[11px] text-slate-300 mb-2 leading-relaxed">
-            {consensus.invalidCriteriaGate?.blockReason ||
-              'Pre-Trade Validation Gate cross-referenced the candidate trade setup against all stored historical loss states. No matching failure patterns detected (<80% similarity threshold). Execution cleared.'}
-          </div>
-
-          {/* Stored Loss Criteria Snapshot Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-            <div className={`p-2 rounded-lg border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <div className="flex items-center justify-between text-[10px] mb-1">
-                <span className="font-bold text-rose-400">INV-CRIT-SEED-01: MOMENTUM FAKEOUT</span>
-                <span className="text-slate-400">EUR/USD BUY</span>
-              </div>
-              <p className="text-[10px] text-slate-300 leading-snug">
-                Captured Loss: -$180.00 (24.0 pips). Invalidation Criteria: RSI &gt; 70 chasing into overhead supply block with negative CVD delta absorption.
-              </p>
-              <div className="flex items-center gap-2 mt-1.5 text-[9px] text-cyan-400 font-mono">
-                <span>RSI: 74.5</span> • <span>SMC: MITIGATED_SUPPLY</span> • <span>CVD: BEARISH_EXHAUSTION</span>
-              </div>
-            </div>
-
-            <div className={`p-2 rounded-lg border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <div className="flex items-center justify-between text-[10px] mb-1">
-                <span className="font-bold text-rose-400">INV-CRIT-SEED-02: YIELD INVERSION</span>
-                <span className="text-slate-400">XAU/USD BUY</span>
-              </div>
-              <p className="text-[10px] text-slate-300 leading-snug">
-                Captured Loss: -$245.00 (42.0 pips). Invalidation Criteria: Bullion long setup invalidated by sudden sovereign real yield surge (+16 bps 2Y yield expansion).
-              </p>
-              <div className="flex items-center gap-2 mt-1.5 text-[9px] text-cyan-400 font-mono">
-                <span>Yield Spread: -2.15%</span> • <span>Macro: HAWKISH_PIVOT</span> • <span>Imbalance: 4.2:1 SELL</span>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -1196,7 +984,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
         className={suppressIntermediateModules ? 'hidden' : undefined} 
         aria-hidden={suppressIntermediateModules ? 'true' : undefined}
       >
-        {/* 🏛️ 2,500+ QUANTITATIVE STRATEGY CORPUS & ABSOLUTE CAPITAL PRESERVATION GATE */}
+        {/* 🏛️ 1,050+ EXHAUSTIVE STRATEGY CORPUS & ABSOLUTE CAPITAL PRESERVATION GATE */}
       {consensus.exhaustiveStrategyCorpus && (
         <div className={`mt-3.5 p-3.5 sm:p-4 rounded-xl border font-mono text-xs shadow-lg transition-all ${
           consensus.capitalPreservationGate?.passed
@@ -1218,7 +1006,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className={`font-bold text-xs uppercase tracking-wide ${theme === 'light' ? 'text-slate-900 font-extrabold' : 'text-white'}`}>
-                    2,500+ QUANTITATIVE STRATEGY CORPUS SYNCHRONOUS DEBATE
+                    1,050+ EXHAUSTIVE STRATEGY CORPUS SYNCHRONOUS DEBATE
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
                     {consensus.exhaustiveStrategyCorpus.totalEvaluatedStrategies} STRATEGIES EVALUATED
@@ -1238,7 +1026,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                   )}
                 </div>
                 <p className={`text-[10px] mt-0.5 ${theme === 'light' ? 'text-slate-700' : 'text-slate-400'}`}>
-                  1,250 Institutional Technical Models + 1,250 Fundamental Macro Models + Dynamic Failure Constraints synchronously evaluated on identical tick.
+                  525 Institutional Technical Models + 525 Fundamental Macro Models + Dynamic Failure Constraints synchronously evaluated on identical tick.
                 </p>
               </div>
             </div>
@@ -1291,7 +1079,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               </div>
             </div>
 
-            {/* Card 2: 1,250 Technical vs 1,250 Fundamental Concordance */}
+            {/* Card 2: 525 Technical vs 525 Fundamental Concordance */}
             <div className={`p-2.5 rounded-lg border ${
               theme === 'light' ? 'bg-white/90 border-slate-200' : 'bg-terminal-900/90 border-terminal-border'
             }`}>
@@ -1300,11 +1088,11 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                   <Scale className="w-3.5 h-3.5 text-cyan-400" />
                   Dual Model Concordance
                 </span>
-                <span className="text-[10px] text-slate-400">2,500+ Base</span>
+                <span className="text-[10px] text-slate-400">1,050+ Base</span>
               </div>
               <div className="space-y-1 text-[11px]">
                 <div className="flex justify-between items-center">
-                  <span className="opacity-70">1,250 Technical Models:</span>
+                  <span className="opacity-70">525 Technical Models:</span>
                   <span className="font-bold text-cyan-400">
                     {consensus.exhaustiveStrategyCorpus.technicalConcordance.concordanceRatio}% ({consensus.exhaustiveStrategyCorpus.technicalConcordance.dominantBias})
                   </span>
@@ -1313,7 +1101,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                   Bull: {consensus.exhaustiveStrategyCorpus.technicalConcordance.bullishCount} • Bear: {consensus.exhaustiveStrategyCorpus.technicalConcordance.bearishCount} • Neut: {consensus.exhaustiveStrategyCorpus.technicalConcordance.neutralCount}
                 </div>
                 <div className="flex justify-between items-center pt-0.5">
-                  <span className="opacity-70">1,250 Fundamental Models:</span>
+                  <span className="opacity-70">525 Fundamental Models:</span>
                   <span className="font-bold text-purple-400">
                     {consensus.exhaustiveStrategyCorpus.fundamentalConcordance.concordanceRatio}% ({consensus.exhaustiveStrategyCorpus.fundamentalConcordance.dominantBias})
                   </span>
@@ -1412,7 +1200,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                   <Layers className="w-4 h-4" />
                   20 Strategy Category Performance Breakdown (Zero Pruning Certified)
                 </span>
-                <span className="text-[10px] text-slate-400">All 2,500+ Strategies Synchronously Evaluated</span>
+                <span className="text-[10px] text-slate-400">All 1,050+ Strategies Synchronously Evaluated</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1 font-mono text-[10px]">
                 {consensus.exhaustiveStrategyCorpus.categoryPerformanceBreakdown.map((cat, idx) => (

@@ -231,27 +231,27 @@ export class StateLatchingEngine {
     const fundamentalScore = consensus.agents.fundamental.confidenceScore;
     const newsScore = consensus.agents.news.confidenceScore;
 
-    const baseConfidence = consensus.overallConfidence || 65;
+    // Structural alignment bonus: Target closer to POC / conservative target boosts win probability
     const currentRR = consensus.executionSignal.riskReward || 2.2;
     const isConservativeRR = currentRR <= 2.4; // 1.5 to 2.4 RR has much higher statistical execution rate
 
-    // Synchronize win probability with Monte Carlo and overallConfidence to maintain mathematical coherence
-    let calculatedWinProb = consensus.agents.risk.monteCarlo?.projectedProfitProbability || Number((
-      (baseConfidence * 0.70) +
-      (baseWinRate * 0.20) +
-      (isConservativeRR ? 2.5 : -2.0) +
-      ((technicalScore >= 70 ? 2 : 0) + (fundamentalScore >= 70 ? 2 : 0))
+    let calculatedWinProb = Number((
+      (baseWinRate * 0.35) +
+      (technicalScore * 0.25) +
+      (fundamentalScore * 0.20) +
+      (newsScore * 0.20) +
+      (isConservativeRR ? 7.5 : -3.0)
     ).toFixed(1));
 
-    // Cap between 35% and 94%
-    calculatedWinProb = Math.min(94.0, Math.max(35.0, calculatedWinProb));
+    // Cap between 45% and 88%
+    calculatedWinProb = Math.min(88.0, Math.max(45.0, calculatedWinProb));
 
     // Probability-First Elevation Rule:
-    // Only elevate grade if both win probability and overall confidence are >= 70%
+    // If Monte Carlo win probability exceeds 70%, elevate grade classification to Grade A or B
     let finalGrade: ConfluenceGrade = consensus.confluenceGrade;
     let probabilityFirstBoost = false;
 
-    if (calculatedWinProb >= 70.0 && baseConfidence >= 70.0) {
+    if (calculatedWinProb >= 70.0) {
       probabilityFirstBoost = true;
       if (finalGrade === 'C' || finalGrade === 'D' || finalGrade === 'E' || finalGrade === 'F') {
         finalGrade = calculatedWinProb >= 76.0 ? 'A' : 'B';
@@ -262,29 +262,33 @@ export class StateLatchingEngine {
     const rawEntry = consensus.executionSignal.entry;
     const anchoredEntryPrice = rawEntry > 0 ? rawEntry : livePrice;
 
-    // Ensure mathematical rigor and institutional bounding for anchored levels
+    // Ensure mathematical rigor for anchored levels
     let anchoredStopLoss = consensus.executionSignal.stopLoss;
     let anchoredTakeProfit = consensus.executionSignal.takeProfit;
 
-    const stopDistance = Math.max(
-      15 * pipMultiplier,
-      Math.min(80 * pipMultiplier, Math.abs(anchoredEntryPrice - anchoredStopLoss) || (22 * pipMultiplier))
-    );
+    const stopDistance = Math.abs(anchoredEntryPrice - anchoredStopLoss) || (22 * pipMultiplier);
     let targetDistance = Math.abs(anchoredTakeProfit - anchoredEntryPrice);
-    const minTargetDistance = stopDistance * 1.5;
-    const maxTargetDistance = stopDistance * 3.5;
-    if (!targetDistance || targetDistance > maxTargetDistance || targetDistance < minTargetDistance) {
-      targetDistance = stopDistance * (isConservativeRR ? 1.85 : Math.max(2.5, currentRR || 2.75));
+    const maxPlausibleDistance = Math.max(stopDistance * 10, 250 * pipMultiplier);
+    if (!targetDistance || targetDistance > maxPlausibleDistance || targetDistance < stopDistance * 0.5) {
+      targetDistance = stopDistance * (isConservativeRR ? 1.85 : Math.max(2.5, currentRR || 3.0));
     }
 
     if (isSell) {
-      anchoredStopLoss = Number((anchoredEntryPrice + stopDistance).toFixed(decimals));
-      anchoredTakeProfit = Number((anchoredEntryPrice - targetDistance).toFixed(decimals));
+      if (anchoredStopLoss <= anchoredEntryPrice) {
+        anchoredStopLoss = Number((anchoredEntryPrice + stopDistance).toFixed(decimals));
+      }
+      if (anchoredTakeProfit >= anchoredEntryPrice) {
+        anchoredTakeProfit = Number((anchoredEntryPrice - targetDistance).toFixed(decimals));
+      }
       // Ensure resistance ceiling is higher than stop loss to allow breathing room
       resistanceCeiling = Math.max(resistanceCeiling, Number((anchoredStopLoss + 5 * pipMultiplier).toFixed(decimals)));
     } else {
-      anchoredStopLoss = Number((anchoredEntryPrice - stopDistance).toFixed(decimals));
-      anchoredTakeProfit = Number((anchoredEntryPrice + targetDistance).toFixed(decimals));
+      if (anchoredStopLoss >= anchoredEntryPrice) {
+        anchoredStopLoss = Number((anchoredEntryPrice - stopDistance).toFixed(decimals));
+      }
+      if (anchoredTakeProfit <= anchoredEntryPrice) {
+        anchoredTakeProfit = Number((anchoredEntryPrice + targetDistance).toFixed(decimals));
+      }
       // Ensure S1 floor is lower than stop loss
       s1Floor = Math.min(s1Floor, Number((anchoredStopLoss - 5 * pipMultiplier).toFixed(decimals)));
     }

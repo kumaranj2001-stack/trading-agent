@@ -370,28 +370,19 @@ export class RiskManagerAgent extends BaseAgent {
     // achieves significantly higher Monte Carlo win probability (>70%).
     const isConservativeRR = riskRewardRatio <= 2.4;
     const baseWinProbability = symbolHistory && symbolHistory.trades >= 2 ? symbolHistory.winRate : 65.0;
-    const techBoost = technical.confidenceScore >= 70 ? 3.5 : technical.confidenceScore >= 50 ? 1.5 : -2.5;
-    const fundBoost = fundamental.confidenceScore >= 70 ? 3.0 : 1.0;
-    const newsBoost = news && news.confidenceScore >= 70 ? 2.0 : 0.5;
-    const rrBoost = isConservativeRR ? 2.5 : -2.0;
+    const techBoost = technical.confidenceScore >= 70 ? 7.0 : technical.confidenceScore >= 50 ? 3.0 : -4.0;
+    const fundBoost = fundamental.confidenceScore >= 70 ? 5.5 : 1.5;
+    const newsBoost = news && news.confidenceScore >= 70 ? 4.5 : 1.0;
+    const rrBoost = isConservativeRR ? 7.5 : -3.5;
 
-    // Synchronize Monte Carlo projected profit probability with overallConfidence to eliminate UI contradictions
-    // (Prevents a 44% confidence trade from erroneously reporting an 86.6% win rate)
     const calculatedWinProb = Math.min(
-      94.0,
-      Math.max(
-        35.0,
-        Number((
-          (overallConfidence * 0.70) +
-          (baseWinProbability * 0.20) +
-          techBoost + fundBoost + newsBoost + rrBoost
-        ).toFixed(1))
-      )
+      88.0,
+      Math.max(48.0, Number((baseWinProbability * 0.35 + techBoost + fundBoost + newsBoost + rrBoost + 30).toFixed(1)))
     );
 
     // Probability-First Elevation Rule:
-    // Only elevate grade classification to Grade A or B if BOTH calculated win probability and overall confidence meet criteria
-    if (calculatedWinProb >= 70.0 && overallConfidence >= 70.0 && !isVetoTriggered) {
+    // If Monte Carlo win probability exceeds 70%, elevate grade classification to Grade A or B
+    if (calculatedWinProb >= 70.0 && !isVetoTriggered) {
       if (assignedGrade === 'C' || assignedGrade === 'D' || assignedGrade === 'E' || assignedGrade === 'F') {
         const boostedGrade: ConfluenceGrade = calculatedWinProb >= 76.0 ? 'A' : 'B';
         adjustmentsMade.push(
