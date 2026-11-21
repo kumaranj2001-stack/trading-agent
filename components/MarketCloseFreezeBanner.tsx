@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Snowflake, 
   Lock, 
@@ -26,6 +26,39 @@ export const MarketCloseFreezeBanner: React.FC<MarketCloseFreezeBannerProps> = (
 }) => {
   const [isManualOverride, setIsManualOverride] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [countdownFormatted, setCountdownFormatted] = useState<string>(() => {
+    return sessionInfo?.nextOpenFormatted || '';
+  });
+  const [secondsRemaining, setSecondsRemaining] = useState<number>(() => {
+    return sessionInfo?.secondsUntilOpen || 0;
+  });
+
+  // ⏱️ Active real-time countdown decrement loop (ticks every 1,000ms)
+  useEffect(() => {
+    if (!sessionInfo?.isFrozen || !sessionInfo?.nextOpenDate) {
+      if (sessionInfo?.nextOpenFormatted) {
+        setCountdownFormatted(sessionInfo.nextOpenFormatted);
+      }
+      return;
+    }
+
+    const tick = () => {
+      const res = MarketSessionManager.formatCountdown(sessionInfo.nextOpenDate);
+      setCountdownFormatted(res.formatted);
+      setSecondsRemaining(res.secondsRemaining);
+
+      if (res.secondsRemaining <= 0) {
+        // Countdown reached zero: trigger automated session boundary transition
+        MarketSessionManager.forceSessionCheck();
+      }
+    };
+
+    // Immediate calculation on mount/dependency change
+    tick();
+
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [sessionInfo?.nextOpenDate, sessionInfo?.isFrozen, sessionInfo?.pair]);
 
   if (!sessionInfo || (!sessionInfo.isFrozen && !isManualOverride) || isDismissed) {
     return null;
@@ -77,10 +110,12 @@ export const MarketCloseFreezeBanner: React.FC<MarketCloseFreezeBannerProps> = (
 
         {/* Right column: Countdown & Simulation Override Button */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-sky-800/40">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/80 border border-sky-500/30 text-sky-300 text-[11px]">
-            <Clock className="w-3.5 h-3.5 text-amber-400" />
-            <span className="text-slate-400">Resumes:</span>
-            <span className="font-bold text-amber-300">{sessionInfo.nextOpenFormatted}</span>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/80 border border-sky-500/30 text-sky-300 text-[11px] shadow-sm">
+            <Clock className={`w-3.5 h-3.5 text-amber-400 ${secondsRemaining > 0 ? 'animate-pulse' : ''}`} />
+            <span className="text-slate-400 font-medium">Resumes:</span>
+            <span className="font-bold text-amber-300 font-mono tracking-tight">
+              {countdownFormatted || sessionInfo.nextOpenFormatted}
+            </span>
           </div>
 
           <button

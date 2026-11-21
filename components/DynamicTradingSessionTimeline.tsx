@@ -264,11 +264,22 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
           }
         }
       } else {
-        // Weekend close countdown to Sunday open
-        const daysUntilSunday = (7 - utcDay) % 7;
-        const sundayOpenMinutes = 21 * 60;
-        const minutesUntilSundayOpen = (daysUntilSunday * 1440) + (sundayOpenMinutes - currentUtcMinutes);
-        secondsUntilOpen = Math.max(0, minutesUntilSundayOpen * 60 - utcSeconds);
+        // Weekend close countdown to each session's actual opening
+        let daysUntilNextSessionOpen = 0;
+        let openTimeMinutes = openMinutes;
+        
+        if (sess.id === 'sydney') {
+          // Sydney opens Sunday 21:00 UTC
+          daysUntilNextSessionOpen = (7 - utcDay) % 7;
+          openTimeMinutes = 21 * 60;
+        } else {
+          // Tokyo, London, New York open Monday at their respective open times
+          daysUntilNextSessionOpen = (8 - utcDay) % 7 || 7;
+          openTimeMinutes = openMinutes;
+        }
+        
+        const minutesUntilSessionOpen = (daysUntilNextSessionOpen * 1440) + (openTimeMinutes - currentUtcMinutes);
+        secondsUntilOpen = Math.max(0, minutesUntilSessionOpen * 60 - utcSeconds);
       }
 
       // Local city time string
@@ -316,6 +327,11 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
         const minUntilStart = currentUtcMinutes < startMin
           ? startMin - currentUtcMinutes
           : (1440 - currentUtcMinutes) + startMin;
+        secondsUntilStart = Math.max(0, minUntilStart * 60 - utcSeconds);
+      } else {
+        // On weekend, next overlap occurs on Monday
+        const daysUntilMonday = (8 - utcDay) % 7 || 7;
+        const minUntilStart = (daysUntilMonday * 1440) + startMin - currentUtcMinutes;
         secondsUntilStart = Math.max(0, minUntilStart * 60 - utcSeconds);
       }
 

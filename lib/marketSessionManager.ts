@@ -204,8 +204,11 @@ export class MarketSessionManager {
       const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const openDayName = dayNames[nextOpenDate.getUTCDay()];
       const openUtcTime = `${String(nextOpenDate.getUTCHours()).padStart(2, '0')}:${String(nextOpenDate.getUTCMinutes()).padStart(2, '0')} UTC`;
+      const pad = (n: number) => String(n).padStart(2, '0');
       
-      nextOpenFormatted = `${openDayName} ${openUtcTime} (${hours}h ${minutes}m ${secs}s)`;
+      nextOpenFormatted = `${openDayName} ${openUtcTime} (${hours}h ${pad(minutes)}m ${pad(secs)}s)`;
+    } else if (isFrozen) {
+      nextOpenFormatted = 'Manual Freeze / Paused';
     }
 
     const lastClosePrice = this.getFrozenPrice(pair);
@@ -223,6 +226,42 @@ export class MarketSessionManager {
       secondsUntilOpen,
       reason,
       lastClosePrice,
+    };
+  }
+
+  /**
+   * Format remaining countdown given a target ISO date string or Date object.
+   * Decrements with second-by-second precision.
+   */
+  public static formatCountdown(targetIsoDate?: string | Date): { formatted: string; secondsRemaining: number } {
+    if (!targetIsoDate) {
+      return { formatted: 'Manual Halt (Indefinite)', secondsRemaining: 0 };
+    }
+    const targetTime = typeof targetIsoDate === 'string' ? new Date(targetIsoDate).getTime() : targetIsoDate.getTime();
+    if (isNaN(targetTime)) {
+      return { formatted: 'Session Pending', secondsRemaining: 0 };
+    }
+
+    const diffMs = targetTime - Date.now();
+    const secondsRemaining = Math.max(0, Math.floor(diffMs / 1000));
+
+    if (secondsRemaining <= 0) {
+      return { formatted: 'Opening Now...', secondsRemaining: 0 };
+    }
+
+    const targetDate = new Date(targetTime);
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const openDayName = dayNames[targetDate.getUTCDay()];
+    const openUtcTime = `${String(targetDate.getUTCHours()).padStart(2, '0')}:${String(targetDate.getUTCMinutes()).padStart(2, '0')} UTC`;
+
+    const hours = Math.floor(secondsRemaining / 3600);
+    const minutes = Math.floor((secondsRemaining % 3600) / 60);
+    const secs = secondsRemaining % 60;
+    const pad = (n: number) => String(n).padStart(2, '0');
+
+    return {
+      formatted: `${openDayName} ${openUtcTime} (${hours}h ${pad(minutes)}m ${pad(secs)}s)`,
+      secondsRemaining,
     };
   }
 
@@ -300,6 +339,13 @@ export class MarketSessionManager {
     this.heartbeatTimer = setInterval(() => {
       this.checkSessionTransitions();
     }, 1000);
+  }
+
+  /**
+   * Force an immediate check for session transitions across all instruments.
+   */
+  public static forceSessionCheck(): void {
+    this.checkSessionTransitions();
   }
 
   /**
