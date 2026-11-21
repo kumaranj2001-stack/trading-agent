@@ -412,7 +412,7 @@ export class EventDrivenMacroIntelligenceEngine {
     symbol: CurrencyPair
   ): MacroIntelligenceReport {
     const catalyst = HIGH_IMPACT_MACRO_CATALYSTS.find(c => c.id === eventId) || HIGH_IMPACT_MACRO_CATALYSTS[0];
-    const livePrice = BASE_PRICES[symbol] || 2734.50;
+    const livePrice = BASE_PRICES[symbol] || 3538.20;
 
     // 1. Cross-verify feeds
     const convergence = this.executeBidirectionalCrossVerification(catalyst, symbol);

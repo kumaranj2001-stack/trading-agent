@@ -725,261 +725,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
         </div>
       )}
 
-      {/* 🏛️ MANDATORY CHIEF REVIEWER & INSTITUTIONAL GATEKEEPER CLEARANCE CARD (Unhidden & Fully Visible in Terminal) */}
-      {chiefAudit && (
-        <div className={`mt-3.5 p-3.5 sm:p-4 rounded-xl border font-mono text-xs shadow-lg transition-all ${
-          chiefAudit.status === 'VETOED'
-            ? theme === 'light'
-              ? 'bg-rose-50/90 border-rose-300 text-rose-950 ring-1 ring-rose-300'
-              : 'bg-gradient-to-r from-rose-950/90 via-terminal-950 to-red-950/70 border-rose-500 text-rose-200 ring-1 ring-rose-500/50'
-            : chiefAudit.status === 'MODIFIED'
-            ? theme === 'light'
-              ? 'bg-amber-50/90 border-amber-300 text-amber-950 ring-1 ring-amber-300'
-              : 'bg-gradient-to-r from-amber-950/80 via-terminal-950 to-amber-900/60 border-amber-500 text-amber-200'
-            : theme === 'light'
-            ? 'bg-indigo-50/90 border-indigo-300 text-indigo-950 shadow-sm'
-            : 'bg-gradient-to-r from-indigo-950/60 via-terminal-950 to-terminal-950 border-indigo-500/50 text-indigo-200'
-        }`}>
-          {/* Gatekeeper Top Bar */}
-          <div className={`flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 mb-2.5 ${
-            theme === 'light' ? 'border-slate-300' : 'border-terminal-border/60'
-          }`}>
-            <div className="flex items-center gap-2">
-              <div className={`p-1.5 rounded-lg border ${
-                chiefAudit.status === 'APPROVED' 
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' 
-                  : chiefAudit.status === 'MODIFIED'
-                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
-                  : 'bg-rose-500/20 text-rose-400 border-rose-500/50 animate-pulse'
-              }`}>
-                <ShieldCheck className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`font-bold text-xs uppercase tracking-wide ${theme === 'light' ? 'text-slate-900 font-extrabold' : 'text-white'}`}>
-                    CHIEF REVIEWER AUDIT: {chiefAudit.auditorName}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                    chiefAudit.status === 'APPROVED'
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
-                      : chiefAudit.status === 'MODIFIED'
-                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
-                      : 'bg-rose-500/20 text-rose-400 border-rose-500/50'
-                  }`}>
-                    GATEKEEPER {chiefAudit.status}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                    chiefAudit.consensusRuleSatisfied
-                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
-                      : 'bg-rose-600 text-white border-rose-400 animate-pulse'
-                  }`}>
-                    {chiefAudit.agreeCount}/5 DESKS AGREE {chiefAudit.consensusRuleSatisfied ? '(SUPERMAJORITY SATISFIED)' : '(CONSENSUS FAILED: AVOID TRADE)'}
-                  </span>
-                </div>
-                <p className={`text-[10px] mt-0.5 ${theme === 'light' ? 'text-slate-700' : 'text-slate-400'}`}>
-                  Signature: <code className="text-cyan-500 font-bold">{chiefAudit.gatekeeperSignature}</code> • Directive: <strong className={chiefAudit.consensusDirective === 'APPROVE_TRADE' ? 'text-emerald-500' : 'text-rose-500'}>{chiefAudit.consensusDirective}</strong>
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowDebateBreakdown(!showDebateBreakdown)}
-                className={`px-2.5 py-1 rounded text-[11px] font-bold border flex items-center gap-1 transition-all ${
-                  theme === 'light'
-                    ? 'bg-white hover:bg-slate-100 text-indigo-900 border-slate-300 shadow-sm'
-                    : 'bg-terminal-900 hover:bg-terminal-800 text-indigo-300 border-indigo-500/40'
-                }`}
-              >
-                <span>7-Agent Debate & Desk Votes</span>
-                {showDebateBreakdown ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
-
-          {/* 6 Specialist Desk Voting Breakdown Chips with Zoom-Safe Wrap */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-[10px] mb-2.5">
-            {Object.values(chiefAudit.deskVotes).map((deskVote) => (
-              <div 
-                key={deskVote.desk}
-                className={`p-2 rounded border transition-all min-w-0 ${
-                  deskVote.vote === 'AGREE'
-                    ? theme === 'light'
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-                      : 'bg-terminal-900/90 border-emerald-500/40 text-emerald-200'
-                    : theme === 'light'
-                    ? 'bg-rose-50 border-rose-200 text-rose-950'
-                    : 'bg-terminal-900/90 border-rose-500/40 text-rose-200'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-0.5 gap-1">
-                  <span className="font-bold truncate text-[10px]">
-                    {deskVote.desk === 'TECHNICAL' ? '1. Technical' :
-                     deskVote.desk === 'FUNDAMENTAL' ? '2. Macro Desk' :
-                     deskVote.desk === 'NEWS_WIRE' ? '3. News Wire' :
-                     deskVote.desk === 'FOREX_INTERMARKET' ? '4. Intermarket' : '5. Risk Gov'}
-                  </span>
-                  <span className={`px-1 py-0.2 rounded font-black text-[9px] shrink-0 ${
-                    deskVote.vote === 'AGREE'
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : 'bg-rose-500/20 text-rose-400'
-                  }`}>
-                    {deskVote.vote}
-                  </span>
-                </div>
-                <div className="text-[9px] opacity-90 truncate font-mono">{deskVote.analystName.split(' ')[0]} • {deskVote.bias}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Dialectical Debate Comparison: Buy-Side Case vs Sell-Side Counter-Thesis */}
-          {showDebateBreakdown && (
-            <div className="mt-2.5 space-y-2.5 pt-2.5 border-t border-terminal-border/50">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                {/* Buy-Side Case Card */}
-                <div className={`p-3 rounded-lg border text-[11px] ${
-                  theme === 'light'
-                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
-                    : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                }`}>
-                  <div className="flex items-center justify-between font-bold text-xs mb-1.5 text-emerald-500">
-                    <span className="flex items-center gap-1.5">
-                      <TrendingUp className="w-4 h-4" />
-                      BUY-SIDE THESIS (DEMAND & CONFLUENCE)
-                    </span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40">
-                      SMC DEMAND FLOOR
-                    </span>
-                  </div>
-                  <p className="text-[11px] leading-relaxed">
-                    {chiefAudit.buySideCase}
-                  </p>
-                </div>
-
-                {/* Sell-Side Counter-Thesis Card */}
-                <div className={`p-3 rounded-lg border text-[11px] ${
-                  theme === 'light'
-                    ? 'bg-rose-50/70 border-rose-200 text-rose-950'
-                    : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
-                }`}>
-                  <div className="flex items-center justify-between font-bold text-xs mb-1.5 text-rose-500">
-                    <span className="flex items-center gap-1.5">
-                      <TrendingDown className="w-4 h-4" />
-                      SELL-SIDE COUNTER-THESIS (SUPPLY & DRAG)
-                    </span>
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/40">
-                      RESISTANCE CEILING
-                    </span>
-                  </div>
-                  <p className="text-[11px] leading-relaxed">
-                    {chiefAudit.sellSideCase}
-                  </p>
-                </div>
-              </div>
-
-              {/* Chief Reviewer Comparative Verdict */}
-              <div className={`p-3 rounded-lg border text-xs font-mono ${
-                chiefAudit.consensusRuleSatisfied
-                  ? theme === 'light'
-                    ? 'bg-indigo-50 border-indigo-200 text-indigo-950'
-                    : 'bg-indigo-950/50 border-indigo-500/40 text-indigo-200'
-                  : theme === 'light'
-                  ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold'
-                  : 'bg-rose-950/80 border-rose-500 text-rose-200'
-              }`}>
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-bold text-xs uppercase flex items-center gap-1.5">
-                    <Shield className="w-4 h-4 text-indigo-400" />
-                    Chief Reviewer Dialectical Synthesis & Consensus Ruling:
-                  </span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    chiefAudit.consensusRuleSatisfied ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-600 text-white'
-                  }`}>
-                    {chiefAudit.consensusDirective}
-                  </span>
-                </div>
-                <p className="text-[11px] leading-relaxed">
-                  {chiefAudit.comparativeVerdict}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Contradiction Warning (if any) */}
-          {chiefAudit.contradictionResolution.hasContradiction && (
-            <div className={`mt-2.5 p-2.5 rounded-lg border text-[11px] ${
-              chiefAudit.status === 'VETOED'
-                ? 'bg-rose-950/80 border-rose-500 text-rose-200'
-                : 'bg-amber-950/60 border-amber-600 text-amber-200'
-            }`}>
-              <div className="flex items-center gap-1.5 font-bold mb-0.5">
-                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                <span className="uppercase text-[10px]">
-                  CONTRADICTION DETECTED: {chiefAudit.contradictionResolution.contradictionType?.replace(/_/g, ' ')}
-                </span>
-              </div>
-              <p className="text-[10px] leading-relaxed">
-                {chiefAudit.contradictionResolution.explanation}
-              </p>
-            </div>
-          )}
-
-          {/* Mandatory Invalidation Trigger Strip */}
-          <div className={`mt-2.5 p-2.5 rounded-lg border flex flex-wrap items-center justify-between gap-2 text-[11px] ${
-            theme === 'light' ? 'bg-white border-slate-300 text-slate-800' : 'bg-terminal-900 border-terminal-border text-slate-200'
-          }`}>
-            <div className="flex items-center gap-2 flex-wrap">
-              <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />
-              <span>
-                <strong className="text-cyan-500 uppercase">MANDATORY INVALIDATION:</strong> {chiefAudit.explicitInvalidationCriteria}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold border border-rose-500/40 text-[10px]">
-                Level: {chiefAudit.invalidationPriceLevel}
-              </span>
-              <button
-                onClick={() => setShowInvalidationChecklist(!showInvalidationChecklist)}
-                className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 transition-colors ${
-                  theme === 'light'
-                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
-                    : 'bg-terminal-800 hover:bg-terminal-700 text-cyan-300 border-terminal-border'
-                }`}
-              >
-                <span>All 7 Invalidation Triggers</span>
-                {showInvalidationChecklist ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Complete 7-Trigger Invalidation Checklist Modal/Panel */}
-          {showInvalidationChecklist && (
-            <div className={`mt-2.5 p-3 rounded-lg border text-[11px] space-y-1.5 ${
-              theme === 'light' ? 'bg-slate-50 border-slate-300 text-slate-800' : 'bg-terminal-950 border-terminal-border text-slate-300'
-            }`}>
-              <div className="flex items-center justify-between pb-1.5 border-b border-terminal-border/40 font-bold text-xs">
-                <span className="flex items-center gap-1.5 text-rose-400 uppercase">
-                  <ShieldAlert className="w-4 h-4" />
-                  Mandatory Institutional Invalidation Checklist (7 Triggers)
-                </span>
-                <span className="text-[10px] text-slate-500">Autonomous exit on breach</span>
-              </div>
-              <div className="space-y-1 pt-1 font-mono text-[10px]">
-                {chiefAudit.completeInvalidationCriteriaList.map((crit, idx) => (
-                  <div key={idx} className="flex items-start gap-2 p-1.5 rounded hover:bg-black/10 transition-colors">
-                    <span className="w-4 h-4 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold text-[9px] shrink-0 mt-0.5">
-                      {idx + 1}
-                    </span>
-                    <span className="leading-relaxed">{crit}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 🔬 Intermediate Analysis & Multi-Agent Debate Modules - Visually suppressed on Terminal interface while fully executing all underlying pipelines in background */}
+      {/* 🔬 Intermediate Analysis & Multi-Agent Debate Modules */}
       <div 
         className={suppressIntermediateModules ? 'hidden' : undefined} 
         aria-hidden={suppressIntermediateModules ? 'true' : undefined}
@@ -1511,6 +1257,260 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
           </div>
         )}
       </div>
+
+      {/* 🏛️ MANDATORY CHIEF REVIEWER & INSTITUTIONAL GATEKEEPER CLEARANCE CARD (Image 2 - Institutional Gatekeeper) */}
+      {chiefAudit && (
+        <div className={`mt-3.5 p-3.5 sm:p-4 rounded-xl border font-mono text-xs shadow-lg transition-all ${
+          chiefAudit.status === 'VETOED'
+            ? theme === 'light'
+              ? 'bg-rose-50/90 border-rose-300 text-rose-950 ring-1 ring-rose-300'
+              : 'bg-gradient-to-r from-rose-950/90 via-terminal-950 to-red-950/70 border-rose-500 text-rose-200 ring-1 ring-rose-500/50'
+            : chiefAudit.status === 'MODIFIED'
+            ? theme === 'light'
+              ? 'bg-amber-50/90 border-amber-300 text-amber-950 ring-1 ring-amber-300'
+              : 'bg-gradient-to-r from-amber-950/80 via-terminal-950 to-amber-900/60 border-amber-500 text-amber-200'
+            : theme === 'light'
+            ? 'bg-indigo-50/90 border-indigo-300 text-indigo-950 shadow-sm'
+            : 'bg-gradient-to-r from-indigo-950/60 via-terminal-950 to-terminal-950 border-indigo-500/50 text-indigo-200'
+        }`}>
+          {/* Gatekeeper Top Bar */}
+          <div className={`flex flex-wrap items-center justify-between gap-2 border-b pb-2.5 mb-2.5 ${
+            theme === 'light' ? 'border-slate-300' : 'border-terminal-border/60'
+          }`}>
+            <div className="flex items-center gap-2">
+              <div className={`p-1.5 rounded-lg border ${
+                chiefAudit.status === 'APPROVED' 
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50' 
+                  : chiefAudit.status === 'MODIFIED'
+                  ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
+                  : 'bg-rose-500/20 text-rose-400 border-rose-500/50 animate-pulse'
+              }`}>
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`font-bold text-xs uppercase tracking-wide ${theme === 'light' ? 'text-slate-900 font-extrabold' : 'text-white'}`}>
+                    CHIEF REVIEWER AUDIT: {chiefAudit.auditorName}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    chiefAudit.status === 'APPROVED'
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                      : chiefAudit.status === 'MODIFIED'
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/50'
+                      : 'bg-rose-500/20 text-rose-400 border-rose-500/50'
+                  }`}>
+                    GATEKEEPER {chiefAudit.status}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                    chiefAudit.consensusRuleSatisfied
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50'
+                      : 'bg-rose-600 text-white border-rose-400 animate-pulse'
+                  }`}>
+                    {chiefAudit.agreeCount}/5 DESKS AGREE {chiefAudit.consensusRuleSatisfied ? '(SUPERMAJORITY SATISFIED)' : '(CONSENSUS FAILED: AVOID TRADE)'}
+                  </span>
+                </div>
+                <p className={`text-[10px] mt-0.5 ${theme === 'light' ? 'text-slate-700' : 'text-slate-400'}`}>
+                  Signature: <code className="text-cyan-500 font-bold">{chiefAudit.gatekeeperSignature}</code> • Directive: <strong className={chiefAudit.consensusDirective === 'APPROVE_TRADE' ? 'text-emerald-500' : 'text-rose-500'}>{chiefAudit.consensusDirective}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowDebateBreakdown(!showDebateBreakdown)}
+                className={`px-2.5 py-1 rounded text-[11px] font-bold border flex items-center gap-1 transition-all ${
+                  theme === 'light'
+                    ? 'bg-white hover:bg-slate-100 text-indigo-900 border-slate-300 shadow-sm'
+                    : 'bg-terminal-900 hover:bg-terminal-800 text-indigo-300 border-indigo-500/40'
+                }`}
+              >
+                <span>7-Agent Debate & Desk Votes</span>
+                {showDebateBreakdown ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+
+          {/* 6 Specialist Desk Voting Breakdown Chips with Zoom-Safe Wrap */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-[10px] mb-2.5">
+            {Object.values(chiefAudit.deskVotes).map((deskVote) => (
+              <div 
+                key={deskVote.desk}
+                className={`p-2 rounded border transition-all min-w-0 ${
+                  deskVote.vote === 'AGREE'
+                    ? theme === 'light'
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                      : 'bg-terminal-900/90 border-emerald-500/40 text-emerald-200'
+                    : theme === 'light'
+                    ? 'bg-rose-50 border-rose-200 text-rose-950'
+                    : 'bg-terminal-900/90 border-rose-500/40 text-rose-200'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-0.5 gap-1">
+                  <span className="font-bold truncate text-[10px]">
+                    {deskVote.desk === 'TECHNICAL' ? '1. Technical' :
+                     deskVote.desk === 'FUNDAMENTAL' ? '2. Macro Desk' :
+                     deskVote.desk === 'NEWS_WIRE' ? '3. News Wire' :
+                     deskVote.desk === 'FOREX_INTERMARKET' ? '4. Intermarket' : '5. Risk Gov'}
+                  </span>
+                  <span className={`px-1 py-0.2 rounded font-black text-[9px] shrink-0 ${
+                    deskVote.vote === 'AGREE'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'bg-rose-500/20 text-rose-400'
+                  }`}>
+                    {deskVote.vote}
+                  </span>
+                </div>
+                <div className="text-[9px] opacity-90 truncate font-mono">{deskVote.analystName.split(' ')[0]} • {deskVote.bias}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Dialectical Debate Comparison: Buy-Side Case vs Sell-Side Counter-Thesis */}
+          {showDebateBreakdown && (
+            <div className="mt-2.5 space-y-2.5 pt-2.5 border-t border-terminal-border/50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {/* Buy-Side Case Card */}
+                <div className={`p-3 rounded-lg border text-[11px] ${
+                  theme === 'light'
+                    ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
+                    : 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                }`}>
+                  <div className="flex items-center justify-between font-bold text-xs mb-1.5 text-emerald-500">
+                    <span className="flex items-center gap-1.5">
+                      <TrendingUp className="w-4 h-4" />
+                      BUY-SIDE THESIS (DEMAND & CONFLUENCE)
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40">
+                      SMC DEMAND FLOOR
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    {chiefAudit.buySideCase}
+                  </p>
+                </div>
+
+                {/* Sell-Side Counter-Thesis Card */}
+                <div className={`p-3 rounded-lg border text-[11px] ${
+                  theme === 'light'
+                    ? 'bg-rose-50/70 border-rose-200 text-rose-950'
+                    : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                }`}>
+                  <div className="flex items-center justify-between font-bold text-xs mb-1.5 text-rose-500">
+                    <span className="flex items-center gap-1.5">
+                      <TrendingDown className="w-4 h-4" />
+                      SELL-SIDE COUNTER-THESIS (SUPPLY & DRAG)
+                    </span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 border border-rose-500/40">
+                      RESISTANCE CEILING
+                    </span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    {chiefAudit.sellSideCase}
+                  </p>
+                </div>
+              </div>
+
+              {/* Chief Reviewer Comparative Verdict */}
+              <div className={`p-3 rounded-lg border text-xs font-mono ${
+                chiefAudit.consensusRuleSatisfied
+                  ? theme === 'light'
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-950'
+                    : 'bg-indigo-950/50 border-indigo-500/40 text-indigo-200'
+                  : theme === 'light'
+                  ? 'bg-rose-100 border-rose-300 text-rose-950 font-bold'
+                  : 'bg-rose-950/80 border-rose-500 text-rose-200'
+              }`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-bold text-xs uppercase flex items-center gap-1.5">
+                    <Shield className="w-4 h-4 text-indigo-400" />
+                    Chief Reviewer Dialectical Synthesis & Consensus Ruling:
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    chiefAudit.consensusRuleSatisfied ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-600 text-white'
+                  }`}>
+                    {chiefAudit.consensusDirective}
+                  </span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  {chiefAudit.comparativeVerdict}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Contradiction Warning (if any) */}
+          {chiefAudit.contradictionResolution.hasContradiction && (
+            <div className={`mt-2.5 p-2.5 rounded-lg border text-[11px] ${
+              chiefAudit.status === 'VETOED'
+                ? 'bg-rose-950/80 border-rose-500 text-rose-200'
+                : 'bg-amber-950/60 border-amber-600 text-amber-200'
+            }`}>
+              <div className="flex items-center gap-1.5 font-bold mb-0.5">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span className="uppercase text-[10px]">
+                  CONTRADICTION DETECTED: {chiefAudit.contradictionResolution.contradictionType?.replace(/_/g, ' ')}
+                </span>
+              </div>
+              <p className="text-[10px] leading-relaxed">
+                {chiefAudit.contradictionResolution.explanation}
+              </p>
+            </div>
+          )}
+
+          {/* Mandatory Invalidation Trigger Strip */}
+          <div className={`mt-2.5 p-2.5 rounded-lg border flex flex-wrap items-center justify-between gap-2 text-[11px] ${
+            theme === 'light' ? 'bg-white border-slate-300 text-slate-800' : 'bg-terminal-900 border-terminal-border text-slate-200'
+          }`}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />
+              <span>
+                <strong className="text-cyan-500 uppercase">MANDATORY INVALIDATION:</strong> {chiefAudit.explicitInvalidationCriteria}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold border border-rose-500/40 text-[10px]">
+                Level: {chiefAudit.invalidationPriceLevel}
+              </span>
+              <button
+                onClick={() => setShowInvalidationChecklist(!showInvalidationChecklist)}
+                className={`px-2 py-0.5 rounded text-[10px] font-bold border flex items-center gap-1 transition-colors ${
+                  theme === 'light'
+                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300'
+                    : 'bg-terminal-800 hover:bg-terminal-700 text-cyan-300 border-terminal-border'
+                }`}
+              >
+                <span>All 7 Invalidation Triggers</span>
+                {showInvalidationChecklist ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Complete 7-Trigger Invalidation Checklist Modal/Panel */}
+          {showInvalidationChecklist && (
+            <div className={`mt-2.5 p-3 rounded-lg border text-[11px] space-y-1.5 ${
+              theme === 'light' ? 'bg-slate-50 border-slate-300 text-slate-800' : 'bg-terminal-950 border-terminal-border text-slate-300'
+            }`}>
+              <div className="flex items-center justify-between pb-1.5 border-b border-terminal-border/40 font-bold text-xs">
+                <span className="flex items-center gap-1.5 text-rose-400 uppercase">
+                  <ShieldAlert className="w-4 h-4" />
+                  Mandatory Institutional Invalidation Checklist (7 Triggers)
+                </span>
+                <span className="text-[10px] text-slate-500">Autonomous exit on breach</span>
+              </div>
+              <div className="space-y-1 pt-1 font-mono text-[10px]">
+                {chiefAudit.completeInvalidationCriteriaList.map((crit, idx) => (
+                  <div key={idx} className="flex items-start gap-2 p-1.5 rounded hover:bg-black/10 transition-colors">
+                    <span className="w-4 h-4 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold text-[9px] shrink-0 mt-0.5">
+                      {idx + 1}
+                    </span>
+                    <span className="leading-relaxed">{crit}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Core Fundamental & Technical Reasons Driving the Decision (5 Structured Pillars) */}
       <div className="mt-4 space-y-2.5">

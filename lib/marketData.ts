@@ -14,31 +14,31 @@ export const INDIAN_MARKET_ASSETS: CurrencyPair[] = [
 
 export const BASE_PRICES: Record<CurrencyPair, number> = {
   // Forex Majors (Live OANDA / Global Spot Market Parity)
-  'EUR/USD': 1.0865,
-  'GBP/USD': 1.2985,
-  'USD/JPY': 154.30,
-  'AUD/USD': 0.6585,
-  'USD/CAD': 1.3895,
-  'USD/CHF': 0.8845,
-  'NZD/USD': 0.5985,
-  'EUR/GBP': 0.8368,
+  'EUR/USD': 1.0968,
+  'GBP/USD': 1.3086,
+  'USD/JPY': 158.56,
+  'AUD/USD': 0.6619,
+  'USD/CAD': 1.4343,
+  'USD/CHF': 0.8401,
+  'NZD/USD': 0.5471,
+  'EUR/GBP': 0.8382,
   // Metals & Energy Commodities (Live Spot/TradingView OANDA Parity)
-  'XAU/USD': 2734.50, // Spot Gold ($/oz) (Matches TradingView OANDA:XAUUSD live feed)
-  'XAG/USD': 31.85,   // Spot Silver ($/oz) (Matches TradingView OANDA:XAGUSD)
-  'XPT/USD': 985.40,  // Spot Platinum ($/oz)
-  'COPPER': 4.350,    // COMEX Copper ($/lb) (Matches TradingView COMEX:HG1!)
-  'WTI_CRUDE': 71.45, // WTI Light Sweet Crude Oil ($/bbl)
-  'BRENT_CRUDE': 75.30,// Brent Global Benchmark ($/bbl)
+  'XAU/USD': 3538.20, // Spot Gold ($/oz) (Matches TradingView OANDA:XAUUSD live feed ~3538)
+  'XAG/USD': 41.22,   // Spot Silver ($/oz) (Matches TradingView TVC:SILVER)
+  'XPT/USD': 1296.60, // Spot Platinum ($/oz)
+  'COPPER': 5.485,    // COMEX Copper ($/lb) (Matches TradingView COMEX:HG1!)
+  'WTI_CRUDE': 83.41, // WTI Light Sweet Crude Oil ($/bbl) (Matches TradingView NYMEX:CL1!)
+  'BRENT_CRUDE': 92.57,// Brent Global Benchmark ($/bbl) (Matches TradingView NYMEX:BB1!)
   // Indian Market & Currency (Live NSE & FX Parity)
-  'NIFTY 50': 24350.50,
-  'BANK NIFTY': 52120.00,
-  'USD/INR': 84.42,
-  'EUR/INR': 91.75,
-  'GBP/INR': 109.65,
-  'RELIANCE': 1285.50,
-  'TCS': 4150.00,
-  'HDFC BANK': 1745.00,
-  'INFY': 1855.00,
+  'NIFTY 50': 25800.60,
+  'BANK NIFTY': 64635.20,
+  'USD/INR': 92.66,
+  'EUR/INR': 101.62,
+  'GBP/INR': 121.20,
+  'RELIANCE': 1377.50,
+  'TCS': 2376.20,
+  'HDFC BANK': 846.00,
+  'INFY': 1098.00,
 };
 
 export const PIP_VALUES: Record<CurrencyPair, number> = {
@@ -85,9 +85,36 @@ export const OANDA_TRADINGVIEW_MAP: Record<CurrencyPair, string> = {
   'XAG/USD': 'OANDA:XAGUSD',
   'XPT/USD': 'TVC:PLATINUM',
   'COPPER': 'COMEX:HG1!',
-  'WTI_CRUDE': 'TVC:USOIL',
-  'BRENT_CRUDE': 'TVC:UKOIL',
+  'WTI_CRUDE': 'NYMEX:CL1!',
+  'BRENT_CRUDE': 'NYMEX:BB1!',
   // Indian Markets
+  'NIFTY 50': 'NSE:NIFTY',
+  'BANK NIFTY': 'NSE:BANKNIFTY',
+  'USD/INR': 'FX_IDC:USDINR',
+  'EUR/INR': 'FX_IDC:EURINR',
+  'GBP/INR': 'FX_IDC:GBPINR',
+  'RELIANCE': 'NSE:RELIANCE',
+  'TCS': 'NSE:TCS',
+  'HDFC BANK': 'NSE:HDFCBANK',
+  'INFY': 'NSE:INFY',
+};
+
+// Authoritative TradingView Global Scanner tickers for instant REST quote aggregation
+export const TRADINGVIEW_SCANNER_MAP: Record<CurrencyPair, string> = {
+  'EUR/USD': 'OANDA:EURUSD',
+  'GBP/USD': 'OANDA:GBPUSD',
+  'USD/JPY': 'OANDA:USDJPY',
+  'AUD/USD': 'OANDA:AUDUSD',
+  'USD/CAD': 'OANDA:USDCAD',
+  'USD/CHF': 'OANDA:USDCHF',
+  'NZD/USD': 'OANDA:NZDUSD',
+  'EUR/GBP': 'OANDA:EURGBP',
+  'XAU/USD': 'OANDA:XAUUSD',
+  'XAG/USD': 'TVC:SILVER',
+  'XPT/USD': 'TVC:PLATINUM',
+  'COPPER': 'COMEX:HG1!',
+  'WTI_CRUDE': 'NYMEX:CL1!',
+  'BRENT_CRUDE': 'NYMEX:BB1!',
   'NIFTY 50': 'NSE:NIFTY',
   'BANK NIFTY': 'NSE:BANKNIFTY',
   'USD/INR': 'FX_IDC:USDINR',

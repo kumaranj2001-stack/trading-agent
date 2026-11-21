@@ -258,39 +258,47 @@ export class StateLatchingEngine {
       }
     }
 
-    // 4. Anchor Static Entry, Stop-Loss, and Take-Profit
+    // 4. Anchor Static Entry, Stop-Loss, and Take-Profit strictly derived from live market quote
     const rawEntry = consensus.executionSignal.entry;
-    const anchoredEntryPrice = rawEntry > 0 ? rawEntry : livePrice;
+    const anchoredEntryPrice = (rawEntry > 0 && Math.abs(rawEntry - livePrice) / livePrice < 0.05)
+      ? rawEntry 
+      : Number(livePrice.toFixed(decimals));
 
     // Ensure mathematical rigor for anchored levels
-    let anchoredStopLoss = consensus.executionSignal.stopLoss;
-    let anchoredTakeProfit = consensus.executionSignal.takeProfit;
+    const rawStopLoss = consensus.executionSignal.stopLoss;
+    const rawTakeProfit = consensus.executionSignal.takeProfit;
 
-    const stopDistance = Math.abs(anchoredEntryPrice - anchoredStopLoss) || (22 * pipMultiplier);
-    const targetDistance = Math.abs(anchoredTakeProfit - anchoredEntryPrice) || (stopDistance * (isConservativeRR ? 1.85 : currentRR));
+    let stopDistance = Math.abs(anchoredEntryPrice - rawStopLoss);
+    if (!stopDistance || stopDistance < 5 * pipMultiplier || stopDistance > 80 * pipMultiplier) {
+      stopDistance = 18 * pipMultiplier;
+    }
+
+    let targetDistance = Math.abs(rawTakeProfit - anchoredEntryPrice);
+    const minTargetDistance = stopDistance * 1.5;
+    const maxTargetDistance = stopDistance * 4.0;
+    if (!targetDistance || targetDistance < minTargetDistance || targetDistance > maxTargetDistance || targetDistance > 250 * pipMultiplier) {
+      targetDistance = stopDistance * (isConservativeRR ? 1.85 : Math.max(2.2, Math.min(3.2, currentRR || 2.6)));
+    }
+
+    let anchoredStopLoss: number;
+    let anchoredTakeProfit: number;
 
     if (isSell) {
-      if (anchoredStopLoss <= anchoredEntryPrice) {
-        anchoredStopLoss = Number((anchoredEntryPrice + stopDistance).toFixed(decimals));
-      }
-      if (anchoredTakeProfit >= anchoredEntryPrice) {
-        anchoredTakeProfit = Number((anchoredEntryPrice - targetDistance).toFixed(decimals));
-      }
+      anchoredStopLoss = Number((anchoredEntryPrice + stopDistance).toFixed(decimals));
+      anchoredTakeProfit = Number((anchoredEntryPrice - targetDistance).toFixed(decimals));
       // Ensure resistance ceiling is higher than stop loss to allow breathing room
       resistanceCeiling = Math.max(resistanceCeiling, Number((anchoredStopLoss + 5 * pipMultiplier).toFixed(decimals)));
+      s1Floor = Math.min(s1Floor, Number((anchoredTakeProfit - 5 * pipMultiplier).toFixed(decimals)));
     } else {
-      if (anchoredStopLoss >= anchoredEntryPrice) {
-        anchoredStopLoss = Number((anchoredEntryPrice - stopDistance).toFixed(decimals));
-      }
-      if (anchoredTakeProfit <= anchoredEntryPrice) {
-        anchoredTakeProfit = Number((anchoredEntryPrice + targetDistance).toFixed(decimals));
-      }
+      anchoredStopLoss = Number((anchoredEntryPrice - stopDistance).toFixed(decimals));
+      anchoredTakeProfit = Number((anchoredEntryPrice + targetDistance).toFixed(decimals));
       // Ensure S1 floor is lower than stop loss
       s1Floor = Math.min(s1Floor, Number((anchoredStopLoss - 5 * pipMultiplier).toFixed(decimals)));
+      resistanceCeiling = Math.max(resistanceCeiling, Number((anchoredTakeProfit + 5 * pipMultiplier).toFixed(decimals)));
     }
 
     const anchoredRiskReward = Number((targetDistance / stopDistance).toFixed(2));
-    const anchoredLots = consensus.executionSignal.lots > 0 ? consensus.executionSignal.lots : 0.05;
+    const anchoredLots = consensus.executionSignal.lots > 0 ? consensus.executionSignal.lots : 0.02;
 
     const now = Date.now();
     const expiryMs = now + Math.round(timeWindowMinutes * 60 * 1000);

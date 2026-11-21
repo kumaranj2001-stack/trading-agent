@@ -1222,7 +1222,7 @@ export default function Home() {
                 isMarketFrozen={isMarketFrozen}
                 sessionInfo={sessionInfo}
                 theme={theme}
-                suppressIntermediateModules={true}
+                suppressIntermediateModules={false}
               />
             ) : isAnalyzing ? (
               <div className="rounded-xl border border-cyan-500/20 bg-terminal-900/80 p-5 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-3 text-xs font-mono shadow-lg animate-pulse">

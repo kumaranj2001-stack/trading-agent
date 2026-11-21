@@ -580,6 +580,7 @@ export class SwarmCoordinator {
       symbol: pair,
       proposedEntry: calculatedEntry,
       livePrice: currentPrice,
+      direction: activeDirection,
       minBandPips: 10,
     });
 

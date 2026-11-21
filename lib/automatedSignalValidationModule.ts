@@ -44,6 +44,7 @@ export class AutomatedSignalValidationModule {
     symbol: CurrencyPair;
     proposedEntry: number;
     livePrice: number;
+    direction?: 'BUY' | 'SELL' | 'HOLD';
     minBandPips?: number;
     maxBandPips?: number;
   }): EntryProximityFilterResult {
@@ -51,10 +52,27 @@ export class AutomatedSignalValidationModule {
       symbol,
       proposedEntry,
       livePrice,
+      direction = 'BUY',
       minBandPips = 10,
     } = params;
 
-    const pipMultiplier = PIP_VALUES[symbol] || (symbol.includes('JPY') ? 0.01 : symbol === 'XAU/USD' ? 0.10 : 0.0001);
+    const isIndian = symbol === 'NIFTY 50' || symbol === 'BANK NIFTY' || 
+                     symbol === 'RELIANCE' || symbol === 'TCS' || 
+                     symbol === 'HDFC BANK' || symbol === 'INFY';
+    const isGold = symbol === 'XAU/USD';
+    const isSilver = symbol === 'XAG/USD';
+    const isPlatinum = symbol === 'XPT/USD';
+    const isCopper = symbol === 'COPPER';
+    const isOil = symbol === 'WTI_CRUDE' || symbol === 'BRENT_CRUDE';
+    const isJpy = symbol.includes('JPY');
+    const isRupee = symbol.includes('/INR');
+
+    let decimals = 5;
+    if (isIndian || isGold || isPlatinum || isOil) decimals = 2;
+    else if (isSilver || isJpy || isRupee) decimals = 3;
+    else if (isCopper) decimals = 4;
+
+    const pipMultiplier = PIP_VALUES[symbol] || (isJpy ? 0.01 : isGold ? 0.10 : 0.0001);
     const pipDistance = Number((Math.abs(proposedEntry - livePrice) / pipMultiplier).toFixed(2));
 
     // Notice: 50-pip upper restriction is permanently removed to allow unlimited profit potential
@@ -72,11 +90,12 @@ export class AutomatedSignalValidationModule {
 
     const toleranceBandDescription = `Unlimited Profit Potential Active (50-pip cap removed). Live variance: ${pipDistance} pips. Uncapped multi-tier expansion & dynamic trailing runner engaged.`;
 
-    // Multi-tier expansion target projections
+    // Multi-tier expansion target projections strictly aligned to trade direction
+    const isSell = direction === 'SELL';
     const expansionTargets = {
-      tp1: Number((livePrice + (params.proposedEntry > livePrice ? 35 : -35) * pipMultiplier).toFixed(5)),
-      tp2: Number((livePrice + (params.proposedEntry > livePrice ? 85 : -85) * pipMultiplier).toFixed(5)),
-      tp3: Number((livePrice + (params.proposedEntry > livePrice ? 180 : -180) * pipMultiplier).toFixed(5)),
+      tp1: Number((isSell ? livePrice - 35 * pipMultiplier : livePrice + 35 * pipMultiplier).toFixed(decimals)),
+      tp2: Number((isSell ? livePrice - 85 * pipMultiplier : livePrice + 85 * pipMultiplier).toFixed(decimals)),
+      tp3: Number((isSell ? livePrice - 180 * pipMultiplier : livePrice + 180 * pipMultiplier).toFixed(decimals)),
       openRunnerPips: 'UNCAPPED (Trailing ATR Pivots)',
     };
 

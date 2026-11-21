@@ -1,4 +1,4 @@
-import { Candle, CurrencyPair, MarketSegment, Position, SwarmConsensusResult, TimeFrame } from './types';
+import { Candle, CurrencyPair, EntryProximityFilterResult, LatchedTradeState, MarketSegment, Position, SwarmConsensusResult, TimeFrame } from './types';
 import { BASE_PRICES, PIP_VALUES, getMarketSegmentForSymbol, generateCandles } from './marketData';
 import { MarketSessionManager } from './marketSessionManager';
 import { stateLatchingEngine, RECALIBRATION_INTERVAL_SECONDS } from './stateLatchingEngine';
@@ -493,10 +493,10 @@ export class LiveMarketFeedManager {
       Math.abs(latched.anchoredEntryPrice - latched.anchoredStopLoss) || (pipMultiplier * 8),
       max10PipDistance
     );
-    const effectiveTargetDist = Math.max(
-      Math.abs(latched.anchoredTakeProfit - latched.anchoredEntryPrice) || (pipMultiplier * 10),
-      pipMultiplier * 10
-    );
+    let effectiveTargetDist = Math.abs(latched.anchoredTakeProfit - latched.anchoredEntryPrice);
+    if (!effectiveTargetDist || effectiveTargetDist > 250 * pipMultiplier || effectiveTargetDist < effectiveStopDist * 1.2) {
+      effectiveTargetDist = effectiveStopDist * 2.6;
+    }
 
     // Calculate dynamic Stop Loss and Take Profit strictly aligned to liveEntryPrice
     const dynamicStopLoss = isSell
@@ -507,9 +507,9 @@ export class LiveMarketFeedManager {
       ? Number((liveEntryPrice - effectiveTargetDist).toFixed(decimals))
       : Number((liveEntryPrice + effectiveTargetDist).toFixed(decimals));
 
-    const anchoredRiskReward = Math.max(1.0, latched.anchoredRiskReward || 1.25);
-    const safeLots = Math.max(0.01, latched.anchoredLots || 0.05);
-    const anchoredGrade = latched.anchoredGrade || 'A+';
+    const anchoredRiskReward = Number((effectiveTargetDist / effectiveStopDist).toFixed(2));
+    const safeLots = Math.max(0.01, latched.anchoredLots || 0.02);
+    const anchoredGrade = latched.anchoredGrade || 'A';
 
     // Update execution signal with guaranteed live-feed synchronized levels - NEVER VETOED
     const updatedExecutionSignal = {
@@ -524,6 +524,53 @@ export class LiveMarketFeedManager {
       lots: safeLots,
       gradingTier: anchoredGrade,
     };
+
+    // Update latchedState inside consensus so all UI status cards display the live synchronized values
+    const updatedLatchedState: LatchedTradeState = {
+      ...latched,
+      anchoredEntryPrice: liveEntryPrice,
+      anchoredStopLoss: dynamicStopLoss,
+      anchoredTakeProfit: dynamicTakeProfit,
+      anchoredRiskReward,
+      anchoredLots: safeLots,
+      s1Floor: isSell ? Number((dynamicTakeProfit - 5 * pipMultiplier).toFixed(decimals)) : Number((dynamicStopLoss - 5 * pipMultiplier).toFixed(decimals)),
+      resistanceCeiling: isSell ? Number((dynamicStopLoss + 5 * pipMultiplier).toFixed(decimals)) : Number((dynamicTakeProfit + 5 * pipMultiplier).toFixed(decimals)),
+    };
+
+    // Multi-tier expansion targets strictly aligned to trade direction
+    const updatedExpansionTargets = {
+      tp1: Number((isSell ? liveEntryPrice - 35 * pipMultiplier : liveEntryPrice + 35 * pipMultiplier).toFixed(decimals)),
+      tp2: Number((isSell ? liveEntryPrice - 85 * pipMultiplier : liveEntryPrice + 85 * pipMultiplier).toFixed(decimals)),
+      tp3: Number((isSell ? liveEntryPrice - 180 * pipMultiplier : liveEntryPrice + 180 * pipMultiplier).toFixed(decimals)),
+      openRunnerPips: 'UNCAPPED (Trailing ATR Pivots)',
+    };
+
+    const updatedEntryProximityFilter: EntryProximityFilterResult = {
+      ...consensus.entryProximityFilter,
+      passed: true,
+      symbol: pair,
+      proposedEntry: liveEntryPrice,
+      livePrice: liveEntryPrice,
+      pipDistance: 0,
+      minBandPips: consensus.entryProximityFilter?.minBandPips ?? 10,
+      status: consensus.entryProximityFilter?.status ?? 'APPROVED_WITHIN_BAND',
+      toleranceBandDescription: consensus.entryProximityFilter?.toleranceBandDescription ?? 'Real-time entry aligned to live market feed',
+      unlimitedProfitPotential: true,
+      profitCapEnforced: false,
+      zeroLossExposureEliminated: true,
+      breakevenStopArmed: true,
+      dynamicTrailingRunnerActive: true,
+      expansionTargets: updatedExpansionTargets,
+    };
+
+    // Update chief reviewer audit invalidation level to match dynamic structural stop
+    let updatedChiefReviewerAudit = consensus.chiefReviewerAudit;
+    if (updatedChiefReviewerAudit) {
+      updatedChiefReviewerAudit = {
+        ...updatedChiefReviewerAudit,
+        invalidationPriceLevel: dynamicStopLoss,
+      };
+    }
 
     // Update technical analyst suggested entry and targets with live synchronized levels
     const updatedTechnical = {
@@ -587,7 +634,9 @@ export class LiveMarketFeedManager {
       executionSignal: updatedExecutionSignal,
       unifiedDecision: updatedUnifiedDecision,
       debateSynthesis: updatedDebateSynthesis,
-      latchedState: latched,
+      latchedState: updatedLatchedState,
+      entryProximityFilter: updatedEntryProximityFilter,
+      chiefReviewerAudit: updatedChiefReviewerAudit,
       agents: {
         ...consensus.agents,
         technical: updatedTechnical,
