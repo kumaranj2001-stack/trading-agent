@@ -493,7 +493,7 @@ export class SwarmCoordinator {
     let finalLots = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedLotSize ?? risk.parameters.positionSizeLots;
     let finalStopLoss = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedStopLoss ?? risk.parameters.stopLoss;
     let finalTakeProfit = debateOutcome.synthesis.terminalNode?.executionGuidance.suggestedTakeProfit ?? risk.parameters.takeProfit1;
-    const finalRiskReward = debateOutcome.synthesis.terminalNode?.updatedThresholds.riskRewardRatio ?? risk.parameters.riskRewardRatio;
+    let finalRiskReward = debateOutcome.synthesis.terminalNode?.updatedThresholds.riskRewardRatio ?? risk.parameters.riskRewardRatio;
     const finalMaxRisk = debateOutcome.synthesis.terminalNode?.updatedThresholds.maxLossUsd ?? risk.parameters.maxLossUsd;
 
     // Strict Mathematical Invariant Safeguard: Bound execution parameters strictly to consensus direction
@@ -681,16 +681,7 @@ export class SwarmCoordinator {
       proposedDirection: activeDirection,
     });
 
-    // 4. Single Deterministic Institutional Target: anchored to POC / Order Block liquidity zone
-    const singleInstitutionalTarget = institutionalCapitalPreservationEngine.calculateSingleInstitutionalTarget({
-      symbol: pair,
-      direction: activeDirection,
-      livePrice: currentPrice,
-      technical,
-      orderFlow,
-    });
-
-    // 5. Dynamic Volatility-Based Stop Loss: 1.5x ATR beyond structural boundaries
+    // 4. Fixed Structural Stop Loss with Volatility Buffer: 5 pips beyond S1/R1 + 1.5x ATR
     const volatilityStopLoss = institutionalCapitalPreservationEngine.calculateDynamicVolatilityStopLoss({
       symbol: pair,
       direction: activeDirection,
@@ -698,9 +689,21 @@ export class SwarmCoordinator {
       technical,
     });
 
+    // 5. Single Deterministic Institutional Target: anchored to POC / Order Block liquidity zone
+    // Dynamically paired with volatilityStopLoss to guarantee an institutional R:R strictly between 2.2:1 and 3.2:1
+    const singleInstitutionalTarget = institutionalCapitalPreservationEngine.calculateSingleInstitutionalTarget({
+      symbol: pair,
+      direction: activeDirection,
+      livePrice: currentPrice,
+      technical,
+      orderFlow,
+      stopLossPrice: volatilityStopLoss.stopLossPrice,
+    });
+
     if (!isStateLatched) {
       finalStopLoss = volatilityStopLoss.stopLossPrice;
       finalTakeProfit = singleInstitutionalTarget.targetPrice;
+      finalRiskReward = singleInstitutionalTarget.riskRewardRatio;
     }
 
     // 6. Pre-Trade Capital-Protection Gate:

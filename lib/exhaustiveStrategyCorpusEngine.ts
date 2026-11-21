@@ -459,20 +459,34 @@ export class ExhaustiveStrategyCorpusEngine {
     let anchoredTakeProfitLevel: number;
     let liquidityWallDistancePips = 0;
 
+    const minSafeStopDist = 20 * pipMultiplier;
+
     if (direction === 'BUY') {
       // Anchored strictly below Bid Wall
-      const structuralFloor = Math.min(bidWallPrice, technical.keySupport || bidWallPrice);
-      anchoredStopLossLevel = Number((structuralFloor - (volatilityAtrBufferPips + 5) * pipMultiplier).toFixed(decimals));
+      const structuralFloor = (technical.keySupport && technical.keySupport < currentPrice && (currentPrice - technical.keySupport) < 80 * pipMultiplier)
+        ? Math.min(bidWallPrice, technical.keySupport)
+        : bidWallPrice;
+      let calculatedSL = structuralFloor - (volatilityAtrBufferPips + 5) * pipMultiplier;
+      if ((currentPrice - calculatedSL) < minSafeStopDist) {
+        calculatedSL = currentPrice - minSafeStopDist;
+      }
+      anchoredStopLossLevel = Number(calculatedSL.toFixed(decimals));
       liquidityWallDistancePips = Number(((currentPrice - bidWallPrice) / pipMultiplier).toFixed(1));
       const stopDistance = Math.abs(currentPrice - anchoredStopLossLevel);
-      anchoredTakeProfitLevel = Number((currentPrice + stopDistance * 3.2).toFixed(decimals));
+      anchoredTakeProfitLevel = Number((currentPrice + stopDistance * 2.65).toFixed(decimals));
     } else {
       // Anchored strictly above Ask Wall
-      const structuralCeiling = Math.max(askWallPrice, technical.keyResistance || askWallPrice);
-      anchoredStopLossLevel = Number((structuralCeiling + (volatilityAtrBufferPips + 5) * pipMultiplier).toFixed(decimals));
+      const structuralCeiling = (technical.keyResistance && technical.keyResistance > currentPrice && (technical.keyResistance - currentPrice) < 80 * pipMultiplier)
+        ? Math.max(askWallPrice, technical.keyResistance)
+        : askWallPrice;
+      let calculatedSL = structuralCeiling + (volatilityAtrBufferPips + 5) * pipMultiplier;
+      if ((calculatedSL - currentPrice) < minSafeStopDist) {
+        calculatedSL = currentPrice + minSafeStopDist;
+      }
+      anchoredStopLossLevel = Number(calculatedSL.toFixed(decimals));
       liquidityWallDistancePips = Number(((askWallPrice - currentPrice) / pipMultiplier).toFixed(1));
       const stopDistance = Math.abs(anchoredStopLossLevel - currentPrice);
-      anchoredTakeProfitLevel = Number((currentPrice - stopDistance * 3.2).toFixed(decimals));
+      anchoredTakeProfitLevel = Number((currentPrice - stopDistance * 2.65).toFixed(decimals));
     }
 
     // 4. Evaluate Mandatory Gating Checklist (Absolute Capital Preservation & Strict Institutional Tiers)

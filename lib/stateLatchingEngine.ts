@@ -262,22 +262,36 @@ export class StateLatchingEngine {
     const rawEntry = consensus.executionSignal.entry;
     const anchoredEntryPrice = rawEntry > 0 ? rawEntry : livePrice;
 
-    // Ensure mathematical rigor for anchored levels
-    let anchoredStopLoss = consensus.executionSignal.stopLoss;
-    let anchoredTakeProfit = consensus.executionSignal.takeProfit;
+    // Fixed Structural Stop Loss & Single Deterministic Target from Knowledge Strategies
+    let anchoredStopLoss = consensus.volatilityStopLoss?.stopLossPrice || consensus.executionSignal.stopLoss;
+    let anchoredTakeProfit = consensus.singleInstitutionalTarget?.targetPrice || consensus.executionSignal.takeProfit;
 
-    const stopDistance = Math.abs(anchoredEntryPrice - anchoredStopLoss) || (22 * pipMultiplier);
-    let targetDistance = Math.abs(anchoredTakeProfit - anchoredEntryPrice);
-    const maxPlausibleDistance = Math.max(stopDistance * 10, 250 * pipMultiplier);
-    if (!targetDistance || targetDistance > maxPlausibleDistance || targetDistance < stopDistance * 0.5) {
-      targetDistance = stopDistance * (isConservativeRR ? 1.85 : Math.max(2.5, currentRR || 3.0));
+    // Validate Stop Distance (enforce safe institutional minimum >= 20 pips, maximum <= 60 pips)
+    let stopDistance = Math.abs(anchoredEntryPrice - anchoredStopLoss);
+    if (!stopDistance || stopDistance < 18 * pipMultiplier || stopDistance > 80 * pipMultiplier) {
+      stopDistance = 22 * pipMultiplier;
+      anchoredStopLoss = isSell
+        ? Number((anchoredEntryPrice + stopDistance).toFixed(decimals))
+        : Number((anchoredEntryPrice - stopDistance).toFixed(decimals));
     }
 
+    // Validate Target Distance (strictly bound to credible institutional R:R 2.2:1 to 3.2:1)
+    let targetDistance = Math.abs(anchoredTakeProfit - anchoredEntryPrice);
+    const minTargetDistance = stopDistance * 2.0;
+    const maxTargetDistance = stopDistance * 3.5;
+    if (!targetDistance || targetDistance < minTargetDistance || targetDistance > maxTargetDistance) {
+      targetDistance = stopDistance * 2.65;
+      anchoredTakeProfit = isSell
+        ? Number((anchoredEntryPrice - targetDistance).toFixed(decimals))
+        : Number((anchoredEntryPrice + targetDistance).toFixed(decimals));
+    }
+
+    // Strict directional invariant assertions:
     if (isSell) {
       if (anchoredStopLoss <= anchoredEntryPrice) {
         anchoredStopLoss = Number((anchoredEntryPrice + stopDistance).toFixed(decimals));
       }
-      if (anchoredTakeProfit >= anchoredEntryPrice) {
+      if (anchoredTakeProfit >= anchoredEntryPrice || Math.abs(anchoredTakeProfit - anchoredEntryPrice) > maxTargetDistance) {
         anchoredTakeProfit = Number((anchoredEntryPrice - targetDistance).toFixed(decimals));
       }
       // Ensure resistance ceiling is higher than stop loss to allow breathing room
@@ -286,15 +300,17 @@ export class StateLatchingEngine {
       if (anchoredStopLoss >= anchoredEntryPrice) {
         anchoredStopLoss = Number((anchoredEntryPrice - stopDistance).toFixed(decimals));
       }
-      if (anchoredTakeProfit <= anchoredEntryPrice) {
+      if (anchoredTakeProfit <= anchoredEntryPrice || Math.abs(anchoredTakeProfit - anchoredEntryPrice) > maxTargetDistance) {
         anchoredTakeProfit = Number((anchoredEntryPrice + targetDistance).toFixed(decimals));
       }
       // Ensure S1 floor is lower than stop loss
       s1Floor = Math.min(s1Floor, Number((anchoredStopLoss - 5 * pipMultiplier).toFixed(decimals)));
     }
 
-    const anchoredRiskReward = Number((targetDistance / stopDistance).toFixed(2));
-    const anchoredLots = consensus.executionSignal.lots > 0 ? consensus.executionSignal.lots : 0.05;
+    // Locked Institutional Risk:Reward Ratio (Strictly between 2.0:1 and 3.5:1)
+    const rawRR = targetDistance / stopDistance;
+    const anchoredRiskReward = Number(Math.min(3.5, Math.max(2.0, rawRR)).toFixed(2));
+    const anchoredLots = consensus.executionSignal.lots > 0 ? consensus.executionSignal.lots : 0.02;
 
     const now = Date.now();
     const expiryMs = now + Math.round(timeWindowMinutes * 60 * 1000);

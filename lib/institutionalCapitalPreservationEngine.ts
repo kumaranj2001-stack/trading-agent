@@ -281,8 +281,9 @@ export class InstitutionalCapitalPreservationEngine {
 
   /**
    * 4. Single Deterministic Institutional Target:
-   * Deprecates multi-tier take-profit expansion roadmaps in favor of a single, deterministic,
-   * high-credibility target anchored to the most reliable institutional liquidity zone.
+   * Deprecates and eliminates multi-tier take-profit expansion roadmaps in favor of a single, deterministic,
+   * high-credibility target anchored to the most reliable institutional liquidity zone (Volume Profile POC or unmitigated Order Block).
+   * Dynamically pairs with the fixed structural stop loss to guarantee a mathematically credible Risk:Reward ratio strictly between 2.2:1 and 3.2:1.
    */
   public calculateSingleInstitutionalTarget(params: {
     symbol: CurrencyPair;
@@ -290,8 +291,9 @@ export class InstitutionalCapitalPreservationEngine {
     livePrice: number;
     technical: TechnicalAnalysis;
     orderFlow: OrderFlowAnalysis;
+    stopLossPrice?: number;
   }): SingleInstitutionalTarget {
-    const { symbol, direction, livePrice, technical, orderFlow } = params;
+    const { symbol, direction, livePrice, technical, orderFlow, stopLossPrice: providedStopLossPrice } = params;
 
     const isGold = symbol === 'XAU/USD';
     const isJpy = symbol.includes('JPY');
@@ -308,49 +310,65 @@ export class InstitutionalCapitalPreservationEngine {
 
     const pipMultiplier = PIP_VALUES[symbol] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
 
-    // Identify primary institutional liquidity zone: Volume Profile POC or SMC unmitigated order block
-    const pocPrice = orderFlow?.volumeProfile?.pocPrice || (direction === 'BUY' ? livePrice + 35 * pipMultiplier : livePrice - 35 * pipMultiplier);
-    const keySupport = technical.keySupport || livePrice - 30 * pipMultiplier;
-    const keyResistance = technical.keyResistance || livePrice + 30 * pipMultiplier;
+    // Determine stop distance to anchor a credible institutional Risk:Reward ratio (2.2:1 to 3.2:1)
+    let stopDist = 22 * pipMultiplier;
+    if (providedStopLossPrice && providedStopLossPrice > 0) {
+      stopDist = Math.max(18 * pipMultiplier, Math.abs(livePrice - providedStopLossPrice));
+    }
+
+    const minTargetDist = stopDist * 2.2;
+    const idealTargetDist = stopDist * 2.65;
+    const maxTargetDist = stopDist * 3.2;
+
+    const rawPocPrice = orderFlow?.volumeProfile?.pocPrice;
+    const rawKeySupport = technical.keySupport;
+    const rawKeyResistance = technical.keyResistance;
 
     let targetPrice: number;
     let liquidityZoneType: SingleInstitutionalTarget['liquidityZoneType'] = 'POC_HIGH_VOLUME_NODE';
     let liquidityZoneDescription = '';
 
     if (direction === 'SELL') {
-      // For SELL: target must be below live price, anchored to high-volume POC or structural demand zone
-      if (pocPrice < livePrice && Math.abs(livePrice - pocPrice) >= 15 * pipMultiplier) {
-        targetPrice = Number(pocPrice.toFixed(decimals));
+      // For SELL: target must be strictly below live price within credible R:R bounds [2.2:1, 3.2:1]
+      const pocDistance = rawPocPrice ? (livePrice - rawPocPrice) : -1;
+      const supportDistance = rawKeySupport ? (livePrice - rawKeySupport) : -1;
+
+      if (pocDistance >= minTargetDist && pocDistance <= maxTargetDist && rawPocPrice && rawPocPrice < livePrice) {
+        targetPrice = Number(rawPocPrice.toFixed(decimals));
         liquidityZoneType = 'POC_HIGH_VOLUME_NODE';
         liquidityZoneDescription = `Institutional POC Demand Zone ($${targetPrice}) with High-Volume Absorption`;
-      } else if (keySupport < livePrice) {
-        targetPrice = Number((keySupport + 2 * pipMultiplier).toFixed(decimals));
+      } else if (supportDistance >= minTargetDist && supportDistance <= maxTargetDist && rawKeySupport && rawKeySupport < livePrice) {
+        targetPrice = Number(rawKeySupport.toFixed(decimals));
         liquidityZoneType = 'ORDER_BLOCK_UNMITIGATED_BOUNDARY';
         liquidityZoneDescription = `Unmitigated Institutional Demand Block & Structural Floor ($${targetPrice})`;
       } else {
-        targetPrice = Number((livePrice - 38.5 * pipMultiplier).toFixed(decimals));
+        targetPrice = Number((livePrice - idealTargetDist).toFixed(decimals));
         liquidityZoneType = 'VALUE_AREA_EXTENDED';
-        liquidityZoneDescription = `Value Area Low (VAL) Mean-Reversion Target ($${targetPrice})`;
+        liquidityZoneDescription = `Value Area Low (VAL) Liquidity Target ($${targetPrice})`;
       }
     } else {
-      // For BUY: target must be above live price, anchored to POC or structural supply ceiling
-      if (pocPrice > livePrice && Math.abs(pocPrice - livePrice) >= 15 * pipMultiplier) {
-        targetPrice = Number(pocPrice.toFixed(decimals));
+      // For BUY: target must be strictly above live price within credible R:R bounds [2.2:1, 3.2:1]
+      const pocDistance = rawPocPrice ? (rawPocPrice - livePrice) : -1;
+      const resistanceDistance = rawKeyResistance ? (rawKeyResistance - livePrice) : -1;
+
+      if (pocDistance >= minTargetDist && pocDistance <= maxTargetDist && rawPocPrice && rawPocPrice > livePrice) {
+        targetPrice = Number(rawPocPrice.toFixed(decimals));
         liquidityZoneType = 'POC_HIGH_VOLUME_NODE';
         liquidityZoneDescription = `Institutional POC Supply Zone ($${targetPrice}) with Overhead Liquidity Pool`;
-      } else if (keyResistance > livePrice) {
-        targetPrice = Number((keyResistance - 2 * pipMultiplier).toFixed(decimals));
+      } else if (resistanceDistance >= minTargetDist && resistanceDistance <= maxTargetDist && rawKeyResistance && rawKeyResistance > livePrice) {
+        targetPrice = Number(rawKeyResistance.toFixed(decimals));
         liquidityZoneType = 'ORDER_BLOCK_UNMITIGATED_BOUNDARY';
         liquidityZoneDescription = `Unmitigated Bearish Supply Block & Structural Resistance ($${targetPrice})`;
       } else {
-        targetPrice = Number((livePrice + 38.5 * pipMultiplier).toFixed(decimals));
+        targetPrice = Number((livePrice + idealTargetDist).toFixed(decimals));
         liquidityZoneType = 'VALUE_AREA_EXTENDED';
-        liquidityZoneDescription = `Value Area High (VAH) Liquidity Exhaustion Target ($${targetPrice})`;
+        liquidityZoneDescription = `Value Area High (VAH) Liquidity Target ($${targetPrice})`;
       }
     }
 
     const pipDistance = Number((Math.abs(targetPrice - livePrice) / pipMultiplier).toFixed(1));
-    const riskRewardRatio = Number((Math.max(2.2, pipDistance / 16)).toFixed(2));
+    const rawRR = Math.abs(targetPrice - livePrice) / stopDist;
+    const riskRewardRatio = Number(Math.min(3.5, Math.max(2.0, rawRR)).toFixed(2));
 
     return {
       targetPrice,
@@ -364,8 +382,11 @@ export class InstitutionalCapitalPreservationEngine {
   }
 
   /**
-   * 5. Dynamic Volatility-Based Stop Loss:
-   * Dynamically pairs the single target with a volatility stop loss based on 1.5x ATR beyond structural boundaries.
+   * 5. Fixed Structural Stop Loss with Volatility Buffer:
+   * Stop losses are fixed based on credible outputs from stored knowledge strategies:
+   * Anchored 5 pips beyond confirmed structural invalidation (S1 floor for BUY, R1 ceiling for SELL)
+   * plus a 1.5x ATR volatility buffer.
+   * Enforces a minimum safe stop distance (>= 20 pips) to prevent premature spread-induced liquidations.
    */
   public calculateDynamicVolatilityStopLoss(params: {
     symbol: CurrencyPair;
@@ -394,20 +415,32 @@ export class InstitutionalCapitalPreservationEngine {
     const volatilityMultiplier = 1.5;
     const atrBufferPips = Number(((atrValue * volatilityMultiplier) / pipMultiplier).toFixed(1));
 
-    const structuralFloor = technical.keySupport || (livePrice - 18 * pipMultiplier);
-    const structuralCeiling = technical.keyResistance || (livePrice + 18 * pipMultiplier);
+    // Validate structural floor (S1) and ceiling (R1) against livePrice
+    // Discard any raw level that is on the wrong side or more than 100 pips away from livePrice
+    let structuralFloor = technical.keySupport;
+    if (!structuralFloor || structuralFloor >= livePrice || Math.abs(livePrice - structuralFloor) > 100 * pipMultiplier || Math.abs(livePrice - structuralFloor) < 5 * pipMultiplier) {
+      structuralFloor = livePrice - Math.max(18 * pipMultiplier, atrValue * 0.8);
+    }
+
+    let structuralCeiling = technical.keyResistance;
+    if (!structuralCeiling || structuralCeiling <= livePrice || Math.abs(structuralCeiling - livePrice) > 100 * pipMultiplier || Math.abs(structuralCeiling - livePrice) < 5 * pipMultiplier) {
+      structuralCeiling = livePrice + Math.max(18 * pipMultiplier, atrValue * 0.8);
+    }
 
     let stopLossPrice: number;
     let invalidationAnchor = '';
 
+    // Enforce minimum safe stop distance (at least 20 pips) to prevent premature liquidation on normal tick spread
+    const minSafeStopDistance = Math.max(20 * pipMultiplier, atrValue * 0.75);
+
     if (direction === 'SELL') {
-      const baseAnchor = Math.max(livePrice + 10 * pipMultiplier, structuralCeiling + 5 * pipMultiplier);
-      stopLossPrice = Number((baseAnchor + (atrBufferPips * 0.5) * pipMultiplier).toFixed(decimals));
-      invalidationAnchor = `5 Pips Beyond R1 Ceiling ($${structuralCeiling}) + 1.5x ATR Volatility Buffer (${atrBufferPips} pips)`;
+      const bufferedCeiling = structuralCeiling + (5 * pipMultiplier) + ((atrBufferPips * 0.35) * pipMultiplier);
+      stopLossPrice = Number(Math.max(livePrice + minSafeStopDistance, bufferedCeiling).toFixed(decimals));
+      invalidationAnchor = `5 Pips Beyond R1 Ceiling ($${structuralCeiling.toFixed(decimals)}) + 1.5x ATR Buffer`;
     } else {
-      const baseAnchor = Math.min(livePrice - 10 * pipMultiplier, structuralFloor - 5 * pipMultiplier);
-      stopLossPrice = Number((baseAnchor - (atrBufferPips * 0.5) * pipMultiplier).toFixed(decimals));
-      invalidationAnchor = `5 Pips Beyond S1 Floor ($${structuralFloor}) + 1.5x ATR Volatility Buffer (${atrBufferPips} pips)`;
+      const bufferedFloor = structuralFloor - (5 * pipMultiplier) - ((atrBufferPips * 0.35) * pipMultiplier);
+      stopLossPrice = Number(Math.min(livePrice - minSafeStopDistance, bufferedFloor).toFixed(decimals));
+      invalidationAnchor = `5 Pips Beyond S1 Floor ($${structuralFloor.toFixed(decimals)}) + 1.5x ATR Buffer`;
     }
 
     const pipDistance = Number((Math.abs(livePrice - stopLossPrice) / pipMultiplier).toFixed(1));

@@ -215,17 +215,20 @@ export class RiskManagerAgent extends BaseAgent {
     let stopDistance: number;
     let calculatedStopLoss: number;
 
+    const minSafeStopPips = Math.max(20, volatilityAtrBufferPips);
+    const minSafeStopDistance = minSafeStopPips * pipMultiplier;
+
     if (proposedAction === 'BUY') {
       // For BUY setups: structural floor is min(keySupport, bidWallPrice)
-      structuralPoint = (technical.keySupport && technical.keySupport < currentPrice)
+      structuralPoint = (technical.keySupport && technical.keySupport < currentPrice && (currentPrice - technical.keySupport) < 80 * pipMultiplier)
         ? Math.min(technical.keySupport, bidWallPrice)
         : bidWallPrice;
       
       // Stop Loss anchored strictly beyond the verified Order Book Bid Liquidity Wall + ATR buffer
       calculatedStopLoss = Number((structuralPoint - (volatilityBufferAbs + 5 * pipMultiplier)).toFixed(decimals));
       stopDistance = Number((currentPrice - calculatedStopLoss).toFixed(decimals));
-      if (stopDistance <= 0 || calculatedStopLoss >= currentPrice) {
-        stopDistance = Math.max(15 * pipMultiplier, volatilityBufferAbs + 5 * pipMultiplier);
+      if (stopDistance < minSafeStopDistance || calculatedStopLoss >= currentPrice) {
+        stopDistance = minSafeStopDistance;
         calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
       }
       adjustmentsMade.push(
@@ -233,28 +236,28 @@ export class RiskManagerAgent extends BaseAgent {
       );
     } else if (proposedAction === 'SELL') {
       // For SELL setups: structural ceiling is max(keyResistance, askWallPrice)
-      structuralPoint = (technical.keyResistance && technical.keyResistance > currentPrice)
+      structuralPoint = (technical.keyResistance && technical.keyResistance > currentPrice && (technical.keyResistance - currentPrice) < 80 * pipMultiplier)
         ? Math.max(technical.keyResistance, askWallPrice)
         : askWallPrice;
       
       // Stop Loss anchored strictly beyond the verified Order Book Ask Liquidity Wall + ATR buffer
       calculatedStopLoss = Number((structuralPoint + (volatilityBufferAbs + 5 * pipMultiplier)).toFixed(decimals));
       stopDistance = Number((calculatedStopLoss - currentPrice).toFixed(decimals));
-      if (stopDistance <= 0 || calculatedStopLoss <= currentPrice) {
-        stopDistance = Math.max(15 * pipMultiplier, volatilityBufferAbs + 5 * pipMultiplier);
+      if (stopDistance < minSafeStopDistance || calculatedStopLoss <= currentPrice) {
+        stopDistance = minSafeStopDistance;
         calculatedStopLoss = Number((currentPrice + stopDistance).toFixed(decimals));
       }
       adjustmentsMade.push(
         `Order Book Liquidity Wall Anchoring: Initial Stop Loss anchored strictly at ${calculatedStopLoss} behind Order Book Ask Wall at ${askWallPrice} (Depth: ${askWallVolume} lots, ATR Buffer: ${volatilityAtrBufferPips} pips).`
       );
     } else {
-      stopDistance = 20 * pipMultiplier;
+      stopDistance = minSafeStopDistance;
       calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
     }
 
-    // Dynamic Take Profit & Unlimited Profit Maximization Engine:
-    // Permanently removes the 10-50 pip profit restriction to allow unlimited profit potential.
-    // Generates multi-tier institutional expansion targets (TP1, TP2, TP3, and uncapped trailing runner).
+    // Single Deterministic Institutional Target:
+    // Deprecates multi-tier expansions in favor of a single high-credibility institutional target
+    // strictly calibrated to guarantee a 2.4:1 to 3.0:1 Risk:Reward ratio.
     const overallConfidenceScore = Math.round(
       (technical.confidenceScore * 0.40) +
       (fundamental.confidenceScore * 0.35) +
@@ -262,22 +265,10 @@ export class RiskManagerAgent extends BaseAgent {
       (forex.confidenceScore * 0.10)
     );
 
-    const isHighConvictionMacro = overallConfidenceScore >= 80 || 
-      (fundamental.macroRegime && (fundamental.macroRegime.includes('Expansion') || fundamental.macroRegime.includes('Tightening'))) ||
-      pair === 'XAU/USD' || pair === 'WTI_CRUDE';
-
-    // Baseline R:R supports micro-setups (minimum 10 pips / 1:1 to 1:1.5 R:R) up to multi-tier macro expansions (100-500+ pips)
-    // Small setups (10 pips target or 1:1 to 1:1.5 R:R) are mandatorily executed with 1:1 Breakeven Ratchet armed.
-    const minTargetDistance = 10 * pipMultiplier;
-    const targetDistance = Math.max(
-      minTargetDistance,
-      isHighConvictionMacro
-        ? Math.max(120 * pipMultiplier, stopDistance * 4.5)
-        : Math.max(25 * pipMultiplier, stopDistance * 1.5)
-    );
+    const targetDistance = Number((stopDistance * 2.65).toFixed(decimals));
 
     adjustmentsMade.push(
-      `Multi-Tier Profit Engine: 10-pip minimum target (TP1) authorized with uncapped trailing runner. Baseline target set to ${(targetDistance / pipMultiplier).toFixed(0)} pips.`
+      `Institutional Single Target: Single deterministic take-profit target authorized with high-certainty liquidity anchor. Target distance set to ${(targetDistance / pipMultiplier).toFixed(0)} pips (2.65:1 R:R).`
     );
 
     // Strict Real-Time Loss Exposure Elimination Protocol (1:1 Breakeven Ratchet)
@@ -291,7 +282,7 @@ export class RiskManagerAgent extends BaseAgent {
     if (proposedAction === 'SELL') {
       // 🎯 FOR SHORT / SELL: Stop Loss MUST be strictly ABOVE entry, Target MUST be strictly BELOW entry
       calculatedTakeProfit1 = Number((currentPrice - targetDistance).toFixed(decimals));
-      calculatedTakeProfit2 = Number((currentPrice - targetDistance * 1.8).toFixed(decimals));
+      calculatedTakeProfit2 = calculatedTakeProfit1;
 
       // Strict Mathematical Invariant Assertion: Stop Loss > entryPrice && Take Profit < entryPrice
       if (calculatedStopLoss <= currentPrice) {
@@ -299,14 +290,12 @@ export class RiskManagerAgent extends BaseAgent {
       }
       if (calculatedTakeProfit1 >= currentPrice) {
         calculatedTakeProfit1 = Number((currentPrice - Math.abs(targetDistance)).toFixed(decimals));
-      }
-      if (calculatedTakeProfit2 >= currentPrice) {
-        calculatedTakeProfit2 = Number((currentPrice - Math.abs(targetDistance * 1.8)).toFixed(decimals));
+        calculatedTakeProfit2 = calculatedTakeProfit1;
       }
     } else if (proposedAction === 'BUY') {
       // 🎯 FOR LONG / BUY: Stop Loss MUST be strictly BELOW entry, Target MUST be strictly ABOVE entry
       calculatedTakeProfit1 = Number((currentPrice + targetDistance).toFixed(decimals));
-      calculatedTakeProfit2 = Number((currentPrice + targetDistance * 1.8).toFixed(decimals));
+      calculatedTakeProfit2 = calculatedTakeProfit1;
 
       // Strict Mathematical Invariant Assertion: Stop Loss < entryPrice && Take Profit > entryPrice
       if (calculatedStopLoss >= currentPrice) {
@@ -314,13 +303,11 @@ export class RiskManagerAgent extends BaseAgent {
       }
       if (calculatedTakeProfit1 <= currentPrice) {
         calculatedTakeProfit1 = Number((currentPrice + Math.abs(targetDistance)).toFixed(decimals));
-      }
-      if (calculatedTakeProfit2 <= currentPrice) {
-        calculatedTakeProfit2 = Number((currentPrice + Math.abs(targetDistance * 1.8)).toFixed(decimals));
+        calculatedTakeProfit2 = calculatedTakeProfit1;
       }
     } else {
       calculatedTakeProfit1 = Number((currentPrice + targetDistance).toFixed(decimals));
-      calculatedTakeProfit2 = Number((currentPrice + targetDistance * 1.8).toFixed(decimals));
+      calculatedTakeProfit2 = calculatedTakeProfit1;
     }
 
     // Conditional Execution: Strict Verification of Confidence Threshold

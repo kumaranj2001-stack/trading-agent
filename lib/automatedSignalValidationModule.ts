@@ -98,20 +98,22 @@ export class AutomatedSignalValidationModule {
     const isSellDirection = direction === 'SELL' || (direction === undefined && proposedEntry < livePrice);
     const effectiveDir: 'BUY' | 'SELL' = isSellDirection ? 'SELL' : 'BUY';
 
-    // Calculate Single Deterministic Institutional Target & Dynamic Volatility Stop Loss
+    // Calculate Dynamic Volatility Stop Loss first
+    const volatilityStopLoss = institutionalCapitalPreservationEngine.calculateDynamicVolatilityStopLoss({
+      symbol,
+      direction: effectiveDir,
+      livePrice,
+      technical: technical || { keySupport: livePrice - 20 * pipMultiplier, keyResistance: livePrice + 20 * pipMultiplier, indicators: { atr: 15 * pipMultiplier } } as unknown as TechnicalAnalysis,
+    });
+
+    // Calculate Single Deterministic Institutional Target paired with the fixed stop loss
     const singleInstitutionalTarget = institutionalCapitalPreservationEngine.calculateSingleInstitutionalTarget({
       symbol,
       direction: effectiveDir,
       livePrice,
       technical: technical || { keySupport: livePrice - 30 * pipMultiplier, keyResistance: livePrice + 30 * pipMultiplier } as unknown as TechnicalAnalysis,
       orderFlow: orderFlow || {} as unknown as OrderFlowAnalysis,
-    });
-
-    const volatilityStopLoss = institutionalCapitalPreservationEngine.calculateDynamicVolatilityStopLoss({
-      symbol,
-      direction: effectiveDir,
-      livePrice,
-      technical: technical || { keySupport: livePrice - 20 * pipMultiplier, keyResistance: livePrice + 20 * pipMultiplier, indicators: { atr: 15 * pipMultiplier } } as unknown as TechnicalAnalysis,
+      stopLossPrice: volatilityStopLoss.stopLossPrice,
     });
 
     return {
