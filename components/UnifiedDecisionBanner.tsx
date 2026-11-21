@@ -857,7 +857,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               <strong className="text-xs">{consensus.latchedState.anchoredEntryPrice}</strong>
             </div>
             <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <span className="text-[10px] text-rose-500 block font-semibold">Anchored Stop Loss (5-Pip Buffer)</span>
+              <span className="text-[10px] text-rose-500 block font-semibold">Analytical Report Stop Loss</span>
               <strong className="text-xs text-rose-400">{consensus.latchedState.anchoredStopLoss}</strong>
             </div>
             <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>

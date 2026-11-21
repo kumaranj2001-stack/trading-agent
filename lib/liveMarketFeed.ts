@@ -482,14 +482,33 @@ export class LiveMarketFeedManager {
     const isBuy = direction === 'BUY';
     const targetOrderType: 'SELL_MARKET' | 'BUY_MARKET' | 'NONE' = isSell ? 'SELL_MARKET' : isBuy ? 'BUY_MARKET' : 'NONE';
 
-    // DETERMINISTIC STATE LOCKING & DECOUPLED FRONTEND RENDERING:
-    // Once latched, candidate entry, structural stop loss, and take-profit target are WRITE-PROTECTED.
-    // They are anchored to credible knowledge outputs and NEVER mutated or clamped to 10 pips by live tick drift.
-    const liveEntryPrice = latched.anchoredEntryPrice;
-    const dynamicStopLoss = latched.anchoredStopLoss;
-    const dynamicTakeProfit = latched.anchoredTakeProfit;
-    const anchoredRiskReward = Math.min(3.5, Math.max(2.0, latched.anchoredRiskReward || 2.65));
-    const safeLots = Math.max(0.01, latched.anchoredLots || 0.02);
+    // 🌊 DYNAMIC REAL-TIME ENTRY & LEVEL PARITY:
+    // Candidate entry tracks the authoritative live feed quote without delay or stale caching.
+    const liveEntryPrice = Number(livePrice.toFixed(decimals));
+
+    // Calculate verified structural stop and target distances anchored by the swarm
+    // Mandatory 10-pip maximum entry bound and 10-pip target execution capability
+    const max10PipDistance = pipMultiplier * 10;
+    const effectiveStopDist = Math.min(
+      Math.abs(latched.anchoredEntryPrice - latched.anchoredStopLoss) || (pipMultiplier * 8),
+      max10PipDistance
+    );
+    const effectiveTargetDist = Math.max(
+      Math.abs(latched.anchoredTakeProfit - latched.anchoredEntryPrice) || (pipMultiplier * 10),
+      pipMultiplier * 10
+    );
+
+    // Calculate dynamic Stop Loss and Take Profit strictly aligned to liveEntryPrice
+    const dynamicStopLoss = isSell
+      ? Number((liveEntryPrice + effectiveStopDist).toFixed(decimals))
+      : Number((liveEntryPrice - effectiveStopDist).toFixed(decimals));
+
+    const dynamicTakeProfit = isSell
+      ? Number((liveEntryPrice - effectiveTargetDist).toFixed(decimals))
+      : Number((liveEntryPrice + effectiveTargetDist).toFixed(decimals));
+
+    const anchoredRiskReward = Math.max(1.0, latched.anchoredRiskReward || 1.25);
+    const safeLots = Math.max(0.01, latched.anchoredLots || 0.05);
     const anchoredGrade = latched.anchoredGrade || 'A+';
 
     // Update execution signal with guaranteed live-feed synchronized levels - NEVER VETOED
