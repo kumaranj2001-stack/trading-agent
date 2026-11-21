@@ -56,8 +56,6 @@ import { MarketCloseFreezeBanner } from '@/components/MarketCloseFreezeBanner';
 import { AutonomousSwarmEngine, AutonomousSwarmTelemetry } from '@/lib/autonomousSwarmEngine';
 import { tradeInvalidationEngine } from '@/lib/tradeInvalidationEngine';
 import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
-import { immutableOrderLockEngine } from '@/lib/immutableOrderLockEngine';
-import { oandaBenchmarkSync } from '@/lib/oandaBenchmarkSync';
 import { ExecutionTelemetryEngine } from '@/lib/executionTelemetryEngine';
 import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 import { preExecutionVerificationEngine } from '@/lib/preExecutionVerificationEngine';
@@ -489,11 +487,6 @@ export default function Home() {
         // ⚡ Autonomous Emergency / Small-Profit Exit on Invalidation (FULL_AUTOPILOT & SEMI_AUTONOMOUS)
         if (executionModeRef.current === 'FULL_AUTOPILOT' || executionModeRef.current === 'SEMI_AUTONOMOUS') {
           for (const pos of reevaluated) {
-            // ❄️ OANDA Parity Corridor Protection & Natural Resolution Grace Period:
-            // Freeze automated triggers if cross-feed discrepancy > 50 pips or position is settling
-            if (pos.invalidation?.isInvalidationFrozen) {
-              continue;
-            }
             if (pos.invalidation?.isInvalidated && (pos.invalidation.urgency === 'HIGH' || pos.invalidation.urgency === 'CRITICAL')) {
               setTimeout(() => {
                 handleClosePosition(pos.id, 'INVALIDATION_AUTO_CLOSE', pos.invalidation?.allReasons);
@@ -600,8 +593,8 @@ export default function Home() {
 
           return {
             ...pos,
-            stopLoss: invStatus.trailedStopLoss || pos.immutableState?.anchors.anchoredStopLoss || pos.stopLoss,
-            takeProfit: invStatus.compressedTakeProfit || pos.immutableState?.anchors.anchoredTakeProfit || pos.takeProfit,
+            stopLoss: invStatus.trailedStopLoss || pos.stopLoss,
+            takeProfit: invStatus.compressedTakeProfit || pos.takeProfit,
             isBreakevenLocked: isBreakeven,
             trailingStopActive: isBreakeven,
             targetCompressed: isCompressed,
@@ -613,11 +606,6 @@ export default function Home() {
         // ⚡ Paramount Structural Override & Invalidation Exit (FULL_AUTOPILOT & SEMI_AUTONOMOUS)
         if (executionModeRef.current === 'FULL_AUTOPILOT' || executionModeRef.current === 'SEMI_AUTONOMOUS') {
           for (const pos of updatedPositions) {
-            // ❄️ OANDA Parity Corridor Protection & Natural Resolution Grace Period:
-            // Freeze automated triggers if cross-feed discrepancy > 50 pips or position is settling
-            if (pos.invalidation?.isInvalidationFrozen) {
-              continue;
-            }
             const symPrice = pos.symbol === selectedPair ? event.livePrice : LiveMarketFeedManager.getCanonicalPrice(pos.symbol);
             const isInvalidationPriceBreached = pos.invalidationPriceLevel && (
               (pos.type === 'BUY' && symPrice <= pos.invalidationPriceLevel) ||
@@ -973,42 +961,8 @@ export default function Home() {
       `MANDATORY INVALIDATION: Immediate exit if ${tradeType === 'BUY' ? 'price breaches S1 structural floor' : 'price breaches R1 structural ceiling'} or confirmed CHoCH occurs.`;
     const invalidationPriceLevel = chiefAudit?.invalidationPriceLevel || executionStopLoss;
 
-    // 🏛️ Institutional OANDA Feed Benchmark Tolerance Corridor Verification (±20 to 50 Pips)
-    const toleranceCheck = oandaBenchmarkSync.validateExecutionTolerance({
-      symbol: signal.symbol,
-      executionPrice: liveFillPrice,
-      orderType: tradeType,
-    });
-
-    if (!toleranceCheck.isWithinTolerance) {
-      showNotification(`🛑 OANDA CORRIDOR REJECTION: Discrepancy ${toleranceCheck.discrepancyPips} pips exceeds institutional tolerance corridor (max 50 pips). Order rejected prior to dispatch.`);
-      return;
-    }
-
-    const newPositionId = `pos-${Date.now()}`;
-
-    // 🔒 Enforce Deterministic State-Locking at the Exact Millisecond of Order Dispatch
-    // Captures write-protected point-in-time snapshot of bid, ask, spread, execution fill, and OANDA benchmark
-    const immutableState = immutableOrderLockEngine.createOrderLock({
-      positionId: newPositionId,
-      symbol: signal.symbol,
-      orderType: tradeType,
-      fillPrice: liveFillPrice,
-      bidPrice: verification.liveBid,
-      askPrice: verification.liveAsk,
-      spreadPips: verification.spreadPips,
-      orderLots: executionLots,
-      stopLoss: executionStopLoss,
-      takeProfit: executionTakeProfit,
-      invalidationPriceLevel,
-      riskRewardRatio: signal.riskReward,
-      riskAmountUsd: signal.riskAmountUsd || 0,
-      explicitInvalidationCriteria: explicitInvalidation,
-      chiefReviewerSignature: chiefAudit?.gatekeeperSignature,
-    });
-
     const newPosition: Position = {
-      id: newPositionId,
+      id: `pos-${Date.now()}`,
       symbol: signal.symbol,
       type: tradeType,
       lots: executionLots,
@@ -1037,7 +991,6 @@ export default function Home() {
         fillPrice: liveFillPrice,
       },
       atomicVerification: verification,
-      immutableState,
     };
 
     const marginUsedForTrade = (executionLots * 100000) / 30;
@@ -1087,9 +1040,6 @@ export default function Home() {
 
     const finalPnl = Number((pipDiff * pipDollar * pos.lots).toFixed(2));
     const updatedPositions = portfolio.positions.filter(p => p.id !== posId);
-
-    // 🔒 Release write-protected immutable lock from engine registry & storage
-    immutableOrderLockEngine.purgeLock(pos.id);
     const newBalance = Number((portfolio.balance + finalPnl).toFixed(2));
     const marginFreed = (pos.lots * 100000) / 30;
     const newMarginUsed = Math.max(0, portfolio.marginUsed - marginFreed);

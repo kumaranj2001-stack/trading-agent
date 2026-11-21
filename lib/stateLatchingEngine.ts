@@ -267,11 +267,7 @@ export class StateLatchingEngine {
     let anchoredTakeProfit = consensus.executionSignal.takeProfit;
 
     const stopDistance = Math.abs(anchoredEntryPrice - anchoredStopLoss) || (22 * pipMultiplier);
-    let targetDistance = Math.abs(anchoredTakeProfit - anchoredEntryPrice);
-    const maxPlausibleDistance = Math.max(stopDistance * 10, 250 * pipMultiplier);
-    if (!targetDistance || targetDistance > maxPlausibleDistance || targetDistance < stopDistance * 0.5) {
-      targetDistance = stopDistance * (isConservativeRR ? 1.85 : Math.max(2.5, currentRR || 3.0));
-    }
+    const targetDistance = Math.abs(anchoredTakeProfit - anchoredEntryPrice) || (stopDistance * (isConservativeRR ? 1.85 : currentRR));
 
     if (isSell) {
       if (anchoredStopLoss <= anchoredEntryPrice) {

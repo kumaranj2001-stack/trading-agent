@@ -580,7 +580,6 @@ export class SwarmCoordinator {
       symbol: pair,
       proposedEntry: calculatedEntry,
       livePrice: currentPrice,
-      direction: activeDirection === 'BUY' ? 'BUY' : 'SELL',
       minBandPips: 10,
     });
 
