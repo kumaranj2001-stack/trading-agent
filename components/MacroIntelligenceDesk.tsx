@@ -1016,26 +1016,26 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                       </div>
                     </div>
 
-                    {/* 4. Single Deterministic Institutional Target (POC / Liquidity Zone Anchored) */}
+                    {/* 4. Multi-Tiered Take-Profit Scaling */}
                     <div className="p-3 rounded-xl bg-terminal-950 border border-emerald-500/30 space-y-1.5">
                       <div className="flex items-center justify-between text-emerald-300 font-bold text-[11px]">
-                        <span>SINGLE INSTITUTIONAL TARGET</span>
+                        <span>MULTI-TIER TARGETS</span>
                         <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-200 border border-emerald-800">
-                          A+ ANCHOR
+                          3 TIERS
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-300 space-y-0.5">
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Target Price:</span>
+                          <span className="text-slate-400">TP1 (50% Out):</span>
                           <span className="text-emerald-400 font-bold">${activeReport.riskProtocols.multiTierTakeProfitScaling.tp1.price}</span>
                         </div>
-                        <div className="flex justify-between text-[10px]">
-                          <span className="text-slate-400">Liquidity Zone:</span>
-                          <span className="text-emerald-300 font-semibold">Volume Profile POC</span>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">TP2 (30% Out):</span>
+                          <span className="text-emerald-300">${activeReport.riskProtocols.multiTierTakeProfitScaling.tp2.price}</span>
                         </div>
                         <div className="flex justify-between pt-1 border-t border-terminal-border/60 text-[10px]">
-                          <span className="text-cyan-400">Certainty Score:</span>
-                          <span className="text-cyan-300 font-bold">84.5% Execution Certainty</span>
+                          <span className="text-cyan-400">TP3 Runner (20%):</span>
+                          <span className="text-cyan-300">${activeReport.riskProtocols.multiTierTakeProfitScaling.tp3.price}</span>
                         </div>
                       </div>
                     </div>
@@ -1162,14 +1162,14 @@ export const MacroIntelligenceDesk: React.FC<MacroIntelligenceDeskProps> = ({
                     </span>
                   </div>
 
-                  {/* Single Deterministic Take Profit Target */}
+                  {/* Target 1 */}
                   <div className="p-2.5 rounded-lg bg-terminal-950 border border-emerald-500/40">
-                    <span className="text-[10px] text-emerald-300 block uppercase font-semibold">Single Institutional Target</span>
+                    <span className="text-[10px] text-emerald-300 block uppercase font-semibold">Take Profit 1</span>
                     <span className="text-base font-bold text-emerald-400">
                       ${activeReport.riskProtocols?.multiTierTakeProfitScaling.tp1.price || activeReport.executionParameters.takeProfit1}
                     </span>
-                    <span className="text-[9px] text-emerald-300/80 block">
-                      Volume Profile POC Anchor (84.5% Certainty)
+                    <span className="text-[9px] text-slate-500 block">
+                      TP2: ${activeReport.riskProtocols?.multiTierTakeProfitScaling.tp2.price || activeReport.executionParameters.takeProfit2}
                     </span>
                   </div>
 

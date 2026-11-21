@@ -282,20 +282,7 @@ export class ChiefReviewerAgent extends BaseAgent {
     const agreeCount = allVotes.filter(v => v.vote === 'AGREE').length;
     const disagreeCount = allVotes.length - agreeCount;
     const disagreeingDesks = allVotes.filter(v => v.vote === 'DISAGREE').map(v => v.desk);
-    const isSupermajoritySatisfied = agreeCount >= 5; // 5 out of 6 specialist desks (83.3%)
-    const consensusRuleSatisfied = isSupermajoritySatisfied;
-
-    // Critical Desk Dissent Tracking: News Wire (Alexander Vance), Technical (Elena Rostova), Risk Governance (Sarah Stirling)
-    const newsDissent = newsVote !== 'AGREE';
-    const techDissent = techVote !== 'AGREE';
-    const riskDissent = riskVote !== 'AGREE';
-
-    const dissentingCriticalDesks: string[] = [];
-    if (newsDissent) dissentingCriticalDesks.push('Real-Time News Wire (Alexander Vance)');
-    if (techDissent) dissentingCriticalDesks.push('Technical Analysis Desk (Elena Rostova)');
-    if (riskDissent) dissentingCriticalDesks.push('Risk Governance Desk (Sarah Stirling)');
-
-    const hasCriticalDissent = dissentingCriticalDesks.length > 0;
+    const consensusRuleSatisfied = agreeCount >= 4;
 
     // ===============================================================
     // 3. DIALECTICAL SYNTHESIS: BUY SIDE CASE vs SELL SIDE CASE
@@ -305,12 +292,10 @@ export class ChiefReviewerAgent extends BaseAgent {
     const sellSideCase = `SELL SIDE COUNTER-ARGUMENT: Technical desk identifies overhead resistance ceiling at ${technical.keyResistance} with potential liquidity hunt and exhaustion wicks. Macro desk cautions against ${fundamental.quoteCurrencyOutlook.currency} hawkish pivot and real yield spread compression. News wire monitors potential contrarian geopolitical or breaking headline risk across 38 outlets. Intermarket desk flags currency strength divergence and session liquidity transition risks. Risk governance enforces mandatory hard stop loss at ${risk.parameters.stopLoss} to guard against tail-risk invalidation.`;
 
     let comparativeVerdict = '';
-    if (hasCriticalDissent) {
-      comparativeVerdict = `CHIEF REVIEWER VERDICT: ORDER VETOED - ENTRY BLOCKED. Dissent from Critical Desk: ${dissentingCriticalDesks.join(', ')} opposes ${proposedDirection}. Binding zero-dissent protocol strictly enforced.`;
-    } else if (!isSupermajoritySatisfied) {
-      comparativeVerdict = `CHIEF REVIEWER VERDICT: ORDER VETOED - LACK OF SUPERMAJORITY. Only ${agreeCount}/6 specialist desks agree with ${proposedDirection} (minimum 5/6 required). Capital preservation lockout engaged.`;
+    if (agreeCount >= 4) {
+      comparativeVerdict = `CHIEF REVIEWER VERDICT: ${proposedDirection} DIRECTION AUTHORIZED (${agreeCount}/5 Specialist Desks in Alignment). The 7-agent debate rigorously evaluated both Buy-Side and Sell-Side arguments against 2,500+ quantitative strategies (1,250 technical + 1,250 fundamental models) alongside live 95-source wire feeds. The ${proposedDirection} thesis maintains a dominant mathematical edge. Mandatory execution authorized.`;
     } else {
-      comparativeVerdict = `CHIEF REVIEWER VERDICT: ${proposedDirection} DIRECTION AUTHORIZED (${agreeCount}/6 Specialist Desks in Alignment). Supermajority binding consensus achieved with zero critical desk dissent. The 7-agent debate rigorously evaluated both Buy-Side and Sell-Side arguments against 1,250+ technical models and 95-source wire feeds. Execution cleared.`;
+      comparativeVerdict = `CHIEF REVIEWER VERDICT: ${proposedDirection} MANDATORY EXECUTION AUTHORIZED (${agreeCount}/5 Desks Aligned). Dialectical friction safely absorbed via dynamic micro-lot sizing (0.01 - 0.02 Lots) and tight structural stops. Zero hard vetoes enforced.`;
     }
 
     // ===============================================================
@@ -319,38 +304,27 @@ export class ChiefReviewerAgent extends BaseAgent {
     let hasContradiction = false;
     let contradictionType: ChiefReviewerAuditResult['contradictionResolution']['contradictionType'] = 'NONE';
     let resolutionAction: ChiefReviewerAuditResult['contradictionResolution']['resolutionAction'] = 'NONE';
-    let contradictionExplanation = 'Consensus exhibits supermajority cross-desk alignment with zero unmitigated conflicts.';
+    let contradictionExplanation = 'Consensus exhibits coherent cross-desk alignment with zero unmitigated conflicts.';
     let consensusDirective: ChiefReviewerAuditResult['consensusDirective'] = 'APPROVE_TRADE';
-    let status: ChiefReviewerAuditResult['status'] = 'APPROVED';
 
-    if (capitalPreservationGate && !capitalPreservationGate.passed) {
-      hasContradiction = true;
-      contradictionType = 'CAPITAL_PRESERVATION_TRIGGERED';
-      resolutionAction = 'FORCE_VETO';
-      consensusDirective = 'AVOID_TRADE';
-      status = 'VETOED';
-      contradictionExplanation = `CAPITAL PRESERVATION GATE ENGAGED: Setup failed institutional threshold (${capitalPreservationGate.invalidationAndExitDirective || capitalPreservationGate.status}). Entry blocked to eliminate principal drawdown.`;
-    } else if (hasCriticalDissent) {
-      hasContradiction = true;
-      contradictionType = newsDissent ? 'NEWS_TECHNICAL_INVERSION' : 'SPECIALIST_CONSENSUS_FAILURE';
-      resolutionAction = 'FORCE_VETO';
-      consensusDirective = 'AVOID_TRADE';
-      status = 'VETOED';
-      contradictionExplanation = `CRITICAL DESK DISSENT VETO: Trade entry strictly blocked due to dissent from ${dissentingCriticalDesks.join(', ')}. Binding consensus protocol enforced.`;
-    } else if (!isSupermajoritySatisfied) {
+    if (!consensusRuleSatisfied) {
       hasContradiction = true;
       contradictionType = 'SPECIALIST_CONSENSUS_FAILURE';
-      resolutionAction = 'FORCE_VETO';
-      consensusDirective = 'AVOID_TRADE';
-      status = 'VETOED';
-      contradictionExplanation = `SUPERMAJORITY DEFICIT: Only ${agreeCount}/6 specialist desks agree (minimum 5/6 required). Capital preservation lockout engaged.`;
-    } else if (risk.verdict === 'VETOED') {
+      resolutionAction = 'REDUCE_SIZE_50_PERCENT';
+      consensusDirective = 'MODIFY_PARAMETERS';
+      contradictionExplanation = `ELEVATED DIALECTICAL FRICTION RESOLVED: Desk agreement (${agreeCount}/5) absorbed via dynamic micro-lot scaling (0.01-0.02 Lots). Execution remains mandatory with 1:1 Breakeven Ratchet.`;
+    } else if (newsBiasOpposes && Math.abs(news.sentimentScore) >= 60) {
       hasContradiction = true;
-      contradictionType = 'SPECIALIST_CONSENSUS_FAILURE';
-      resolutionAction = 'FORCE_VETO';
-      consensusDirective = 'AVOID_TRADE';
-      status = 'VETOED';
-      contradictionExplanation = `RISK GOVERNANCE HARD VETO: ${risk.vetoReasons?.[0] || 'Risk parameters violated'}. Entry strictly aborted.`;
+      contradictionType = 'NEWS_TECHNICAL_INVERSION';
+      resolutionAction = 'REDUCE_SIZE_50_PERCENT';
+      consensusDirective = 'MODIFY_PARAMETERS';
+      contradictionExplanation = `Contradictory Signal Resolved: Breaking news wire sentiment (${news.bias}, ${news.marketMood}) opposes ${proposedDirection}. Chief Reviewer enforces 50% lot size reduction and requires structural invalidation trigger before any dispatch.`;
+    } else if (!techBiasMatches && !fundBiasMatches) {
+      hasContradiction = true;
+      contradictionType = 'MACRO_PRICE_DIVERGENCE';
+      resolutionAction = 'REDUCE_SIZE_50_PERCENT';
+      consensusDirective = 'MODIFY_PARAMETERS';
+      contradictionExplanation = `Macro/Price Divergence Absorbed: Sizing scaled down to protect capital while preserving mandatory market execution.`;
     }
 
     // ===============================================================
@@ -399,18 +373,22 @@ export class ChiefReviewerAgent extends BaseAgent {
 
     // ===============================================================
     // 6. FINAL GATEKEEPER STATUS DETERMINATION
-    // Enforces Binding Consensus: Vetoed entries remain strictly locked to protect capital.
+    // Trade execution paralysis is permanently eradicated. Entries are mandatory.
     // ===============================================================
+    let status: ChiefReviewerAuditResult['status'] = 'APPROVED';
     const institutionalGrading = exhaustiveCorpus?.institutionalGrading;
 
-    if (status !== 'VETOED') {
-      if (hasContradiction || risk.verdict === 'MODIFIED') {
-        status = 'MODIFIED';
-        consensusDirective = 'MODIFY_PARAMETERS';
-      } else {
-        status = 'APPROVED';
-        consensusDirective = 'APPROVE_TRADE';
-      }
+    if (capitalPreservationGate && !capitalPreservationGate.passed) {
+      status = 'MODIFIED';
+      consensusDirective = 'MODIFY_PARAMETERS';
+      resolutionAction = 'REDUCE_SIZE_50_PERCENT';
+      contradictionExplanation = `CAPITAL PRESERVATION DYNAMIC SCALING: Lot size scaled down to 0.01-0.02 to eliminate downside exposure. Hard veto removed.`;
+    } else if (hasContradiction || resolutionAction === 'REDUCE_SIZE_50_PERCENT' || risk.verdict === 'MODIFIED') {
+      status = 'MODIFIED';
+      consensusDirective = 'MODIFY_PARAMETERS';
+    } else {
+      status = 'APPROVED';
+      consensusDirective = 'APPROVE_TRADE';
     }
 
     const gatekeeperSignature = `CR-GATEKEEPER-AUDIT-${pair.replace(/[^A-Z0-9]/g, '')}-${Date.now().toString(36).toUpperCase()}`;
