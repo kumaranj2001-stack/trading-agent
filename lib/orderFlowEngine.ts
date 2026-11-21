@@ -429,7 +429,7 @@ export class OrderFlowEngine {
    */
   public analyzeOrderFlow(symbol: CurrencyPair): OrderFlowAnalysisReport {
     const startTime = performance.now();
-    const currentPrice = BASE_PRICES[symbol] || 2734.50;
+    const currentPrice = BASE_PRICES[symbol] || 3538.50;
 
     // Track tick counter
     this.tickCounter[symbol] = (this.tickCounter[symbol] || 0) + 1;
@@ -524,7 +524,7 @@ export class OrderFlowEngine {
     timeframe: string = '5m',
     candles: Array<{ time: number | string; open: number; high: number; low: number; close: number; volume?: number }> = []
   ): import('./types').OrderFlowSessionAnalysis {
-    const basePrice = BASE_PRICES[symbol] || 2734.50;
+    const basePrice = BASE_PRICES[symbol] || 3538.50;
     const isGold = symbol === 'XAU/USD';
     const isSilver = symbol === 'XAG/USD';
     const isPlatinum = symbol === 'XPT/USD';

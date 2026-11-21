@@ -66,7 +66,8 @@ const INTERVAL_MAP: Record<TimeFrame, { interval: string; range: string }> = {
 export class RealMarketDataService {
   private static quoteCache: Map<CurrencyPair, { quote: LiveMarketQuote; fetchedAt: number }> = new Map();
   private static candleCache: Map<string, { candles: Candle[]; fetchedAt: number }> = new Map();
-  private static CACHE_TTL_MS = 3000; // 3-second freshness window
+  private static CACHE_TTL_MS = 3000; // 3-second freshness window for active candles
+  private static RATES_CACHE_TTL_MS = 30000; // 30-second freshness window for multi-asset ticker quotes
 
   /**
    * Fetch real live OHLCV candle bars from global market feeds.
@@ -192,7 +193,7 @@ export class RealMarketDataService {
 
       // Check cache
       const cached = this.quoteCache.get(p);
-      if (cached && (now - cached.fetchedAt) < this.CACHE_TTL_MS) {
+      if (cached && (now - cached.fetchedAt) < this.RATES_CACHE_TTL_MS) {
         quotes.push(cached.quote);
         return;
       }

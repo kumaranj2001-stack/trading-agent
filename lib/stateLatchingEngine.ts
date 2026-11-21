@@ -262,33 +262,29 @@ export class StateLatchingEngine {
     const rawEntry = consensus.executionSignal.entry;
     const anchoredEntryPrice = rawEntry > 0 ? rawEntry : livePrice;
 
-    // Ensure mathematical rigor for anchored levels
+    // Ensure mathematical rigor and institutional bounding for anchored levels
     let anchoredStopLoss = consensus.executionSignal.stopLoss;
     let anchoredTakeProfit = consensus.executionSignal.takeProfit;
 
-    const stopDistance = Math.abs(anchoredEntryPrice - anchoredStopLoss) || (22 * pipMultiplier);
+    const stopDistance = Math.max(
+      15 * pipMultiplier,
+      Math.min(80 * pipMultiplier, Math.abs(anchoredEntryPrice - anchoredStopLoss) || (22 * pipMultiplier))
+    );
     let targetDistance = Math.abs(anchoredTakeProfit - anchoredEntryPrice);
-    const maxPlausibleDistance = Math.max(stopDistance * 10, 250 * pipMultiplier);
-    if (!targetDistance || targetDistance > maxPlausibleDistance || targetDistance < stopDistance * 0.5) {
-      targetDistance = stopDistance * (isConservativeRR ? 1.85 : Math.max(2.5, currentRR || 3.0));
+    const minTargetDistance = stopDistance * 1.5;
+    const maxTargetDistance = stopDistance * 3.5;
+    if (!targetDistance || targetDistance > maxTargetDistance || targetDistance < minTargetDistance) {
+      targetDistance = stopDistance * (isConservativeRR ? 1.85 : Math.max(2.5, currentRR || 2.75));
     }
 
     if (isSell) {
-      if (anchoredStopLoss <= anchoredEntryPrice) {
-        anchoredStopLoss = Number((anchoredEntryPrice + stopDistance).toFixed(decimals));
-      }
-      if (anchoredTakeProfit >= anchoredEntryPrice) {
-        anchoredTakeProfit = Number((anchoredEntryPrice - targetDistance).toFixed(decimals));
-      }
+      anchoredStopLoss = Number((anchoredEntryPrice + stopDistance).toFixed(decimals));
+      anchoredTakeProfit = Number((anchoredEntryPrice - targetDistance).toFixed(decimals));
       // Ensure resistance ceiling is higher than stop loss to allow breathing room
       resistanceCeiling = Math.max(resistanceCeiling, Number((anchoredStopLoss + 5 * pipMultiplier).toFixed(decimals)));
     } else {
-      if (anchoredStopLoss >= anchoredEntryPrice) {
-        anchoredStopLoss = Number((anchoredEntryPrice - stopDistance).toFixed(decimals));
-      }
-      if (anchoredTakeProfit <= anchoredEntryPrice) {
-        anchoredTakeProfit = Number((anchoredEntryPrice + targetDistance).toFixed(decimals));
-      }
+      anchoredStopLoss = Number((anchoredEntryPrice - stopDistance).toFixed(decimals));
+      anchoredTakeProfit = Number((anchoredEntryPrice + targetDistance).toFixed(decimals));
       // Ensure S1 floor is lower than stop loss
       s1Floor = Math.min(s1Floor, Number((anchoredStopLoss - 5 * pipMultiplier).toFixed(decimals)));
     }

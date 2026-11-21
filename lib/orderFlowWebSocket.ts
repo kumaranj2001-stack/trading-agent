@@ -42,13 +42,13 @@ export class IsolatedOrderFlowWebSocketClient {
 
   constructor(symbol: CurrencyPair = 'XAU/USD') {
     this.symbol = symbol;
-    this.currentPrice = BASE_PRICES[symbol] || 2734.50;
+    this.currentPrice = BASE_PRICES[symbol] || 3538.50;
   }
 
   public setSymbol(newSymbol: CurrencyPair) {
     if (this.symbol === newSymbol) return;
     this.symbol = newSymbol;
-    this.currentPrice = BASE_PRICES[newSymbol] || 2734.50;
+    this.currentPrice = BASE_PRICES[newSymbol] || 3538.50;
     this.reconnect();
   }
 

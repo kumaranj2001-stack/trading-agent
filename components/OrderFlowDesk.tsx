@@ -54,8 +54,8 @@ export const OrderFlowDesk: React.FC<OrderFlowDeskProps> = ({
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const [techWeight, setTechWeight] = useState<number>(50); // 50%
   const [liveTicksCount, setLiveTicksCount] = useState<number>(0);
-  const [liveBid, setLiveBid] = useState<number>(BASE_PRICES[initialPair] || 2734.50);
-  const [liveAsk, setLiveAsk] = useState<number>((BASE_PRICES[initialPair] || 2734.50) + 0.25);
+  const [liveBid, setLiveBid] = useState<number>(BASE_PRICES[initialPair] || 3538.50);
+  const [liveAsk, setLiveAsk] = useState<number>((BASE_PRICES[initialPair] || 3538.50) + 0.25);
   const [liveCvd, setLiveCvd] = useState<number>(420);
   const [liveBuyingPct, setLiveBuyingPct] = useState<number>(62.4);
 

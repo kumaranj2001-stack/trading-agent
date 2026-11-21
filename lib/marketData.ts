@@ -14,31 +14,31 @@ export const INDIAN_MARKET_ASSETS: CurrencyPair[] = [
 
 export const BASE_PRICES: Record<CurrencyPair, number> = {
   // Forex Majors (Live OANDA / Global Spot Market Parity)
-  'EUR/USD': 1.0865,
-  'GBP/USD': 1.2985,
-  'USD/JPY': 154.30,
-  'AUD/USD': 0.6585,
-  'USD/CAD': 1.3895,
-  'USD/CHF': 0.8845,
-  'NZD/USD': 0.5985,
-  'EUR/GBP': 0.8368,
+  'EUR/USD': 1.0975,
+  'GBP/USD': 1.3082,
+  'USD/JPY': 158.51,
+  'AUD/USD': 0.6619,
+  'USD/CAD': 1.4339,
+  'USD/CHF': 0.8396,
+  'NZD/USD': 0.5470,
+  'EUR/GBP': 0.8381,
   // Metals & Energy Commodities (Live Spot/TradingView OANDA Parity)
-  'XAU/USD': 2734.50, // Spot Gold ($/oz) (Matches TradingView OANDA:XAUUSD live feed)
-  'XAG/USD': 31.85,   // Spot Silver ($/oz) (Matches TradingView OANDA:XAGUSD)
-  'XPT/USD': 985.40,  // Spot Platinum ($/oz)
-  'COPPER': 4.350,    // COMEX Copper ($/lb) (Matches TradingView COMEX:HG1!)
-  'WTI_CRUDE': 71.45, // WTI Light Sweet Crude Oil ($/bbl)
-  'BRENT_CRUDE': 75.30,// Brent Global Benchmark ($/bbl)
+  'XAU/USD': 3538.50, // Spot Gold ($/oz) (Matches TradingView OANDA:XAUUSD live feed ~3538-3539)
+  'XAG/USD': 41.08,   // Spot Silver ($/oz) (Matches TradingView OANDA:XAGUSD)
+  'XPT/USD': 1289.60, // Spot Platinum ($/oz)
+  'COPPER': 5.465,    // COMEX Copper ($/lb) (Matches TradingView COMEX:HG1!)
+  'WTI_CRUDE': 83.62, // WTI Light Sweet Crude Oil ($/bbl)
+  'BRENT_CRUDE': 89.87,// Brent Global Benchmark ($/bbl)
   // Indian Market & Currency (Live NSE & FX Parity)
-  'NIFTY 50': 24350.50,
-  'BANK NIFTY': 52120.00,
-  'USD/INR': 84.42,
-  'EUR/INR': 91.75,
-  'GBP/INR': 109.65,
-  'RELIANCE': 1285.50,
-  'TCS': 4150.00,
-  'HDFC BANK': 1745.00,
-  'INFY': 1855.00,
+  'NIFTY 50': 25800.60,
+  'BANK NIFTY': 64635.20,
+  'USD/INR': 92.67,
+  'EUR/INR': 101.61,
+  'GBP/INR': 121.23,
+  'RELIANCE': 1377.50,
+  'TCS': 2376.20,
+  'HDFC BANK': 846.00,
+  'INFY': 1098.00,
 };
 
 export const PIP_VALUES: Record<CurrencyPair, number> = {

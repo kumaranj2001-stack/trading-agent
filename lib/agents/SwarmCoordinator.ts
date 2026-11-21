@@ -522,20 +522,22 @@ export class SwarmCoordinator {
       confluenceGrade = existingLatched.anchoredGrade;
       activeDirection = existingLatched.anchoredDirection;
     } else {
+      const pipMult = PIP_VALUES[pair] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
+      const stopDistance = Math.max(
+        15 * pipMult,
+        Math.min(80 * pipMult, Math.abs(currentPrice - risk.parameters.stopLoss) || (22 * pipMult))
+      );
+      const rawTargetDist = Math.abs(currentPrice - risk.parameters.takeProfit1);
+      const targetDistance = (rawTargetDist >= stopDistance * 1.5 && rawTargetDist <= stopDistance * 3.5)
+        ? rawTargetDist
+        : stopDistance * 2.5;
+
       if (activeDirection === 'SELL') {
-        if (finalStopLoss <= currentPrice) {
-          finalStopLoss = Number((currentPrice + Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
-        }
-        if (finalTakeProfit >= currentPrice) {
-          finalTakeProfit = Number((currentPrice - Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
-        }
+        finalStopLoss = Number((currentPrice + stopDistance).toFixed(decimals));
+        finalTakeProfit = Number((currentPrice - targetDistance).toFixed(decimals));
       } else if (activeDirection === 'BUY') {
-        if (finalStopLoss >= currentPrice) {
-          finalStopLoss = Number((currentPrice - Math.abs(currentPrice - risk.parameters.stopLoss)).toFixed(decimals));
-        }
-        if (finalTakeProfit <= currentPrice) {
-          finalTakeProfit = Number((currentPrice + Math.abs(risk.parameters.takeProfit1 - currentPrice)).toFixed(decimals));
-        }
+        finalStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
+        finalTakeProfit = Number((currentPrice + targetDistance).toFixed(decimals));
       }
     }
 
