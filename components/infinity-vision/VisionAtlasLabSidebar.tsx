@@ -15,12 +15,15 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { CurrencyPair } from '@/lib/types';
+import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { BASE_PRICES } from '@/lib/marketData';
 
 export interface VisionAtlasLabSidebarProps {
   pair: CurrencyPair;
   timeframe: string;
   theme?: 'light' | 'dark';
   onSimulate?: () => void;
+  livePrice?: number;
 }
 
 export const VisionAtlasLabSidebar: React.FC<VisionAtlasLabSidebarProps> = ({
@@ -28,6 +31,7 @@ export const VisionAtlasLabSidebar: React.FC<VisionAtlasLabSidebarProps> = ({
   timeframe,
   theme = 'light',
   onSimulate,
+  livePrice: propLivePrice,
 }) => {
   const isLight = theme === 'light';
   const cleanPair = pair.replace('/', '');
@@ -37,10 +41,20 @@ export const VisionAtlasLabSidebar: React.FC<VisionAtlasLabSidebarProps> = ({
   const [isExplaining, setIsExplaining] = useState<boolean>(false);
   const [explanationText, setExplanationText] = useState<string>('');
 
+  const isGold = pair === 'XAU/USD';
+  const isJpy = pair.includes('JPY');
+  const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY';
+  const decimals = isJpy ? 3 : (isGold || isIndian) ? 2 : 5;
+  const activePrice = propLivePrice || LiveMarketFeedManager.getCanonicalPrice(pair) || BASE_PRICES[pair] || 3538.20;
+  const sweepPrice = (activePrice * 0.998).toFixed(decimals);
+  const entryMin = (activePrice * 1.002).toFixed(decimals);
+  const entryMax = (activePrice * 1.004).toFixed(decimals);
+  const stopThreshold = (activePrice * 1.008).toFixed(decimals);
+
   const handleAnalyseAndExplain = () => {
     setIsExplaining(true);
-    const textEn = `Institutional Order Flow for ${cleanPair} on ${timeframe}: Price has executed a sell-side liquidity sweep at 3998.47. High-probability confluence entry zone is isolated between 4050.28 and 4052.61, overlapping the 61.8% Fibonacci retracement and premium fair value gap. Maintain stop loss above danger threshold 4067.16.`;
-    const textTa = `${cleanPair} ${timeframe} நேரடி தொழில்நுட்ப பகுப்பாய்வு: விலை 3998.47 இல் கீழ்நிலைப் பணப்புழக்கத்தை (Sell-side Liquidity) எடுத்துள்ளது. 4050.28 முதல் 4052.61 வரையிலான பகுதியில் உயர் நம்பகத்தன்மை கொண்ட என்ட்ரி மண்டலம் கண்டறியப்பட்டுள்ளது. ஆபத்து எல்லையான 4067.16 க்கு மேல் ஸ்டாப் லாஸ் வைக்கவும்.`;
+    const textEn = `Institutional Order Flow for ${cleanPair} on ${timeframe}: Price has executed a sell-side liquidity sweep at ${sweepPrice}. High-probability confluence entry zone is isolated between ${entryMin} and ${entryMax}, overlapping the 61.8% Fibonacci retracement and premium fair value gap. Maintain stop loss above danger threshold ${stopThreshold}.`;
+    const textTa = `${cleanPair} ${timeframe} நேரடி தொழில்நுட்ப பகுப்பாய்வு: விலை ${sweepPrice} இல் கீழ்நிலைப் பணப்புழக்கத்தை (Sell-side Liquidity) எடுத்துள்ளது. ${entryMin} முதல் ${entryMax} வரையிலான பகுதியில் உயர் நம்பகத்தன்மை கொண்ட என்ட்ரி மண்டலம் கண்டறியப்பட்டுள்ளது. ஆபத்து எல்லையான ${stopThreshold} க்கு மேல் ஸ்டாப் லாஸ் வைக்கவும்.`;
     
     const textToSpeak = selectedLanguage === 'ta' ? textTa : textEn;
     setExplanationText(textToSpeak);
@@ -160,28 +174,28 @@ export const VisionAtlasLabSidebar: React.FC<VisionAtlasLabSidebarProps> = ({
                   <span className="w-2 h-2 rounded-full bg-rose-500" />
                   <span className="text-slate-700 dark:text-slate-300">Sell-limit zone</span>
                 </span>
-                <span className="font-bold text-slate-900 dark:text-white">4001.70 - 4002.40</span>
+                <span className="font-bold text-slate-900 dark:text-white">{(activePrice * 1.001).toFixed(decimals)} - {(activePrice * 1.003).toFixed(decimals)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-amber-700" />
                   <span className="text-slate-700 dark:text-slate-300">Sell-limit zone 2</span>
                 </span>
-                <span className="font-bold text-slate-900 dark:text-white">4010.14 - 4012.72</span>
+                <span className="font-bold text-slate-900 dark:text-white">{(activePrice * 1.005).toFixed(decimals)} - {(activePrice * 1.008).toFixed(decimals)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-blue-500" />
                   <span className="text-slate-700 dark:text-slate-300">Sell-side liquidity</span>
                 </span>
-                <span className="font-bold text-slate-900 dark:text-white">3999.67 - 4000.55</span>
+                <span className="font-bold text-slate-900 dark:text-white">{(activePrice * 0.997).toFixed(decimals)} - {(activePrice * 0.999).toFixed(decimals)}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-blue-700" />
                   <span className="text-slate-700 dark:text-slate-300">Buy-limit zone</span>
                 </span>
-                <span className="font-bold text-slate-900 dark:text-white">3989.97 - 3996.36</span>
+                <span className="font-bold text-slate-900 dark:text-white">{(activePrice * 0.991).toFixed(decimals)} - {(activePrice * 0.995).toFixed(decimals)}</span>
               </div>
             </div>
             <p className="text-[9px] text-slate-400 italic pt-1 font-sans">

@@ -20,6 +20,7 @@ import {
   ConfluenceGrade
 } from './types';
 import { BASE_PRICES } from './marketData';
+import { LiveMarketFeedManager } from './liveMarketFeed';
 import { computeTechnicalIndicators, calculateEMA, calculateRSI, calculateATR } from './indicators';
 import { realTimeNewsEngine } from './newsEngine';
 import { TECHNICAL_KNOWLEDGE_BASE } from './knowledge/technicalKnowledge';
@@ -50,10 +51,16 @@ export class VisionAtlasLabEngine {
     timeframe: TimeFrame = '1h',
     candles: Candle[] = []
   ): VisionAtlasPayload {
-    const livePrice = BASE_PRICES[symbol] || 3538.20;
-    const lastClose = candles && candles.length > 0 ? candles[candles.length - 1].close : 0;
-    const isMismatched = Math.abs(lastClose - livePrice) / livePrice > 0.50;
-    const safeCandles = candles && candles.length >= 10 && !isMismatched ? candles : this.generateBaselineCandles(symbol, livePrice, 60);
+    // 🌐 Single Source of Truth: Guarantee perfect price parity with Terminal
+    const canonicalCandles = (candles && candles.length >= 10) 
+      ? candles 
+      : LiveMarketFeedManager.getCanonicalCandles(symbol, timeframe);
+    const livePrice = (canonicalCandles && canonicalCandles.length > 0)
+      ? canonicalCandles[canonicalCandles.length - 1].close
+      : (LiveMarketFeedManager.getCanonicalPrice(symbol) || BASE_PRICES[symbol] || 3538.20);
+    const safeCandles = canonicalCandles && canonicalCandles.length >= 10 
+      ? canonicalCandles 
+      : this.generateBaselineCandles(symbol, livePrice, 60);
     const closes = safeCandles.map(c => c.close);
     const highs = safeCandles.map(c => c.high);
     const lows = safeCandles.map(c => c.low);

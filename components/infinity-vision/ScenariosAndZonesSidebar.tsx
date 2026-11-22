@@ -16,6 +16,7 @@ import {
 import { CurrencyPair, Candle } from '@/lib/types';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 import { visionSystemLogger } from '@/lib/visionSystemLogger';
+import { BASE_PRICES } from '@/lib/marketData';
 
 export interface ScenariosAndZonesSidebarProps {
   pair: CurrencyPair;
@@ -48,7 +49,7 @@ export const ScenariosAndZonesSidebar: React.FC<ScenariosAndZonesSidebarProps> =
   const priceDecimals = pair.includes('JPY') ? 3 : (pair.includes('USD') && !isXau) ? 5 : (pair.includes('NIFTY') || isXau) ? 2 : 4;
   
   // Real-time authoritative price from terminal feed or prop
-  const activePrice = currentPrice || LiveMarketFeedManager.getCanonicalPrice(pair) || (isXau ? 4005.88 : 1.0850);
+  const activePrice = currentPrice || LiveMarketFeedManager.getCanonicalPrice(pair) || BASE_PRICES[pair] || 3538.20;
   const recentLogs = visionSystemLogger.getRecentLogs();
   const latestLog = recentLogs.find(l => l.pair === pair) || recentLogs[recentLogs.length - 1];
 
@@ -328,7 +329,7 @@ export const ScenariosAndZonesSidebar: React.FC<ScenariosAndZonesSidebarProps> =
                   <span>1D Timeframe</span>
                   <span className="text-rose-600">BEARISH (BOS)</span>
                 </div>
-                <p className="text-[10px] text-slate-500">Structural swing low broken at 4020.00.</p>
+                <p className="text-[10px] text-slate-500">Structural swing low broken at {(activePrice * 0.995).toFixed(priceDecimals)}.</p>
               </div>
 
               <div className="p-2.5 rounded border border-slate-200 dark:border-terminal-border space-y-1">
@@ -344,7 +345,7 @@ export const ScenariosAndZonesSidebar: React.FC<ScenariosAndZonesSidebarProps> =
                   <span>1H Timeframe</span>
                   <span className="text-amber-600">CONSOLIDATION RANGE</span>
                 </div>
-                <p className="text-[10px] text-slate-500">Range bound between 3998.47 and 4046.88.</p>
+                <p className="text-[10px] text-slate-500">Range bound between {(activePrice * 0.990).toFixed(priceDecimals)} and {(activePrice * 1.010).toFixed(priceDecimals)}.</p>
               </div>
 
               <div className="p-2.5 rounded border border-cyan-500/40 bg-cyan-500/5 space-y-1">

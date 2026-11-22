@@ -28,16 +28,34 @@ import { UnifiedDecisionBanner } from '@/components/UnifiedDecisionBanner';
 import { ChartView } from '@/components/ChartView';
 import { AgentSwarmPanel } from '@/components/AgentSwarmPanel';
 import { AgentDebateFeed } from '@/components/AgentDebateFeed';
-import { PortfolioPanel } from '@/components/PortfolioPanel';
 import { ActiveEntryInvalidationBanner } from '@/components/ActiveEntryInvalidationBanner';
-import { MultiAssetIngestionTelemetryCard } from '@/components/MultiAssetIngestionTelemetryCard';
-import { DynamicTradingSessionTimeline } from '@/components/DynamicTradingSessionTimeline';
 import { BacktestView } from '@/components/BacktestModal';
 import { ArchitectureView } from '@/components/ArchitectureView';
 import { SettingsModal } from '@/components/SettingsModal';
 import { RiskRatioControllerModal } from '@/components/RiskRatioControllerModal';
 import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
+
+const PortfolioPanel = dynamic(
+  () => import('@/components/PortfolioPanel').then((mod) => mod.PortfolioPanel),
+  { ssr: false }
+);
+
+const MultiAssetIngestionTelemetryCard = dynamic(
+  () => import('@/components/MultiAssetIngestionTelemetryCard').then((mod) => mod.MultiAssetIngestionTelemetryCard),
+  { ssr: false }
+);
+
+const DynamicTradingSessionTimeline = dynamic(
+  () => import('@/components/DynamicTradingSessionTimeline').then((mod) => mod.DynamicTradingSessionTimeline),
+  { ssr: false }
+);
+
+const MarketCloseFreezeBanner = dynamic(
+  () => import('@/components/MarketCloseFreezeBanner').then((mod) => mod.MarketCloseFreezeBanner),
+  { ssr: false }
+);
+
 const VisionAtlasWorkspace = dynamic(
   () => import('@/components/VisionAtlasWorkspace').then((mod) => mod.VisionAtlasWorkspace),
   {
@@ -65,7 +83,6 @@ import { getMarketSegmentForSymbol, PIP_VALUES, generateCandles } from '@/lib/ma
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 import { MarketSessionInfo, TradeHistoryItem } from '@/lib/types';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
-import { MarketCloseFreezeBanner } from '@/components/MarketCloseFreezeBanner';
 import { AutonomousSwarmEngine, AutonomousSwarmTelemetry } from '@/lib/autonomousSwarmEngine';
 import { tradeInvalidationEngine } from '@/lib/tradeInvalidationEngine';
 import { stateLatchingEngine } from '@/lib/stateLatchingEngine';

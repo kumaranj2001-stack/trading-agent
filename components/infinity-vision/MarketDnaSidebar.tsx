@@ -13,6 +13,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { CurrencyPair } from '@/lib/types';
+import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { BASE_PRICES } from '@/lib/marketData';
 
 export interface MarketDnaSidebarProps {
   pair: CurrencyPair;
@@ -20,6 +22,7 @@ export interface MarketDnaSidebarProps {
   theme?: 'light' | 'dark';
   onTogglePatternOnChart?: (on: boolean) => void;
   onToggleChartMode?: (mode: 'Candles' | 'Line') => void;
+  livePrice?: number;
 }
 
 export const MarketDnaSidebar: React.FC<MarketDnaSidebarProps> = ({
@@ -28,9 +31,14 @@ export const MarketDnaSidebar: React.FC<MarketDnaSidebarProps> = ({
   theme = 'light',
   onTogglePatternOnChart,
   onToggleChartMode,
+  livePrice: propLivePrice,
 }) => {
   const isLight = theme === 'light';
   const isXau = pair.includes('XAU');
+  const isJpy = pair.includes('JPY');
+  const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY';
+  const decimals = isJpy ? 3 : (isXau || isIndian) ? 2 : 5;
+  const activePrice = propLivePrice || LiveMarketFeedManager.getCanonicalPrice(pair) || BASE_PRICES[pair] || 3538.20;
   const [activeSubTab, setActiveSubTab] = useState<'overview' | 'twins' | 'entry' | 'stats' | 'confirmation' | 'replay'>('overview');
   const [patternLength, setPatternLength] = useState<number>(40);
   const [outcomeLength, setOutcomeLength] = useState<number>(20);
@@ -226,7 +234,7 @@ export const MarketDnaSidebar: React.FC<MarketDnaSidebarProps> = ({
                       <span className="text-slate-700 dark:text-slate-300">Sell-limit zone</span>
                     </span>
                     <span className="font-bold text-slate-900 dark:text-white">
-                      {isXau ? '4001.70 - 4002.40' : 'Zone 1'}
+                      {(activePrice * 1.001).toFixed(decimals)} - {(activePrice * 1.003).toFixed(decimals)}
                     </span>
                   </div>
 
@@ -236,7 +244,7 @@ export const MarketDnaSidebar: React.FC<MarketDnaSidebarProps> = ({
                       <span className="text-slate-700 dark:text-slate-300">Sell-limit zone 2</span>
                     </span>
                     <span className="font-bold text-slate-900 dark:text-white">
-                      {isXau ? '4010.14 - 4012.72' : 'Zone 2'}
+                      {(activePrice * 1.005).toFixed(decimals)} - {(activePrice * 1.008).toFixed(decimals)}
                     </span>
                   </div>
 
@@ -246,7 +254,7 @@ export const MarketDnaSidebar: React.FC<MarketDnaSidebarProps> = ({
                       <span className="text-slate-700 dark:text-slate-300">Sell-side liquidity</span>
                     </span>
                     <span className="font-bold text-slate-900 dark:text-white">
-                      {isXau ? '3999.67 - 4000.55' : 'SSL'}
+                      {(activePrice * 0.997).toFixed(decimals)} - {(activePrice * 0.999).toFixed(decimals)}
                     </span>
                   </div>
 
@@ -256,7 +264,7 @@ export const MarketDnaSidebar: React.FC<MarketDnaSidebarProps> = ({
                       <span className="text-slate-700 dark:text-slate-300">Buy-limit zone</span>
                     </span>
                     <span className="font-bold text-slate-900 dark:text-white">
-                      {isXau ? '3989.97 - 3996.36' : 'Buy Zone'}
+                      {(activePrice * 0.991).toFixed(decimals)} - {(activePrice * 0.995).toFixed(decimals)}
                     </span>
                   </div>
                 </div>

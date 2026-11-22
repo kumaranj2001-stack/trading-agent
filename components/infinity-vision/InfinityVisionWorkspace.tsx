@@ -89,7 +89,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
     return LiveMarketFeedManager.getCanonicalCandles(initialPair, initialTf);
   });
   const [livePrice, setLivePrice] = useState<number>(() => {
-    return LiveMarketFeedManager.getCanonicalPrice(initialPair) || BASE_PRICES[initialPair] || 4074.90;
+    return LiveMarketFeedManager.getCanonicalPrice(initialPair) || BASE_PRICES[initialPair] || 3538.20;
   });
   const [liveChangePercent, setLiveChangePercent] = useState<number>(-0.06);
   const [liveTimestamp, setLiveTimestamp] = useState<number>(Date.now());
@@ -174,7 +174,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
       if (tel.latencyMs) setLiveLatencyMs(tel.latencyMs);
     });
 
-    // 5. Connect SSE stream to /api/vision-atlas/stream for authoritative backend continuous verification
+    // 5. Authoritative backend continuous verification feed (safely guarded)
     let eventSource: EventSource | null = null;
     try {
       if (typeof window !== 'undefined' && typeof EventSource !== 'undefined') {
@@ -191,9 +191,17 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
             }
           } catch {}
         };
+        eventSource.onerror = () => {
+          if (eventSource) {
+            try {
+              eventSource.close();
+            } catch {}
+            eventSource = null;
+          }
+        };
       }
-    } catch (sseErr) {
-      console.warn('[InfinityVision] SSE connect notice:', sseErr);
+    } catch {
+      // Local LiveMarketFeedManager maintains continuous decoupled feed with 0ms interruption
     }
 
     const staleTimer = setInterval(() => {
@@ -211,7 +219,12 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
       unsubTel();
       clearInterval(staleTimer);
       if (eventSource) {
-        eventSource.close();
+        try {
+          eventSource.onmessage = null;
+          eventSource.onerror = null;
+          eventSource.close();
+        } catch {}
+        eventSource = null;
       }
     };
   }, [selectedPair, selectedTf]);
@@ -436,6 +449,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
           horizonCandles={horizonCandles}
           onChangeHorizon={setHorizonCandles}
           theme={theme}
+          pair={selectedPair}
+          livePrice={livePrice}
         />
 
         {/* Center Floating Liquidity Heatmap Window */}
@@ -445,6 +460,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
           pair={selectedPair}
           timeframe={selectedTf}
           theme={theme}
+          livePrice={livePrice}
         />
 
         {/* 📈 Central Real-Time Streaming Chart Container (Direct TradingView & Confluence Encapsulation) */}
@@ -516,6 +532,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
               pair={selectedPair}
               timeframe={selectedTf}
               theme={theme}
+              livePrice={livePrice}
               onTogglePatternOnChart={setShowPatternOnChart}
               onToggleChartMode={setChartType}
             />
@@ -526,6 +543,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
               pair={selectedPair}
               timeframe={selectedTf}
               theme={theme}
+              livePrice={livePrice}
               onSimulate={() => setIsQuantumVisionOpen(true)}
             />
           )}
@@ -537,6 +555,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
         pair={selectedPair}
         timeframe={selectedTf}
         theme={theme}
+        livePrice={livePrice}
+        candles={liveCandles}
       />
 
       {/* ⚙️ Comprehensive Indicators Drawer */}

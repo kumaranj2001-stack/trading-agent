@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Minimize2, Maximize2, Droplets, Info } from 'lucide-react';
 import { CurrencyPair } from '@/lib/types';
+import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { BASE_PRICES } from '@/lib/marketData';
 
 export interface LiquidityHeatmapModalProps {
   isOpen: boolean;
@@ -10,6 +12,7 @@ export interface LiquidityHeatmapModalProps {
   pair?: CurrencyPair;
   timeframe?: string;
   theme?: 'light' | 'dark';
+  livePrice?: number;
 }
 
 export const LiquidityHeatmapModal: React.FC<LiquidityHeatmapModalProps> = ({
@@ -18,21 +21,33 @@ export const LiquidityHeatmapModal: React.FC<LiquidityHeatmapModalProps> = ({
   pair = 'XAU/USD',
   timeframe = '15m',
   theme = 'light',
+  livePrice: propLivePrice,
 }) => {
   const isLight = theme === 'light';
   const cleanPair = pair.replace('/', '');
 
-  if (!isOpen) return null;
+  const isGold = pair === 'XAU/USD';
+  const isJpy = pair.includes('JPY');
+  const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY';
+  const decimals = isJpy ? 3 : (isGold || isIndian) ? 2 : 5;
+  const activePrice = propLivePrice || LiveMarketFeedManager.getCanonicalPrice(pair) || BASE_PRICES[pair] || 3538.20;
+  const spreadPts = isGold ? 0.17 : isIndian ? 1.5 : isJpy ? 0.015 : 0.00015;
+  const bidVal = (activePrice - spreadPts / 2).toFixed(decimals);
+  const askVal = (activePrice + spreadPts / 2).toFixed(decimals);
 
-  const liquidityLevels = [
-    { type: 'Sell-limit zone', price: 4051.55, strength: 33, delta: '+4', color: 'bg-amber-500', barWidth: '45%' },
-    { type: 'Sell-limit zone 2', price: 4039.91, strength: 43, delta: '+2', color: 'bg-rose-500', barWidth: '65%' },
-    { type: 'Sell-limit zone', price: 4034.96, strength: 29, delta: '+2', color: 'bg-amber-500', barWidth: '40%' },
-    { type: 'Sell-limit zone', price: 4031.70, strength: 40, delta: '+3', color: 'bg-amber-500', barWidth: '58%' },
-    { type: 'Sell-limit zone', price: 4023.69, strength: 34, delta: '+2', color: 'bg-amber-500', barWidth: '48%' },
-    { type: 'Buy-side liquidity', price: 4020.00, strength: 20, delta: '+1', color: 'bg-blue-500', barWidth: '30%' },
-    { type: 'Buy-limit zone', price: 3989.97, strength: 48, delta: '+5', color: 'bg-blue-600', barWidth: '72%' },
-  ];
+  const liquidityLevels = useMemo(() => {
+    return [
+      { type: 'Sell-limit zone 3', price: Number((activePrice * 1.012).toFixed(decimals)), strength: 33, delta: '+4', color: 'bg-amber-500', barWidth: '45%' },
+      { type: 'Sell-limit zone 2', price: Number((activePrice * 1.008).toFixed(decimals)), strength: 43, delta: '+2', color: 'bg-rose-500', barWidth: '65%' },
+      { type: 'Sell-limit zone 1', price: Number((activePrice * 1.005).toFixed(decimals)), strength: 29, delta: '+2', color: 'bg-amber-500', barWidth: '40%' },
+      { type: 'Institutional Ask Wall', price: Number((activePrice * 1.002).toFixed(decimals)), strength: 40, delta: '+3', color: 'bg-amber-500', barWidth: '58%' },
+      { type: 'Buy-side liquidity', price: Number((activePrice * 0.999).toFixed(decimals)), strength: 34, delta: '+2', color: 'bg-amber-500', barWidth: '48%' },
+      { type: 'Institutional Bid Wall', price: Number((activePrice * 0.996).toFixed(decimals)), strength: 20, delta: '+1', color: 'bg-blue-500', barWidth: '30%' },
+      { type: 'Buy-limit demand zone', price: Number((activePrice * 0.990).toFixed(decimals)), strength: 48, delta: '+5', color: 'bg-blue-600', barWidth: '72%' },
+    ];
+  }, [activePrice, decimals]);
+
+  if (!isOpen) return null;
 
   return (
     <div className={`absolute top-12 left-1/2 -translate-x-1/2 z-40 w-[94vw] sm:w-[420px] max-w-[430px] max-h-[85vh] overflow-y-auto rounded-xl border shadow-2xl backdrop-blur-md select-none transition-all ${
@@ -70,9 +85,9 @@ export const LiquidityHeatmapModal: React.FC<LiquidityHeatmapModalProps> = ({
 
         {/* Live Bid / Ask / Spread */}
         <div className="p-2 rounded bg-slate-50 dark:bg-terminal-900 border border-slate-200 dark:border-terminal-border flex items-center justify-between text-xs font-mono">
-          <span>Bid: <strong className="font-bold text-slate-900 dark:text-white">4001.67</strong></span>
-          <span>Ask: <strong className="font-bold text-slate-900 dark:text-white">4001.84</strong></span>
-          <span className="text-slate-500">Spread: <strong className="text-slate-800 dark:text-slate-200">0.17</strong></span>
+          <span>Bid: <strong className="font-bold text-slate-900 dark:text-white">${bidVal}</strong></span>
+          <span>Ask: <strong className="font-bold text-slate-900 dark:text-white">${askVal}</strong></span>
+          <span className="text-slate-500">Spread: <strong className="text-slate-800 dark:text-slate-200">{spreadPts}</strong></span>
         </div>
 
         {/* Table of Liquidity Levels */}

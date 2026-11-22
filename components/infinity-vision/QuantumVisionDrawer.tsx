@@ -14,6 +14,9 @@ import {
   ShieldAlert,
   Info
 } from 'lucide-react';
+import { CurrencyPair } from '@/lib/types';
+import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { BASE_PRICES } from '@/lib/marketData';
 
 export interface QuantumVisionDrawerProps {
   isOpen: boolean;
@@ -21,6 +24,8 @@ export interface QuantumVisionDrawerProps {
   horizonCandles?: number;
   onChangeHorizon?: (h: number) => void;
   theme?: 'light' | 'dark';
+  pair?: CurrencyPair;
+  livePrice?: number;
 }
 
 export const QuantumVisionDrawer: React.FC<QuantumVisionDrawerProps> = ({
@@ -29,6 +34,8 @@ export const QuantumVisionDrawer: React.FC<QuantumVisionDrawerProps> = ({
   horizonCandles = 5,
   onChangeHorizon,
   theme = 'light',
+  pair = 'XAU/USD',
+  livePrice: propLivePrice,
 }) => {
   const isLight = theme === 'light';
   const [activeViewMode, setActiveViewMode] = useState<'Candles' | 'Line'>('Candles');
@@ -41,6 +48,18 @@ export const QuantumVisionDrawer: React.FC<QuantumVisionDrawerProps> = ({
     distribution: false,
   });
 
+  const isGold = pair === 'XAU/USD';
+  const isJpy = pair?.includes('JPY');
+  const isIndian = pair === 'NIFTY 50' || pair === 'BANK NIFTY';
+  const decimals = isJpy ? 3 : (isGold || isIndian) ? 2 : 5;
+  const activePrice = propLivePrice || LiveMarketFeedManager.getCanonicalPrice(pair) || BASE_PRICES[pair] || 3538.20;
+  const keySupport = (activePrice * 0.996).toFixed(decimals);
+  const keyResistance = (activePrice * 1.004).toFixed(decimals);
+  const breakoutThreshold = (activePrice * 1.006).toFixed(decimals);
+  const rejectionRange = `${(activePrice * 1.002).toFixed(decimals)} / ${(activePrice * 0.998).toFixed(decimals)}`;
+  const rangeMin = (activePrice * 0.991).toFixed(decimals);
+  const rangeMax = (activePrice * 1.009).toFixed(decimals);
+
   if (!isOpen) return null;
 
   const toggleAccordion = (key: string) => {
@@ -48,12 +67,15 @@ export const QuantumVisionDrawer: React.FC<QuantumVisionDrawerProps> = ({
   };
 
   const handleExportCsv = () => {
-    const csvContent = 'data:text/csv;charset=utf-8,Step,Timestamp,UpperPath,MedianPath,LowerPath,Confidence\n'
-      + '1,2026-11-11T22:45:00Z,4007.80,4005.88,4001.20,0.50\n'
-      + '2,2026-11-11T23:00:00Z,4010.50,4004.90,3998.47,0.50\n'
-      + '3,2026-11-11T23:15:00Z,4012.30,4003.50,3995.10,0.50\n'
-      + '4,2026-11-11T23:30:00Z,4015.60,4002.80,3991.40,0.50\n'
-      + '5,2026-11-11T23:45:00Z,4018.90,4001.60,3987.04,0.50\n';
+    const now = Date.now();
+    let csvContent = 'data:text/csv;charset=utf-8,Step,Timestamp,UpperPath,MedianPath,LowerPath,Confidence\n';
+    for (let step = 1; step <= 5; step++) {
+      const stepTime = new Date(now + step * 15 * 60 * 1000).toISOString();
+      const upper = (activePrice * (1 + 0.003 * step)).toFixed(decimals);
+      const median = (activePrice * (1 + 0.0005 * step)).toFixed(decimals);
+      const lower = (activePrice * (1 - 0.003 * step)).toFixed(decimals);
+      csvContent += `${step},${stepTime},${upper},${median},${lower},0.50\n`;
+    }
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -193,27 +215,27 @@ export const QuantumVisionDrawer: React.FC<QuantumVisionDrawerProps> = ({
 
           <div className="flex items-center justify-between">
             <span className="text-slate-500">Key Support:</span>
-            <span className="font-bold text-slate-900 dark:text-white">3998.47</span>
+            <span className="font-bold text-slate-900 dark:text-white">${keySupport}</span>
           </div>
           <p className="text-[10px] text-slate-400 -mt-1 text-right font-sans">Range low (1h) - hard S1</p>
 
           <div className="flex items-center justify-between">
             <span className="text-slate-500">Key Resistance:</span>
-            <span className="font-bold text-slate-900 dark:text-white">4005.30</span>
+            <span className="font-bold text-slate-900 dark:text-white">${keyResistance}</span>
           </div>
           <p className="text-[10px] text-slate-400 -mt-1 text-right font-sans">SSL (swing low) - hold C1</p>
 
           <div className="flex items-center justify-between">
             <span className="text-slate-500">Potential Breakout:</span>
-            <span className="font-bold text-slate-900 dark:text-white">above 4005.58</span>
+            <span className="font-bold text-slate-900 dark:text-white">above ${breakoutThreshold}</span>
           </div>
           <p className="text-[10px] text-slate-400 -mt-1 text-right font-sans">past breakout can run 61% of 1h</p>
 
           <div className="flex items-center justify-between">
             <span className="text-slate-500">Potential Rejection:</span>
-            <span className="font-bold text-slate-900 dark:text-white">4003.33 / 3998.47</span>
+            <span className="font-bold text-slate-900 dark:text-white">${rejectionRange}</span>
           </div>
-          <p className="text-[10px] text-slate-400 -mt-1 text-right font-sans">Expected Price Range 3987.04 - 4013.47, 80% of paths</p>
+          <p className="text-[10px] text-slate-400 -mt-1 text-right font-sans">Expected Price Range ${rangeMin} - ${rangeMax}, 80% of paths</p>
 
           <div className="flex items-center justify-between pt-1">
             <span className="text-slate-500">Prediction Timeframe:</span>
