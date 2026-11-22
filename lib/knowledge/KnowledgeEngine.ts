@@ -13,12 +13,16 @@ import {
   TechnicalAnalysis,
   FundamentalAnalysis,
   ForexAnalysis,
-  NewsAnalysis
+  NewsAnalysis,
+  ConfluenceGrade,
+  OrderBookLiquidityWallSnapshot,
+  UnifiedProfitableSetup
 } from '../types';
 import { TECHNICAL_KNOWLEDGE_BASE } from './technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from './fundamentalKnowledge';
 import { diagnosticReasoningEngine } from '../diagnosticReasoningEngine';
 import { exhaustiveStrategyCorpusEngine } from '../exhaustiveStrategyCorpusEngine';
+import { unifiedSetupEngine } from '../unifiedSetupEngine';
 
 export class KnowledgeEngine {
   private technicalRules: KnowledgeRule[];
@@ -265,6 +269,33 @@ export class KnowledgeEngine {
       highConfidenceScore,
       topRules,
     };
+  }
+
+  /**
+   * Derives an actionable trading setup inextricably linked to the rule's
+   * structural invalidation point and dynamic target calculation logic.
+   * Prioritizes dynamic risk management over rigid entry triggers.
+   */
+  public deriveRiskGovernedSetup(params: {
+    rule?: KnowledgeRule;
+    pair: CurrencyPair;
+    direction: 'BUY' | 'SELL' | 'HOLD';
+    currentPrice: number;
+    accountEquity?: number;
+    confidenceScore: number;
+    confluenceGrade: ConfluenceGrade;
+    liquidityWalls?: OrderBookLiquidityWallSnapshot;
+  }): UnifiedProfitableSetup {
+    return unifiedSetupEngine.generateUnifiedProfitableSetup({
+      symbol: params.pair,
+      direction: params.direction,
+      currentPrice: params.currentPrice,
+      accountEquity: params.accountEquity,
+      confidenceScore: params.confidenceScore,
+      confluenceGrade: params.confluenceGrade,
+      liquidityWalls: params.liquidityWalls,
+      governingRule: params.rule,
+    });
   }
 }
 

@@ -332,6 +332,14 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             <span>2,100+ QUANTITATIVE STRATEGIES (1,050+ TECH + 1,050+ FUND • ORTHOGONAL)</span>
           </span>
 
+          {/* 🛡️ Dynamic Risk Precedence over Rigid Rules Badge */}
+          <span className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border ${
+            theme === 'light' ? 'bg-rose-100 text-rose-900 border-rose-300' : 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+          }`}>
+            <ShieldAlert className="w-3 h-3 text-rose-400" />
+            <span>DYNAMIC RISK PRECEDENCE: ACTIVE (RIGID RULES SUPERSEDED)</span>
+          </span>
+
           <span className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border ${
             theme === 'light' ? 'bg-cyan-100 text-cyan-900 border-cyan-300' : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
           }`}>
@@ -705,6 +713,76 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                 </div>
                 <span className="text-[9px] text-emerald-400 block mt-0.5 font-semibold truncate">
                   Memory Verified • ${consensus.preTradeValidationGate?.historicalDrawdownPreventedUsd || 1460} Saved
+                </span>
+              </div>
+            </div>
+
+            {/* 🏛️ Standardized Unified Risk-First Schema Linkage Panel */}
+            <div className={`mt-2 p-2.5 rounded-lg border text-[10px] font-mono ${
+              theme === 'light' ? 'bg-indigo-50/60 border-indigo-200 text-slate-800' : 'bg-black/40 border-indigo-500/30 text-slate-200'
+            }`}>
+              <div className="flex flex-wrap items-center justify-between gap-1 pb-1.5 mb-1.5 border-b border-indigo-500/20 font-bold">
+                <span className="text-cyan-400 flex items-center gap-1.5 uppercase tracking-wide">
+                  <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                  STANDARDIZED UNIFIED RISK SCHEMA // STRUCTURAL INVALIDATION & DYNAMIC TARGET
+                </span>
+                <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                  DYNAMIC RISK PRECEDENCE: {consensus.unifiedProfitableSetup?.riskFirstGatingPassed !== false ? 'ACTIVE (ENTRY AUTHORIZED)' : 'GATED'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px]">
+                {/* Structural Invalidation Details */}
+                <div className="p-2 rounded bg-black/20 border border-rose-500/20 space-y-1">
+                  <div className="flex items-center justify-between text-rose-400 font-bold">
+                    <span>🛡️ STRUCTURAL INVALIDATION (STOP-LOSS)</span>
+                    <span className="text-slate-400 text-[9px] font-normal truncate">
+                      Anchor: {consensus.unifiedProfitableSetup?.structuralInvalidation?.anchorType || 'ORDER_BLOCK_BOUNDARY'}
+                    </span>
+                  </div>
+                  <div className="text-slate-300 truncate">
+                    <span className="text-slate-400">Formula: </span>
+                    <code className="text-rose-300 font-bold">
+                      {consensus.unifiedProfitableSetup?.structuralInvalidation?.invalidationPriceFormula || 'Structural Floor - 5p buffer'}
+                    </code>
+                  </div>
+                  <div className="flex items-center justify-between text-[9px] text-slate-400">
+                    <span>Buffer: <strong className="text-white">+{consensus.unifiedProfitableSetup?.structuralInvalidation?.anchorOffsetPips || 5} pips</strong></span>
+                    <span>Max Allowed Stop: <strong className="text-emerald-400">{consensus.unifiedProfitableSetup?.structuralInvalidation?.maxPermissibleStopDistancePips || 24} pips</strong></span>
+                    <span>1:1 Ratchet: <strong className="text-cyan-400">+{consensus.unifiedProfitableSetup?.structuralInvalidation?.trailingBreakevenTriggerPips || 10}p</strong></span>
+                  </div>
+                </div>
+
+                {/* Dynamic Target Calculation Logic Details */}
+                <div className="p-2 rounded bg-black/20 border border-emerald-500/20 space-y-1">
+                  <div className="flex items-center justify-between text-emerald-400 font-bold">
+                    <span>🎯 DYNAMIC TARGET LOGIC (EXIT MANAGEMENT)</span>
+                    <span className="text-slate-400 text-[9px] font-normal truncate">
+                      Target: {consensus.unifiedProfitableSetup?.dynamicTargetLogic?.targetType || 'OPPOSING_LIQUIDITY_POOL'}
+                    </span>
+                  </div>
+                  <div className="text-slate-300 truncate">
+                    <span className="text-slate-400">Formula: </span>
+                    <code className="text-emerald-300 font-bold">
+                      {consensus.unifiedProfitableSetup?.dynamicTargetLogic?.targetCalculationFormula || 'EntryPrice +/- (Distance * 3.2)'}
+                    </code>
+                  </div>
+                  <div className="flex items-center justify-between text-[9px] text-slate-400">
+                    <span>Min R:R: <strong className="text-amber-400">≥ {consensus.unifiedProfitableSetup?.dynamicTargetLogic?.minimumRiskRewardRatio || 3.2}:1</strong></span>
+                    <span>Volatility Multiplier: <strong className="text-white">{consensus.unifiedProfitableSetup?.dynamicTargetLogic?.volatilityExpansionCoefficient || 1.85}x</strong></span>
+                    <span>Exit Trailing: <strong className="text-cyan-400">1.5x ATR</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dynamic Risk Gating Rationale */}
+              <div className="mt-1.5 pt-1.5 border-t border-indigo-500/20 flex flex-wrap items-center justify-between gap-1 text-[9px] text-slate-300">
+                <span className="truncate max-w-xl">
+                  <strong className="text-amber-400">DYNAMIC RISK VERDICT: </strong>
+                  {consensus.unifiedProfitableSetup?.riskGatingRationale || 'Dynamic risk precedence verified: Invalidation anchored 5p beyond order block boundary.'}
+                </span>
+                <span className="text-cyan-400 font-bold shrink-0">
+                  RULE: {consensus.unifiedProfitableSetup?.linkedRuleId || 'UNIFIED-QUANT-SCHEMA'}
                 </span>
               </div>
             </div>

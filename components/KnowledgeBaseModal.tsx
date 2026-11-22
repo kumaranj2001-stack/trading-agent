@@ -112,11 +112,11 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
               <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                 {allRules.length} VERIFIED MODELS (1,050+ TECH + 1,050+ FUND)
               </span>
-              <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                MULTI-TIER SCREENED
+              <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold">
+                DYNAMIC RISK PRECEDENCE
               </span>
               <span className="hidden lg:inline px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                8 ORTHOGONAL FAMILIES
+                UNIFIED RISK-LINKED SCHEMA
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">
@@ -358,6 +358,34 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
                 <p className="text-slate-300 text-xs font-sans mb-2 leading-relaxed">
                   {rule.conditionDescription}
                 </p>
+
+                {/* 🏛️ Standardized Unified Risk-First Schema: Structural Invalidation & Dynamic Target Logic */}
+                {rule.structuralInvalidation && rule.dynamicTargetLogic && (
+                  <div className="my-2 p-2.5 rounded-lg bg-black/40 border border-indigo-500/30 text-[10px] font-mono grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="min-w-0">
+                      <span className="text-rose-400 font-bold block mb-0.5 truncate">
+                        🛡️ STRUCTURAL INVALIDATION (STOP-LOSS):
+                      </span>
+                      <span className="text-slate-300 block truncate">
+                        Anchor: <strong className="text-white">{rule.structuralInvalidation.anchorType}</strong> (+{rule.structuralInvalidation.anchorOffsetPips}p Buffer)
+                      </span>
+                      <span className="text-slate-400 text-[9px] block truncate">
+                        Formula: {rule.structuralInvalidation.invalidationPriceFormula}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-emerald-400 font-bold block mb-0.5 truncate">
+                        🎯 DYNAMIC TARGET LOGIC (EXIT MANAGEMENT):
+                      </span>
+                      <span className="text-slate-300 block truncate">
+                        Target: <strong className="text-white">{rule.dynamicTargetLogic.targetType}</strong> (Min {rule.dynamicTargetLogic.minimumRiskRewardRatio}:1 R:R)
+                      </span>
+                      <span className="text-slate-400 text-[9px] block truncate">
+                        Formula: {rule.dynamicTargetLogic.targetCalculationFormula}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-terminal-border/40 text-[10px]">
                   <div className="flex flex-wrap items-center gap-3">

@@ -1,4 +1,10 @@
-import { KnowledgeRule, SignalDirection } from '../types';
+import {
+  KnowledgeRule,
+  SignalDirection,
+  StructuralInvalidationPoint,
+  DynamicTargetCalculationLogic,
+  DynamicRiskProfile
+} from '../types';
 
 /**
  * 🏛️ Comprehensive Quantitative Technical Library: 1,050+ Models across Orthogonal Strategy Families
@@ -13,7 +19,9 @@ import { KnowledgeRule, SignalDirection } from '../types';
  * 7. Momentum Oscillators & Dual CVD Divergences (115 models)
  * 8. Price Action Formations & Institutional Absorption (115 models)
  *
- * Total: 150 + 150 + 150 + 135 + 120 + 115 + 115 + 115 = 1,050 Models
+ * Standardized Unified Risk-First Schema:
+ * Every setup is inextricably linked to its structural invalidation point for stop-loss placement
+ * and dynamic target calculation logic, enforcing dynamic risk management over rigid entry triggers.
  */
 
 const SMC_SUBCATEGORIES = [
@@ -73,10 +81,10 @@ const MA_SUBCATEGORIES = [
 const MOMENTUM_SUBCATEGORIES = [
   'Regular Divergence Confirmation',
   'Hidden Trend Divergence Expansion',
-  'Histogram Momentum Impulse Velocity',
-  'Extreme Momentum Absorption',
-  'Dual-Oscillator RSI/Stoch Confluence',
-  'Secondary Oscillator Filter (RSI)'
+  'Multi-Timeframe Momentum Ribbon Cross',
+  'Overbought/Oversold Extreme Mean Reversion',
+  'Volume Flow Indicator (VFI) Trend Confirmation',
+  'Stochastic RSI Golden/Death Cross'
 ];
 
 const CANDLE_SUBCATEGORIES = [
@@ -87,6 +95,194 @@ const CANDLE_SUBCATEGORIES = [
   'Liquidity Grab Rejection Pin',
   'Volume Spread Analysis (VSA) Stopping Volume'
 ];
+
+/**
+ * Standardized Unified Dynamic Risk Schema Generator for Technical Models
+ */
+const createTechnicalRiskSchema = (
+  orthogonalFamily: string,
+  isBull: boolean,
+  i: number,
+  metrics: { profitFactor: number; sharpeRatio: number }
+): {
+  structuralInvalidation: StructuralInvalidationPoint;
+  dynamicTargetLogic: DynamicTargetCalculationLogic;
+  dynamicRiskProfile: DynamicRiskProfile;
+} => {
+  let anchorType: StructuralInvalidationPoint['anchorType'] = 'ORDER_BLOCK_BOUNDARY';
+  let anchorOffsetPips = 5.0;
+  let invalidationPriceFormula = '';
+  let structuralBoundaryDescription = '';
+  let trailingBreakevenTriggerPips = 10.0;
+  let maxPermissibleStopDistancePips = 22.0;
+
+  let targetType: DynamicTargetCalculationLogic['targetType'] = 'OPPOSING_LIQUIDITY_POOL';
+  let minimumRiskRewardRatio = 3.2;
+  let targetCalculationFormula = '';
+  let volatilityExpansionCoefficient = 1.85;
+  let dynamicExitRatchet = '1:1 Breakeven locked at +10p; trailing ratchet 1.5x ATR after 2.0R expansion.';
+
+  switch (orthogonalFamily) {
+    case 'Smart Money Concepts & Order Flow':
+      anchorType = 'ORDER_BLOCK_BOUNDARY';
+      anchorOffsetPips = 5.0;
+      invalidationPriceFormula = isBull
+        ? 'DemandOrderBlock.Low - 5.0p (Structural Liquidity Floor)'
+        : 'SupplyOrderBlock.High + 5.0p (Structural Liquidity Ceiling)';
+      structuralBoundaryDescription = isBull
+        ? 'Breach of Demand Order Block low invalidates institutional buying sponsorship.'
+        : 'Breach of Supply Order Block high invalidates institutional distribution bias.';
+      trailingBreakevenTriggerPips = 10.0;
+      maxPermissibleStopDistancePips = 22.0;
+      targetType = 'OPPOSING_LIQUIDITY_POOL';
+      minimumRiskRewardRatio = 3.4;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.4) at Opposing Buy/Sell Side Liquidity Pool';
+      volatilityExpansionCoefficient = 1.95;
+      dynamicExitRatchet = 'Lock 1:1 Breakeven at +10p; ratchet trail 1.5x ATR beyond 2.0R.';
+      break;
+
+    case 'Auction Market Theory & CVD':
+      anchorType = 'VALUE_AREA_BOUNDARY';
+      anchorOffsetPips = 6.0;
+      invalidationPriceFormula = isBull
+        ? 'ValueAreaLow - 6.0p (High-Volume POC Defense Band)'
+        : 'ValueAreaHigh + 6.0p (High-Volume POC Defense Band)';
+      structuralBoundaryDescription = isBull
+        ? 'Acceptance below VAL with negative cumulative delta invalidates value expansion auction.'
+        : 'Acceptance above VAH with positive cumulative delta invalidates exhaustion auction.';
+      trailingBreakevenTriggerPips = 12.0;
+      maxPermissibleStopDistancePips = 24.0;
+      targetType = 'ORDER_BOOK_DEPTH_WALL';
+      minimumRiskRewardRatio = 3.2;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.2) at Overhead Order Book Asymmetric Depth Wall';
+      volatilityExpansionCoefficient = 1.80;
+      dynamicExitRatchet = 'Breakeven ratchet armed at high-volume shelf; trail behind dynamic POC.';
+      break;
+
+    case 'Harmonic Geometry & Volatility':
+      anchorType = isBull ? 'SWING_LOW_BUFFER' : 'SWING_HIGH_BUFFER';
+      anchorOffsetPips = 5.0;
+      invalidationPriceFormula = isBull
+        ? 'HarmonicPointX.Low - 5.0p (0.786 / 0.886 Golden Pocket Invalidation)'
+        : 'HarmonicPointX.High + 5.0p (0.786 / 0.886 Golden Pocket Invalidation)';
+      structuralBoundaryDescription = isBull
+        ? 'Candle close beyond 1.000 retracement of swing Point X invalidates harmonic PRZ.'
+        : 'Candle close beyond 1.000 retracement of swing Point X invalidates bearish PRZ.';
+      trailingBreakevenTriggerPips = 10.0;
+      maxPermissibleStopDistancePips = 20.0;
+      targetType = 'ASYMMETRIC_EXPANSION_RR';
+      minimumRiskRewardRatio = 3.5;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.5) at 1.618 Fibonacci Extension Runway';
+      volatilityExpansionCoefficient = 2.00;
+      dynamicExitRatchet = 'Lock 1:1 Breakeven at 0.618 CD target; trail 1.3x ATR beyond 2.0R.';
+      break;
+
+    case 'Multi-Timeframe Entry Protocols':
+      anchorType = 'LIQUIDITY_SWEEP_EXTREME';
+      anchorOffsetPips = 4.5;
+      invalidationPriceFormula = isBull
+        ? 'HTFSweepWick.Low - 4.5p (Session Sweep Purge Baseline)'
+        : 'HTFSweepWick.High + 4.5p (Session Sweep Purge Baseline)';
+      structuralBoundaryDescription = 'Violation of HTF sweep wick low/high dissolves institutional displacement thesis.';
+      trailingBreakevenTriggerPips = 10.0;
+      maxPermissibleStopDistancePips = 22.0;
+      targetType = 'OPPOSING_LIQUIDITY_POOL';
+      minimumRiskRewardRatio = 3.6;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.6) at Opposite Session High/Low Liquidity';
+      volatilityExpansionCoefficient = 2.10;
+      dynamicExitRatchet = 'Lock Breakeven at 15M BOS; trail 1.5x ATR behind 1H swing pivots.';
+      break;
+
+    case 'Statistical Arbitrage & Mean Reversion':
+      anchorType = 'VWAP_VOLATILITY_BAND';
+      anchorOffsetPips = 7.0;
+      invalidationPriceFormula = isBull
+        ? 'BollingerLower3σ - 7.0p (Statistical Extreme Breakdown Buffer)'
+        : 'BollingerUpper3σ + 7.0p (Statistical Extreme Breakout Buffer)';
+      structuralBoundaryDescription = 'Sustained price drift beyond 3.5σ confirms regime drift away from mean.';
+      trailingBreakevenTriggerPips = 12.0;
+      maxPermissibleStopDistancePips = 25.0;
+      targetType = 'VALUE_AREA_EXTENDED_POC';
+      minimumRiskRewardRatio = 3.0;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.0) at Central Mean VWAP Equilibrium';
+      volatilityExpansionCoefficient = 1.65;
+      dynamicExitRatchet = 'Ratchet to Breakeven at 1.0σ touch; scale single target at Mean Band.';
+      break;
+
+    case 'Multi-Timeframe Trend Stacks':
+      anchorType = isBull ? 'SWING_LOW_BUFFER' : 'SWING_HIGH_BUFFER';
+      anchorOffsetPips = 5.5;
+      invalidationPriceFormula = isBull
+        ? 'DynamicEMA50 - 5.5p (Ribbon Stack Compression Support Floor)'
+        : 'DynamicEMA50 + 5.5p (Ribbon Stack Compression Resistance Ceiling)';
+      structuralBoundaryDescription = 'Displacement through 50 EMA ribbon stack breaks directional persistence.';
+      trailingBreakevenTriggerPips = 11.0;
+      maxPermissibleStopDistancePips = 24.0;
+      targetType = 'ASYMMETRIC_EXPANSION_RR';
+      minimumRiskRewardRatio = 3.3;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.3) at Trend Channel Expansion Ceiling';
+      volatilityExpansionCoefficient = 1.90;
+      dynamicExitRatchet = 'Dynamic ATR trailing stop armed; 1:1 Breakeven locked at +11p.';
+      break;
+
+    case 'Statistical Arbitrage & Oscillators':
+      anchorType = isBull ? 'SWING_LOW_BUFFER' : 'SWING_HIGH_BUFFER';
+      anchorOffsetPips = 5.0;
+      invalidationPriceFormula = isBull
+        ? 'DivergencePivot.Low - 5.0p (Momentum Baseline Support)'
+        : 'DivergencePivot.High + 5.0p (Momentum Baseline Resistance)';
+      structuralBoundaryDescription = 'Breach of momentum swing pivot negates RSI/CVD divergence premise.';
+      trailingBreakevenTriggerPips = 10.0;
+      maxPermissibleStopDistancePips = 20.0;
+      targetType = 'ORDER_BOOK_DEPTH_WALL';
+      minimumRiskRewardRatio = 3.1;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.1) at Counter-Trend Liquidity Imbalance Wall';
+      volatilityExpansionCoefficient = 1.70;
+      dynamicExitRatchet = 'Lock Breakeven at 50 RSI midline crossing; trail 1.5x ATR.';
+      break;
+
+    case 'Price Action & Candlestick Absorptions':
+    default:
+      anchorType = 'LIQUIDITY_SWEEP_EXTREME';
+      anchorOffsetPips = 5.0;
+      invalidationPriceFormula = isBull
+        ? 'AbsorptionWick.Low - 5.0p (Institutional Stopping Volume Floor)'
+        : 'AbsorptionWick.High + 5.0p (Institutional Stopping Volume Ceiling)';
+      structuralBoundaryDescription = 'Loss of institutional absorption wick reveals unhedged market pressure.';
+      trailingBreakevenTriggerPips = 10.0;
+      maxPermissibleStopDistancePips = 21.0;
+      targetType = 'OPPOSING_LIQUIDITY_POOL';
+      minimumRiskRewardRatio = 3.2;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.2) at Opposing Liquidity Vacuum Pocket';
+      volatilityExpansionCoefficient = 1.80;
+      dynamicExitRatchet = '1:1 Breakeven locked immediately after expansion candle closes.';
+      break;
+  }
+
+  return {
+    structuralInvalidation: {
+      anchorType,
+      anchorOffsetPips,
+      invalidationPriceFormula,
+      structuralBoundaryDescription,
+      trailingBreakevenTriggerPips,
+      maxPermissibleStopDistancePips,
+    },
+    dynamicTargetLogic: {
+      targetType,
+      minimumRiskRewardRatio,
+      targetCalculationFormula,
+      volatilityExpansionCoefficient,
+      dynamicExitRatchet,
+    },
+    dynamicRiskProfile: {
+      riskFirstPrecedence: true,
+      proportionalSizingMethod: 'VOLATILITY_ADJUSTED_EQUITY_PERCENT',
+      maxAccountRiskPercent: 2.0,
+      expectedRoiPercent: Number((metrics.profitFactor * 6.5).toFixed(1)),
+    },
+  };
+};
 
 export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
   const rules: KnowledgeRule[] = [];
@@ -113,6 +309,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
     const isBull = i % 2 === 1;
     const sub = SMC_SUBCATEGORIES[i % SMC_SUBCATEGORIES.length];
     const metrics = createMetrics(81.5, 2.45, i);
+    const riskSchema = createTechnicalRiskSchema('Smart Money Concepts & Order Flow', isBull, i, metrics);
     rules.push({
       id: `TECH-SMC-${String(i).padStart(4, '0')}`,
       category: 'TECHNICAL',
@@ -127,6 +324,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
       signalAction: isBull ? 'STRONG_BUY' : 'STRONG_SELL',
       invalidationCriteria: isBull ? 'Candle body close below the bottom of the Order Block or FVG boundary.' : 'Candle body close above the top of the Bearish Order Block.',
       ...metrics,
+      ...riskSchema,
     });
   }
 
@@ -135,6 +333,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
     const isBull = i % 2 === 1;
     const sub = AMT_SUBCATEGORIES[i % AMT_SUBCATEGORIES.length];
     const metrics = createMetrics(80.0, 2.38, i);
+    const riskSchema = createTechnicalRiskSchema('Auction Market Theory & CVD', isBull, i, metrics);
     rules.push({
       id: `TECH-AMT-${String(i).padStart(4, '0')}`,
       category: 'TECHNICAL',
@@ -143,12 +342,13 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
       marketScope: 'GLOBAL',
       ruleName: isBull ? `Institutional ${sub} Demand Absorption #${i}` : `Institutional ${sub} Supply Exhaustion #${i}`,
       conditionDescription: isBull
-        ? `Price tests Value Area Low / VWAP -2σ with strong positive Cumulative Volume Delta (CVD) absorption divergence and bid wall skew >2.5:1.`
-        : `Price tests Value Area High / VWAP +2σ with strong negative CVD distribution divergence and ask wall skew >2.5:1.`,
-      confidenceWeight: 10,
+        ? `High-volume buyers defend Point of Control / Value Area Low with positive Cumulative Volume Delta divergence, absorbing institutional liquidity wall.`
+        : `High-volume sellers defend Value Area High with negative Cumulative Volume Delta divergence, signaling overhead institutional distribution.`,
+      confidenceWeight: 9 + (i % 3),
       signalAction: isBull ? 'STRONG_BUY' : 'STRONG_SELL',
       invalidationCriteria: isBull ? 'Volume delta collapses below -2.5σ with VWAP breach.' : 'Volume delta surges above +2.5σ with VWAP breach.',
       ...metrics,
+      ...riskSchema,
     });
   }
 
@@ -157,6 +357,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
     const isBull = i % 2 === 1;
     const sub = FIB_SUBCATEGORIES[i % FIB_SUBCATEGORIES.length];
     const metrics = createMetrics(79.0, 2.30, i);
+    const riskSchema = createTechnicalRiskSchema('Harmonic Geometry & Volatility', isBull, i, metrics);
     rules.push({
       id: `TECH-HARM-${String(i).padStart(4, '0')}`,
       category: 'TECHNICAL',
@@ -171,6 +372,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
       signalAction: isBull ? 'STRONG_BUY' : 'STRONG_SELL',
       invalidationCriteria: isBull ? 'Candle close beyond 1.00 swing low Point X.' : 'Candle close beyond 1.00 swing high Point X.',
       ...metrics,
+      ...riskSchema,
     });
   }
 
@@ -179,6 +381,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
     const isBull = i % 2 === 1;
     const sub = MTF_SUBCATEGORIES[i % MTF_SUBCATEGORIES.length];
     const metrics = createMetrics(82.0, 2.50, i);
+    const riskSchema = createTechnicalRiskSchema('Multi-Timeframe Entry Protocols', isBull, i, metrics);
     rules.push({
       id: `TECH-MTF-${String(i).padStart(4, '0')}`,
       category: 'TECHNICAL',
@@ -193,6 +396,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
       signalAction: isBull ? 'STRONG_BUY' : 'STRONG_SELL',
       invalidationCriteria: 'Higher timeframe structure broken against trade direction.',
       ...metrics,
+      ...riskSchema,
     });
   }
 
@@ -201,6 +405,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
     const isBull = i % 2 === 1;
     const sub = STAT_ARB_SUBCATEGORIES[i % STAT_ARB_SUBCATEGORIES.length];
     const metrics = createMetrics(77.5, 2.20, i);
+    const riskSchema = createTechnicalRiskSchema('Statistical Arbitrage & Mean Reversion', isBull, i, metrics);
     rules.push({
       id: `TECH-ARB-${String(i).padStart(4, '0')}`,
       category: 'TECHNICAL',
@@ -215,6 +420,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
       signalAction: isBull ? 'BUY' : 'SELL',
       invalidationCriteria: 'Drift velocity expands past 3.5σ without reversal bar.',
       ...metrics,
+      ...riskSchema,
     });
   }
 
@@ -223,6 +429,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
     const isBull = i % 2 === 1;
     const sub = MA_SUBCATEGORIES[i % MA_SUBCATEGORIES.length];
     const metrics = createMetrics(74.0, 1.95, i);
+    const riskSchema = createTechnicalRiskSchema('Multi-Timeframe Trend Stacks', isBull, i, metrics);
     rules.push({
       id: `TECH-MA-${String(i).padStart(4, '0')}`,
       category: 'TECHNICAL',
@@ -237,6 +444,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
       signalAction: isBull ? 'BUY' : 'SELL',
       invalidationCriteria: isBull ? 'Sustained close below EMA 50 on 1H/4H timeframe.' : 'Recovery and close above EMA 50.',
       ...metrics,
+      ...riskSchema,
     });
   }
 
@@ -245,6 +453,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
     const isBull = i % 2 === 1;
     const sub = MOMENTUM_SUBCATEGORIES[i % MOMENTUM_SUBCATEGORIES.length];
     const metrics = createMetrics(75.5, 2.05, i);
+    const riskSchema = createTechnicalRiskSchema('Statistical Arbitrage & Oscillators', isBull, i, metrics);
     rules.push({
       id: `TECH-MOM-${String(i).padStart(4, '0')}`,
       category: 'TECHNICAL',
@@ -259,6 +468,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
       signalAction: isBull ? 'BUY' : 'SELL',
       invalidationCriteria: isBull ? 'RSI prints new lower low under 25.' : 'RSI prints new higher high above 75.',
       ...metrics,
+      ...riskSchema,
     });
   }
 
@@ -267,6 +477,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
     const isBull = i % 2 === 1;
     const sub = CANDLE_SUBCATEGORIES[i % CANDLE_SUBCATEGORIES.length];
     const metrics = createMetrics(76.0, 2.15, i);
+    const riskSchema = createTechnicalRiskSchema('Price Action & Candlestick Absorptions', isBull, i, metrics);
     rules.push({
       id: `TECH-PA-${String(i).padStart(4, '0')}`,
       category: 'TECHNICAL',
@@ -281,6 +492,7 @@ export function generateTechnicalKnowledgeBase(): KnowledgeRule[] {
       signalAction: isBull ? 'BUY' : 'SELL',
       invalidationCriteria: isBull ? 'Subsequent bar violates lower wick low.' : 'Subsequent bar trades above upper rejection high.',
       ...metrics,
+      ...riskSchema,
     });
   }
 

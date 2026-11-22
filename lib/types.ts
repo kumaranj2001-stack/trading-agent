@@ -491,6 +491,48 @@ export interface IndianMarketMetrics {
   tradingSession: 'PRE_OPEN' | 'REGULAR_NSE' | 'POST_CLOSE' | 'CLOSED';
 }
 
+export interface StructuralInvalidationPoint {
+  anchorType:
+    | 'SWING_LOW_BUFFER'
+    | 'SWING_HIGH_BUFFER'
+    | 'ORDER_BLOCK_BOUNDARY'
+    | 'FAIR_VALUE_GAP_CEILING'
+    | 'FAIR_VALUE_GAP_FLOOR'
+    | 'LIQUIDITY_SWEEP_EXTREME'
+    | 'VWAP_VOLATILITY_BAND'
+    | 'POC_INVERSION_BARRIER'
+    | 'VALUE_AREA_BOUNDARY'
+    | 'CENTRAL_BANK_RATE_WALL'
+    | 'SOVEREIGN_YIELD_REVERSAL'
+    | 'COMMERCIAL_COT_EXTREME';
+  anchorOffsetPips: number;
+  invalidationPriceFormula: string;
+  structuralBoundaryDescription: string;
+  trailingBreakevenTriggerPips: number;
+  maxPermissibleStopDistancePips: number;
+}
+
+export interface DynamicTargetCalculationLogic {
+  targetType:
+    | 'OPPOSING_LIQUIDITY_POOL'
+    | 'ORDER_BOOK_DEPTH_WALL'
+    | 'VALUE_AREA_EXTENDED_POC'
+    | 'ASYMMETRIC_EXPANSION_RR'
+    | 'CENTRAL_BANK_YIELD_HORIZON'
+    | 'COT_FLOW_REBALANCING_ZONE';
+  minimumRiskRewardRatio: number;
+  targetCalculationFormula: string;
+  volatilityExpansionCoefficient: number;
+  dynamicExitRatchet: string;
+}
+
+export interface DynamicRiskProfile {
+  riskFirstPrecedence: boolean;
+  proportionalSizingMethod: 'VOLATILITY_ADJUSTED_EQUITY_PERCENT' | 'STOCHASTIC_DRAWDOWN_GUARD';
+  maxAccountRiskPercent: number;
+  expectedRoiPercent: number;
+}
+
 export interface KnowledgeRule {
   id: string;
   category: 'TECHNICAL' | 'FUNDAMENTAL';
@@ -513,6 +555,11 @@ export interface KnowledgeRule {
   profitFactor?: number;
   expectancyR?: number;
   tier?: 'TIER_1_ALPHA_VANGUARD' | 'TIER_2_HIGH_CONVICTION' | 'TIER_3_TACTICAL_CONFLUENCE';
+
+  // 🏛️ Standardized Unified Risk-First Schema (Inextricably Linked)
+  structuralInvalidation: StructuralInvalidationPoint;
+  dynamicTargetLogic: DynamicTargetCalculationLogic;
+  dynamicRiskProfile: DynamicRiskProfile;
 }
 
 export interface ScreenedModel {
@@ -589,6 +636,14 @@ export interface UnifiedProfitableSetup {
   screeningTier: 'TIER_1_ALPHA_VANGUARD' | 'TIER_2_HIGH_CONVICTION' | 'TIER_3_TACTICAL_CONFLUENCE';
   breakevenRatchetArmed: boolean;
   institutionalRationale: string;
+
+  // 🏛️ Unified Risk-First Schema Linkage
+  linkedRuleId?: string;
+  structuralInvalidation: StructuralInvalidationPoint;
+  dynamicTargetLogic: DynamicTargetCalculationLogic;
+  dynamicRiskProfile: DynamicRiskProfile;
+  riskFirstGatingPassed: boolean;
+  riskGatingRationale: string;
 }
 
 export interface KnowledgeMatchResult {

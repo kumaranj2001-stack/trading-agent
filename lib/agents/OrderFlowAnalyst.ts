@@ -187,6 +187,27 @@ export class OrderFlowAnalystAgent extends BaseAgent {
         signalAction: bias,
         conditionDescription: `CVD divergence (${divergenceType}) confirms passive institutional absorption against retail market order flow.`,
         invalidationCriteria: 'Opposing cumulative delta expansion breaching primary liquidity wall.',
+        structuralInvalidation: {
+          anchorType: 'POC_INVERSION_BARRIER',
+          anchorOffsetPips: 6.0,
+          invalidationPriceFormula: bias === 'BUY' ? 'POC.Node - 6.0p' : 'POC.Node + 6.0p',
+          structuralBoundaryDescription: 'Breach of Point of Control node indicating failure of delta absorption wall',
+          trailingBreakevenTriggerPips: 8.0,
+          maxPermissibleStopDistancePips: 20.0,
+        },
+        dynamicTargetLogic: {
+          targetType: 'ORDER_BOOK_DEPTH_WALL',
+          minimumRiskRewardRatio: 3.2,
+          targetCalculationFormula: bias === 'BUY' ? 'Opposing.AskWall.Depth' : 'Opposing.BidWall.Depth',
+          volatilityExpansionCoefficient: 1.4,
+          dynamicExitRatchet: 'CVD delta deceleration ratchet at opposing depth wall',
+        },
+        dynamicRiskProfile: {
+          riskFirstPrecedence: true,
+          proportionalSizingMethod: 'VOLATILITY_ADJUSTED_EQUITY_PERCENT',
+          maxAccountRiskPercent: 1.5,
+          expectedRoiPercent: 4.8,
+        },
       },
       {
         id: 'OF-FOOTPRINT-002',
@@ -199,6 +220,27 @@ export class OrderFlowAnalystAgent extends BaseAgent {
         signalAction: bias,
         conditionDescription: `Diagonal footprint imbalance ratio (${buyImbalanceRatio}:1) with ${levelsDetectedCount} stacked institutional levels.`,
         invalidationCriteria: 'Loss of stacked imbalance node and volume rotation back through POC.',
+        structuralInvalidation: {
+          anchorType: 'ORDER_BLOCK_BOUNDARY',
+          anchorOffsetPips: 5.5,
+          invalidationPriceFormula: bias === 'BUY' ? 'StackedImbalance.Low - 5.5p' : 'StackedImbalance.High + 5.5p',
+          structuralBoundaryDescription: 'Loss of stacked diagonal imbalance level by opposite market aggression',
+          trailingBreakevenTriggerPips: 7.5,
+          maxPermissibleStopDistancePips: 18.0,
+        },
+        dynamicTargetLogic: {
+          targetType: 'OPPOSING_LIQUIDITY_POOL',
+          minimumRiskRewardRatio: 3.0,
+          targetCalculationFormula: bias === 'BUY' ? 'Entry + (3.0 * RiskDistance)' : 'Entry - (3.0 * RiskDistance)',
+          volatilityExpansionCoefficient: 1.35,
+          dynamicExitRatchet: 'Imbalance node volume trailing ratchet',
+        },
+        dynamicRiskProfile: {
+          riskFirstPrecedence: true,
+          proportionalSizingMethod: 'VOLATILITY_ADJUSTED_EQUITY_PERCENT',
+          maxAccountRiskPercent: 1.5,
+          expectedRoiPercent: 4.5,
+        },
       },
       {
         id: 'OF-VP-003',
@@ -211,6 +253,27 @@ export class OrderFlowAnalystAgent extends BaseAgent {
         signalAction: bias,
         conditionDescription: `Price exhibiting ${valueAreaAcceptance} relative to POC node ${pocPrice}.`,
         invalidationCriteria: 'Failed auction re-entering opposite value area extreme.',
+        structuralInvalidation: {
+          anchorType: 'VALUE_AREA_BOUNDARY',
+          anchorOffsetPips: 7.0,
+          invalidationPriceFormula: bias === 'BUY' ? 'VAL.Boundary - 7.0p' : 'VAH.Boundary + 7.0p',
+          structuralBoundaryDescription: 'Auction rejection outside Value Area boundary confirming false breakout',
+          trailingBreakevenTriggerPips: 9.0,
+          maxPermissibleStopDistancePips: 22.0,
+        },
+        dynamicTargetLogic: {
+          targetType: 'VALUE_AREA_EXTENDED_POC',
+          minimumRiskRewardRatio: 3.1,
+          targetCalculationFormula: bias === 'BUY' ? 'PriorSession.VAH + Expansion' : 'PriorSession.VAL - Expansion',
+          volatilityExpansionCoefficient: 1.5,
+          dynamicExitRatchet: 'Opposite Value Area boundary test ratchet',
+        },
+        dynamicRiskProfile: {
+          riskFirstPrecedence: true,
+          proportionalSizingMethod: 'VOLATILITY_ADJUSTED_EQUITY_PERCENT',
+          maxAccountRiskPercent: 1.5,
+          expectedRoiPercent: 4.6,
+        },
       },
     ];
 

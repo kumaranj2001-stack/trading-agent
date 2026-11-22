@@ -377,7 +377,10 @@ export class ExhaustiveStrategyCorpusEngine {
       news,
     });
 
-    // 8. Unified High-Conviction Profitable Setup Framework (Single Target & Protective SL)
+    // 8. Unified High-Conviction Profitable Setup Framework (Inextricably Linked to Knowledge Risk Schema)
+    const governingRule = (technical.topMatchedRules && technical.topMatchedRules[0]) || 
+                          (fundamental.topMatchedRules && fundamental.topMatchedRules[0]);
+
     const unifiedProfitableSetup = unifiedSetupEngine.generateUnifiedProfitableSetup({
       symbol: pair,
       direction: metaConsensusDirection,
@@ -386,6 +389,7 @@ export class ExhaustiveStrategyCorpusEngine {
       confluenceGrade: registryEvaluation.gradingResult.grade,
       liquidityWalls: liquidityWallsSnapshot,
       preTradeGate: preTradeValidationGate,
+      governingRule,
     });
 
     return {
