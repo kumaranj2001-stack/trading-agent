@@ -510,7 +510,7 @@ export default function Home() {
 
   // 5b. Dedicated 15-Second Multi-Desk Institutional Recalibration Engine
   // Automatically triggers every 15 SECONDS to synthesize data across all five core analytical engines:
-  // Technical (525 strategies), Fundamental (525 engines), News (38 wires), Forex/Order Flow, and Risk Management
+  // Technical (1,050+ strategies), Fundamental (1,050+ engines across 8 orthogonal families), News (38 wires), Forex/Order Flow, and Risk Management
   useEffect(() => {
     const recalibrationTimer = setInterval(() => {
       if (MarketSessionManager.isMarketFrozen(selectedPairRef.current)) {
@@ -1233,7 +1233,7 @@ export default function Home() {
                       Recalibrating 5-Agent Swarm Consensus for {selectedPair}
                     </span>
                     <span className="text-slate-400 text-[11px]">
-                      Purged legacy state latches • Evaluating 1,050+ institutional technical & fundamental models...
+                      Purged legacy state latches • Evaluating 2,100+ institutional technical & fundamental models...
                     </span>
                   </div>
                 </div>
@@ -1308,7 +1308,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* Tab 03: Vision Atlas Lab - Multi-Factor Confluence & 1,050+ Institutional Strategies */}
+        {/* Tab 03: Vision Atlas Lab - Multi-Factor Confluence & 2,100+ Institutional Strategies */}
         {(activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab') && (
           <VisionAtlasWorkspace
             pair={selectedPair}
@@ -1346,7 +1346,7 @@ export default function Home() {
                     </span>
                   </div>
                   <p className="text-slate-400 text-xs">
-                    Simultaneous asynchronous processes: Technical (525), Fundamental (525), 38 News Wires, Forex Relativity & CRO Risk Gatekeeper
+                    Simultaneous asynchronous processes: Technical (1,050+), Fundamental (1,050+), 38 News Wires, Forex Relativity & CRO Risk Gatekeeper
                   </p>
                 </div>
               </div>
@@ -1484,7 +1484,7 @@ export default function Home() {
           />
         )}
 
-        {/* Tab 10: Institutional Knowledge Base (1,050+ Rules) */}
+        {/* Tab 10: Institutional Knowledge Base (2,100+ Rules) */}
         {activeTab === 'knowledge' && (
           <KnowledgeBaseModal
             isFullPage={true}

@@ -382,7 +382,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-500/15 text-purple-300 border border-purple-500/40 flex items-center gap-1">
                 <Database className="w-3 h-3 text-purple-400" />
-                1,050+ STRATEGIES SYNCHRONOUS DEBATE
+                2,100+ STRATEGIES SYNCHRONOUS DEBATE
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3 text-cyan-400" />
@@ -503,10 +503,10 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-nowrap">
           <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800 text-cyan-300">
-            1. Marcus Vance (525+ Tech)
+            1. Marcus Vance (1,050+ Tech)
           </span>
           <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800 text-purple-300">
-            2. Dr. Elena Rostova (525+ Macro)
+            2. Dr. Elena Rostova (1,050+ Macro)
           </span>
           <span className="px-2 py-0.5 rounded bg-sky-950/60 border border-sky-800 text-sky-300">
             3. Alexander Vance (95+ News)
@@ -515,7 +515,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
             4. Kenji Sato (Forex Order Flow)
           </span>
           <span className="px-2 py-0.5 rounded bg-teal-950/60 border border-teal-800 text-teal-300">
-            5. Strategy Corpus & MTF Node (1,050+)
+            5. Strategy Corpus & MTF Node (2,100+)
           </span>
           <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-300">
             6. Sarah Stirling (Micro-Lot & 1:1 Ratchet)
@@ -610,7 +610,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                 </span>
               )}
               <span className="text-[10px] text-cyan-300 font-bold bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">
-                1,050+ CORPUS VERIFIED
+                2,100+ CORPUS VERIFIED
               </span>
             </div>
           </div>
@@ -785,7 +785,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                     Gatekeeper Audit (Marcus Sterling)
                   </div>
                   <div className="text-[10px] text-slate-400 truncate">
-                    1,050+ Strategies • 0 Vetoes • Zero-Pruned
+                    2,100+ Strategies • 0 Vetoes • Zero-Pruned
                   </div>
                 </div>
               </div>
@@ -1082,7 +1082,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
             </span>
           </div>
 
-          {/* Buy-Side Rules from 525 Technical & 525 Fundamental Rules */}
+          {/* Buy-Side Rules from 1,050+ Technical & 1,050+ Fundamental Rules */}
           {buySideRules.length > 0 && (
             <div className="space-y-1.5">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
@@ -1153,7 +1153,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
             </span>
           </div>
 
-          {/* Sell-Side Rules from 525 Technical & 525 Fundamental Rules */}
+          {/* Sell-Side Rules from 1,050+ Technical & 1,050+ Fundamental Rules */}
           {sellSideRules.length > 0 && (
             <div className="space-y-1.5">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">

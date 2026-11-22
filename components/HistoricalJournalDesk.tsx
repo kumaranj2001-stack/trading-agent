@@ -71,7 +71,7 @@ export const HistoricalJournalDesk: React.FC<HistoricalJournalDeskProps> = ({
   const recurringWarning = analysis.recurringMistakesWarning;
   const guardrailAction = journalAnalysis?.guardrailActionApplied || analysis.activeGuardrailAction;
 
-  const totalOperativeRules = 1050 + dynamicRules.length;
+  const totalOperativeRules = 2100 + dynamicRules.length;
   const latestRule = dynamicRules.length > 0 ? dynamicRules[0] : null;
 
   return (
@@ -140,11 +140,11 @@ export const HistoricalJournalDesk: React.FC<HistoricalJournalDeskProps> = ({
               {totalOperativeRules}
             </span>
             <span className="text-slate-400 text-[10px] truncate">
-              (1,050 + {dynamicRules.length})
+              (2,100 + {dynamicRules.length})
             </span>
           </div>
           <span className="text-[10px] text-indigo-300 block font-sans mt-0.5 truncate">
-            {dynamicRules.length > 0 ? `Rule #${latestRule?.failureAudit.ruleIndex || 1051} Active` : 'Baseline Active'}
+            {dynamicRules.length > 0 ? `Rule #${latestRule?.failureAudit.ruleIndex || 2101} Active` : 'Baseline Active'}
           </span>
         </div>
 

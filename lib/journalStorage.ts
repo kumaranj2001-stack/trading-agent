@@ -14,6 +14,7 @@ import { db } from './firebase';
 import { doc, setDoc, getDocs, collection, query, orderBy, limit, deleteDoc } from 'firebase/firestore';
 import { diagnosticReasoningEngine } from './diagnosticReasoningEngine';
 import { strategyRegistry } from './strategyRegistry';
+import { invalidCriteriaMemoryManager } from './invalidCriteriaMemory';
 
 const STORAGE_KEY = 'qri_storage_journal_v1';
 const LEGACY_STORAGE_KEY = 'apex_storage_journal_v1';
@@ -311,6 +312,20 @@ export class JournalStorageManager {
         synthesizedRuleId = diagnosticAudit.synthesizedRuleId;
         lossCat = diagnosticAudit.failureClassification as any;
         lesson = diagnosticAudit.mitigationRuleDirective;
+
+        // 🛡️ Persistent Memory Module: Log losing trade criteria to enforce pre-trade validation gate
+        invalidCriteriaMemoryManager.recordLossAsInvalidCriterion({
+          symbol: item.symbol,
+          direction: item.orderType,
+          lossPips: diagnosticAudit.lossPips || Math.abs(item.entryPrice - exitPrice) * 100,
+          lossAmountUsd: Math.abs(realizedPnl),
+          failureClassification: diagnosticAudit.failureClassification,
+          failedPattern: diagnosticAudit.pointOfFailure || 'Unmitigated Loss Violation',
+          invalidatingFactor: diagnosticAudit.primaryFailureMetric || 'Structural invalidation threshold breached',
+          preventionRuleDirective: diagnosticAudit.mitigationRuleDirective || 'Enforce pre-trade validation gate lockout',
+          marketRegime: options?.exitReason,
+          originatingTradeId: item.tradeId || item.id,
+        });
       } else if (outcome === 'WIN') {
         lossCat = 'NONE_DISCIPLINED_WIN';
         lesson = `Target captured at ${exitPrice}. Institutional confluence hypothesis validated.`;

@@ -506,6 +506,89 @@ export interface KnowledgeRule {
   timeframeScope?: 'MICRO' | 'INTRADAY' | 'SWING' | 'MACRO';
   spatialZoneTarget?: 'DEMAND_OB' | 'SUPPLY_OB' | 'FVG' | 'OTE_POCKET' | 'BSL' | 'SSL' | 'EQUILIBRIUM';
   quantParameters?: Record<string, any>;
+  orthogonalFamily?: string;
+  sharpeRatio?: number;
+  maxDrawdownPercent?: number;
+  calmarRatio?: number;
+  profitFactor?: number;
+  expectancyR?: number;
+  tier?: 'TIER_1_ALPHA_VANGUARD' | 'TIER_2_HIGH_CONVICTION' | 'TIER_3_TACTICAL_CONFLUENCE';
+}
+
+export interface ScreenedModel {
+  id: string;
+  name: string;
+  category: 'TECHNICAL' | 'FUNDAMENTAL';
+  orthogonalFamily: string;
+  sharpeRatio: number;
+  maxDrawdownPercent: number;
+  calmarRatio: number;
+  profitFactor: number;
+  winRate: number;
+  expectancyR: number;
+  tier: 'TIER_1_ALPHA_VANGUARD' | 'TIER_2_HIGH_CONVICTION' | 'TIER_3_TACTICAL_CONFLUENCE';
+  score: number;
+  activeSignal: SignalDirection;
+}
+
+export interface MultiTierScreeningTelemetry {
+  totalModelsScreened: number; // 2,100+
+  tier1AlphaVanguardCount: number;
+  tier2HighConvictionCount: number;
+  tier3TacticalCount: number;
+  averageSharpeRatio: number;
+  averageMaxDrawdown: number;
+  topRankedAlphaModels: ScreenedModel[];
+  screeningPassRate: number;
+  orthogonalFamiliesCount: number;
+}
+
+export interface InvalidCriterionRecord {
+  criterionId: string;
+  originatingTradeId?: string;
+  symbol: CurrencyPair | string;
+  direction: 'BUY' | 'SELL';
+  failureClassification: FailureClassification | string;
+  failedPattern: string;
+  lossPips: number;
+  lossAmountUsd: number;
+  marketRegime: string;
+  invalidatingFactor: string;
+  preventionRuleDirective: string;
+  loggedTimestamp: number;
+  status: 'ACTIVE_GATE_LOCK' | 'ARCHIVED';
+  preventedDrawdownCount: number;
+}
+
+export interface PreTradeValidationGateResult {
+  passed: boolean;
+  gateStatus: 'ARMED_AND_CLEARED' | 'BLOCKED_BY_INVALID_CRITERIA' | 'CAUTION_CRITERIA_WARNING';
+  activeInvalidCriteriaCount: number;
+  matchedCriterion?: InvalidCriterionRecord;
+  blockReason?: string;
+  historicalDrawdownPreventedUsd: number;
+  auditStamp: string;
+}
+
+export interface UnifiedProfitableSetup {
+  symbol: CurrencyPair;
+  direction: 'BUY' | 'SELL' | 'HOLD';
+  confidenceScore: number;
+  confluenceGrade: ConfluenceGrade;
+  entryPrice: number;
+  singleHighConfidenceTarget: number;
+  targetDistancePips: number;
+  riskRewardRatio: number;
+  anchoredStopLoss: number;
+  stopDistancePips: number;
+  proportionalLotSize: number;
+  projectedProfitUsd: number;
+  projectedLossUsd: number;
+  projectedRoiPercent: number;
+  preTradeGateStatus: PreTradeValidationGateResult;
+  screeningTier: 'TIER_1_ALPHA_VANGUARD' | 'TIER_2_HIGH_CONVICTION' | 'TIER_3_TACTICAL_CONFLUENCE';
+  breakevenRatchetArmed: boolean;
+  institutionalRationale: string;
 }
 
 export interface KnowledgeMatchResult {
@@ -651,9 +734,9 @@ export interface InstitutionalOrderFlowMetrics {
 }
 
 export interface ExhaustiveStrategyCorpusEvaluation {
-  totalEvaluatedStrategies: number; // 1,050+
-  technicalEvaluatedCount: number;  // 525
-  fundamentalEvaluatedCount: number; // 525
+  totalEvaluatedStrategies: number; // 2,100+
+  technicalEvaluatedCount: number;  // 1,050+
+  fundamentalEvaluatedCount: number; // 1,050+
   dynamicFailureConstraintsCount: number; // 1+
 
   technicalConcordance: {
@@ -684,6 +767,9 @@ export interface ExhaustiveStrategyCorpusEvaluation {
   institutionalOrderFlow?: InstitutionalOrderFlowMetrics;
   activeStrategyPermutations?: string[];
   prunedStrategyPermutationsCount?: number;
+  multiTierScreening?: MultiTierScreeningTelemetry;
+  unifiedProfitableSetup?: UnifiedProfitableSetup;
+  preTradeValidationGate?: PreTradeValidationGateResult;
 }
 
 export interface OrderBookLiquidityWallSnapshot {
@@ -1355,6 +1441,9 @@ export interface SwarmConsensusResult {
   exhaustiveStrategyCorpus?: ExhaustiveStrategyCorpusEvaluation;
   capitalPreservationGate?: AbsoluteCapitalPreservationGateResult;
   sevenStagePipeline?: SevenStagePipelineResult;
+  multiTierScreening?: MultiTierScreeningTelemetry;
+  unifiedProfitableSetup?: UnifiedProfitableSetup;
+  preTradeValidationGate?: PreTradeValidationGateResult;
 }
 
 // ============================================================================
@@ -1365,11 +1454,11 @@ export interface SwarmConsensusResult {
 
 export interface Stage1StrategiesAnalysis {
   stage: 1;
-  stageName: '1,050+ Execution Strategies Analysis';
+  stageName: '1,050+ Execution Strategies Analysis' | '2,100+ Quantitative Execution Strategies Analysis';
   timestamp: number;
   symbol: CurrencyPair;
   timeframe: TimeFrame;
-  totalStrategiesEvaluated: number; // 1,050+ (525+ Technical + 525+ Fundamental)
+  totalStrategiesEvaluated: number; // 2,100+ (1,050+ Technical + 1,050+ Fundamental across 8 Orthogonal Families)
   technicalStrategiesEvaluated: number;
   fundamentalStrategiesEvaluated: number;
   rawTechnicalScore: number;
@@ -2713,7 +2802,7 @@ export interface MultiFactorConfluenceReport {
     rationale: string;
   };
   technicalStream: {
-    totalRulesEvaluated: number; // 525
+    totalRulesEvaluated: number; // 1,050+
     passingRulesCount: number;
     bullishCount: number;
     bearishCount: number;
@@ -2724,7 +2813,7 @@ export interface MultiFactorConfluenceReport {
     topMatchedRules: KnowledgeRule[];
   };
   fundamentalStream: {
-    totalRulesEvaluated: number; // 525
+    totalRulesEvaluated: number; // 1,050+
     passingRulesCount: number;
     supportiveCount: number;
     restrictiveCount: number;
@@ -2818,13 +2907,13 @@ export interface VisionAtlasPayload {
   // Four Specialized Processing Engines
   strategyEngines: {
     technical: {
-      totalEvaluated: number; // 525 distinct indicator combinations
+      totalEvaluated: number; // 1,050+ distinct indicator combinations across 8 orthogonal families
       activeBullishSetups: number;
       activeBearishSetups: number;
       topValidatedSetups: Array<{ name: string; score: number; timeframe: string }>;
     };
     fundamental: {
-      totalEvaluated: number; // 525 fundamental models
+      totalEvaluated: number; // 1,050+ fundamental models across 8 orthogonal families
       regime: string;
       interestRateDifferential: string;
       monetaryPolicyShift: string;

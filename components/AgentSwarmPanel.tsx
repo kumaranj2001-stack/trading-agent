@@ -140,7 +140,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
             Continuous Loop Active {telemetry?.cycleNumber ? `(Cycle #${telemetry.cycleNumber})` : ''}
           </span>
           <span>• 15s Multi-Desk Recalibration Loop</span>
-          <span>• 525 Technical + 525 Macro Strategies</span>
+          <span>• 1,050+ Technical + 1,050+ Macro Strategies (2,100+ Total)</span>
           <span>• 38 Wires Streamed</span>
           <span className="text-cyan-600 font-bold">
             {telemetry?.latencyMs ? `${telemetry.latencyMs}ms Latency` : 'Zero Human Latency'}
@@ -726,7 +726,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
             <div className="space-y-3 text-sm">
               <div className="bg-terminal-950/80 p-3 rounded-lg border border-indigo-500/20">
                 <span className="text-indigo-400 text-xs uppercase font-bold block mb-1.5">
-                  1,050+ Strategies Synchronous Corpus Verification
+                  2,100+ Strategies Synchronous Corpus Verification
                 </span>
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>

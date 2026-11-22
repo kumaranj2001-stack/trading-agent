@@ -54,7 +54,7 @@ export class KnowledgeEngine {
 
   /**
    * Exhaustive Synchronous Strategy Corpus Evaluation
-   * Evaluates all 525 technical and 525 fundamental models without heuristic pruning.
+   * Evaluates all 2,100+ quantitative strategies (1,050+ technical and 1,050+ fundamental models across 8 orthogonal families) without heuristic pruning.
    */
   public evaluateExhaustiveStrategyCorpus(params: {
     pair: CurrencyPair;

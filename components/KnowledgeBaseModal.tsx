@@ -107,20 +107,20 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-white text-sm sm:text-base truncate">
-                10 // INSTITUTIONAL KNOWLEDGE BASE (1,050+ STRATEGIES & HEURISTICS)
+                10 // INSTITUTIONAL KNOWLEDGE BASE (2,100+ QUANTITATIVE MODELS)
               </h3>
               <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                {allRules.length} VERIFIED RULES (525 TECH + 525 FUND)
+                {allRules.length} VERIFIED MODELS (1,050+ TECH + 1,050+ FUND)
               </span>
               <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-                ZERO PRUNING CERTIFIED
+                MULTI-TIER SCREENED
               </span>
               <span className="hidden lg:inline px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
-                SYNCHRONOUS INTEGRATION
+                8 ORTHOGONAL FAMILIES
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">
-              525 Technical (SMC / Confluence) • 525 Fundamental (Central Banks / Indian Markets)
+              1,050+ Technical (SMC / AMT / Volatility) • 1,050+ Fundamental (Macro / Rates / Flows / COT)
             </p>
           </div>
         </div>
@@ -324,11 +324,27 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
                     }`}>
                       {rule.category}
                     </span>
+                    {rule.tier && (
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold font-mono border ${
+                        rule.tier === 'TIER_1_ALPHA_VANGUARD'
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                          : rule.tier === 'TIER_2_HIGH_CONVICTION'
+                          ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                          : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+                      }`}>
+                        {rule.tier === 'TIER_1_ALPHA_VANGUARD' ? 'ALPHA VANGUARD' : rule.tier === 'TIER_2_HIGH_CONVICTION' ? 'HIGH CONVICTION' : 'TACTICAL'}
+                      </span>
+                    )}
                     <span className="text-white font-bold text-xs">{rule.ruleName}</span>
-                    <span className="text-[10px] text-slate-400">({rule.subcategory})</span>
+                    <span className="text-[10px] text-slate-400">({rule.orthogonalFamily || rule.subcategory})</span>
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {rule.sharpeRatio && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                        Sharpe: <strong>{rule.sharpeRatio}</strong>
+                      </span>
+                    )}
                     {isTriggered && (
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/50 flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" />
@@ -354,6 +370,16 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
                     <span className="text-slate-400">
                       Win Rate: <strong className="text-cyan-400">{rule.expectedWinRate}%</strong>
                     </span>
+                    {rule.maxDrawdownPercent !== undefined && (
+                      <span className="text-slate-400">
+                        Max DD: <strong className="text-emerald-400">{rule.maxDrawdownPercent}%</strong>
+                      </span>
+                    )}
+                    {rule.profitFactor !== undefined && (
+                      <span className="text-slate-400">
+                        PF: <strong className="text-indigo-400">{rule.profitFactor}</strong>
+                      </span>
+                    )}
                     <span className="text-slate-400">
                       Weight: <strong className="text-indigo-400">{rule.confidenceWeight}/10</strong>
                     </span>

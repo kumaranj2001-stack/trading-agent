@@ -88,7 +88,7 @@ export class AutomatedSignalValidationModule {
       status = 'APPROVED_WITHIN_BAND';
     }
 
-    const toleranceBandDescription = `Unlimited Profit Potential Active (50-pip cap removed). Live variance: ${pipDistance} pips. Uncapped multi-tier expansion & dynamic trailing runner engaged.`;
+    const toleranceBandDescription = `Unified High-Conviction Profit Framework Active. Single high-confidence target aligned to verified liquidity wall. Live variance: ${pipDistance} pips. Single-ticket execution engaged.`;
 
     // Multi-tier expansion target projections strictly aligned to trade direction
     const isSell = direction === 'SELL';

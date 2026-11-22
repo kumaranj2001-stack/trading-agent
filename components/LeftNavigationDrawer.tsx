@@ -159,12 +159,12 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       id: 'knowledge',
       number: '02',
       label: 'Knowledge',
-      description: '1,050+ Quant Rules & Institutional Heuristics',
+      description: '2,100+ Quant Rules & Institutional Heuristics',
       icon: Database,
       color: 'text-teal-400',
       activeBg: 'bg-teal-500/15 border-teal-500/40 text-teal-300 font-semibold',
       isActive: activeTab === 'knowledge',
-      badge: '1,050+',
+      badge: '2,100+',
       badgeColor: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
       action: () => {
         setActiveTab('knowledge');
@@ -176,12 +176,12 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       id: 'vision-atlas',
       number: '03',
       label: 'Vision Atlas Lab',
-      description: '1,050+ Multi-Factor Confluence & Quant Engine',
+      description: '2,100+ Multi-Factor Confluence & Quant Engine',
       icon: Compass,
       color: 'text-cyan-400',
       activeBg: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 font-semibold',
       isActive: activeTab === 'vision-atlas' || activeTab === 'vision-atlas-lab',
-      badge: '1050 CONFLUENCE',
+      badge: '2100 CONFLUENCE',
       badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
       action: () => {
         setActiveTab('vision-atlas');

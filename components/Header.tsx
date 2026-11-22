@@ -156,7 +156,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {isMarketFrozen ? `❄️ STATE FROZEN (${sessionInfo?.statusLabel || activeSession})` : activeSession}
                 </span>
                 <span className="text-sky-400 font-bold hidden md:inline">• 95 DYNAMIC FEEDS</span>
-                <span className="text-cyan-400 hidden lg:inline font-bold">• 1,050+ RULES</span>
+                <span className="text-cyan-400 hidden lg:inline font-bold">• 2,100+ QUANT RULES</span>
                 <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-cyan-300 border border-indigo-500/40 text-[10px] font-mono font-bold hidden xl:flex items-center gap-1">
                   <Zap className="w-2.5 h-2.5 text-cyan-400 animate-pulse" />
                   <span>24/7 AUTONOMOUS SWARM</span>

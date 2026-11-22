@@ -2,7 +2,7 @@
 
 A high-performance, **Vercel-deployable** multi-agent trading intelligence system architected around four specialized institutional roles: **Technical Analyst**, **Fundamental Analyst**, **Forex Market Analyst**, and **Risk Manager**.
 
-Engineered for both **Global Forex Markets** and the **Indian Stock Market (NSE / BSE)** with live institutional **OANDA / TradingView charting** and an embedded **1,050+ Rule Institutional Knowledge Base** (525 Technical + 525 Fundamental rules) for high-accuracy, high-confidence entry execution.
+Engineered for both **Global Forex Markets** and the **Indian Stock Market (NSE / BSE)** with live institutional **OANDA / TradingView charting** and an embedded **2,100+ Rule Institutional Knowledge Base** (1,050+ Technical + 1,050+ Fundamental models across 8 orthogonal strategy families) for high-accuracy, high-confidence entry execution.
 
 ---
 
@@ -23,25 +23,27 @@ Engineered for both **Global Forex Markets** and the **Indian Stock Market (NSE 
 - Embeds official institutional **OANDA / TradingView Live Charts** with real-time streaming feeds, multi-timeframe controls, drawing tools, and standard indicator suites.
 - Toggle anytime between **OANDA Live Streaming Chart** and the **Apex Algorithmic Swarm Matrix Chart** with custom Smart Money Concepts (FVG, Order Blocks, Liquidity Sweeps, Dynamic Stop Loss & Take Profit brackets).
 
-### 3. 🧠 1,050+ Institutional Knowledge Base Rules (Stored for High-Confidence Entry)
-To ensure high accuracy and eliminate false breakouts, the swarm is backed by a structured knowledge base of over 1,000 verified rules:
-- **525 Technical Analysis Rules**:
-  - Smart Money Concepts (Order Blocks, 3-bar Fair Value Gaps, Liquidity Sweeps, CHOCH, BOS)
-  - Multi-Timeframe (MTF) confluence filters (15M - 1H - 4H - Daily alignment)
-  - Moving Average ribbon compressions & golden/death crosses
-  - RSI & MACD regular and hidden momentum divergences
-  - Volatility contraction patterns (VCP) and Bollinger Band squeezes
-  - Classic chart geometry & Volume Spread Analysis (VSA stopping volume, absorption)
+### 3. 🧠 2,100+ Institutional Knowledge Base Rules (Stored for High-Confidence Entry)
+To ensure high accuracy and eliminate false breakouts, the swarm is backed by a structured knowledge base of over 2,100 verified quantitative rules across 8 orthogonal strategy families:
+- **1,050+ Technical Analysis Rules**:
+  - Smart Money Concepts & Order Flow (Order Blocks, 3-bar Fair Value Gaps, Liquidity Sweeps, CHOCH, BOS)
+  - Auction Market Theory & CVD (Volume Profile POC/VAH/VAL, Cumulative Volume Delta, Bid/Ask Depth Imbalance)
+  - Harmonic Geometry & Volatility Dynamics (Golden Pockets, Gartley/Bat confluences, ATR volatility expansions)
+  - Multi-Timeframe Entry Protocols (15M - 1H - 4H - Daily alignment)
+  - Statistical Arbitrage & Mean Reversion (Z-Score bands, Ornstein-Uhlenbeck mean reversion)
+  - Multi-Timeframe Trend Stacks & Moving Average ribbon compressions
+  - Statistical Arbitrage & Oscillators (RSI & MACD regular and hidden momentum divergences)
+  - Price Action & Candlestick Absorptions (VSA stopping volume, institutional absorption)
   - Indian Market specific setups: 15-minute Opening Range Breakout (ORB), Central Pivot Range (CPR), VWAP institutional defense, Expiry day gamma blast setups.
-- **525 Fundamental Analysis Rules**:
-  - Central Bank rate differential rules (Fed, ECB, BOJ, BoE, RBI)
-  - 2Y/10Y sovereign yield curve inversions & real interest rate spreads
-  - CPI / Core PCE inflation surprises and stagflation thresholds
-  - FII & DII institutional cash market buying/selling thresholds
-  - Brent crude price shocks on Indian CAD and Rupee valuations
-  - Corporate quarterly earnings beats/misses and sectoral margin guidance
-  - Sovereign credit rating actions and geopolitical risk premia
-  - Global Dollar Index (DXY) momentum transmission
+- **1,050+ Fundamental Analysis Rules**:
+  - Central Bank Policy & Interest Rate Trajectories (Fed, ECB, BOJ, BoE, RBI)
+  - Real Yields & Sovereign Spreads (2Y/10Y sovereign yield curve inversions & real interest rate spreads)
+  - COT Positioning & Institutional Flows (Commercial Hedger extremes, asset manager net positioning)
+  - Inflation Dynamics & Surprises (CPI / Core PCE inflation surprises and stagflation thresholds)
+  - Cross-Asset Commodity Linkages (Brent crude price shocks on Indian CAD and Rupee valuations)
+  - Sovereign Debt & Balance of Payments (FII & DII institutional cash market buying/selling thresholds)
+  - Corporate Earnings & Credit Quality (corporate quarterly earnings beats/misses and sectoral margin guidance)
+  - Geopolitical & Carry Regimes (sovereign credit rating actions, geopolitical risk premia, DXY momentum transmission)
 
 ### 4. 🛡️ Risk Manager & 1,000-Path Monte Carlo Simulation
 - **VETO Authority**: Automatic rejection of non-compliant setups.

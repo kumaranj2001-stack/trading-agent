@@ -19,6 +19,9 @@ import { diagnosticReasoningEngine } from './diagnosticReasoningEngine';
 import { OrderFlowEngine } from './orderFlowEngine';
 import { PIP_VALUES } from './marketData';
 import { strategyRegistry } from './strategyRegistry';
+import { multiTieredScreeningEngine } from './screeningEngine';
+import { invalidCriteriaMemoryManager } from './invalidCriteriaMemory';
+import { unifiedSetupEngine } from './unifiedSetupEngine';
 
 export class ExhaustiveStrategyCorpusEngine {
   private static instance: ExhaustiveStrategyCorpusEngine;
@@ -37,8 +40,8 @@ export class ExhaustiveStrategyCorpusEngine {
 
   /**
    * Exhaustive Synchronous Meta-Analysis Engine:
-   * Evaluates ALL 1,050+ strategies (525+ Technical & 525+ Fundamental + Dynamic failure rules)
-   * on the identical synchronous market state without any partial execution or heuristic pruning.
+   * Evaluates ALL 2,100+ strategies (1,050+ Technical & 1,050+ Fundamental + Dynamic failure rules)
+   * across 8 orthogonal strategy families on the identical synchronous market state without any partial execution or heuristic pruning.
    */
   public evaluateSynchronously(params: {
     pair: CurrencyPair;
@@ -90,7 +93,7 @@ export class ExhaustiveStrategyCorpusEngine {
     const fiiFlowCr = (fundamental as any).indianMarketMetrics?.fiiNetFlowCr;
     const dynamicRules = diagnosticReasoningEngine.getDynamicRules();
 
-    // 1. Synchronous Evaluation of ALL 525 Technical Strategies (Zero Pruning)
+    // 1. Synchronous Evaluation of ALL 1,050+ Technical Strategies (Zero Pruning)
     let techBullCount = 0;
     let techBearCount = 0;
     let techNeutralCount = 0;
@@ -154,7 +157,7 @@ export class ExhaustiveStrategyCorpusEngine {
       }
     }
 
-    // 2. Synchronous Evaluation of ALL 525 Fundamental Strategies (Zero Pruning)
+    // 2. Synchronous Evaluation of ALL 1,050+ Fundamental Strategies (Zero Pruning)
     let fundBullCount = 0;
     let fundBearCount = 0;
     let fundNeutralCount = 0;
@@ -246,9 +249,9 @@ export class ExhaustiveStrategyCorpusEngine {
     });
 
     // 4. Calculate Concordance Ratios & Meta Consensus Score
-    const techTotal = TECHNICAL_KNOWLEDGE_BASE.length; // 525
-    const fundTotal = FUNDAMENTAL_KNOWLEDGE_BASE.length; // 525
-    const totalCorpus = techTotal + fundTotal + dynamicRules.length; // 1,050+
+    const techTotal = TECHNICAL_KNOWLEDGE_BASE.length; // 1,050+
+    const fundTotal = FUNDAMENTAL_KNOWLEDGE_BASE.length; // 1,050+
+    const totalCorpus = techTotal + fundTotal + dynamicRules.length; // 2,100+
 
     const techDominantBias: 'BUY' | 'SELL' | 'NEUTRAL' = 
       techBullCount > techBearCount * 1.2 ? 'BUY' : techBearCount > techBullCount * 1.2 ? 'SELL' : 'NEUTRAL';
@@ -356,6 +359,35 @@ export class ExhaustiveStrategyCorpusEngine {
       debateFrictionIndex = Math.max(18.0, debateFrictionIndex);
     }
 
+    // 6. Multi-Tiered Screening Engine: Rank 2,100+ Models on Sharpe, Drawdown, Profit Factor
+    const multiTierScreening = multiTieredScreeningEngine.screenAndRankModels({
+      symbol: pair,
+      direction: metaConsensusDirection,
+      technical,
+      fundamental,
+    });
+
+    // 7. Persistent Memory Module: Pre-Trade Validation Gate (Zero Repeat Losses)
+    const preTradeValidationGate = invalidCriteriaMemoryManager.evaluatePreTradeGate({
+      symbol: pair,
+      direction: metaConsensusDirection,
+      currentPrice,
+      technical,
+      fundamental,
+      news,
+    });
+
+    // 8. Unified High-Conviction Profitable Setup Framework (Single Target & Protective SL)
+    const unifiedProfitableSetup = unifiedSetupEngine.generateUnifiedProfitableSetup({
+      symbol: pair,
+      direction: metaConsensusDirection,
+      currentPrice,
+      confidenceScore: metaConsensusScore,
+      confluenceGrade: registryEvaluation.gradingResult.grade,
+      liquidityWalls: liquidityWallsSnapshot,
+      preTradeGate: preTradeValidationGate,
+    });
+
     return {
       totalEvaluatedStrategies: totalCorpus,
       technicalEvaluatedCount: techTotal,
@@ -386,6 +418,9 @@ export class ExhaustiveStrategyCorpusEngine {
       institutionalOrderFlow: registryEvaluation.institutionalMetrics,
       activeStrategyPermutations: registryEvaluation.matchedStrategies.map(s => s.id),
       prunedStrategyPermutationsCount: strategyRegistry.getRegistryStats().prunedCount,
+      multiTierScreening,
+      preTradeValidationGate,
+      unifiedProfitableSetup,
     };
   }
 

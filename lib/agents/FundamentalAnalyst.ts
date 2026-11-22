@@ -102,7 +102,7 @@ export class FundamentalAnalystAgent extends BaseAgent {
     else if (macroScore <= -35) bias = 'STRONG_SELL';
     else if (macroScore <= -10) bias = 'SELL';
 
-    // Match against the 525 Fundamental Knowledge Base Rules!
+    // Match against the 1,050+ Fundamental Knowledge Base Rules across 8 Orthogonal Families!
     const knowledgeMatch = knowledgeEngine.matchFundamentalKnowledge(
       pair,
       segment,

@@ -277,7 +277,7 @@ export class RiskManagerAgent extends BaseAgent {
     );
 
     adjustmentsMade.push(
-      `Multi-Tier Profit Engine: 10-pip minimum target (TP1) authorized with uncapped trailing runner. Baseline target set to ${(targetDistance / pipMultiplier).toFixed(0)} pips.`
+      `Unified High-Conviction Profit Framework: Single high-confidence target set to ${(targetDistance / pipMultiplier).toFixed(0)} pips (${(targetDistance / stopDistance).toFixed(1)}:1 R:R) to eliminate fragmented exit management and maximize trade fidelity.`
     );
 
     // Strict Real-Time Loss Exposure Elimination Protocol (1:1 Breakeven Ratchet)

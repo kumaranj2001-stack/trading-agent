@@ -80,7 +80,7 @@ export const SevenStagePipelineVisualizer: React.FC<SevenStagePipelineVisualizer
   const { stage1, stage2, stage3, stage4, stage5, stage6, stage7 } = pipeline;
 
   const stageTabs = [
-    { num: 1, name: '1,050+ Strategies', badge: '1,050+ Models', status: stage1.status },
+    { num: 1, name: '2,100+ Strategies', badge: '2,100+ Models', status: stage1.status },
     { num: 2, name: 'Congress & Order Flow', badge: `Grade ${stage2.orderFlowGovernance.selectedSetupGrade}`, status: stage2.status },
     { num: 3, name: 'Live Data & MT5', badge: `${stage3.exactLiveQuotes.spreadPips} pips`, status: stage3.status },
     { num: 4, name: 'Intermarket & News', badge: `${stage4.nlpSentimentScoring.sentimentScore > 0 ? '+' : ''}${stage4.nlpSentimentScoring.sentimentScore}`, status: stage4.status },
@@ -227,7 +227,7 @@ export const SevenStagePipelineVisualizer: React.FC<SevenStagePipelineVisualizer
                     STAGE 1 OF 7
                   </span>
                   <h4 className="font-extrabold text-sm text-cyan-300 uppercase">
-                    1,050+ Execution Strategies Exhaustive Analysis
+                    2,100+ Quantitative Execution Strategies Exhaustive Analysis
                   </h4>
                 </div>
                 <span className="text-[10px] text-slate-400">Execution Latency: {stage1.latencyMs}ms</span>
@@ -237,7 +237,7 @@ export const SevenStagePipelineVisualizer: React.FC<SevenStagePipelineVisualizer
                 <div className={`p-3 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
                   <span className="text-[10px] text-slate-400 block font-semibold">Total Strategies Evaluated</span>
                   <span className="text-base font-extrabold text-cyan-400">{stage1.totalStrategiesEvaluated} Rules</span>
-                  <span className="text-[9px] text-slate-500 block mt-0.5">525+ Technical + 525+ Fundamental</span>
+                  <span className="text-[9px] text-slate-500 block mt-0.5">1,050+ Technical + 1,050+ Fundamental</span>
                 </div>
 
                 <div className={`p-3 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
