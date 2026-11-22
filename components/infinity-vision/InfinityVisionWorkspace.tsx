@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { CurrencyPair, TimeFrame, Candle } from '@/lib/types';
 import { InfinityVisionToolbar, ChartViewMode } from './InfinityVisionToolbar';
 import { InfinityVisionOhlcBar } from './InfinityVisionOhlcBar';
-import { InfinityVisionChart } from './InfinityVisionChart';
 import { QuantumVisionDrawer } from './QuantumVisionDrawer';
 import { LiquidityHeatmapModal } from './LiquidityHeatmapModal';
 import { IndicatorsModal } from './IndicatorsModal';
@@ -16,6 +16,20 @@ import { BASE_PRICES } from '@/lib/marketData';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
 import { visionSystemLogger } from '@/lib/visionSystemLogger';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+
+const InfinityVisionChart = dynamic(
+  () => import('./InfinityVisionChart').then((m) => m.InfinityVisionChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/60 text-slate-400 gap-3 min-h-[350px]">
+        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-mono tracking-wider text-cyan-400">INITIALIZING LIGHTWEIGHT CHART CANVAS...</span>
+      </div>
+    ),
+  }
+);
 
 export interface InfinityVisionWorkspaceProps {
   pair: CurrencyPair;
@@ -384,25 +398,27 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
 
         {/* 📈 Central Real-Time Streaming Chart Container (Direct TradingView & Confluence Encapsulation) */}
         <div className="flex-1 p-2 sm:p-3 relative flex flex-col min-w-0 min-h-0 bg-slate-100 dark:bg-terminal-950/60 overflow-hidden">
-          <InfinityVisionChart
-            candles={liveCandles}
-            pair={selectedPair}
-            timeframe={selectedTf}
-            theme={theme}
-            showIndicatorsOverlay={chartViewMode === 'Advanced' || chartViewMode === 'Standard' || isIndicatorsOpen}
-            showQuantumSimulation={isQuantumVisionOpen}
-            showMarketDna={isMarketDnaOpen}
-            showVisionAtlasLab={isVisionAtlasLabOpen}
-            showLiquidityHeatmap={isLiquidityOpen}
-            showMarketStructure={true}
-            showInternalStructure={true}
-            chartType={chartType}
-            showPatternOnChart={showPatternOnChart}
-            horizonCandles={horizonCandles}
-            latencyMs={liveLatencyMs}
-            isInterrupted={isInterrupted}
-            onReconnect={handleReconnect}
-          />
+          <ErrorBoundary fallbackTitle="Infinity Vision Native Chart Engine">
+            <InfinityVisionChart
+              candles={liveCandles}
+              pair={selectedPair}
+              timeframe={selectedTf}
+              theme={theme}
+              showIndicatorsOverlay={chartViewMode === 'Advanced' || chartViewMode === 'Standard' || isIndicatorsOpen}
+              showQuantumSimulation={isQuantumVisionOpen}
+              showMarketDna={isMarketDnaOpen}
+              showVisionAtlasLab={isVisionAtlasLabOpen}
+              showLiquidityHeatmap={isLiquidityOpen}
+              showMarketStructure={true}
+              showInternalStructure={true}
+              chartType={chartType}
+              showPatternOnChart={showPatternOnChart}
+              horizonCandles={horizonCandles}
+              latencyMs={liveLatencyMs}
+              isInterrupted={isInterrupted}
+              onReconnect={handleReconnect}
+            />
+          </ErrorBoundary>
         </div>
 
         {/* Right Sidebar: Dynamic Mode (Scenarios & Zones vs Market DNA vs Vision Atlas Lab) */}

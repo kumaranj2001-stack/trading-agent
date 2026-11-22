@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { 
   CurrencyPair, 
   TimeFrame, 
@@ -36,7 +38,18 @@ import { SettingsModal } from '@/components/SettingsModal';
 import { RiskRatioControllerModal } from '@/components/RiskRatioControllerModal';
 import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
-import { VisionAtlasWorkspace } from '@/components/VisionAtlasWorkspace';
+const VisionAtlasWorkspace = dynamic(
+  () => import('@/components/VisionAtlasWorkspace').then((mod) => mod.VisionAtlasWorkspace),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="min-h-[500px] w-full flex flex-col items-center justify-center bg-terminal-950 border border-terminal-border rounded-xl text-slate-400 gap-3 p-12">
+        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-mono tracking-wider text-cyan-400">INITIALIZING VISION ATLAS LAB & MULTI-FACTOR ENGINE...</span>
+      </div>
+    ),
+  }
+);
 import { MacroIntelligenceDesk } from '@/components/MacroIntelligenceDesk';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
@@ -1310,22 +1323,24 @@ export default function Home() {
 
         {/* Tab 03: Vision Atlas Lab - Multi-Factor Confluence & 2,100+ Institutional Strategies */}
         {(activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab') && (
-          <VisionAtlasWorkspace
-            pair={selectedPair}
-            timeframe={timeframe}
-            candles={candles}
-            onSelectPair={handleSelectPair}
-            onSelectTimeframe={handleSelectTimeframe}
-            onClose={() => setActiveTab('terminal')}
-            onOpenJournal={() => setActiveTab('journals')}
-            onSyncToTerminal={(params) => {
-              handleSelectPair(params.symbol);
-              setActiveTab('terminal');
-              showNotification(`VISION ATLAS SYNCED: ${params.direction} on ${params.symbol} loaded into Terminal.`);
-            }}
-            theme={theme}
-            onToggleTheme={handleToggleTheme}
-          />
+          <ErrorBoundary fallbackTitle="Vision Atlas Lab Module">
+            <VisionAtlasWorkspace
+              pair={selectedPair}
+              timeframe={timeframe}
+              candles={candles}
+              onSelectPair={handleSelectPair}
+              onSelectTimeframe={handleSelectTimeframe}
+              onClose={() => setActiveTab('terminal')}
+              onOpenJournal={() => setActiveTab('journals')}
+              onSyncToTerminal={(params) => {
+                handleSelectPair(params.symbol);
+                setActiveTab('terminal');
+                showNotification(`VISION ATLAS SYNCED: ${params.direction} on ${params.symbol} loaded into Terminal.`);
+              }}
+              theme={theme}
+              onToggleTheme={handleToggleTheme}
+            />
+          </ErrorBoundary>
         )}
 
         {/* Tab 2: Dedicated 5-Desk Agent Swarm Command Desk */}

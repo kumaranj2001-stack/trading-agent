@@ -48,7 +48,7 @@ import { Candle, CurrencyPair, TimeFrame } from '@/lib/types';
 import { calculateEMA } from '@/lib/indicators';
 
 export interface InfinityVisionChartProps {
-  candles: Candle[];
+  candles?: Candle[];
   pair: CurrencyPair;
   timeframe: string;
   theme?: 'light' | 'dark';
@@ -91,9 +91,9 @@ interface OverlayPoint {
 
 export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   candles = [],
-  pair,
-  timeframe,
-  theme = 'light',
+  pair = 'XAU/USD',
+  timeframe = '15m',
+  theme = 'dark',
   showQuantumSimulation: propShowQuantumSimulation = true,
   showMarketDna: propShowMarketDna = true,
   showIndicatorsOverlay: propShowIndicatorsOverlay = true,
@@ -110,6 +110,12 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   onSelectZone,
 }) => {
   const isLight = theme === 'light';
+
+  // 🛡️ Client Mount Guard - Prevents SSR hydration crashes with native canvas
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // 🎛️ Bi-Directional Interactive Overlay Control States (Syncs with external props or local toggles)
   const [showQuantumSimulation, setShowQuantumSimulation] = useState<boolean>(propShowQuantumSimulation);
@@ -155,7 +161,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   // 1. Prepare Safe Canonical Candlesticks sorted in strictly ascending time
   const safeCandles = useMemo(() => {
     let list: Candle[] = [];
-    if (candles && candles.length >= 8) {
+    if (candles && Array.isArray(candles) && candles.length >= 8) {
       list = [...candles.slice(-65)];
     } else {
       const base = pair.includes('XAU') ? 4005.0 : pair.includes('JPY') ? 152.5 : pair.includes('NIFTY') ? 24500 : 1.0850;
@@ -182,30 +188,39 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       }
     }
 
-    // Ensure strictly unique and ascending timestamps
+    // Ensure strictly unique and ascending timestamps with finite numbers
     let lastTime = 0;
     return list.map((c, i) => {
       let tSec = Math.floor(new Date(c.time || c.timestamp || (Date.now() - (list.length - i) * 60000)).getTime() / 1000);
+      if (Number.isNaN(tSec) || tSec <= 0) {
+        tSec = Math.floor(Date.now() / 1000) - (list.length - i) * 900;
+      }
       if (tSec <= lastTime) {
         tSec = lastTime + 60;
       }
       lastTime = tSec;
       return {
         ...c,
+        open: Number(c.open) || 4000,
+        high: Number(c.high) || 4000,
+        low: Number(c.low) || 4000,
+        close: Number(c.close) || 4000,
         timestamp: tSec * 1000,
         time: new Date(tSec * 1000).toISOString(),
       };
     });
   }, [candles, pair]);
 
-  const lastCandle = safeCandles[safeCandles.length - 1] || {
-    open: 4005.0,
-    high: 4007.6,
-    low: 3998.9,
-    close: 4005.8,
-    timestamp: Date.now(),
-    volume: 1500,
-  };
+  const lastCandle = useMemo(() => {
+    return safeCandles[safeCandles.length - 1] || {
+      open: 4005.0,
+      high: 4007.6,
+      low: 3998.9,
+      close: 4005.8,
+      timestamp: Date.now(),
+      volume: 1500,
+    };
+  }, [safeCandles]);
 
   const isXau = pair.includes('XAU');
   const priceDecimals = pair.includes('JPY') ? 3 : (pair.includes('USD') && !isXau) ? 5 : (pair.includes('NIFTY') || isXau) ? 2 : 4;
@@ -219,10 +234,12 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   const { minC, maxC, span } = useMemo(() => {
     const minVal = Math.min(...safeCandles.map(c => c.low));
     const maxVal = Math.max(...safeCandles.map(c => c.high));
+    const safeMin = Number.isFinite(minVal) ? minVal : 3990;
+    const safeMax = Number.isFinite(maxVal) ? maxVal : 4020;
     return {
-      minC: minVal,
-      maxC: maxVal,
-      span: Math.max(maxVal - minVal, minVal * 0.002),
+      minC: safeMin,
+      maxC: safeMax,
+      span: Math.max(safeMax - safeMin, safeMin * 0.002),
     };
   }, [safeCandles]);
 
@@ -233,72 +250,88 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     const bosLines: Array<{ x1Time: number; x2Time: number; price: number; type: 'BULLISH' | 'BEARISH'; label: string }> = [];
     const chochLines: Array<{ x1Time: number; x2Time: number; price: number; type: 'BULLISH' | 'BEARISH'; label: string }> = [];
 
-    if (safeCandles.length < 10) return { majorSwings, internalSwings, bosLines, chochLines };
+    if (!safeCandles || safeCandles.length < 10) return { majorSwings, internalSwings, bosLines, chochLines };
 
-    // 1. Detect Major Swing Points (k = 3)
-    let lastMajorHigh: OverlayPoint | null = null;
-    let lastMajorLow: OverlayPoint | null = null;
+    try {
+      let lastMajorHigh: OverlayPoint | null = null;
+      let lastMajorLow: OverlayPoint | null = null;
 
-    for (let i = 3; i < safeCandles.length - 3; i++) {
-      const cur = safeCandles[i];
-      const tSec = Math.floor(cur.timestamp! / 1000);
+      for (let i = 3; i < safeCandles.length - 3; i++) {
+        const cur = safeCandles[i];
+        if (!cur) continue;
+        const tSec = Math.floor(cur.timestamp! / 1000);
 
-      // Swing High
-      const isHigh = 
-        cur.high > safeCandles[i-1].high && cur.high > safeCandles[i-2].high && cur.high > safeCandles[i-3].high &&
-        cur.high > safeCandles[i+1].high && cur.high > safeCandles[i+2].high && cur.high > safeCandles[i+3].high;
+        // Safe neighbors check
+        const c1Pre = safeCandles[i-1];
+        const c2Pre = safeCandles[i-2];
+        const c3Pre = safeCandles[i-3];
+        const c1Post = safeCandles[i+1];
+        const c2Post = safeCandles[i+2];
+        const c3Post = safeCandles[i+3];
 
-      // Swing Low
-      const isLow = 
-        cur.low < safeCandles[i-1].low && cur.low < safeCandles[i-2].low && cur.low < safeCandles[i-3].low &&
-        cur.low < safeCandles[i+1].low && cur.low < safeCandles[i+2].low && cur.low < safeCandles[i+3].low;
+        if (!c1Pre || !c2Pre || !c3Pre || !c1Post || !c2Post || !c3Post) continue;
 
-      if (isHigh) {
-        const type = lastMajorHigh ? (cur.high > lastMajorHigh.price ? 'HH' : 'LH') : 'HH';
-        const point: OverlayPoint = { timeSec: tSec, price: cur.high, label: type, type };
-        majorSwings.push(point);
+        // Swing High
+        const isHigh = 
+          cur.high > c1Pre.high && cur.high > c2Pre.high && cur.high > c3Pre.high &&
+          cur.high > c1Post.high && cur.high > c2Post.high && cur.high > c3Post.high;
 
-        // Check BOS or CHoCH
-        if (lastMajorHigh && cur.high > lastMajorHigh.price) {
-          bosLines.push({
-            x1Time: lastMajorHigh.timeSec,
-            x2Time: tSec,
-            price: lastMajorHigh.price,
-            type: 'BULLISH',
-            label: 'BOS (Bullish)',
-          });
+        // Swing Low
+        const isLow = 
+          cur.low < c1Pre.low && cur.low < c2Pre.low && cur.low < c3Pre.low &&
+          cur.low < c1Post.low && cur.low < c2Post.low && cur.low < c3Post.low;
+
+        if (isHigh) {
+          const type = lastMajorHigh ? (cur.high > lastMajorHigh.price ? 'HH' : 'LH') : 'HH';
+          const point: OverlayPoint = { timeSec: tSec, price: cur.high, label: type, type };
+          majorSwings.push(point);
+
+          if (lastMajorHigh && cur.high > lastMajorHigh.price) {
+            bosLines.push({
+              x1Time: lastMajorHigh.timeSec,
+              x2Time: tSec,
+              price: lastMajorHigh.price,
+              type: 'BULLISH',
+              label: 'BOS (Bullish)',
+            });
+          }
+          lastMajorHigh = point;
         }
-        lastMajorHigh = point;
-      }
 
-      if (isLow) {
-        const type = lastMajorLow ? (cur.low > lastMajorLow.price ? 'HL' : 'LL') : 'LL';
-        const point: OverlayPoint = { timeSec: tSec, price: cur.low, label: type, type };
-        majorSwings.push(point);
+        if (isLow) {
+          const type = lastMajorLow ? (cur.low > lastMajorLow.price ? 'HL' : 'LL') : 'LL';
+          const point: OverlayPoint = { timeSec: tSec, price: cur.low, label: type, type };
+          majorSwings.push(point);
 
-        if (lastMajorLow && cur.low < lastMajorLow.price) {
-          chochLines.push({
-            x1Time: lastMajorLow.timeSec,
-            x2Time: tSec,
-            price: lastMajorLow.price,
-            type: 'BEARISH',
-            label: 'CHoCH (Bearish)',
-          });
+          if (lastMajorLow && cur.low < lastMajorLow.price) {
+            chochLines.push({
+              x1Time: lastMajorLow.timeSec,
+              x2Time: tSec,
+              price: lastMajorLow.price,
+              type: 'BEARISH',
+              label: 'CHoCH (Bearish)',
+            });
+          }
+          lastMajorLow = point;
         }
-        lastMajorLow = point;
       }
-    }
 
-    // 2. Detect Internal Swings (k = 1)
-    for (let i = 1; i < safeCandles.length - 1; i += 2) {
-      const cur = safeCandles[i];
-      const tSec = Math.floor(cur.timestamp! / 1000);
-      if (cur.high > safeCandles[i-1].high && cur.high > safeCandles[i+1].high) {
-        internalSwings.push({ timeSec: tSec, price: cur.high, label: 'iH' });
+      // 2. Detect Internal Swings (k = 1)
+      for (let i = 1; i < safeCandles.length - 1; i += 2) {
+        const cur = safeCandles[i];
+        const prev = safeCandles[i-1];
+        const next = safeCandles[i+1];
+        if (!cur || !prev || !next) continue;
+        const tSec = Math.floor(cur.timestamp! / 1000);
+        if (cur.high > prev.high && cur.high > next.high) {
+          internalSwings.push({ timeSec: tSec, price: cur.high, label: 'iH' });
+        }
+        if (cur.low < prev.low && cur.low < next.low) {
+          internalSwings.push({ timeSec: tSec, price: cur.low, label: 'iL' });
+        }
       }
-      if (cur.low < safeCandles[i-1].low && cur.low < safeCandles[i+1].low) {
-        internalSwings.push({ timeSec: tSec, price: cur.low, label: 'iL' });
-      }
+    } catch (e) {
+      console.warn('Market structure parsing error:', e);
     }
 
     return { majorSwings, internalSwings, bosLines, chochLines };
@@ -408,7 +441,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
   // ⚛️ Quantum Vision Simulation Projection Paths
   const quantVisionPaths = useMemo(() => {
-    const lastTimeSec = Math.floor(lastCandle.timestamp! / 1000);
+    const lastTimeSec = Math.floor((lastCandle.timestamp || Date.now()) / 1000);
     const steps = 7;
     const intervalSec = 15 * 60; // 15-minute intervals
     const upper: Array<{ timeSec: number; price: number }> = [];
@@ -440,7 +473,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
   // 🧬 Market DNA Projected Fractal Ghost Candles
   const ghostCandles = useMemo(() => {
-    const lastTimeSec = Math.floor(lastCandle.timestamp! / 1000);
+    const lastTimeSec = Math.floor((lastCandle.timestamp || Date.now()) / 1000);
     const count = 8;
     const intervalSec = 15 * 60;
     const list: Array<{ timeSec: number; open: number; close: number; high: number; low: number; isUp: boolean }> = [];
@@ -466,280 +499,358 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     return list;
   }, [lastCandle.close, lastCandle.timestamp, span]);
 
+  // 📍 Mathematical Projection Coordinate Converter (Guarantees finite numbers)
+  const getCoordinates = useCallback((timeSec: number, price: number) => {
+    const defaultX = dimensions.width * 0.75;
+    const defaultY = dimensions.height * 0.5;
+
+    if (!Number.isFinite(price) || !Number.isFinite(timeSec)) {
+      return { x: defaultX, y: defaultY };
+    }
+
+    if (!chartInstanceRef.current || !seriesInstanceRef.current) {
+      const denom = Math.max(maxC - minC, 0.0001);
+      const frac = (maxC - price) / denom;
+      const safeFrac = Number.isFinite(frac) ? Math.max(0.05, Math.min(0.95, frac)) : 0.5;
+      return { x: defaultX, y: dimensions.height * safeFrac };
+    }
+
+    try {
+      const series = seriesInstanceRef.current;
+      const timeScale = chartInstanceRef.current.timeScale();
+
+      let x = timeScale.timeToCoordinate(timeSec as unknown as Time);
+      let y = series.priceToCoordinate(price);
+
+      // If future time (beyond existing candles), project forward linearly based on candle spacing
+      if (x === null) {
+        const lastTimeSec = Math.floor(lastCandle.timestamp! / 1000);
+        const prevTimeSec = safeCandles.length > 1 ? Math.floor(safeCandles[safeCandles.length - 2].timestamp! / 1000) : lastTimeSec - 900;
+        const lastX = timeScale.timeToCoordinate(lastTimeSec as unknown as Time);
+        const prevX = timeScale.timeToCoordinate(prevTimeSec as unknown as Time);
+        const spacing = (lastX !== null && prevX !== null) ? Math.max(lastX - prevX, 10) : 12;
+        const stepIndex = Math.max(1, Math.round((timeSec - lastTimeSec) / 900));
+        x = ((lastX ?? (dimensions.width - 80)) + stepIndex * spacing) as any;
+      }
+
+      const finalX = (x !== null && Number.isFinite(Number(x))) ? Number(x) : defaultX;
+      const finalY = (y !== null && Number.isFinite(Number(y))) ? Number(y) : defaultY;
+
+      return { x: finalX, y: finalY };
+    } catch {
+      return { x: defaultX, y: defaultY };
+    }
+  }, [maxC, minC, dimensions, lastCandle.timestamp, safeCandles]);
+
+  // Convert Quant Vision paths to screen coordinates for smooth SVG overlay
+  const quantVisionSvgCoordinates = useMemo(() => {
+    const upperCoords = (quantVisionPaths.upper || []).map(p => getCoordinates(p.timeSec, p.price));
+    const medianCoords = (quantVisionPaths.median || []).map(p => getCoordinates(p.timeSec, p.price));
+    const lowerCoords = (quantVisionPaths.lower || []).map(p => getCoordinates(p.timeSec, p.price));
+
+    const upperStr = upperCoords.map(p => `${p.x},${p.y}`).join(' ');
+    const lowerReversed = [...lowerCoords].reverse().map(p => `${p.x},${p.y}`).join(' ');
+    const polygonPoints = upperStr && lowerReversed ? `${upperStr} ${lowerReversed}` : '';
+
+    return { upperCoords, medianCoords, lowerCoords, polygonPoints };
+  }, [quantVisionPaths, getCoordinates, renderVersion]);
+
   // =========================================================================
   // 🚀 MOUNT TRADINGVIEW LIGHTWEIGHT CHARTS DIRECTLY INTO APPLICATION'S DOM
   // =========================================================================
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    if (!isMounted || !chartContainerRef.current) return;
 
-    // Destroy existing instance if any
-    if (chartInstanceRef.current) {
-      chartInstanceRef.current.remove();
-      chartInstanceRef.current = null;
-    }
+    try {
+      // Destroy existing instance if any
+      if (chartInstanceRef.current) {
+        chartInstanceRef.current.remove();
+        chartInstanceRef.current = null;
+      }
 
-    const { clientWidth, clientHeight } = chartContainerRef.current;
-    const initialWidth = clientWidth || dimensions.width;
-    const initialHeight = clientHeight || dimensions.height;
+      const { clientWidth, clientHeight } = chartContainerRef.current;
+      const initialWidth = clientWidth || dimensions.width;
+      const initialHeight = clientHeight || dimensions.height;
 
-    // 1. Create native HTML5 Canvas Chart with bidirectional DOM integration
-    const chart = createChart(chartContainerRef.current, {
-      width: initialWidth,
-      height: initialHeight,
-      layout: {
-        background: { type: ColorType.Solid, color: isLight ? '#ffffff' : '#090d16' },
-        textColor: isLight ? '#334155' : '#94a3b8',
-        fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-        fontSize: 11,
-      },
-      grid: {
-        vertLines: { color: isLight ? 'rgba(226, 232, 240, 0.7)' : 'rgba(30, 41, 59, 0.35)' },
-        horzLines: { color: isLight ? 'rgba(226, 232, 240, 0.7)' : 'rgba(30, 41, 59, 0.35)' },
-      },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-        vertLine: {
-          color: isLight ? '#94a3b8' : '#475569',
-          width: 1,
-          style: LineStyle.Dashed,
-          labelBackgroundColor: isLight ? '#1e293b' : '#0f172a',
+      // 1. Create native HTML5 Canvas Chart with bidirectional DOM integration
+      const chart = createChart(chartContainerRef.current, {
+        width: initialWidth,
+        height: initialHeight,
+        layout: {
+          background: { type: ColorType.Solid, color: isLight ? '#ffffff' : '#090d16' },
+          textColor: isLight ? '#334155' : '#94a3b8',
+          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
+          fontSize: 11,
         },
-        horzLine: {
-          color: isLight ? '#94a3b8' : '#475569',
-          width: 1,
-          style: LineStyle.Dashed,
-          labelBackgroundColor: isLight ? '#1e293b' : '#0f172a',
+        grid: {
+          vertLines: { color: isLight ? 'rgba(226, 232, 240, 0.7)' : 'rgba(30, 41, 59, 0.35)' },
+          horzLines: { color: isLight ? 'rgba(226, 232, 240, 0.7)' : 'rgba(30, 41, 59, 0.35)' },
         },
-      },
-      rightPriceScale: {
-        borderColor: isLight ? '#e2e8f0' : '#1e293b',
-        scaleMargins: {
-          top: 0.12,
-          bottom: 0.12,
+        crosshair: {
+          mode: CrosshairMode.Normal,
+          vertLine: {
+            color: isLight ? '#94a3b8' : '#475569',
+            width: 1,
+            style: LineStyle.Dashed,
+            labelBackgroundColor: isLight ? '#1e293b' : '#0f172a',
+          },
+          horzLine: {
+            color: isLight ? '#94a3b8' : '#475569',
+            width: 1,
+            style: LineStyle.Dashed,
+            labelBackgroundColor: isLight ? '#1e293b' : '#0f172a',
+          },
         },
-      },
-      timeScale: {
-        borderColor: isLight ? '#e2e8f0' : '#1e293b',
-        timeVisible: true,
-        secondsVisible: false,
-        barSpacing: 10,
-        minBarSpacing: 3,
-        rightOffset: 12,
-      },
-      handleScroll: {
-        mouseWheel: true,
-        pressedMouseMove: true,
-        horzTouchDrag: true,
-        vertTouchDrag: true,
-      },
-      handleScale: {
-        axisPressedMouseMove: true,
-        mouseWheel: true,
-        pinch: true,
-      },
-    });
-
-    chartInstanceRef.current = chart;
-
-    // 2. Add Candlestick / Line Series based on chartType
-    let mainSeries: ISeriesApi<'Candlestick'> | ISeriesApi<'Line'>;
-    if (chartType === 'Line') {
-      mainSeries = chart.addSeries(LineSeries, {
-        color: '#0284c7',
-        lineWidth: 2,
-        priceFormat: {
-          type: 'price',
-          precision: priceDecimals,
-          minMove: 1 / Math.pow(10, priceDecimals),
+        rightPriceScale: {
+          borderColor: isLight ? '#e2e8f0' : '#1e293b',
+          scaleMargins: {
+            top: 0.12,
+            bottom: 0.12,
+          },
+        },
+        timeScale: {
+          borderColor: isLight ? '#e2e8f0' : '#1e293b',
+          timeVisible: true,
+          secondsVisible: false,
+          barSpacing: 10,
+          minBarSpacing: 3,
+          rightOffset: 12,
+        },
+        handleScroll: {
+          mouseWheel: true,
+          pressedMouseMove: true,
+          horzTouchDrag: true,
+          vertTouchDrag: true,
+        },
+        handleScale: {
+          axisPressedMouseMove: true,
+          mouseWheel: true,
+          pinch: true,
         },
       });
-    } else {
-      mainSeries = chart.addSeries(CandlestickSeries, {
-        upColor: '#10b981',
-        downColor: '#ef4444',
-        borderUpColor: '#10b981',
-        borderDownColor: '#ef4444',
-        wickUpColor: '#10b981',
-        wickDownColor: '#ef4444',
-        priceFormat: {
-          type: 'price',
-          precision: priceDecimals,
-          minMove: 1 / Math.pow(10, priceDecimals),
-        },
-      });
-    }
-    seriesInstanceRef.current = mainSeries;
 
-    // 3. Populate Series with canonical live data
-    const formattedData = safeCandles.map(c => {
-      const timeVal = Math.floor(c.timestamp! / 1000) as UTCTimestamp;
+      chartInstanceRef.current = chart;
+
+      // 2. Add Candlestick / Line Series based on chartType
+      let mainSeries: ISeriesApi<'Candlestick'> | ISeriesApi<'Line'>;
       if (chartType === 'Line') {
-        return { time: timeVal, value: c.close };
-      }
-      return {
-        time: timeVal,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-      };
-    });
-
-    // @ts-ignore
-    mainSeries.setData(formattedData);
-
-    // 4. Add Dynamic EMA Overlays if enabled
-    if (showIndicatorsOverlay) {
-      const ema20Series = chart.addSeries(LineSeries, {
-        color: '#f59e0b',
-        lineWidth: 2,
-        title: 'EMA 20',
-      });
-      const ema50Series = chart.addSeries(LineSeries, {
-        color: '#06b6d4',
-        lineWidth: 2,
-        title: 'EMA 50',
-      });
-
-      const ema20Data = safeCandles
-        .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema20[i] }))
-        .filter(d => !Number.isNaN(d.value) && d.value !== undefined);
-
-      const ema50Data = safeCandles
-        .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema50[i] }))
-        .filter(d => !Number.isNaN(d.value) && d.value !== undefined);
-
-      ema20Series.setData(ema20Data);
-      ema50Series.setData(ema50Data);
-
-      ema20SeriesRef.current = ema20Series;
-      ema50SeriesRef.current = ema50Series;
-    }
-
-    // 5. Native Series Markers for Institutional Sweeps & Order Flow Signals
-    if (safeCandles.length >= 15) {
-      const markers = [
-        {
-          time: Math.floor(safeCandles[safeCandles.length - 8].timestamp! / 1000) as UTCTimestamp,
-          position: 'aboveBar' as const,
-          color: '#d97706',
-          shape: 'arrowDown' as const,
-          text: 'REJECTION 1',
-        },
-        {
-          time: Math.floor(safeCandles[safeCandles.length - 4].timestamp! / 1000) as UTCTimestamp,
-          position: 'belowBar' as const,
-          color: '#ea580c',
-          shape: 'arrowUp' as const,
-          text: '▼ LIQUIDITY SWEEP',
-        },
-        {
-          time: Math.floor(safeCandles[safeCandles.length - 2].timestamp! / 1000) as UTCTimestamp,
-          position: 'belowBar' as const,
+        mainSeries = chart.addSeries(LineSeries, {
           color: '#0284c7',
-          shape: 'circle' as const,
-          text: '▲ CONFIRMED',
-        },
-      ];
-      createSeriesMarkers(mainSeries, markers);
-    }
-
-    // 6. Native Structural Price Lines for Invalidation Boundaries
-    mainSeries.createPriceLine({
-      price: lastCandle.close,
-      color: '#06b6d4',
-      lineWidth: 1,
-      lineStyle: LineStyle.Dashed,
-      axisLabelVisible: true,
-      title: 'LIVE TICK',
-    });
-
-    // 7. Subscribe to Crosshair & Pan/Zoom events to bi-directionally sync SVG Overlays
-    const handleTimeScaleChange = () => {
-      setRenderVersion(v => v + 1);
-    };
-
-    chart.timeScale().subscribeVisibleLogicalRangeChange(handleTimeScaleChange);
-    chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeScaleChange);
-
-    chart.subscribeCrosshairMove((param) => {
-      if (!param || !param.time || !param.seriesData) {
-        setHoveredCandle(null);
-        return;
-      }
-      const data = param.seriesData.get(mainSeries);
-      if (data && 'close' in data) {
-        setHoveredCandle({
-          time: new Date(Number(param.time) * 1000).toISOString(),
-          timestamp: Number(param.time) * 1000,
-          open: (data as any).open || (data as any).value,
-          high: (data as any).high || (data as any).value,
-          low: (data as any).low || (data as any).value,
-          close: (data as any).close || (data as any).value,
-          volume: 0,
+          lineWidth: 2,
+          priceFormat: {
+            type: 'price',
+            precision: priceDecimals,
+            minMove: 1 / Math.pow(10, priceDecimals),
+          },
+        });
+      } else {
+        mainSeries = chart.addSeries(CandlestickSeries, {
+          upColor: '#10b981',
+          downColor: '#ef4444',
+          borderUpColor: '#10b981',
+          borderDownColor: '#ef4444',
+          wickUpColor: '#10b981',
+          wickDownColor: '#ef4444',
+          priceFormat: {
+            type: 'price',
+            precision: priceDecimals,
+            minMove: 1 / Math.pow(10, priceDecimals),
+          },
         });
       }
-    });
+      seriesInstanceRef.current = mainSeries;
 
-    // Fit content smoothly on initial mount
-    chart.timeScale().fitContent();
+      // 3. Populate Series with canonical live data
+      const formattedData = safeCandles.map(c => {
+        const timeVal = Math.floor(c.timestamp! / 1000) as UTCTimestamp;
+        if (chartType === 'Line') {
+          return { time: timeVal, value: c.close };
+        }
+        return {
+          time: timeVal,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+        };
+      });
+
+      // @ts-ignore
+      mainSeries.setData(formattedData);
+
+      // 4. Add Dynamic EMA Overlays if enabled
+      if (showIndicatorsOverlay) {
+        const ema20Series = chart.addSeries(LineSeries, {
+          color: '#f59e0b',
+          lineWidth: 2,
+          title: 'EMA 20',
+        });
+        const ema50Series = chart.addSeries(LineSeries, {
+          color: '#06b6d4',
+          lineWidth: 2,
+          title: 'EMA 50',
+        });
+
+        const ema20Data = safeCandles
+          .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema20[i] }))
+          .filter(d => Number.isFinite(d.value) && d.value !== undefined);
+
+        const ema50Data = safeCandles
+          .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema50[i] }))
+          .filter(d => Number.isFinite(d.value) && d.value !== undefined);
+
+        ema20Series.setData(ema20Data);
+        ema50Series.setData(ema50Data);
+
+        ema20SeriesRef.current = ema20Series;
+        ema50SeriesRef.current = ema50Series;
+      }
+
+      // 5. Native Series Markers for Institutional Sweeps (Safely guarded)
+      try {
+        if (safeCandles.length >= 15) {
+          const markers = [
+            {
+              time: Math.floor(safeCandles[safeCandles.length - 8].timestamp! / 1000) as UTCTimestamp,
+              position: 'aboveBar' as const,
+              color: '#d97706',
+              shape: 'arrowDown' as const,
+              text: 'REJECTION 1',
+            },
+            {
+              time: Math.floor(safeCandles[safeCandles.length - 4].timestamp! / 1000) as UTCTimestamp,
+              position: 'belowBar' as const,
+              color: '#ea580c',
+              shape: 'arrowUp' as const,
+              text: '▼ LIQUIDITY SWEEP',
+            },
+            {
+              time: Math.floor(safeCandles[safeCandles.length - 2].timestamp! / 1000) as UTCTimestamp,
+              position: 'belowBar' as const,
+              color: '#0284c7',
+              shape: 'circle' as const,
+              text: '▲ CONFIRMED',
+            },
+          ];
+          createSeriesMarkers(mainSeries, markers);
+        }
+      } catch (err) {
+        console.warn('Native series markers initialization safely bypassed:', err);
+      }
+
+      // 6. Native Structural Price Lines for Invalidation Boundaries
+      try {
+        mainSeries.createPriceLine({
+          price: lastCandle.close,
+          color: '#06b6d4',
+          lineWidth: 1,
+          lineStyle: LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: 'LIVE TICK',
+        });
+      } catch (err) {
+        console.warn('Price line initialization safely bypassed:', err);
+      }
+
+      // 7. Subscribe to Crosshair & Pan/Zoom events to bi-directionally sync SVG Overlays
+      const handleTimeScaleChange = () => {
+        setRenderVersion(v => v + 1);
+      };
+
+      chart.timeScale().subscribeVisibleLogicalRangeChange(handleTimeScaleChange);
+      chart.timeScale().subscribeVisibleTimeRangeChange(handleTimeScaleChange);
+
+      chart.subscribeCrosshairMove((param) => {
+        if (!param || !param.time || !param.seriesData) {
+          setHoveredCandle(null);
+          return;
+        }
+        const data = param.seriesData.get(mainSeries);
+        if (data && 'close' in data) {
+          setHoveredCandle({
+            time: new Date(Number(param.time) * 1000).toISOString(),
+            timestamp: Number(param.time) * 1000,
+            open: (data as any).open || (data as any).value,
+            high: (data as any).high || (data as any).value,
+            low: (data as any).low || (data as any).value,
+            close: (data as any).close || (data as any).value,
+            volume: 0,
+          });
+        }
+      });
+
+      // Fit content smoothly on initial mount
+      chart.timeScale().fitContent();
+    } catch (err) {
+      console.error('TradingView Lightweight Charts DOM initialization error:', err);
+    }
 
     return () => {
-      chart.remove();
-      chartInstanceRef.current = null;
+      try {
+        if (chartInstanceRef.current) {
+          chartInstanceRef.current.remove();
+          chartInstanceRef.current = null;
+        }
+      } catch (err) {
+        console.warn('Chart cleanup error:', err);
+      }
       seriesInstanceRef.current = null;
       ema20SeriesRef.current = null;
       ema50SeriesRef.current = null;
     };
   }, [
+    isMounted,
     pair, 
     chartType, 
     isLight, 
     priceDecimals, 
-    showIndicatorsOverlay,
-    // safeCandles reference ensures clean rebuild on symbol switch
+    showIndicatorsOverlay
   ]);
 
   // Update Data dynamically without destroying canvas
   useEffect(() => {
     if (!seriesInstanceRef.current || safeCandles.length === 0) return;
 
-    const formattedData = safeCandles.map(c => {
-      const timeVal = Math.floor(c.timestamp! / 1000) as UTCTimestamp;
-      if (chartType === 'Line') {
-        return { time: timeVal, value: c.close };
+    try {
+      const formattedData = safeCandles.map(c => {
+        const timeVal = Math.floor(c.timestamp! / 1000) as UTCTimestamp;
+        if (chartType === 'Line') {
+          return { time: timeVal, value: c.close };
+        }
+        return {
+          time: timeVal,
+          open: c.open,
+          high: c.high,
+          low: c.low,
+          close: c.close,
+        };
+      });
+
+      // @ts-ignore
+      seriesInstanceRef.current.setData(formattedData);
+
+      if (showIndicatorsOverlay && ema20SeriesRef.current && ema50SeriesRef.current) {
+        const ema20Data = safeCandles
+          .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema20[i] }))
+          .filter(d => Number.isFinite(d.value) && d.value !== undefined);
+
+        const ema50Data = safeCandles
+          .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema50[i] }))
+          .filter(d => Number.isFinite(d.value) && d.value !== undefined);
+
+        ema20SeriesRef.current.setData(ema20Data);
+        ema50SeriesRef.current.setData(ema50Data);
       }
-      return {
-        time: timeVal,
-        open: c.open,
-        high: c.high,
-        low: c.low,
-        close: c.close,
-      };
-    });
 
-    // @ts-ignore
-    seriesInstanceRef.current.setData(formattedData);
-
-    if (showIndicatorsOverlay && ema20SeriesRef.current && ema50SeriesRef.current) {
-      const ema20Data = safeCandles
-        .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema20[i] }))
-        .filter(d => !Number.isNaN(d.value) && d.value !== undefined);
-
-      const ema50Data = safeCandles
-        .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema50[i] }))
-        .filter(d => !Number.isNaN(d.value) && d.value !== undefined);
-
-      ema20SeriesRef.current.setData(ema20Data);
-      ema50SeriesRef.current.setData(ema50Data);
+      setRenderVersion(v => v + 1);
+    } catch (err) {
+      console.warn('Dynamic data update error:', err);
     }
-
-    setRenderVersion(v => v + 1);
   }, [safeCandles, chartType, showIndicatorsOverlay, ema20, ema50]);
 
   // 📐 ResizeObserver ensuring zero layout shifting and perfect DOM synchronization
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    if (!isMounted || !chartContainerRef.current) return;
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
@@ -748,7 +859,9 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
           const h = Math.max(Math.floor(height), 460);
           setDimensions({ width: w, height: h });
           if (chartInstanceRef.current) {
-            chartInstanceRef.current.applyOptions({ width: w, height: h });
+            try {
+              chartInstanceRef.current.applyOptions({ width: w, height: h });
+            } catch {}
             setRenderVersion(v => v + 1);
           }
         }
@@ -756,59 +869,32 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     });
     ro.observe(chartContainerRef.current);
     return () => ro.disconnect();
-  }, []);
-
-  // 📍 Mathematical Projection Coordinate Converter (Maps chart coordinates to overlay SVG canvas)
-  const getCoordinates = useCallback((timeSec: number, price: number) => {
-    if (!chartInstanceRef.current || !seriesInstanceRef.current) {
-      // Fallback relative interpolation
-      const frac = (maxC - price) / Math.max(maxC - minC, 0.0001);
-      return { x: dimensions.width * 0.75, y: dimensions.height * Math.max(0.05, Math.min(0.95, frac)) };
-    }
-
-    const series = seriesInstanceRef.current;
-    const timeScale = chartInstanceRef.current.timeScale();
-
-    let x = timeScale.timeToCoordinate(timeSec as unknown as Time);
-    const y = series.priceToCoordinate(price);
-
-    // If future time (beyond existing candles), project forward linearly based on candle spacing
-    if (x === null) {
-      const lastTimeSec = Math.floor(lastCandle.timestamp! / 1000);
-      const prevTimeSec = safeCandles.length > 1 ? Math.floor(safeCandles[safeCandles.length - 2].timestamp! / 1000) : lastTimeSec - 900;
-      const lastX = timeScale.timeToCoordinate(lastTimeSec as unknown as Time);
-      const prevX = timeScale.timeToCoordinate(prevTimeSec as unknown as Time);
-      const spacing = (lastX !== null && prevX !== null) ? Math.max(lastX - prevX, 10) : 12;
-      const stepIndex = Math.max(1, Math.round((timeSec - lastTimeSec) / 900));
-      x = ((lastX ?? (dimensions.width - 80)) + stepIndex * spacing) as any;
-    }
-
-    return {
-      x: Number(x ?? dimensions.width / 2),
-      y: Number(y ?? dimensions.height / 2),
-    };
-  }, [maxC, minC, dimensions, lastCandle.timestamp, safeCandles]);
+  }, [isMounted]);
 
   // Zoom / Scale Controls
   const handleZoom = (factor: number) => {
     if (!chartInstanceRef.current) return;
-    const timeScale = chartInstanceRef.current.timeScale();
-    const currentRange = timeScale.getVisibleLogicalRange();
-    if (currentRange) {
-      const mid = (currentRange.from + currentRange.to) / 2;
-      const span = (currentRange.to - currentRange.from) * factor;
-      timeScale.setVisibleLogicalRange({
-        from: mid - span / 2,
-        to: mid + span / 2,
-      });
-      setRenderVersion(v => v + 1);
-    }
+    try {
+      const timeScale = chartInstanceRef.current.timeScale();
+      const currentRange = timeScale.getVisibleLogicalRange();
+      if (currentRange) {
+        const mid = (currentRange.from + currentRange.to) / 2;
+        const span = (currentRange.to - currentRange.from) * factor;
+        timeScale.setVisibleLogicalRange({
+          from: mid - span / 2,
+          to: mid + span / 2,
+        });
+        setRenderVersion(v => v + 1);
+      }
+    } catch {}
   };
 
   const handleResetZoom = () => {
     if (!chartInstanceRef.current) return;
-    chartInstanceRef.current.timeScale().fitContent();
-    setRenderVersion(v => v + 1);
+    try {
+      chartInstanceRef.current.timeScale().fitContent();
+      setRenderVersion(v => v + 1);
+    } catch {}
   };
 
   // ✍️ User Interactive Drawing Handler (Operates natively without iframe traps)
@@ -875,18 +961,19 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     setDrawnElements([]);
   };
 
-  // Convert Quant Vision paths to screen coordinates for smooth SVG overlay
-  const quantVisionSvgCoordinates = useMemo(() => {
-    const upperCoords = quantVisionPaths.upper.map(p => getCoordinates(p.timeSec, p.price));
-    const medianCoords = quantVisionPaths.median.map(p => getCoordinates(p.timeSec, p.price));
-    const lowerCoords = quantVisionPaths.lower.map(p => getCoordinates(p.timeSec, p.price));
-
-    const upperStr = upperCoords.map(p => `${p.x},${p.y}`).join(' ');
-    const lowerReversed = [...lowerCoords].reverse().map(p => `${p.x},${p.y}`).join(' ');
-    const polygonPoints = `${upperStr} ${lowerReversed}`;
-
-    return { upperCoords, medianCoords, lowerCoords, polygonPoints };
-  }, [quantVisionPaths, getCoordinates, renderVersion]);
+  // If not yet mounted on client, render clean loading container
+  if (!isMounted) {
+    return (
+      <div className={`w-full h-full min-h-[520px] sm:min-h-[560px] flex flex-col items-center justify-center rounded-xl border font-mono text-xs ${
+        isLight ? 'bg-white border-slate-200 text-slate-700' : 'bg-terminal-950 border-terminal-border text-cyan-400'
+      }`}>
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+          <span className="font-bold tracking-wider">MOUNTING TRADINGVIEW LIGHTWEIGHT CHARTS CANVAS...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -1183,7 +1270,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                     <rect
                       x={0}
                       y={yTop}
-                      width={dimensions.width - 65}
+                      width={Math.max(dimensions.width - 65, 10)}
                       height={h}
                       fill={zone.color}
                       stroke={zone.borderColor}
@@ -1191,7 +1278,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                       strokeDasharray="4 2"
                     />
                     <rect
-                      x={dimensions.width - 150}
+                      x={Math.max(dimensions.width - 150, 10)}
                       y={yTop + 2}
                       width={82}
                       height={15}
@@ -1199,7 +1286,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                       fill={zone.badgeBg}
                     />
                     <text
-                      x={dimensions.width - 146}
+                      x={Math.max(dimensions.width - 146, 14)}
                       y={yTop + 13}
                       fill="#ffffff"
                       fontSize="9"
@@ -1222,14 +1309,14 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                     <line
                       x1={0}
                       y1={coord.y}
-                      x2={dimensions.width - 65}
+                      x2={Math.max(dimensions.width - 65, 10)}
                       y2={coord.y}
                       stroke={isLight ? 'rgba(148, 163, 184, 0.45)' : 'rgba(71, 85, 105, 0.35)'}
                       strokeWidth="1"
                       strokeDasharray="3 3"
                     />
                     <text
-                      x={dimensions.width - 70}
+                      x={Math.max(dimensions.width - 70, 10)}
                       y={coord.y - 3}
                       textAnchor="end"
                       fill={isLight ? '#64748b' : '#94a3b8'}
@@ -1255,7 +1342,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                     <rect
                       x={80}
                       y={yTop}
-                      width={dimensions.width - 170}
+                      width={Math.max(dimensions.width - 170, 20)}
                       height={h}
                       fill={ob.color}
                       stroke={ob.borderColor}
@@ -1290,7 +1377,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                     <rect
                       x={0}
                       y={coord.y - 12}
-                      width={dimensions.width - 65}
+                      width={Math.max(dimensions.width - 65, 10)}
                       height={24}
                       fill="url(#liqBidGradient)"
                       stroke="rgba(16, 185, 129, 0.4)"
@@ -1318,7 +1405,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                     <rect
                       x={0}
                       y={coord.y - 12}
-                      width={dimensions.width - 65}
+                      width={Math.max(dimensions.width - 65, 10)}
                       height={24}
                       fill="url(#liqAskGradient)"
                       stroke="rgba(239, 68, 68, 0.4)"
@@ -1496,64 +1583,72 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
           {showQuantumSimulation && (
             <g className="quant-vision-layer">
               {/* Shaded Probability Cone */}
-              <polygon
-                points={quantVisionSvgCoordinates.polygonPoints}
-                fill="url(#tvFanGradient)"
-                stroke="rgba(59, 130, 246, 0.4)"
-                strokeWidth="1"
-                strokeDasharray="3 2"
-              />
+              {quantVisionSvgCoordinates.polygonPoints && (
+                <polygon
+                  points={quantVisionSvgCoordinates.polygonPoints}
+                  fill="url(#tvFanGradient)"
+                  stroke="rgba(59, 130, 246, 0.4)"
+                  strokeWidth="1"
+                  strokeDasharray="3 2"
+                />
+              )}
 
               {/* Upper Bullish Path */}
-              <path
-                d={quantVisionSvgCoordinates.upperCoords.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
-                fill="none"
-                stroke="#3b82f6"
-                strokeWidth="2"
-                strokeDasharray="4 2"
-              />
+              {quantVisionSvgCoordinates.upperCoords.length > 0 && (
+                <path
+                  d={quantVisionSvgCoordinates.upperCoords.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth="2"
+                  strokeDasharray="4 2"
+                />
+              )}
 
               {/* Median Continuation Path */}
-              <path
-                d={quantVisionSvgCoordinates.medianCoords.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
-                fill="none"
-                stroke="#6366f1"
-                strokeWidth="1.5"
-                strokeDasharray="2 2"
-              />
+              {quantVisionSvgCoordinates.medianCoords.length > 0 && (
+                <path
+                  d={quantVisionSvgCoordinates.medianCoords.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
+                  fill="none"
+                  stroke="#6366f1"
+                  strokeWidth="1.5"
+                  strokeDasharray="2 2"
+                />
+              )}
 
               {/* Lower Breakdown Path */}
-              <path
-                d={quantVisionSvgCoordinates.lowerCoords.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
-                fill="none"
-                stroke="#1e3a8a"
-                strokeWidth="2"
-              />
+              {quantVisionSvgCoordinates.lowerCoords.length > 0 && (
+                <path
+                  d={quantVisionSvgCoordinates.lowerCoords.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`, '')}
+                  fill="none"
+                  stroke="#1e3a8a"
+                  strokeWidth="2"
+                />
+              )}
 
               {/* Path Probability Badges */}
               {quantVisionSvgCoordinates.upperCoords.length > 0 && (
-                <g>
-                  <text
-                    x={quantVisionSvgCoordinates.upperCoords[quantVisionSvgCoordinates.upperCoords.length - 1].x + 4}
-                    y={quantVisionSvgCoordinates.upperCoords[quantVisionSvgCoordinates.upperCoords.length - 1].y + 3}
-                    fill="#2563eb"
-                    fontSize="9"
-                    fontFamily="monospace"
-                    fontWeight="bold"
-                  >
-                    Bullish Target (38%)
-                  </text>
-                  <text
-                    x={quantVisionSvgCoordinates.lowerCoords[quantVisionSvgCoordinates.lowerCoords.length - 1].x + 4}
-                    y={quantVisionSvgCoordinates.lowerCoords[quantVisionSvgCoordinates.lowerCoords.length - 1].y + 3}
-                    fill="#1e3a8a"
-                    fontSize="9"
-                    fontFamily="monospace"
-                    fontWeight="bold"
-                  >
-                    Support Breakdown (32%)
-                  </text>
-                </g>
+                <text
+                  x={(quantVisionSvgCoordinates.upperCoords[quantVisionSvgCoordinates.upperCoords.length - 1]?.x ?? 0) + 4}
+                  y={(quantVisionSvgCoordinates.upperCoords[quantVisionSvgCoordinates.upperCoords.length - 1]?.y ?? 0) + 3}
+                  fill="#2563eb"
+                  fontSize="9"
+                  fontFamily="monospace"
+                  fontWeight="bold"
+                >
+                  Bullish Target (38%)
+                </text>
+              )}
+              {quantVisionSvgCoordinates.lowerCoords.length > 0 && (
+                <text
+                  x={(quantVisionSvgCoordinates.lowerCoords[quantVisionSvgCoordinates.lowerCoords.length - 1]?.x ?? 0) + 4}
+                  y={(quantVisionSvgCoordinates.lowerCoords[quantVisionSvgCoordinates.lowerCoords.length - 1]?.y ?? 0) + 3}
+                  fill="#1e3a8a"
+                  fontSize="9"
+                  fontFamily="monospace"
+                  fontWeight="bold"
+                >
+                  Support Breakdown (32%)
+                </text>
               )}
             </g>
           )}
