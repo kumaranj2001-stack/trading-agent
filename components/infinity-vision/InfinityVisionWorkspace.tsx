@@ -392,6 +392,10 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
             showIndicatorsOverlay={chartViewMode === 'Advanced' || chartViewMode === 'Standard' || isIndicatorsOpen}
             showQuantumSimulation={isQuantumVisionOpen}
             showMarketDna={isMarketDnaOpen}
+            showVisionAtlasLab={isVisionAtlasLabOpen}
+            showLiquidityHeatmap={isLiquidityOpen}
+            showMarketStructure={true}
+            showInternalStructure={true}
             chartType={chartType}
             showPatternOnChart={showPatternOnChart}
             horizonCandles={horizonCandles}
