@@ -102,6 +102,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   const [isVisionAtlasLabOpen, setIsVisionAtlasLabOpen] = useState<boolean>(false);
   const [isLiquidityOpen, setIsLiquidityOpen] = useState<boolean>(false);
   const [isIndicatorsOpen, setIsIndicatorsOpen] = useState<boolean>(false);
+  const [showMarketStructure, setShowMarketStructure] = useState<boolean>(true);
+  const [showInternalStructure, setShowInternalStructure] = useState<boolean>(true);
   const [activeRightSidebarMode, setActiveRightSidebarMode] = useState<'scenarios' | 'market_dna' | 'vision_atlas'>('scenarios');
   const [horizonCandles, setHorizonCandles] = useState<number>(5);
 
@@ -117,21 +119,40 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
     setSelectedTf(initialTf);
   }, [initialTf]);
 
-  // Sync candles from external props (Terminal parent state)
+  // 🌐 Continuous Real-Time Streaming Ingestion Engine (WebSocket & Authoritative Reference Anchor)
   useEffect(() => {
-    if (initialCandles && initialCandles.length > 0) {
-      setLiveCandles(initialCandles);
-      const latest = initialCandles[initialCandles.length - 1];
-      if (latest && Number.isFinite(latest.close)) {
-        setLivePrice(latest.close);
-      }
-    }
-  }, [initialCandles]);
+    let isCancelled = false;
 
-  // 🌐 WebSocket Streaming Subscription & Interruption Telemetry
-  useEffect(() => {
-    // 1. Subscribe to canonical tick broadcasts for the selected pair
+    // 1. Immediately inspect canonical feed or trigger fresh fetch for (selectedPair, selectedTf)
+    const existingCandles = LiveMarketFeedManager.getCanonicalCandles(selectedPair, selectedTf);
+    if (existingCandles && existingCandles.length >= 10) {
+      setLiveCandles(existingCandles);
+      const latestPrice = existingCandles[existingCandles.length - 1].close;
+      setLivePrice(latestPrice);
+    } else {
+      // Direct REST pull from authoritative OANDA TradingView scanner pipeline
+      fetch(`/api/market?pair=${encodeURIComponent(selectedPair)}&timeframe=${selectedTf}&count=65`)
+        .then(res => res.json())
+        .then(json => {
+          if (!isCancelled && json.success && json.data?.candles?.length > 0) {
+            LiveMarketFeedManager.setCanonicalFeed(selectedPair, selectedTf, json.data.candles);
+            setLiveCandles(json.data.candles);
+            if (json.data.currentPrice) {
+              setLivePrice(json.data.currentPrice);
+            }
+          }
+        })
+        .catch(err => {
+          console.warn('[InfinityVision] Initial market candle fetch notice:', err);
+        });
+    }
+
+    // 2. Start authoritative real-time live ticker (1000ms low-latency cadence)
+    const stopLiveFeed = LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1000);
+
+    // 3. Subscribe to real-time micro-ticks from LiveMarketFeedManager
     const unsubscribe = LiveMarketFeedManager.subscribe((event) => {
+      if (isCancelled) return;
       if (event.pair === selectedPair) {
         setLiveCandles(event.candles);
         setLivePrice(event.livePrice);
@@ -140,18 +161,43 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
         if (event.latencyMs) {
           setLiveLatencyMs(event.latencyMs);
         }
+        setIsInterrupted(false);
       }
     });
 
-    // 2. Subscribe to WebSocket telemetry for drop / latency interruption handling
+    // 4. Subscribe to WebSocket telemetry for drop / latency interruption handling
     const unsubTel = LiveMarketFeedManager.subscribeWebSocketTelemetry((tel) => {
+      if (isCancelled) return;
       const session = MarketSessionManager.getMarketSessionInfo(selectedPair);
       const isStale = !session.isFrozen && ((Date.now() - tel.lastTickTimestamp) > 20000);
       setIsInterrupted(!tel.isConnected || isStale);
       if (tel.latencyMs) setLiveLatencyMs(tel.latencyMs);
     });
 
+    // 5. Connect SSE stream to /api/vision-atlas/stream for authoritative backend continuous verification
+    let eventSource: EventSource | null = null;
+    try {
+      if (typeof window !== 'undefined' && typeof EventSource !== 'undefined') {
+        eventSource = new EventSource(`/api/vision-atlas/stream?symbol=${encodeURIComponent(selectedPair)}&timeframe=${selectedTf}`);
+        eventSource.onmessage = (e) => {
+          if (isCancelled) return;
+          try {
+            const streamData = JSON.parse(e.data);
+            if (streamData.type === 'TICK' || streamData.type === 'SNAPSHOT') {
+              setIsInterrupted(false);
+              if (streamData.telemetry?.latencyMs) {
+                setLiveLatencyMs(streamData.telemetry.latencyMs);
+              }
+            }
+          } catch {}
+        };
+      }
+    } catch (sseErr) {
+      console.warn('[InfinityVision] SSE connect notice:', sseErr);
+    }
+
     const staleTimer = setInterval(() => {
+      if (isCancelled) return;
       const tel = LiveMarketFeedManager.getWebSocketTelemetry();
       const session = MarketSessionManager.getMarketSessionInfo(selectedPair);
       const isStale = !session.isFrozen && ((Date.now() - tel.lastTickTimestamp) > 20000);
@@ -159,14 +205,19 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
     }, 2000);
 
     return () => {
+      isCancelled = true;
+      stopLiveFeed();
       unsubscribe();
       unsubTel();
       clearInterval(staleTimer);
+      if (eventSource) {
+        eventSource.close();
+      }
     };
   }, [selectedPair, selectedTf]);
 
   const handleReconnect = () => {
-    LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1500);
+    LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1000);
     setIsInterrupted(false);
   };
 
@@ -401,6 +452,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
           <ErrorBoundary fallbackTitle="Infinity Vision Native Chart Engine">
             <InfinityVisionChart
               candles={liveCandles}
+              livePrice={livePrice}
               pair={selectedPair}
               timeframe={selectedTf}
               theme={theme}
@@ -409,8 +461,14 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
               showMarketDna={isMarketDnaOpen}
               showVisionAtlasLab={isVisionAtlasLabOpen}
               showLiquidityHeatmap={isLiquidityOpen}
-              showMarketStructure={true}
-              showInternalStructure={true}
+              showMarketStructure={showMarketStructure}
+              showInternalStructure={showInternalStructure}
+              onToggleMarketStructure={setShowMarketStructure}
+              onToggleInternalStructure={setShowInternalStructure}
+              onToggleQuantumSimulation={handleToggleQuantumVision}
+              onToggleMarketDna={handleToggleMarketDna}
+              onToggleVisionAtlasLab={handleToggleVisionAtlasLab}
+              onToggleLiquidityHeatmap={handleToggleLiquidity}
               chartType={chartType}
               showPatternOnChart={showPatternOnChart}
               horizonCandles={horizonCandles}

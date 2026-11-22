@@ -479,31 +479,51 @@ export class ForexFactoryIngestionEngine {
     let rawEvents: ForexFactoryRawItem[] = [];
     let sourceSuccess = false;
 
-    // 1. Attempt Primary Forex Factory CDN JSON endpoint
+    // 1. Attempt Ingestion: In browser environment, proxy via local /api/calendar to avoid external CORS blocks; on server, fetch direct
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      if (typeof window !== 'undefined') {
+        const res = await fetch('/api/calendar', { cache: 'no-store' });
+        if (res.ok) {
+          const json = await res.json();
+          const items = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+          if (items.length > 0) {
+            rawEvents = items.map((item: any) => ({
+              title: item.title || item.name || item.event,
+              country: item.country || item.currency || 'USD',
+              date: item.date || item.timestamp,
+              impact: item.impact || 'MEDIUM',
+              forecast: item.forecast,
+              previous: item.previous,
+              actual: item.actual,
+            }));
+            sourceSuccess = true;
+          }
+        }
+      } else {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-      const res = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json', {
-        headers: this.getRotatedHeaders(),
-        signal: controller.signal,
-        cache: 'no-store',
-      });
-      clearTimeout(timeoutId);
+        const res = await fetch('https://nfs.faireconomy.media/ff_calendar_thisweek.json', {
+          headers: this.getRotatedHeaders(),
+          signal: controller.signal,
+          cache: 'no-store',
+        });
+        clearTimeout(timeoutId);
 
-      if (res.ok) {
-        const json = await res.json();
-        if (Array.isArray(json) && json.length > 0) {
-          rawEvents = json.map(item => ({
-            title: item.title || item.name,
-            country: item.country || item.currency || 'USD',
-            date: item.date,
-            impact: item.impact,
-            forecast: item.forecast,
-            previous: item.previous,
-            actual: item.actual,
-          }));
-          sourceSuccess = true;
+        if (res.ok) {
+          const json = await res.json();
+          if (Array.isArray(json) && json.length > 0) {
+            rawEvents = json.map(item => ({
+              title: item.title || item.name,
+              country: item.country || item.currency || 'USD',
+              date: item.date,
+              impact: item.impact,
+              forecast: item.forecast,
+              previous: item.previous,
+              actual: item.actual,
+            }));
+            sourceSuccess = true;
+          }
         }
       }
     } catch (e) {

@@ -42,13 +42,17 @@ import {
   IChartApi,
   ISeriesApi,
   Time,
-  UTCTimestamp
+  UTCTimestamp,
+  IPriceLine
 } from 'lightweight-charts';
 import { Candle, CurrencyPair, TimeFrame } from '@/lib/types';
 import { calculateEMA } from '@/lib/indicators';
+import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
+import { generateCandles, BASE_PRICES } from '@/lib/marketData';
 
 export interface InfinityVisionChartProps {
   candles?: Candle[];
+  livePrice?: number;
   pair: CurrencyPair;
   timeframe: string;
   theme?: 'light' | 'dark';
@@ -66,6 +70,13 @@ export interface InfinityVisionChartProps {
   isInterrupted?: boolean;
   onReconnect?: () => void;
   onSelectZone?: (zoneName: string) => void;
+  onToggleQuantumSimulation?: () => void;
+  onToggleMarketDna?: () => void;
+  onToggleVisionAtlasLab?: () => void;
+  onToggleLiquidityHeatmap?: () => void;
+  onToggleMarketStructure?: (val: boolean) => void;
+  onToggleInternalStructure?: (val: boolean) => void;
+  onToggleIndicatorsOverlay?: (val: boolean) => void;
 }
 
 export type DrawingTool = 'crosshair' | 'trendline' | 'horizontal' | 'rectangle' | 'fib' | 'text' | 'trash';
@@ -91,6 +102,7 @@ interface OverlayPoint {
 
 export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   candles = [],
+  livePrice: propLivePrice,
   pair = 'XAU/USD',
   timeframe = '15m',
   theme = 'dark',
@@ -108,6 +120,13 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   isInterrupted = false,
   onReconnect,
   onSelectZone,
+  onToggleQuantumSimulation,
+  onToggleMarketDna,
+  onToggleVisionAtlasLab,
+  onToggleLiquidityHeatmap,
+  onToggleMarketStructure,
+  onToggleInternalStructure,
+  onToggleIndicatorsOverlay,
 }) => {
   const isLight = theme === 'light';
 
@@ -148,6 +167,10 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   const seriesInstanceRef = useRef<ISeriesApi<'Candlestick'> | ISeriesApi<'Line'> | null>(null);
   const ema20SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
   const ema50SeriesRef = useRef<ISeriesApi<'Line'> | null>(null);
+  const priceLineRef = useRef<IPriceLine | null>(null);
+  const lastCandlesCountRef = useRef<number>(0);
+  const currentPairRef = useRef<string>(pair);
+  const currentTimeframeRef = useRef<string>(timeframe);
 
   // Dimensions & Drawing State
   const [dimensions, setDimensions] = useState({ width: 900, height: 540 });
@@ -158,38 +181,23 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [renderVersion, setRenderVersion] = useState<number>(0);
 
-  // 1. Prepare Safe Canonical Candlesticks sorted in strictly ascending time
+  // 1. Prepare Safe Canonical Candlesticks sorted in strictly ascending time (SSOT Anchored)
   const safeCandles = useMemo(() => {
     let list: Candle[] = [];
-    if (candles && Array.isArray(candles) && candles.length >= 8) {
+    if (candles && Array.isArray(candles) && candles.length >= 2) {
       list = [...candles.slice(-65)];
     } else {
-      const base = pair.includes('XAU') ? 4005.0 : pair.includes('JPY') ? 152.5 : pair.includes('NIFTY') ? 24500 : 1.0850;
-      const count = 45;
-      let cur = base;
-      const now = Date.now();
-      for (let i = count; i >= 0; i--) {
-        const isRed = (i % 3 === 0 || i % 4 === 0);
-        const delta = (Math.sin(i * 0.7) * (base * 0.0006)) + (isRed ? -base * 0.0004 : base * 0.0003);
-        const open = cur;
-        const close = cur + delta;
-        const high = Math.max(open, close) + Math.random() * (base * 0.0004);
-        const low = Math.min(open, close) - Math.random() * (base * 0.0004);
-        list.push({
-          time: new Date(now - i * 15 * 60000).toISOString(),
-          timestamp: now - i * 15 * 60000,
-          open,
-          high,
-          low,
-          close,
-          volume: 1200 + Math.floor(Math.random() * 3000),
-        });
-        cur = close;
+      const canonical = LiveMarketFeedManager.getCanonicalCandles(pair, (['1m', '5m', '15m', '1h', '4h', '1d'].includes(timeframe) ? timeframe as TimeFrame : '1h'));
+      if (canonical && canonical.length >= 2) {
+        list = [...canonical.slice(-65)];
+      } else {
+        list = generateCandles(pair, (['1m', '5m', '15m', '1h', '4h', '1d'].includes(timeframe) ? timeframe as TimeFrame : '1h'), 60);
       }
     }
 
     // Ensure strictly unique and ascending timestamps with finite numbers
     let lastTime = 0;
+    const baseP = propLivePrice || BASE_PRICES[pair] || 4000;
     return list.map((c, i) => {
       let tSec = Math.floor(new Date(c.time || c.timestamp || (Date.now() - (list.length - i) * 60000)).getTime() / 1000);
       if (Number.isNaN(tSec) || tSec <= 0) {
@@ -201,26 +209,27 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
       lastTime = tSec;
       return {
         ...c,
-        open: Number(c.open) || 4000,
-        high: Number(c.high) || 4000,
-        low: Number(c.low) || 4000,
-        close: Number(c.close) || 4000,
+        open: Number(c.open) || baseP,
+        high: Number(c.high) || baseP,
+        low: Number(c.low) || baseP,
+        close: Number(c.close) || baseP,
         timestamp: tSec * 1000,
         time: new Date(tSec * 1000).toISOString(),
       };
     });
-  }, [candles, pair]);
+  }, [candles, pair, timeframe, propLivePrice]);
 
   const lastCandle = useMemo(() => {
+    const baseP = propLivePrice || BASE_PRICES[pair] || 4000;
     return safeCandles[safeCandles.length - 1] || {
-      open: 4005.0,
-      high: 4007.6,
-      low: 3998.9,
-      close: 4005.8,
+      open: baseP,
+      high: baseP,
+      low: baseP,
+      close: baseP,
       timestamp: Date.now(),
       volume: 1500,
     };
-  }, [safeCandles]);
+  }, [safeCandles, propLivePrice, pair]);
 
   const isXau = pair.includes('XAU');
   const priceDecimals = pair.includes('JPY') ? 3 : (pair.includes('USD') && !isXau) ? 5 : (pair.includes('NIFTY') || isXau) ? 2 : 4;
@@ -249,8 +258,10 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     const internalSwings: OverlayPoint[] = [];
     const bosLines: Array<{ x1Time: number; x2Time: number; price: number; type: 'BULLISH' | 'BEARISH'; label: string }> = [];
     const chochLines: Array<{ x1Time: number; x2Time: number; price: number; type: 'BULLISH' | 'BEARISH'; label: string }> = [];
+    const fvgZones: Array<{ timeSec: number; min: number; max: number; type: 'BULLISH' | 'BEARISH'; label: string }> = [];
+    const liquiditySweeps: Array<{ timeSec: number; price: number; type: 'BSL' | 'SSL'; label: string }> = [];
 
-    if (!safeCandles || safeCandles.length < 10) return { majorSwings, internalSwings, bosLines, chochLines };
+    if (!safeCandles || safeCandles.length < 10) return { majorSwings, internalSwings, bosLines, chochLines, fvgZones, liquiditySweeps };
 
     try {
       let lastMajorHigh: OverlayPoint | null = null;
@@ -287,13 +298,23 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
           majorSwings.push(point);
 
           if (lastMajorHigh && cur.high > lastMajorHigh.price) {
-            bosLines.push({
-              x1Time: lastMajorHigh.timeSec,
-              x2Time: tSec,
-              price: lastMajorHigh.price,
-              type: 'BULLISH',
-              label: 'BOS (Bullish)',
-            });
+            if (lastMajorHigh.type === 'LH') {
+              chochLines.push({
+                x1Time: lastMajorHigh.timeSec,
+                x2Time: tSec,
+                price: lastMajorHigh.price,
+                type: 'BULLISH',
+                label: 'CHoCH (Bullish)',
+              });
+            } else {
+              bosLines.push({
+                x1Time: lastMajorHigh.timeSec,
+                x2Time: tSec,
+                price: lastMajorHigh.price,
+                type: 'BULLISH',
+                label: 'BOS (Bullish)',
+              });
+            }
           }
           lastMajorHigh = point;
         }
@@ -304,13 +325,23 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
           majorSwings.push(point);
 
           if (lastMajorLow && cur.low < lastMajorLow.price) {
-            chochLines.push({
-              x1Time: lastMajorLow.timeSec,
-              x2Time: tSec,
-              price: lastMajorLow.price,
-              type: 'BEARISH',
-              label: 'CHoCH (Bearish)',
-            });
+            if (lastMajorLow.type === 'HL') {
+              chochLines.push({
+                x1Time: lastMajorLow.timeSec,
+                x2Time: tSec,
+                price: lastMajorLow.price,
+                type: 'BEARISH',
+                label: 'CHoCH (Bearish)',
+              });
+            } else {
+              bosLines.push({
+                x1Time: lastMajorLow.timeSec,
+                x2Time: tSec,
+                price: lastMajorLow.price,
+                type: 'BEARISH',
+                label: 'BOS (Bearish)',
+              });
+            }
           }
           lastMajorLow = point;
         }
@@ -330,12 +361,55 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
           internalSwings.push({ timeSec: tSec, price: cur.low, label: 'iL' });
         }
       }
+
+      // 3. Detect Fair Value Gaps (FVG Imbalance Zones)
+      for (let i = 2; i < safeCandles.length; i++) {
+        const cPre = safeCandles[i - 2];
+        const cCur = safeCandles[i];
+        if (!cPre || !cCur) continue;
+        const t = Math.floor(cCur.timestamp! / 1000);
+        if (cCur.low > cPre.high) {
+          fvgZones.push({
+            timeSec: t,
+            min: Number(cPre.high.toFixed(priceDecimals)),
+            max: Number(cCur.low.toFixed(priceDecimals)),
+            type: 'BULLISH',
+            label: '1H Bullish FVG',
+          });
+        } else if (cCur.high < cPre.low) {
+          fvgZones.push({
+            timeSec: t,
+            min: Number(cCur.high.toFixed(priceDecimals)),
+            max: Number(cPre.low.toFixed(priceDecimals)),
+            type: 'BEARISH',
+            label: '1H Bearish FVG',
+          });
+        }
+      }
+
+      // 4. Detect Liquidity Sweeps
+      if (lastMajorHigh && safeCandles[safeCandles.length - 1].high > lastMajorHigh.price && safeCandles[safeCandles.length - 1].close < lastMajorHigh.price) {
+        liquiditySweeps.push({
+          timeSec: Math.floor(safeCandles[safeCandles.length - 1].timestamp! / 1000),
+          price: safeCandles[safeCandles.length - 1].high,
+          type: 'BSL',
+          label: '▲ BSL SWEPT',
+        });
+      }
+      if (lastMajorLow && safeCandles[safeCandles.length - 1].low < lastMajorLow.price && safeCandles[safeCandles.length - 1].close > lastMajorLow.price) {
+        liquiditySweeps.push({
+          timeSec: Math.floor(safeCandles[safeCandles.length - 1].timestamp! / 1000),
+          price: safeCandles[safeCandles.length - 1].low,
+          type: 'SSL',
+          label: '▼ SSL SWEPT',
+        });
+      }
     } catch (e) {
       console.warn('Market structure parsing error:', e);
     }
 
-    return { majorSwings, internalSwings, bosLines, chochLines };
-  }, [safeCandles]);
+    return { majorSwings, internalSwings, bosLines, chochLines, fvgZones, liquiditySweeps };
+  }, [safeCandles, priceDecimals]);
 
   // 🌐 Fibonacci Retracements Anchor Levels
   const fibLevels = useMemo(() => {
@@ -740,13 +814,13 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
       // 6. Native Structural Price Lines for Invalidation Boundaries
       try {
-        mainSeries.createPriceLine({
+        priceLineRef.current = mainSeries.createPriceLine({
           price: lastCandle.close,
           color: '#06b6d4',
           lineWidth: 1,
           lineStyle: LineStyle.Dashed,
           axisLabelVisible: true,
-          title: 'LIVE TICK',
+          title: `LIVE $${lastCandle.close.toFixed(priceDecimals)}`,
         });
       } catch (err) {
         console.warn('Price line initialization safely bypassed:', err);
@@ -787,6 +861,12 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
     return () => {
       try {
+        if (priceLineRef.current && seriesInstanceRef.current) {
+          try {
+            seriesInstanceRef.current.removePriceLine(priceLineRef.current);
+          } catch {}
+          priceLineRef.current = null;
+        }
         if (chartInstanceRef.current) {
           chartInstanceRef.current.remove();
           chartInstanceRef.current = null;
@@ -807,46 +887,99 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
     showIndicatorsOverlay
   ]);
 
-  // Update Data dynamically without destroying canvas
+  // ⚡ High-Performance Continuous Streaming Engine (Low-latency series.update on live ticks)
   useEffect(() => {
     if (!seriesInstanceRef.current || safeCandles.length === 0) return;
 
     try {
-      const formattedData = safeCandles.map(c => {
-        const timeVal = Math.floor(c.timestamp! / 1000) as UTCTimestamp;
-        if (chartType === 'Line') {
-          return { time: timeVal, value: c.close };
+      const pairChanged = currentPairRef.current !== pair;
+      const tfChanged = currentTimeframeRef.current !== timeframe;
+      const countDelta = Math.abs(safeCandles.length - lastCandlesCountRef.current);
+
+      if (pairChanged || tfChanged || countDelta > 1 || lastCandlesCountRef.current === 0) {
+        // Full dataset reload when pair or timeframe changes
+        currentPairRef.current = pair;
+        currentTimeframeRef.current = timeframe;
+        lastCandlesCountRef.current = safeCandles.length;
+
+        const formattedData = safeCandles.map(c => {
+          const timeVal = Math.floor(c.timestamp! / 1000) as UTCTimestamp;
+          if (chartType === 'Line') {
+            return { time: timeVal, value: c.close };
+          }
+          return {
+            time: timeVal,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+          };
+        });
+
+        // @ts-ignore
+        seriesInstanceRef.current.setData(formattedData);
+
+        if (showIndicatorsOverlay && ema20SeriesRef.current && ema50SeriesRef.current) {
+          const ema20Data = safeCandles
+            .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema20[i] }))
+            .filter(d => Number.isFinite(d.value) && d.value !== undefined);
+
+          const ema50Data = safeCandles
+            .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema50[i] }))
+            .filter(d => Number.isFinite(d.value) && d.value !== undefined);
+
+          ema20SeriesRef.current.setData(ema20Data);
+          ema50SeriesRef.current.setData(ema50Data);
         }
-        return {
-          time: timeVal,
-          open: c.open,
-          high: c.high,
-          low: c.low,
-          close: c.close,
-        };
-      });
 
-      // @ts-ignore
-      seriesInstanceRef.current.setData(formattedData);
+        if (chartInstanceRef.current) {
+          chartInstanceRef.current.timeScale().fitContent();
+        }
+      } else {
+        // 🚀 Native Continuous Low-Latency Ticking (series.update) - ZERO BUFFERING, ZERO DELAY
+        const latest = safeCandles[safeCandles.length - 1];
+        const timeVal = Math.floor((latest.timestamp || Date.now()) / 1000) as UTCTimestamp;
 
-      if (showIndicatorsOverlay && ema20SeriesRef.current && ema50SeriesRef.current) {
-        const ema20Data = safeCandles
-          .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema20[i] }))
-          .filter(d => Number.isFinite(d.value) && d.value !== undefined);
+        if (chartType === 'Line') {
+          // @ts-ignore
+          seriesInstanceRef.current.update({ time: timeVal, value: latest.close });
+        } else {
+          // @ts-ignore
+          seriesInstanceRef.current.update({
+            time: timeVal,
+            open: latest.open,
+            high: latest.high,
+            low: latest.low,
+            close: latest.close,
+          });
+        }
 
-        const ema50Data = safeCandles
-          .map((c, i) => ({ time: Math.floor(c.timestamp! / 1000) as UTCTimestamp, value: ema50[i] }))
-          .filter(d => Number.isFinite(d.value) && d.value !== undefined);
+        // Dynamically update EMA tips
+        if (showIndicatorsOverlay && ema20SeriesRef.current && ema50SeriesRef.current) {
+          const lastEma20 = ema20[ema20.length - 1];
+          const lastEma50 = ema50[ema50.length - 1];
+          if (Number.isFinite(lastEma20)) {
+            ema20SeriesRef.current.update({ time: timeVal, value: lastEma20 });
+          }
+          if (Number.isFinite(lastEma50)) {
+            ema50SeriesRef.current.update({ time: timeVal, value: lastEma50 });
+          }
+        }
+      }
 
-        ema20SeriesRef.current.setData(ema20Data);
-        ema50SeriesRef.current.setData(ema50Data);
+      // Synchronize live price line instantaneously
+      if (priceLineRef.current) {
+        priceLineRef.current.applyOptions({
+          price: lastCandle.close,
+          title: `LIVE $${lastCandle.close.toFixed(priceDecimals)}`,
+        });
       }
 
       setRenderVersion(v => v + 1);
     } catch (err) {
-      console.warn('Dynamic data update error:', err);
+      console.warn('Real-time streaming update error:', err);
     }
-  }, [safeCandles, chartType, showIndicatorsOverlay, ema20, ema50]);
+  }, [safeCandles, chartType, showIndicatorsOverlay, ema20, ema50, pair, timeframe, lastCandle.close, priceDecimals]);
 
   // 📐 ResizeObserver ensuring zero layout shifting and perfect DOM synchronization
   useEffect(() => {
@@ -1108,7 +1241,11 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
         <div className="flex items-center gap-1 flex-wrap">
           {/* Market Structure Toggle */}
           <button
-            onClick={() => setShowMarketStructure(!showMarketStructure)}
+            onClick={() => {
+              const next = !showMarketStructure;
+              setShowMarketStructure(next);
+              if (onToggleMarketStructure) onToggleMarketStructure(next);
+            }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showMarketStructure
                 ? 'bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 border border-cyan-500/40'
@@ -1122,7 +1259,11 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
           {/* Internal Structure Toggle */}
           <button
-            onClick={() => setShowInternalStructure(!showInternalStructure)}
+            onClick={() => {
+              const next = !showInternalStructure;
+              setShowInternalStructure(next);
+              if (onToggleInternalStructure) onToggleInternalStructure(next);
+            }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showInternalStructure
                 ? 'bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/40'
@@ -1136,7 +1277,11 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
           {/* Quant Vision Toggle */}
           <button
-            onClick={() => setShowQuantumSimulation(!showQuantumSimulation)}
+            onClick={() => {
+              const next = !showQuantumSimulation;
+              setShowQuantumSimulation(next);
+              if (onToggleQuantumSimulation) onToggleQuantumSimulation();
+            }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showQuantumSimulation
                 ? 'bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/40'
@@ -1150,7 +1295,11 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
           {/* Market DNA Toggle */}
           <button
-            onClick={() => setShowMarketDna(!showMarketDna)}
+            onClick={() => {
+              const next = !showMarketDna;
+              setShowMarketDna(next);
+              if (onToggleMarketDna) onToggleMarketDna();
+            }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showMarketDna
                 ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40'
@@ -1164,7 +1313,11 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
           {/* Vision Atlas Lab Overlays Toggle */}
           <button
-            onClick={() => setShowVisionAtlasLab(!showVisionAtlasLab)}
+            onClick={() => {
+              const next = !showVisionAtlasLab;
+              setShowVisionAtlasLab(next);
+              if (onToggleVisionAtlasLab) onToggleVisionAtlasLab();
+            }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showVisionAtlasLab
                 ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-500/40'
@@ -1178,7 +1331,11 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
           {/* Liquidity Heatmap Toggle */}
           <button
-            onClick={() => setShowLiquidityHeatmap(!showLiquidityHeatmap)}
+            onClick={() => {
+              const next = !showLiquidityHeatmap;
+              setShowLiquidityHeatmap(next);
+              if (onToggleLiquidityHeatmap) onToggleLiquidityHeatmap();
+            }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showLiquidityHeatmap
                 ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/40'
@@ -1361,6 +1518,67 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                   </g>
                 );
               })}
+
+              {/* Fair Value Gaps (FVG) Imbalance Zones */}
+              {marketStructureData.fvgZones?.map((fvg, idx) => {
+                const cTop = getCoordinates(fvg.timeSec, fvg.max);
+                const cBottom = getCoordinates(fvg.timeSec, fvg.min);
+                const yTop = Math.min(cTop.y, cBottom.y);
+                const h = Math.max(Math.abs(cBottom.y - cTop.y), 4);
+                return (
+                  <g key={`fvg-${idx}`}>
+                    <rect
+                      x={cTop.x}
+                      y={yTop}
+                      width={Math.max(dimensions.width - cTop.x - 65, 35)}
+                      height={h}
+                      fill={fvg.type === 'BULLISH' ? 'rgba(6, 182, 212, 0.16)' : 'rgba(239, 68, 68, 0.14)'}
+                      stroke={fvg.type === 'BULLISH' ? '#06b6d4' : '#ef4444'}
+                      strokeWidth="1"
+                      strokeDasharray="3 2"
+                    />
+                    <text
+                      x={cTop.x + 6}
+                      y={yTop + 10}
+                      fill={fvg.type === 'BULLISH' ? '#06b6d4' : '#fca5a5'}
+                      fontSize="8"
+                      fontFamily="monospace"
+                      fontWeight="bold"
+                    >
+                      {fvg.label} ({fvg.min.toFixed(priceDecimals)} - {fvg.max.toFixed(priceDecimals)})
+                    </text>
+                  </g>
+                );
+              })}
+
+              {/* Liquidity Sweeps Badges */}
+              {marketStructureData.liquiditySweeps?.map((sw, idx) => {
+                const c = getCoordinates(sw.timeSec, sw.price);
+                const isBsl = sw.type === 'BSL';
+                return (
+                  <g key={`lq-${idx}`}>
+                    <rect
+                      x={c.x - 35}
+                      y={isBsl ? c.y - 20 : c.y + 6}
+                      width={70}
+                      height={15}
+                      rx={3}
+                      fill={isBsl ? 'rgba(245, 158, 11, 0.92)' : 'rgba(16, 185, 129, 0.92)'}
+                    />
+                    <text
+                      x={c.x}
+                      y={isBsl ? c.y - 9 : c.y + 17}
+                      fill="#ffffff"
+                      fontSize="8"
+                      fontWeight="bold"
+                      fontFamily="monospace"
+                      textAnchor="middle"
+                    >
+                      {sw.label}
+                    </text>
+                  </g>
+                );
+              })}
             </g>
           )}
 
@@ -1514,27 +1732,29 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
               {marketStructureData.chochLines.map((choch, idx) => {
                 const c1 = getCoordinates(choch.x1Time, choch.price);
                 const c2 = getCoordinates(choch.x2Time, choch.price);
+                const lineRight = Math.max(dimensions.width - 65, c2.x);
 
                 return (
                   <g key={`choch-${idx}`}>
                     <line
                       x1={c1.x}
                       y1={c1.y}
-                      x2={c2.x}
-                      y2={c2.y}
+                      x2={lineRight}
+                      y2={c1.y}
                       stroke="#f59e0b"
                       strokeWidth="2"
+                      strokeDasharray="4 2"
                     />
                     <rect
-                      x={(c1.x + c2.x) / 2 - 28}
-                      y={c1.y - 9}
-                      width={56}
-                      height={14}
-                      rx={2}
-                      fill="rgba(245, 158, 11, 0.9)"
+                      x={(c1.x + lineRight) / 2 - 45}
+                      y={c1.y - 10}
+                      width={90}
+                      height={16}
+                      rx={3}
+                      fill="rgba(245, 158, 11, 0.95)"
                     />
                     <text
-                      x={(c1.x + c2.x) / 2}
+                      x={(c1.x + lineRight) / 2}
                       y={c1.y + 2}
                       fill="#ffffff"
                       fontSize="8"
@@ -1542,7 +1762,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                       fontFamily="monospace"
                       textAnchor="middle"
                     >
-                      CHoCH / MSS
+                      {choch.label.toUpperCase()}
                     </text>
                   </g>
                 );

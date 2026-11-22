@@ -1216,12 +1216,13 @@ export default function Home() {
 
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
-          <div className="space-y-4">
-            {/* 🌐 Dynamic Trading Session Clock Timeline & Overlap Matrix (Placed at the very top) */}
-            <DynamicTradingSessionTimeline
-              currentPair={selectedPair}
-              theme={theme}
-            />
+          <ErrorBoundary fallbackTitle="QRI Trader Terminal">
+            <div className="space-y-4">
+              {/* 🌐 Dynamic Trading Session Clock Timeline & Overlap Matrix (Placed at the very top) */}
+              <DynamicTradingSessionTimeline
+                currentPair={selectedPair}
+                theme={theme}
+              />
 
             {/* 🌟 UNIFIED 5-ROLE BUY/SELL DECISION BANNER (Preserved Institutional Real-Time Engine Layer) */}
             {consensus && consensus.pair === selectedPair ? (
@@ -1319,6 +1320,7 @@ export default function Home() {
               theme={theme}
             />
           </div>
+        </ErrorBoundary>
         )}
 
         {/* Tab 03: Vision Atlas Lab - Multi-Factor Confluence & 2,100+ Institutional Strategies */}

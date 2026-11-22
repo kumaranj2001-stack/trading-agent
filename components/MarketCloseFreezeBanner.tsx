@@ -26,6 +26,7 @@ export const MarketCloseFreezeBanner: React.FC<MarketCloseFreezeBannerProps> = (
 }) => {
   const [isManualOverride, setIsManualOverride] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [countdownFormatted, setCountdownFormatted] = useState<string>(() => {
     return sessionInfo?.nextOpenFormatted || '';
   });
@@ -35,6 +36,7 @@ export const MarketCloseFreezeBanner: React.FC<MarketCloseFreezeBannerProps> = (
 
   // ⏱️ Active real-time countdown decrement loop (ticks every 1,000ms)
   useEffect(() => {
+    setMounted(true);
     if (!sessionInfo?.isFrozen || !sessionInfo?.nextOpenDate) {
       if (sessionInfo?.nextOpenFormatted) {
         setCountdownFormatted(sessionInfo.nextOpenFormatted);
@@ -113,8 +115,8 @@ export const MarketCloseFreezeBanner: React.FC<MarketCloseFreezeBannerProps> = (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-950/80 border border-sky-500/30 text-sky-300 text-[11px] shadow-sm">
             <Clock className={`w-3.5 h-3.5 text-amber-400 ${secondsRemaining > 0 ? 'animate-pulse' : ''}`} />
             <span className="text-slate-400 font-medium">Resumes:</span>
-            <span className="font-bold text-amber-300 font-mono tracking-tight">
-              {countdownFormatted || sessionInfo.nextOpenFormatted}
+            <span className="font-bold text-amber-300 font-mono tracking-tight" suppressHydrationWarning>
+              {mounted ? (countdownFormatted || sessionInfo.nextOpenFormatted) : sessionInfo.nextOpenFormatted}
             </span>
           </div>
 

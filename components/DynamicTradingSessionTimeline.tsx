@@ -182,10 +182,12 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
   theme = 'dark',
 }) => {
   const [now, setNow] = useState<Date>(() => new Date());
+  const [mounted, setMounted] = useState<boolean>(false);
   const [showTimelineBar, setShowTimelineBar] = useState<boolean>(true);
 
   // High-fidelity 1-second pulse for clock & timers
   useEffect(() => {
+    setMounted(true);
     const timer = setInterval(() => {
       setNow(new Date());
     }, 1000);
@@ -399,10 +401,10 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
             </div>
 
             <div className="flex items-center gap-2 text-xs font-mono text-slate-400 mt-0.5 flex-wrap">
-              <span className="text-cyan-400 font-bold">{utcClockString}</span>
+              <span className="text-cyan-400 font-bold" suppressHydrationWarning>{utcClockString}</span>
               <span>•</span>
               <span className={isLight ? 'text-slate-700' : 'text-slate-300'}>
-                Local: <strong className={isLight ? 'text-slate-900' : 'text-white'}>{localClockString}</strong> ({localTimeZoneName})
+                Local: <strong className={isLight ? 'text-slate-900' : 'text-white'} suppressHydrationWarning>{mounted ? localClockString : '--:--:--'}</strong> ({mounted ? localTimeZoneName : 'UTC'})
               </span>
               <span>•</span>
               <span className="text-indigo-400 font-semibold">Active Pair: {currentPair}</span>
@@ -590,8 +592,8 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
                     {sess.isOpen ? <Sun className="w-3 h-3 text-amber-400" /> : <Moon className="w-3 h-3 text-slate-400" />}
                     Local Time:
                   </span>
-                  <span className={`font-bold text-xs ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>
-                    {sess.localCityTime}
+                  <span className={`font-bold text-xs ${isLight ? 'text-slate-800' : 'text-slate-200'}`} suppressHydrationWarning>
+                    {mounted ? sess.localCityTime : '--:--'}
                   </span>
                 </div>
 
