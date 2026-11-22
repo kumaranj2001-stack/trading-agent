@@ -68,6 +68,7 @@ export interface InfinityVisionChartProps {
   horizonCandles?: number;
   latencyMs?: number;
   isInterrupted?: boolean;
+  provider?: string;
   onReconnect?: () => void;
   onSelectZone?: (zoneName: string) => void;
   onToggleQuantumSimulation?: () => void;
@@ -118,6 +119,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   horizonCandles = 5,
   latencyMs = 12,
   isInterrupted = false,
+  provider = 'OANDA_V20_STREAMING',
   onReconnect,
   onSelectZone,
   onToggleQuantumSimulation,
@@ -1153,7 +1155,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
           ) : (
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>LIVE STREAMING · WSS {latencyMs}ms</span>
+              <span>LIVE STREAMING · {provider === 'OANDA_V20_STREAMING' ? 'OANDA v20 STREAM' : provider.replace(/_/g, ' ')} · WSS {latencyMs}ms</span>
             </div>
           )}
         </div>

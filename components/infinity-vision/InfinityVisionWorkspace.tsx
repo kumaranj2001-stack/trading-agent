@@ -450,6 +450,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
               horizonCandles={horizonCandles}
               latencyMs={liveLatencyMs}
               isInterrupted={isInterrupted}
+              provider={wsProvider}
               onReconnect={handleReconnect}
             />
           </ErrorBoundary>
