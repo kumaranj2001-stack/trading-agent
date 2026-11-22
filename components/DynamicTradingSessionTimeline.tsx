@@ -361,7 +361,9 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
   const localTimeZoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   return (
-    <div className={`rounded-xl border transition-all duration-300 shadow-xl overflow-hidden ${
+    <div 
+      suppressHydrationWarning
+      className={`rounded-xl border transition-all duration-300 shadow-xl overflow-hidden ${
       isLight 
         ? 'bg-white border-slate-200 text-slate-800 shadow-slate-200/60' 
         : 'bg-terminal-950 border-terminal-border text-white shadow-2xl'
@@ -404,7 +406,7 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
               <span className="text-cyan-400 font-bold" suppressHydrationWarning>{utcClockString}</span>
               <span>•</span>
               <span className={isLight ? 'text-slate-700' : 'text-slate-300'}>
-                Local: <strong className={isLight ? 'text-slate-900' : 'text-white'} suppressHydrationWarning>{mounted ? localClockString : '--:--:--'}</strong> ({mounted ? localTimeZoneName : 'UTC'})
+                Local: <strong className={isLight ? 'text-slate-900' : 'text-white'} suppressHydrationWarning>{mounted ? localClockString : '--:--:--'}</strong> <span suppressHydrationWarning>({mounted ? localTimeZoneName : 'UTC'})</span>
               </span>
               <span>•</span>
               <span className="text-indigo-400 font-semibold">Active Pair: {currentPair}</span>
@@ -423,8 +425,8 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
                 <span className="font-bold text-white block text-[11px] leading-tight">
                   ACTIVE NOW: {activeOverlap.name.toUpperCase()}
                 </span>
-                <span className="text-[10px] text-emerald-300 block">
-                  Closes in: <strong className="text-white">{formatCountdown(activeOverlap.secondsUntilEnd)}</strong>
+                <span className="text-[10px] text-emerald-300 block" suppressHydrationWarning>
+                  Closes in: <strong className="text-white" suppressHydrationWarning>{mounted ? formatCountdown(activeOverlap.secondsUntilEnd) : '--:--:--'}</strong>
                 </span>
               </div>
             </div>
@@ -437,8 +439,8 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
                 <span className="font-semibold block text-[11px] leading-tight">
                   NEXT OVERLAP: {nextOverlap.name}
                 </span>
-                <span className="text-[10px] text-cyan-400 block">
-                  Opens in: <strong>{formatCountdown(nextOverlap.secondsUntilStart)}</strong>
+                <span className="text-[10px] text-cyan-400 block" suppressHydrationWarning>
+                  Opens in: <strong suppressHydrationWarning>{mounted ? formatCountdown(nextOverlap.secondsUntilStart) : '--:--:--'}</strong>
                 </span>
               </div>
             </div>
@@ -503,10 +505,10 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
                   <span className="opacity-80">
                     {String(ov.utcStartHour).padStart(2, '0')}:{String(ov.utcStartMinute).padStart(2, '0')} - {String(ov.utcEndHour).padStart(2, '0')}:{String(ov.utcEndMinute).padStart(2, '0')} UTC
                   </span>
-                  <span className={`font-bold font-mono ${ov.isActive ? 'text-emerald-400' : 'text-cyan-400'}`}>
-                    {ov.isActive 
-                      ? formatCountdown(ov.secondsUntilEnd) 
-                      : `in ${formatCountdown(ov.secondsUntilStart)}`}
+                  <span className={`font-bold font-mono ${ov.isActive ? 'text-emerald-400' : 'text-cyan-400'}`} suppressHydrationWarning>
+                    {mounted 
+                      ? (ov.isActive ? formatCountdown(ov.secondsUntilEnd) : `in ${formatCountdown(ov.secondsUntilStart)}`)
+                      : '--:--:--'}
                   </span>
                 </div>
               </div>
@@ -617,8 +619,10 @@ export const DynamicTradingSessionTimeline: React.FC<DynamicTradingSessionTimeli
                     <span className="text-[10px] text-slate-400 uppercase">
                       {sess.isOpen ? 'Closes In:' : 'Opens In:'}
                     </span>
-                    <span className="font-bold text-xs font-mono text-cyan-400">
-                      {sess.isOpen ? formatCountdown(sess.secondsUntilClose) : formatCountdown(sess.secondsUntilOpen)}
+                    <span className="font-bold text-xs font-mono text-cyan-400" suppressHydrationWarning>
+                      {mounted 
+                        ? (sess.isOpen ? formatCountdown(sess.secondsUntilClose) : formatCountdown(sess.secondsUntilOpen))
+                        : '--:--:--'}
                     </span>
                   </div>
 

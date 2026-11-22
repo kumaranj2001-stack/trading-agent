@@ -19,6 +19,7 @@ export interface InfinityVisionOhlcBarProps {
   isLive?: boolean;
   latencyMs?: number;
   isInterrupted?: boolean;
+  provider?: string;
   theme?: 'light' | 'dark';
 }
 
@@ -37,6 +38,7 @@ export const InfinityVisionOhlcBar: React.FC<InfinityVisionOhlcBarProps> = ({
   isLive = true,
   latencyMs = 12,
   isInterrupted = false,
+  provider = 'OANDA_V20_STREAMING',
   theme = 'light',
 }) => {
   const isLight = theme === 'light';
@@ -107,7 +109,7 @@ export const InfinityVisionOhlcBar: React.FC<InfinityVisionOhlcBarProps> = ({
         {isInterrupted ? (
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/30 text-[10px] font-bold animate-pulse">
             <WifiOff className="w-3 h-3 text-amber-500" />
-            <span>INTERRUPTED</span>
+            <span>RECONNECTING...</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
@@ -116,11 +118,14 @@ export const InfinityVisionOhlcBar: React.FC<InfinityVisionOhlcBarProps> = ({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
             <span>LIVE ({latencyMs}ms)</span>
+            <span className="text-[9px] opacity-75 hidden lg:inline">
+              • {provider.replace(/_/g, ' ')}
+            </span>
           </div>
         )}
 
         <span className="hidden md:inline text-[10px] text-slate-400 font-sans">
-          Synchronized Terminal Feed
+          SSOT Parity Guaranteed
         </span>
       </div>
     </div>
