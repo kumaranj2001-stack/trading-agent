@@ -54,21 +54,21 @@ export const PortfolioPanel: React.FC<PortfolioPanelProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3 text-sm">
         <div className="bg-terminal-950 p-2.5 sm:p-3 rounded-lg border border-terminal-border min-w-0">
           <span className="text-slate-400 block text-[11px] sm:text-xs font-semibold uppercase mb-1 truncate">Account Balance</span>
-          <span className="text-white font-bold text-sm sm:text-base block truncate">
+          <span className="text-white font-bold text-sm sm:text-base block truncate" suppressHydrationWarning>
             ${portfolio.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         </div>
 
         <div className="bg-terminal-950 p-2.5 sm:p-3 rounded-lg border border-terminal-border min-w-0">
           <span className="text-slate-400 block text-[11px] sm:text-xs font-semibold uppercase mb-1 truncate">Net Equity</span>
-          <span className="text-white font-bold text-sm sm:text-base block truncate">
+          <span className="text-white font-bold text-sm sm:text-base block truncate" suppressHydrationWarning>
             ${(portfolio.balance + totalOpenPnl).toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         </div>
 
         <div className="bg-terminal-950 p-2.5 sm:p-3 rounded-lg border border-terminal-border min-w-0">
           <span className="text-slate-400 block text-[11px] sm:text-xs font-semibold uppercase mb-1 truncate">Free Margin</span>
-          <span className="text-cyan-400 font-bold text-sm sm:text-base block truncate">
+          <span className="text-cyan-400 font-bold text-sm sm:text-base block truncate" suppressHydrationWarning>
             ${portfolio.freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2 })}
           </span>
         </div>

@@ -27,7 +27,7 @@ export const INITIAL_PORTFOLIO: PortfolioState = {
       currentPrice: 1.11430,
       stopLoss: 1.10950,
       takeProfit: 1.12150,
-      openTime: new Date(Date.now() - 3600000 * 2).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      openTime: '10:00',
       pnl: 40.00,
       pnlPercent: 0.72,
       riskReward: 2.1,

@@ -45,7 +45,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-screen bg-terminal-950 text-slate-100 antialiased selection:bg-cyan-500/30 selection:text-cyan-200 transition-colors duration-200">
+      <body className="min-h-screen bg-terminal-950 text-slate-100 antialiased selection:bg-cyan-500/30 selection:text-cyan-200 transition-colors duration-200" suppressHydrationWarning>
         <TradingProvider>
           {children}
         </TradingProvider>
