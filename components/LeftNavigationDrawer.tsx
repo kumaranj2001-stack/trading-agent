@@ -376,6 +376,23 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
         window.scrollTo({ top: 0, behavior: 'smooth' });
       },
     },
+    {
+      id: 'scalping',
+      number: '15',
+      label: 'Scalping',
+      description: 'Ultra-Low Latency Scalp Hunter & Hold Desk',
+      icon: Zap,
+      color: 'text-cyan-400',
+      activeBg: 'bg-cyan-500/15 border-cyan-500/40 text-cyan-300 font-semibold',
+      isActive: activeTab === 'scalping',
+      badge: 'MICRO-TICK',
+      badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+      action: () => {
+        setActiveTab('scalping');
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
   ];
 
   return (

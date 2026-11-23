@@ -35,6 +35,7 @@ import { ArchitectureView } from '@/components/ArchitectureView';
 import { SettingsModal } from '@/components/SettingsModal';
 import { RiskRatioControllerModal } from '@/components/RiskRatioControllerModal';
 import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
+import { ScalpingDesk } from '@/components/ScalpingDesk';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
 import { VisionAtlasWorkspace } from '@/components/VisionAtlasWorkspace';
 import { MacroIntelligenceDesk } from '@/components/MacroIntelligenceDesk';
@@ -1535,6 +1536,19 @@ export default function Home() {
             }}
             isScanning={isScanning}
             onRefreshScan={fetchOpportunities}
+          />
+        )}
+
+        {/* Tab 15: Dedicated Ultra-Low Latency Scalping Module */}
+        {activeTab === 'scalping' && (
+          <ScalpingDesk
+            isFullPage={true}
+            pair={selectedPair}
+            onSelectPair={(pair) => {
+              handleSelectPair(pair);
+            }}
+            onBackToTerminal={() => setActiveTab('terminal')}
+            theme={theme}
           />
         )}
       </main>

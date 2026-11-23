@@ -52,8 +52,9 @@ export type NavigationTab =
   | 'macro-engine'         // 11. Alias
   | 'scanner'              // 12. Scanner (Multi-Asset Screener & Confluence Hunter)
   | 'var'                  // 13. VAR (1,000-Path Monte Carlo Value-at-Risk Simulation Desk)
-  | 'backtest'             // Backtest (Monte Carlo Walk-Forward Backtester)
-  | 'firebase'             // 15. Firebase (Firestore Cloud Realtime State Sync)
+  | 'backtest'             // 14. Backtest (Monte Carlo Walk-Forward Backtester)
+  | 'firebase'             // 14. Firebase (Firestore Cloud Realtime State Sync)
+  | 'scalping'             // 15. Scalping (Ultra-Low Latency Scalp Hunter & Precision Desk)
   | 'sequential-pipeline'  // 16. Seven-Stage Deterministic Sequential Pipeline
   | 'pipeline';            // 16. Pipeline alias
 
@@ -3038,3 +3039,152 @@ export interface VisionAtlasPayload {
     executiveNarrative: string;
   };
 }
+
+// ============================================================================
+// ⚡ SCALPING ENGINE & ULTRA-LOW LATENCY DESK TYPES (Navigation Item 15)
+// ============================================================================
+
+export interface ScalpOpportunity {
+  id: string;
+  pair: CurrencyPair;
+  grade: 'A+' | 'A' | 'B';
+  direction: 'BUY' | 'SELL';
+  livePrice: number;
+  entryPrice: number;
+  distancePips: number; // 0.5 to 3.0 pips (proximity to live market)
+  takeProfit: number;
+  stopLoss: number;
+  tpPips: number; // 3.0 to 8.0 pips
+  slPips: number; // 2.0 to 5.0 pips
+  riskRewardRatio: number;
+  spread: number;
+  maxPermissibleSpread: number;
+  spreadPassed: boolean;
+  newsFilterBlocked: boolean;
+  newsFilterReason: string;
+  mlPattern: {
+    patternType: 'MICRO_DELTA_ABSORPTION' | 'ORDER_BOOK_SWEEP_REVERSAL' | 'MOMENTUM_EXPANSION_BURST' | 'TICK_IMBALANCE_SPIKE';
+    predictedMicroMovePips: number;
+    probabilityScore: number; // 0 to 100
+    timeHorizonSeconds: number;
+  };
+  orderBookAnalysis: {
+    bidDominancePercent: number;
+    askDominancePercent: number;
+    netDeltaImbalanceRatio: number;
+    nearestLiquidityPoolPrice: number;
+    nearestLiquidityPoolLots: number;
+  };
+  executionRouting: 'TWAP_MICRO_SLICER' | 'PASSIVE_LIMIT_MAKER' | 'AGGRESSIVE_SWEEP_TAKER';
+  timeframeConfluence: {
+    m1: 'BULLISH' | 'BEARISH';
+    m5: 'BULLISH' | 'BEARISH';
+    m15: 'BULLISH' | 'BEARISH';
+  };
+  timestamp: number;
+  status: 'ACTIVE_READY' | 'EXECUTING' | 'INVALIDATED';
+}
+
+export interface InFlightScalp {
+  id: string;
+  setupId: string;
+  pair: CurrencyPair;
+  direction: 'BUY' | 'SELL';
+  entryPrice: number;
+  currentPrice: number;
+  takeProfit: number;
+  stopLoss: number;
+  trailingStopLevel: number;
+  trailingArmed: boolean;
+  lots: number;
+  holdToCompletion: boolean; // strictly locked until TP or SL hit
+  pnlUsd: number;
+  pnlPips: number;
+  slippagePips: number;
+  fillLatencyMs: number;
+  openTimestamp: number;
+  elapsedSeconds: number;
+  progressPercent: number; // 0 to 100
+  status: 'IN_FLIGHT' | 'COMPLETED_TP' | 'COMPLETED_SL';
+}
+
+export interface InvalidatedScalpSetup {
+  id: string;
+  pair: CurrencyPair;
+  direction: 'BUY' | 'SELL';
+  grade: 'A+' | 'A' | 'B';
+  invalidatedTimestamp: number;
+  invalidationCategory: 'MARKET_STRUCTURE_SHIFT' | 'SPREAD_SPIKE' | 'NEWS_VOLATILITY_WINDOW' | 'LIQUIDITY_RUN_EXHAUSTION';
+  exactReason: string;
+  telemetrySnapshot: {
+    spread: number;
+    observedPrice: number;
+    deltaChange: string;
+    newsEvent?: string;
+  };
+}
+
+export interface ScalpTradeLogEntry {
+  id: string;
+  timestamp: number;
+  pair: CurrencyPair;
+  direction: 'BUY' | 'SELL';
+  entryPrice: number;
+  exitPrice: number;
+  lots: number;
+  durationSeconds: number;
+  grossPnlUsd: number;
+  spreadCostUsd: number;
+  commissionFeeUsd: number;
+  netPnlUsd: number;
+  slippagePips: number;
+  outcome: 'TP_HIT' | 'SL_HIT';
+}
+
+export interface ScalpCircuitBreakerState {
+  dailyDrawdownPercent: number;
+  maxDailyDrawdownCap: number; // e.g. 2.0%
+  isDrawdownLocked: boolean;
+  tradesThisHour: number;
+  maxTradesPerHour: number; // e.g. 10
+  consecutiveLosses: number;
+  maxConsecutiveLosses: number; // e.g. 3
+  coolingPeriodUntil: number | null;
+  breakerActive: boolean;
+}
+
+export interface ScalpBacktestResult {
+  totalTrades: number;
+  winRatePercent: number;
+  profitFactor: number;
+  grossPnlUsd: number;
+  totalSpreadAndFeesUsd: number;
+  netPnlUsd: number;
+  maxDrawdownPercent: number;
+  avgTradeDurationSeconds: number;
+  sampleTrades: Array<{
+    id: string;
+    pair: CurrencyPair;
+    direction: 'BUY' | 'SELL';
+    durationSeconds: number;
+    pnlUsd: number;
+    netPnlUsd: number;
+    outcome: 'TP_HIT' | 'SL_HIT';
+  }>;
+}
+
+export interface ScalpCopyTraderProfile {
+  id: string;
+  name: string;
+  handle: string;
+  avatar: string;
+  winRate: number;
+  profitFactor: number;
+  totalTrades: number;
+  avgDurationSec: number;
+  copiersCount: number;
+  riskRating: 'LOW' | 'MEDIUM' | 'HIGH';
+  isMirroring: boolean;
+  allocatedEquityUsd: number;
+}
+
