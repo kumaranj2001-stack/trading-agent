@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import dynamic from 'next/dynamic';
 import { CurrencyPair, TimeFrame, Candle } from '@/lib/types';
 import { InfinityVisionToolbar, ChartViewMode } from './InfinityVisionToolbar';
 import { InfinityVisionOhlcBar } from './InfinityVisionOhlcBar';
+import { InfinityVisionChart } from './InfinityVisionChart';
 import { QuantumVisionDrawer } from './QuantumVisionDrawer';
 import { LiquidityHeatmapModal } from './LiquidityHeatmapModal';
 import { IndicatorsModal } from './IndicatorsModal';
@@ -16,20 +16,6 @@ import { BASE_PRICES } from '@/lib/marketData';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
 import { visionSystemLogger } from '@/lib/visionSystemLogger';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-
-const InfinityVisionChart = dynamic(
-  () => import('./InfinityVisionChart').then((m) => m.InfinityVisionChart),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900/60 text-slate-400 gap-3 min-h-[350px]">
-        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-mono tracking-wider text-cyan-400">INITIALIZING LIGHTWEIGHT CHART CANVAS...</span>
-      </div>
-    ),
-  }
-);
 
 export interface InfinityVisionWorkspaceProps {
   pair: CurrencyPair;
@@ -89,7 +75,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
     return LiveMarketFeedManager.getCanonicalCandles(initialPair, initialTf);
   });
   const [livePrice, setLivePrice] = useState<number>(() => {
-    return LiveMarketFeedManager.getCanonicalPrice(initialPair) || BASE_PRICES[initialPair] || 3538.20;
+    return LiveMarketFeedManager.getCanonicalPrice(initialPair) || BASE_PRICES[initialPair] || 4074.90;
   });
   const [liveChangePercent, setLiveChangePercent] = useState<number>(-0.06);
   const [liveTimestamp, setLiveTimestamp] = useState<number>(Date.now());
@@ -102,8 +88,6 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   const [isVisionAtlasLabOpen, setIsVisionAtlasLabOpen] = useState<boolean>(false);
   const [isLiquidityOpen, setIsLiquidityOpen] = useState<boolean>(false);
   const [isIndicatorsOpen, setIsIndicatorsOpen] = useState<boolean>(false);
-  const [showMarketStructure, setShowMarketStructure] = useState<boolean>(true);
-  const [showInternalStructure, setShowInternalStructure] = useState<boolean>(true);
   const [activeRightSidebarMode, setActiveRightSidebarMode] = useState<'scenarios' | 'market_dna' | 'vision_atlas'>('scenarios');
   const [horizonCandles, setHorizonCandles] = useState<number>(5);
 
@@ -119,40 +103,21 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
     setSelectedTf(initialTf);
   }, [initialTf]);
 
-  // 🌐 Continuous Real-Time Streaming Ingestion Engine (WebSocket & Authoritative Reference Anchor)
+  // Sync candles from external props (Terminal parent state)
   useEffect(() => {
-    let isCancelled = false;
-
-    // 1. Immediately inspect canonical feed or trigger fresh fetch for (selectedPair, selectedTf)
-    const existingCandles = LiveMarketFeedManager.getCanonicalCandles(selectedPair, selectedTf);
-    if (existingCandles && existingCandles.length >= 10) {
-      setLiveCandles(existingCandles);
-      const latestPrice = existingCandles[existingCandles.length - 1].close;
-      setLivePrice(latestPrice);
-    } else {
-      // Direct REST pull from authoritative OANDA TradingView scanner pipeline
-      fetch(`/api/market?pair=${encodeURIComponent(selectedPair)}&timeframe=${selectedTf}&count=65`)
-        .then(res => res.json())
-        .then(json => {
-          if (!isCancelled && json.success && json.data?.candles?.length > 0) {
-            LiveMarketFeedManager.setCanonicalFeed(selectedPair, selectedTf, json.data.candles);
-            setLiveCandles(json.data.candles);
-            if (json.data.currentPrice) {
-              setLivePrice(json.data.currentPrice);
-            }
-          }
-        })
-        .catch(err => {
-          console.warn('[InfinityVision] Initial market candle fetch notice:', err);
-        });
+    if (initialCandles && initialCandles.length > 0) {
+      setLiveCandles(initialCandles);
+      const latest = initialCandles[initialCandles.length - 1];
+      if (latest && Number.isFinite(latest.close)) {
+        setLivePrice(latest.close);
+      }
     }
+  }, [initialCandles]);
 
-    // 2. Start authoritative real-time live ticker (1000ms low-latency cadence)
-    const stopLiveFeed = LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1000);
-
-    // 3. Subscribe to real-time micro-ticks from LiveMarketFeedManager
+  // 🌐 WebSocket Streaming Subscription & Interruption Telemetry
+  useEffect(() => {
+    // 1. Subscribe to canonical tick broadcasts for the selected pair
     const unsubscribe = LiveMarketFeedManager.subscribe((event) => {
-      if (isCancelled) return;
       if (event.pair === selectedPair) {
         setLiveCandles(event.candles);
         setLivePrice(event.livePrice);
@@ -161,51 +126,18 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
         if (event.latencyMs) {
           setLiveLatencyMs(event.latencyMs);
         }
-        setIsInterrupted(false);
       }
     });
 
-    // 4. Subscribe to WebSocket telemetry for drop / latency interruption handling
+    // 2. Subscribe to WebSocket telemetry for drop / latency interruption handling
     const unsubTel = LiveMarketFeedManager.subscribeWebSocketTelemetry((tel) => {
-      if (isCancelled) return;
       const session = MarketSessionManager.getMarketSessionInfo(selectedPair);
       const isStale = !session.isFrozen && ((Date.now() - tel.lastTickTimestamp) > 20000);
       setIsInterrupted(!tel.isConnected || isStale);
       if (tel.latencyMs) setLiveLatencyMs(tel.latencyMs);
     });
 
-    // 5. Authoritative backend continuous verification feed (safely guarded)
-    let eventSource: EventSource | null = null;
-    try {
-      if (typeof window !== 'undefined' && typeof EventSource !== 'undefined') {
-        eventSource = new EventSource(`/api/vision-atlas/stream?symbol=${encodeURIComponent(selectedPair)}&timeframe=${selectedTf}`);
-        eventSource.onmessage = (e) => {
-          if (isCancelled) return;
-          try {
-            const streamData = JSON.parse(e.data);
-            if (streamData.type === 'TICK' || streamData.type === 'SNAPSHOT') {
-              setIsInterrupted(false);
-              if (streamData.telemetry?.latencyMs) {
-                setLiveLatencyMs(streamData.telemetry.latencyMs);
-              }
-            }
-          } catch {}
-        };
-        eventSource.onerror = () => {
-          if (eventSource) {
-            try {
-              eventSource.close();
-            } catch {}
-            eventSource = null;
-          }
-        };
-      }
-    } catch {
-      // Local LiveMarketFeedManager maintains continuous decoupled feed with 0ms interruption
-    }
-
     const staleTimer = setInterval(() => {
-      if (isCancelled) return;
       const tel = LiveMarketFeedManager.getWebSocketTelemetry();
       const session = MarketSessionManager.getMarketSessionInfo(selectedPair);
       const isStale = !session.isFrozen && ((Date.now() - tel.lastTickTimestamp) > 20000);
@@ -213,24 +145,14 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
     }, 2000);
 
     return () => {
-      isCancelled = true;
-      stopLiveFeed();
       unsubscribe();
       unsubTel();
       clearInterval(staleTimer);
-      if (eventSource) {
-        try {
-          eventSource.onmessage = null;
-          eventSource.onerror = null;
-          eventSource.close();
-        } catch {}
-        eventSource = null;
-      }
     };
   }, [selectedPair, selectedTf]);
 
   const handleReconnect = () => {
-    LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1000);
+    LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1500);
     setIsInterrupted(false);
   };
 
@@ -449,8 +371,6 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
           horizonCandles={horizonCandles}
           onChangeHorizon={setHorizonCandles}
           theme={theme}
-          pair={selectedPair}
-          livePrice={livePrice}
         />
 
         {/* Center Floating Liquidity Heatmap Window */}
@@ -460,39 +380,25 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
           pair={selectedPair}
           timeframe={selectedTf}
           theme={theme}
-          livePrice={livePrice}
         />
 
         {/* 📈 Central Real-Time Streaming Chart Container (Direct TradingView & Confluence Encapsulation) */}
         <div className="flex-1 p-2 sm:p-3 relative flex flex-col min-w-0 min-h-0 bg-slate-100 dark:bg-terminal-950/60 overflow-hidden">
-          <ErrorBoundary fallbackTitle="Infinity Vision Native Chart Engine">
-            <InfinityVisionChart
-              candles={liveCandles}
-              livePrice={livePrice}
-              pair={selectedPair}
-              timeframe={selectedTf}
-              theme={theme}
-              showIndicatorsOverlay={chartViewMode === 'Advanced' || chartViewMode === 'Standard' || isIndicatorsOpen}
-              showQuantumSimulation={isQuantumVisionOpen}
-              showMarketDna={isMarketDnaOpen}
-              showVisionAtlasLab={isVisionAtlasLabOpen}
-              showLiquidityHeatmap={isLiquidityOpen}
-              showMarketStructure={showMarketStructure}
-              showInternalStructure={showInternalStructure}
-              onToggleMarketStructure={setShowMarketStructure}
-              onToggleInternalStructure={setShowInternalStructure}
-              onToggleQuantumSimulation={handleToggleQuantumVision}
-              onToggleMarketDna={handleToggleMarketDna}
-              onToggleVisionAtlasLab={handleToggleVisionAtlasLab}
-              onToggleLiquidityHeatmap={handleToggleLiquidity}
-              chartType={chartType}
-              showPatternOnChart={showPatternOnChart}
-              horizonCandles={horizonCandles}
-              latencyMs={liveLatencyMs}
-              isInterrupted={isInterrupted}
-              onReconnect={handleReconnect}
-            />
-          </ErrorBoundary>
+          <InfinityVisionChart
+            candles={liveCandles}
+            pair={selectedPair}
+            timeframe={selectedTf}
+            theme={theme}
+            showIndicatorsOverlay={chartViewMode === 'Advanced' || chartViewMode === 'Standard' || isIndicatorsOpen}
+            showQuantumSimulation={isQuantumVisionOpen}
+            showMarketDna={isMarketDnaOpen}
+            chartType={chartType}
+            showPatternOnChart={showPatternOnChart}
+            horizonCandles={horizonCandles}
+            latencyMs={liveLatencyMs}
+            isInterrupted={isInterrupted}
+            onReconnect={handleReconnect}
+          />
         </div>
 
         {/* Right Sidebar: Dynamic Mode (Scenarios & Zones vs Market DNA vs Vision Atlas Lab) */}
@@ -532,7 +438,6 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
               pair={selectedPair}
               timeframe={selectedTf}
               theme={theme}
-              livePrice={livePrice}
               onTogglePatternOnChart={setShowPatternOnChart}
               onToggleChartMode={setChartType}
             />
@@ -543,7 +448,6 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
               pair={selectedPair}
               timeframe={selectedTf}
               theme={theme}
-              livePrice={livePrice}
               onSimulate={() => setIsQuantumVisionOpen(true)}
             />
           )}
@@ -555,8 +459,6 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
         pair={selectedPair}
         timeframe={selectedTf}
         theme={theme}
-        livePrice={livePrice}
-        candles={liveCandles}
       />
 
       {/* ⚙️ Comprehensive Indicators Drawer */}

@@ -1,8 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import dynamic from 'next/dynamic';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { 
   CurrencyPair, 
   TimeFrame, 
@@ -28,46 +26,17 @@ import { UnifiedDecisionBanner } from '@/components/UnifiedDecisionBanner';
 import { ChartView } from '@/components/ChartView';
 import { AgentSwarmPanel } from '@/components/AgentSwarmPanel';
 import { AgentDebateFeed } from '@/components/AgentDebateFeed';
+import { PortfolioPanel } from '@/components/PortfolioPanel';
 import { ActiveEntryInvalidationBanner } from '@/components/ActiveEntryInvalidationBanner';
+import { MultiAssetIngestionTelemetryCard } from '@/components/MultiAssetIngestionTelemetryCard';
+import { DynamicTradingSessionTimeline } from '@/components/DynamicTradingSessionTimeline';
 import { BacktestView } from '@/components/BacktestModal';
 import { ArchitectureView } from '@/components/ArchitectureView';
 import { SettingsModal } from '@/components/SettingsModal';
 import { RiskRatioControllerModal } from '@/components/RiskRatioControllerModal';
 import { OpportunityScannerModal } from '@/components/OpportunityScannerModal';
 import { EconomicCalendarModal } from '@/components/EconomicCalendarModal';
-
-const PortfolioPanel = dynamic(
-  () => import('@/components/PortfolioPanel').then((mod) => mod.PortfolioPanel),
-  { ssr: false }
-);
-
-const MultiAssetIngestionTelemetryCard = dynamic(
-  () => import('@/components/MultiAssetIngestionTelemetryCard').then((mod) => mod.MultiAssetIngestionTelemetryCard),
-  { ssr: false }
-);
-
-const DynamicTradingSessionTimeline = dynamic(
-  () => import('@/components/DynamicTradingSessionTimeline').then((mod) => mod.DynamicTradingSessionTimeline),
-  { ssr: false }
-);
-
-const MarketCloseFreezeBanner = dynamic(
-  () => import('@/components/MarketCloseFreezeBanner').then((mod) => mod.MarketCloseFreezeBanner),
-  { ssr: false }
-);
-
-const VisionAtlasWorkspace = dynamic(
-  () => import('@/components/VisionAtlasWorkspace').then((mod) => mod.VisionAtlasWorkspace),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="min-h-[500px] w-full flex flex-col items-center justify-center bg-terminal-950 border border-terminal-border rounded-xl text-slate-400 gap-3 p-12">
-        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-mono tracking-wider text-cyan-400">INITIALIZING VISION ATLAS LAB & MULTI-FACTOR ENGINE...</span>
-      </div>
-    ),
-  }
-);
+import { VisionAtlasWorkspace } from '@/components/VisionAtlasWorkspace';
 import { MacroIntelligenceDesk } from '@/components/MacroIntelligenceDesk';
 import { MonteCarloModal } from '@/components/MonteCarloModal';
 import { KnowledgeBaseModal } from '@/components/KnowledgeBaseModal';
@@ -83,6 +52,7 @@ import { getMarketSegmentForSymbol, PIP_VALUES, generateCandles } from '@/lib/ma
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 import { MarketSessionInfo, TradeHistoryItem } from '@/lib/types';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
+import { MarketCloseFreezeBanner } from '@/components/MarketCloseFreezeBanner';
 import { AutonomousSwarmEngine, AutonomousSwarmTelemetry } from '@/lib/autonomousSwarmEngine';
 import { tradeInvalidationEngine } from '@/lib/tradeInvalidationEngine';
 import { stateLatchingEngine } from '@/lib/stateLatchingEngine';
@@ -1233,13 +1203,12 @@ export default function Home() {
 
         {/* Tab 1: Terminal */}
         {activeTab === 'terminal' && (
-          <ErrorBoundary fallbackTitle="QRI Trader Terminal">
-            <div className="space-y-4">
-              {/* 🌐 Dynamic Trading Session Clock Timeline & Overlap Matrix (Placed at the very top) */}
-              <DynamicTradingSessionTimeline
-                currentPair={selectedPair}
-                theme={theme}
-              />
+          <div className="space-y-4">
+            {/* 🌐 Dynamic Trading Session Clock Timeline & Overlap Matrix (Placed at the very top) */}
+            <DynamicTradingSessionTimeline
+              currentPair={selectedPair}
+              theme={theme}
+            />
 
             {/* 🌟 UNIFIED 5-ROLE BUY/SELL DECISION BANNER (Preserved Institutional Real-Time Engine Layer) */}
             {consensus && consensus.pair === selectedPair ? (
@@ -1337,29 +1306,26 @@ export default function Home() {
               theme={theme}
             />
           </div>
-        </ErrorBoundary>
         )}
 
         {/* Tab 03: Vision Atlas Lab - Multi-Factor Confluence & 2,100+ Institutional Strategies */}
         {(activeTab === 'vision-atlas' || (activeTab as string) === 'vision-atlas-lab') && (
-          <ErrorBoundary fallbackTitle="Vision Atlas Lab Module">
-            <VisionAtlasWorkspace
-              pair={selectedPair}
-              timeframe={timeframe}
-              candles={candles}
-              onSelectPair={handleSelectPair}
-              onSelectTimeframe={handleSelectTimeframe}
-              onClose={() => setActiveTab('terminal')}
-              onOpenJournal={() => setActiveTab('journals')}
-              onSyncToTerminal={(params) => {
-                handleSelectPair(params.symbol);
-                setActiveTab('terminal');
-                showNotification(`VISION ATLAS SYNCED: ${params.direction} on ${params.symbol} loaded into Terminal.`);
-              }}
-              theme={theme}
-              onToggleTheme={handleToggleTheme}
-            />
-          </ErrorBoundary>
+          <VisionAtlasWorkspace
+            pair={selectedPair}
+            timeframe={timeframe}
+            candles={candles}
+            onSelectPair={handleSelectPair}
+            onSelectTimeframe={handleSelectTimeframe}
+            onClose={() => setActiveTab('terminal')}
+            onOpenJournal={() => setActiveTab('journals')}
+            onSyncToTerminal={(params) => {
+              handleSelectPair(params.symbol);
+              setActiveTab('terminal');
+              showNotification(`VISION ATLAS SYNCED: ${params.direction} on ${params.symbol} loaded into Terminal.`);
+            }}
+            theme={theme}
+            onToggleTheme={handleToggleTheme}
+          />
         )}
 
         {/* Tab 2: Dedicated 5-Desk Agent Swarm Command Desk */}

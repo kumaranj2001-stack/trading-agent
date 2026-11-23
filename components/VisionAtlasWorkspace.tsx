@@ -62,21 +62,7 @@ import { TECHNICAL_KNOWLEDGE_BASE } from '@/lib/knowledge/technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from '@/lib/knowledge/fundamentalKnowledge';
 import { knowledgeEngine } from '@/lib/knowledge/KnowledgeEngine';
 import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
-import dynamic from 'next/dynamic';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-
-const InfinityVisionWorkspace = dynamic(
-  () => import('./infinity-vision/InfinityVisionWorkspace').then((m) => m.InfinityVisionWorkspace),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-[650px] flex flex-col items-center justify-center bg-slate-900/60 text-slate-400 gap-3 border border-terminal-border rounded-xl">
-        <div className="w-8 h-8 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs font-mono tracking-wider text-cyan-400">INITIALIZING INFINITY VISION DESK...</span>
-      </div>
-    ),
-  }
-);
+import { InfinityVisionWorkspace } from './infinity-vision/InfinityVisionWorkspace';
 
 export interface VisionAtlasWorkspaceProps {
   pair: CurrencyPair;
@@ -378,26 +364,24 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
           </button>
         </div>
 
-        <ErrorBoundary fallbackTitle="Infinity Vision Workspace">
-          <InfinityVisionWorkspace
-            pair={selectedPair}
-            timeframe={selectedTimeframe}
-            candles={initialCandles}
-            onSelectPair={(p) => {
-              setSelectedPair(p);
-              if (onSelectPair) onSelectPair(p);
-            }}
-            onSelectTimeframe={(tf) => {
-              setSelectedTimeframe(tf);
-              if (onSelectTimeframe) onSelectTimeframe(tf);
-            }}
-            onClose={onClose}
-            onOpenJournal={onOpenJournal}
-            onSyncToTerminal={onSyncToTerminal}
-            theme={theme}
-            onToggleTheme={onToggleTheme}
-          />
-        </ErrorBoundary>
+        <InfinityVisionWorkspace
+          pair={selectedPair}
+          timeframe={selectedTimeframe}
+          candles={initialCandles}
+          onSelectPair={(p) => {
+            setSelectedPair(p);
+            if (onSelectPair) onSelectPair(p);
+          }}
+          onSelectTimeframe={(tf) => {
+            setSelectedTimeframe(tf);
+            if (onSelectTimeframe) onSelectTimeframe(tf);
+          }}
+          onClose={onClose}
+          onOpenJournal={onOpenJournal}
+          onSyncToTerminal={onSyncToTerminal}
+          theme={theme}
+          onToggleTheme={onToggleTheme}
+        />
       </div>
     );
   }
