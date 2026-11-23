@@ -1544,6 +1544,8 @@ export default function Home() {
           <ScalpingDesk
             isFullPage={true}
             pair={selectedPair}
+            livePrice={LiveMarketFeedManager.getCanonicalPrice(selectedPair) || (candles && candles.length > 0 ? candles[candles.length - 1]?.close : undefined) || (selectedPair === 'XAU/USD' ? 3787.37 : undefined)}
+            consensus={consensus}
             onSelectPair={(pair) => {
               handleSelectPair(pair);
             }}

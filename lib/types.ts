@@ -3083,6 +3083,13 @@ export interface ScalpOpportunity {
   };
   timestamp: number;
   status: 'ACTIVE_READY' | 'EXECUTING' | 'INVALIDATED';
+  // SSOT Single Source of Truth & 7-Agent Debate Consensus
+  consensusVerdict?: 'BUY' | 'SELL' | 'HOLD_EDGE';
+  consensusConfidence?: number;
+  linkedRuleId?: string;
+  gatekeeperSignature?: string;
+  sequenceId?: number;
+  traceId?: string;
 }
 
 export interface InFlightScalp {

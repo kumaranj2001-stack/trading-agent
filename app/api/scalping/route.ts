@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { scalpingEngine } from '@/lib/scalpingEngine';
+import { ssotPriceSyncEngine } from '@/lib/ssotPriceSyncEngine';
 import { CurrencyPair } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -10,10 +11,18 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const minGrade = (searchParams.get('minGrade') as 'A+' | 'A' | 'B') || 'B';
     const maxDistancePips = searchParams.get('maxDistance') ? parseFloat(searchParams.get('maxDistance')!) : 3.0;
+    const pairParam = (searchParams.get('pair') as CurrencyPair) || undefined;
+    const livePriceParam = searchParams.get('livePrice') ? parseFloat(searchParams.get('livePrice')!) : undefined;
+    const consensusDirParam = (searchParams.get('consensusDir') as 'BUY' | 'SELL') || undefined;
+    const consensusConfParam = searchParams.get('consensusConf') ? parseFloat(searchParams.get('consensusConf')!) : undefined;
 
     const opportunities = scalpingEngine.pollScannerOpportunities({
       minGrade,
       maxDistancePips,
+      activePair: pairParam,
+      currentLivePrice: livePriceParam,
+      consensusDirection: consensusDirParam,
+      consensusConfidence: consensusConfParam,
     });
 
     const inFlight = scalpingEngine.getInFlightScalps();
@@ -30,6 +39,10 @@ export async function GET(req: NextRequest) {
     const wins = history.filter(t => t.outcome === 'TP_HIT').length;
     const winRate = history.length > 0 ? Number(((wins / history.length) * 100).toFixed(1)) : 0;
 
+    const canonicalLive = (pairParam && livePriceParam) 
+      ? livePriceParam 
+      : ssotPriceSyncEngine.getCanonicalPrice(pairParam || 'XAU/USD');
+
     return NextResponse.json({
       success: true,
       timestamp: Date.now(),
@@ -40,6 +53,12 @@ export async function GET(req: NextRequest) {
         history,
         circuitBreaker,
         copyTraders,
+        ssotTelemetry: {
+          canonicalPrice: canonicalLive,
+          sequenceId: ssotPriceSyncEngine.getLatestSequenceId(),
+          failSafeState: ssotPriceSyncEngine.getFailSafeState(),
+          modulesTelemetry: ssotPriceSyncEngine.getModulesTelemetry(),
+        },
         costAnalytics: {
           totalGrossUsd: Number(totalGross.toFixed(2)),
           totalSpreadCostUsd: Number(totalSpread.toFixed(2)),
