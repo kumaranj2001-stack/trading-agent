@@ -68,7 +68,6 @@ export interface InfinityVisionChartProps {
   horizonCandles?: number;
   latencyMs?: number;
   isInterrupted?: boolean;
-  provider?: string;
   onReconnect?: () => void;
   onSelectZone?: (zoneName: string) => void;
   onToggleQuantumSimulation?: () => void;
@@ -119,7 +118,6 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
   horizonCandles = 5,
   latencyMs = 12,
   isInterrupted = false,
-  provider = 'OANDA_V20_STREAMING',
   onReconnect,
   onSelectZone,
   onToggleQuantumSimulation,
@@ -938,7 +936,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
           chartInstanceRef.current.timeScale().fitContent();
         }
       } else {
-        // 🚀 Native Continuous Low-Latency Ticking (series.update) - ZERO BUFFERING, ZERO DELAY
+        // 🚀 Native micro-tick real-time continuous stream (series.update) - ZERO BUFFERING, ZERO LAG
         const latest = safeCandles[safeCandles.length - 1];
         const timeVal = Math.floor((latest.timestamp || Date.now()) / 1000) as UTCTimestamp;
 
@@ -969,7 +967,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
         }
       }
 
-      // Synchronize live price line instantaneously
+      // Synchronize live price line
       if (priceLineRef.current) {
         priceLineRef.current.applyOptions({
           price: lastCandle.close,
@@ -979,7 +977,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
 
       setRenderVersion(v => v + 1);
     } catch (err) {
-      console.warn('Real-time streaming update error:', err);
+      console.warn('Dynamic data update error:', err);
     }
   }, [safeCandles, chartType, showIndicatorsOverlay, ema20, ema50, pair, timeframe, lastCandle.close, priceDecimals]);
 
@@ -1155,7 +1153,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
           ) : (
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>LIVE STREAMING · {provider === 'OANDA_V20_STREAMING' ? 'OANDA v20 STREAM' : provider.replace(/_/g, ' ')} · WSS {latencyMs}ms</span>
+              <span>LIVE STREAMING · WSS {latencyMs}ms</span>
             </div>
           )}
         </div>
@@ -1246,7 +1244,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
             onClick={() => {
               const next = !showMarketStructure;
               setShowMarketStructure(next);
-              if (onToggleMarketStructure) onToggleMarketStructure(next);
+              onToggleMarketStructure?.(next);
             }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showMarketStructure
@@ -1264,7 +1262,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
             onClick={() => {
               const next = !showInternalStructure;
               setShowInternalStructure(next);
-              if (onToggleInternalStructure) onToggleInternalStructure(next);
+              onToggleInternalStructure?.(next);
             }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showInternalStructure
@@ -1282,7 +1280,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
             onClick={() => {
               const next = !showQuantumSimulation;
               setShowQuantumSimulation(next);
-              if (onToggleQuantumSimulation) onToggleQuantumSimulation();
+              onToggleQuantumSimulation?.();
             }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showQuantumSimulation
@@ -1300,7 +1298,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
             onClick={() => {
               const next = !showMarketDna;
               setShowMarketDna(next);
-              if (onToggleMarketDna) onToggleMarketDna();
+              onToggleMarketDna?.();
             }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showMarketDna
@@ -1318,7 +1316,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
             onClick={() => {
               const next = !showVisionAtlasLab;
               setShowVisionAtlasLab(next);
-              if (onToggleVisionAtlasLab) onToggleVisionAtlasLab();
+              onToggleVisionAtlasLab?.();
             }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showVisionAtlasLab
@@ -1336,7 +1334,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
             onClick={() => {
               const next = !showLiquidityHeatmap;
               setShowLiquidityHeatmap(next);
-              if (onToggleLiquidityHeatmap) onToggleLiquidityHeatmap();
+              onToggleLiquidityHeatmap?.();
             }}
             className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
               showLiquidityHeatmap
@@ -1521,55 +1519,68 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                 );
               })}
 
-              {/* Fair Value Gaps (FVG) Imbalance Zones */}
-              {marketStructureData.fvgZones?.map((fvg, idx) => {
-                const cTop = getCoordinates(fvg.timeSec, fvg.max);
-                const cBottom = getCoordinates(fvg.timeSec, fvg.min);
-                const yTop = Math.min(cTop.y, cBottom.y);
-                const h = Math.max(Math.abs(cBottom.y - cTop.y), 4);
+              {/* Fair Value Gaps (FVG Imbalance Zones) */}
+              {marketStructureData.fvgZones.map((fvg, idx) => {
+                const coordTop = getCoordinates(fvg.timeSec, fvg.max);
+                const coordBottom = getCoordinates(fvg.timeSec, fvg.min);
+                const coordX = getCoordinates(fvg.timeSec, fvg.min);
+                const yTop = Math.min(coordTop.y, coordBottom.y);
+                const h = Math.max(Math.abs(coordBottom.y - coordTop.y), 4);
+                const isBull = fvg.type === 'BULLISH';
+
                 return (
-                  <g key={`fvg-${idx}`}>
+                  <g key={`fvg-${idx}`} opacity="0.85">
                     <rect
-                      x={cTop.x}
+                      x={coordX.x}
                       y={yTop}
-                      width={Math.max(dimensions.width - cTop.x - 65, 35)}
+                      width={Math.max(dimensions.width - coordX.x - 65, 40)}
                       height={h}
-                      fill={fvg.type === 'BULLISH' ? 'rgba(6, 182, 212, 0.16)' : 'rgba(239, 68, 68, 0.14)'}
-                      stroke={fvg.type === 'BULLISH' ? '#06b6d4' : '#ef4444'}
+                      fill={isBull ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)'}
+                      stroke={isBull ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)'}
                       strokeWidth="1"
-                      strokeDasharray="3 2"
+                      strokeDasharray="2 2"
                     />
                     <text
-                      x={cTop.x + 6}
+                      x={coordX.x + 6}
                       y={yTop + 10}
-                      fill={fvg.type === 'BULLISH' ? '#06b6d4' : '#fca5a5'}
+                      fill={isBull ? '#10b981' : '#ef4444'}
                       fontSize="8"
                       fontFamily="monospace"
                       fontWeight="bold"
                     >
-                      {fvg.label} ({fvg.min.toFixed(priceDecimals)} - {fvg.max.toFixed(priceDecimals)})
+                      {fvg.label} [{fvg.min} - {fvg.max}]
                     </text>
                   </g>
                 );
               })}
 
-              {/* Liquidity Sweeps Badges */}
-              {marketStructureData.liquiditySweeps?.map((sw, idx) => {
-                const c = getCoordinates(sw.timeSec, sw.price);
+              {/* Liquidity Sweeps Badges (BSL / SSL) */}
+              {marketStructureData.liquiditySweeps.map((sw, idx) => {
+                const coord = getCoordinates(sw.timeSec, sw.price);
                 const isBsl = sw.type === 'BSL';
+                const yPos = isBsl ? coord.y - 14 : coord.y + 14;
+
                 return (
-                  <g key={`lq-${idx}`}>
+                  <g key={`sweep-${idx}`}>
+                    <circle
+                      cx={coord.x}
+                      cy={coord.y}
+                      r="4"
+                      fill={isBsl ? '#f59e0b' : '#3b82f6'}
+                      stroke="#ffffff"
+                      strokeWidth="1.5"
+                    />
                     <rect
-                      x={c.x - 35}
-                      y={isBsl ? c.y - 20 : c.y + 6}
-                      width={70}
-                      height={15}
+                      x={coord.x - 32}
+                      y={isBsl ? yPos - 12 : yPos}
+                      width={64}
+                      height={14}
                       rx={3}
-                      fill={isBsl ? 'rgba(245, 158, 11, 0.92)' : 'rgba(16, 185, 129, 0.92)'}
+                      fill={isBsl ? 'rgba(245, 158, 11, 0.95)' : 'rgba(59, 130, 246, 0.95)'}
                     />
                     <text
-                      x={c.x}
-                      y={isBsl ? c.y - 9 : c.y + 17}
+                      x={coord.x}
+                      y={isBsl ? yPos - 2 : yPos + 10}
                       fill="#ffffff"
                       fontSize="8"
                       fontWeight="bold"
@@ -1734,29 +1745,27 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
               {marketStructureData.chochLines.map((choch, idx) => {
                 const c1 = getCoordinates(choch.x1Time, choch.price);
                 const c2 = getCoordinates(choch.x2Time, choch.price);
-                const lineRight = Math.max(dimensions.width - 65, c2.x);
 
                 return (
                   <g key={`choch-${idx}`}>
                     <line
                       x1={c1.x}
                       y1={c1.y}
-                      x2={lineRight}
-                      y2={c1.y}
+                      x2={c2.x}
+                      y2={c2.y}
                       stroke="#f59e0b"
                       strokeWidth="2"
-                      strokeDasharray="4 2"
                     />
                     <rect
-                      x={(c1.x + lineRight) / 2 - 45}
-                      y={c1.y - 10}
-                      width={90}
-                      height={16}
-                      rx={3}
-                      fill="rgba(245, 158, 11, 0.95)"
+                      x={(c1.x + c2.x) / 2 - 28}
+                      y={c1.y - 9}
+                      width={56}
+                      height={14}
+                      rx={2}
+                      fill="rgba(245, 158, 11, 0.9)"
                     />
                     <text
-                      x={(c1.x + lineRight) / 2}
+                      x={(c1.x + c2.x) / 2}
                       y={c1.y + 2}
                       fill="#ffffff"
                       fontSize="8"
@@ -1764,7 +1773,7 @@ export const InfinityVisionChart: React.FC<InfinityVisionChartProps> = ({
                       fontFamily="monospace"
                       textAnchor="middle"
                     >
-                      {choch.label.toUpperCase()}
+                      CHoCH / MSS
                     </text>
                   </g>
                 );

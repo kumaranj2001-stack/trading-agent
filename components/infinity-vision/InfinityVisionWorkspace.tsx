@@ -17,11 +17,6 @@ import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
 import { visionSystemLogger } from '@/lib/visionSystemLogger';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { 
-  VisionAtlasWebSocketClient, 
-  VisionAtlasTickPacket, 
-  VisionAtlasConnectionStatus 
-} from '@/lib/visionAtlasWebSocket';
 
 const InfinityVisionChart = dynamic(
   () => import('./InfinityVisionChart').then((m) => m.InfinityVisionChart),
@@ -100,8 +95,6 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   const [liveTimestamp, setLiveTimestamp] = useState<number>(Date.now());
   const [liveLatencyMs, setLiveLatencyMs] = useState<number>(12);
   const [isInterrupted, setIsInterrupted] = useState<boolean>(false);
-  const [wsProvider, setWsProvider] = useState<string>('OANDA_V20_STREAMING');
-  const [wsStatus, setWsStatus] = useState<VisionAtlasConnectionStatus>('LIVE_STREAMING');
 
   // Interactive panels visibility states
   const [isQuantumVisionOpen, setIsQuantumVisionOpen] = useState<boolean>(false);
@@ -126,7 +119,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
     setSelectedTf(initialTf);
   }, [initialTf]);
 
-  // 🌐 Dedicated Vision Atlas Multi-Provider WebSocket Feed (OANDA v20 / Twelve Data / TraderMade / MT5 VPS)
+  // 🌐 Continuous Real-Time Streaming Ingestion Engine (WebSocket & Authoritative Reference Anchor)
   useEffect(() => {
     let isCancelled = false;
 
@@ -154,42 +147,90 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
         });
     }
 
-    // 2. Initialize dedicated Atlas Vision WebSocket Client
-    const client = VisionAtlasWebSocketClient.getInstance(selectedPair, selectedTf);
+    // 2. Start authoritative real-time live ticker (1000ms low-latency cadence)
+    const stopLiveFeed = LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1000);
 
-    const unsubTicks = client.subscribeTicks((packet: VisionAtlasTickPacket) => {
+    // 3. Subscribe to real-time micro-ticks from LiveMarketFeedManager
+    const unsubscribe = LiveMarketFeedManager.subscribe((event) => {
       if (isCancelled) return;
-      if (packet.pair === selectedPair) {
-        setLiveCandles(packet.candles);
-        setLivePrice(packet.price);
-        setLiveChangePercent(packet.change24h);
-        setLiveTimestamp(packet.timestamp);
-        if (packet.latencyMs) {
-          setLiveLatencyMs(packet.latencyMs);
+      if (event.pair === selectedPair) {
+        setLiveCandles(event.candles);
+        setLivePrice(event.livePrice);
+        setLiveChangePercent(event.change24h);
+        setLiveTimestamp(event.timestamp);
+        if (event.latencyMs) {
+          setLiveLatencyMs(event.latencyMs);
         }
-        setWsProvider(packet.provider);
         setIsInterrupted(false);
       }
     });
 
-    const unsubStatus = client.subscribeStatus((status: VisionAtlasConnectionStatus, provider: string, latencyMs: number) => {
+    // 4. Subscribe to WebSocket telemetry for drop / latency interruption handling
+    const unsubTel = LiveMarketFeedManager.subscribeWebSocketTelemetry((tel) => {
       if (isCancelled) return;
-      setWsStatus(status);
-      setWsProvider(provider);
-      if (latencyMs) setLiveLatencyMs(latencyMs);
-      setIsInterrupted(status === 'OFFLINE');
+      const session = MarketSessionManager.getMarketSessionInfo(selectedPair);
+      const isStale = !session.isFrozen && ((Date.now() - tel.lastTickTimestamp) > 20000);
+      setIsInterrupted(!tel.isConnected || isStale);
+      if (tel.latencyMs) setLiveLatencyMs(tel.latencyMs);
     });
+
+    // 5. Authoritative backend continuous verification feed (safely guarded)
+    let eventSource: EventSource | null = null;
+    try {
+      if (typeof window !== 'undefined' && typeof EventSource !== 'undefined') {
+        eventSource = new EventSource(`/api/vision-atlas/stream?symbol=${encodeURIComponent(selectedPair)}&timeframe=${selectedTf}`);
+        eventSource.onmessage = (e) => {
+          if (isCancelled) return;
+          try {
+            const streamData = JSON.parse(e.data);
+            if (streamData.type === 'TICK' || streamData.type === 'SNAPSHOT') {
+              setIsInterrupted(false);
+              if (streamData.telemetry?.latencyMs) {
+                setLiveLatencyMs(streamData.telemetry.latencyMs);
+              }
+            }
+          } catch {}
+        };
+        eventSource.onerror = () => {
+          if (eventSource) {
+            try {
+              eventSource.close();
+            } catch {}
+            eventSource = null;
+          }
+        };
+      }
+    } catch {
+      // Local LiveMarketFeedManager maintains continuous decoupled feed with 0ms interruption
+    }
+
+    const staleTimer = setInterval(() => {
+      if (isCancelled) return;
+      const tel = LiveMarketFeedManager.getWebSocketTelemetry();
+      const session = MarketSessionManager.getMarketSessionInfo(selectedPair);
+      const isStale = !session.isFrozen && ((Date.now() - tel.lastTickTimestamp) > 20000);
+      setIsInterrupted(!tel.isConnected || isStale);
+    }, 2000);
 
     return () => {
       isCancelled = true;
-      unsubTicks();
-      unsubStatus();
+      stopLiveFeed();
+      unsubscribe();
+      unsubTel();
+      clearInterval(staleTimer);
+      if (eventSource) {
+        try {
+          eventSource.onmessage = null;
+          eventSource.onerror = null;
+          eventSource.close();
+        } catch {}
+        eventSource = null;
+      }
     };
   }, [selectedPair, selectedTf]);
 
   const handleReconnect = () => {
-    const client = VisionAtlasWebSocketClient.getInstance(selectedPair, selectedTf);
-    client.reconnect();
+    LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1000);
     setIsInterrupted(false);
   };
 
@@ -396,7 +437,6 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
         isLive={!isInterrupted}
         latencyMs={liveLatencyMs}
         isInterrupted={isInterrupted}
-        provider={wsProvider}
         theme={theme}
       />
 
@@ -450,7 +490,6 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
               horizonCandles={horizonCandles}
               latencyMs={liveLatencyMs}
               isInterrupted={isInterrupted}
-              provider={wsProvider}
               onReconnect={handleReconnect}
             />
           </ErrorBoundary>
