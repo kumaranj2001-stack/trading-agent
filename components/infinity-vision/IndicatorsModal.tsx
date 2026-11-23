@@ -7,12 +7,16 @@ export interface IndicatorsModalProps {
   isOpen: boolean;
   onClose: () => void;
   theme?: 'light' | 'dark';
+  settings?: Record<string, boolean>;
+  onUpdateSettings?: (settings: Record<string, boolean>) => void;
 }
 
 export const IndicatorsModal: React.FC<IndicatorsModalProps> = ({
   isOpen,
   onClose,
   theme = 'light',
+  settings,
+  onUpdateSettings,
 }) => {
   const isLight = theme === 'light';
   const [activeTab, setActiveTab] = useState<'Clean' | 'Standard' | 'Advanced'>('Advanced');
@@ -21,40 +25,48 @@ export const IndicatorsModal: React.FC<IndicatorsModalProps> = ({
   const [openSection, setOpenSection] = useState<string | null>('market_structure');
 
   // Market structure sub-toggles
-  const [toggles, setToggles] = useState<Record<string, boolean>>({
-    ms_map: true,
-    ms_internal: true,
-    ms_bos: true,
-    ms_choch: true,
-    ms_mss: true,
-    ms_wick_breaks: true,
-    labels: true,
-    supply_demand: true,
-    ob_fresh: true,
-    ob_mitigated: true,
-    ob_breaker: true,
-    ob_rejection: true,
-    fvg_fresh: true,
-    fvg_inversion: true,
-    fvg_mitigated: true,
-    liq_sweep: true,
-    liq_pools: true,
-    liq_equal: true,
-    fib_retracement: true,
-    fib_extensions: true,
-    trend_ema: false,
-    rsi_momentum: true,
-    volume_profile: false,
-    zones_danger: true,
-    zones_caution: true,
-    zones_entry: true,
-    zones_safe: true,
-    session_london: true,
-    session_ny: true,
-    session_asian: true,
-    strength_panel: true,
-    advanced_analysis: true,
+  const [toggles, setToggles] = useState<Record<string, boolean>>(() => {
+    return settings || {
+      ms_map: true,
+      ms_internal: true,
+      ms_bos: true,
+      ms_choch: true,
+      ms_mss: true,
+      ms_wick_breaks: true,
+      labels: true,
+      supply_demand: true,
+      ob_fresh: true,
+      ob_mitigated: true,
+      ob_breaker: true,
+      ob_rejection: true,
+      fvg_fresh: true,
+      fvg_inversion: true,
+      fvg_mitigated: true,
+      liq_sweep: true,
+      liq_pools: true,
+      liq_equal: true,
+      fib_retracement: true,
+      fib_extensions: true,
+      trend_ema: true,
+      rsi_momentum: true,
+      volume_profile: false,
+      zones_danger: true,
+      zones_caution: true,
+      zones_entry: true,
+      zones_safe: true,
+      session_london: true,
+      session_ny: true,
+      session_asian: true,
+      strength_panel: true,
+      advanced_analysis: true,
+    };
   });
+
+  React.useEffect(() => {
+    if (settings) {
+      setToggles(settings);
+    }
+  }, [settings]);
 
   const [externalSwingLength, setExternalSwingLength] = useState<number>(8);
   const [internalSwingLength, setInternalSwingLength] = useState<number>(3);
@@ -67,19 +79,25 @@ export const IndicatorsModal: React.FC<IndicatorsModalProps> = ({
   if (!isOpen) return null;
 
   const toggleItem = (key: string) => {
-    setToggles(prev => ({ ...prev, [key]: !prev[key] }));
+    setToggles(prev => {
+      const updated = { ...prev, [key]: !prev[key] };
+      if (onUpdateSettings) onUpdateSettings(updated);
+      return updated;
+    });
   };
 
   const handleShowAll = () => {
     const updated = { ...toggles };
     Object.keys(updated).forEach(k => { updated[k] = true; });
     setToggles(updated);
+    if (onUpdateSettings) onUpdateSettings(updated);
   };
 
   const handleHideAll = () => {
     const updated = { ...toggles };
     Object.keys(updated).forEach(k => { updated[k] = false; });
     setToggles(updated);
+    if (onUpdateSettings) onUpdateSettings(updated);
   };
 
   const handleReset = () => {

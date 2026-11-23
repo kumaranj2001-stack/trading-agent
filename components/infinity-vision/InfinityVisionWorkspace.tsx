@@ -16,6 +16,7 @@ import { BASE_PRICES } from '@/lib/marketData';
 import { LiveMarketFeedManager } from '@/lib/liveMarketFeed';
 import { MarketSessionManager } from '@/lib/marketSessionManager';
 import { visionSystemLogger } from '@/lib/visionSystemLogger';
+import { VisionAtlasWebSocketClient } from '@/lib/visionAtlasWebSocket';
 
 export interface InfinityVisionWorkspaceProps {
   pair: CurrencyPair;
@@ -91,6 +92,42 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
   const [activeRightSidebarMode, setActiveRightSidebarMode] = useState<'scenarios' | 'market_dna' | 'vision_atlas'>('scenarios');
   const [horizonCandles, setHorizonCandles] = useState<number>(5);
 
+  // 🧭 Bi-directional Control Panel Indicator Overlays State
+  const [indicatorSettings, setIndicatorSettings] = useState<Record<string, boolean>>({
+    ms_map: true,
+    ms_internal: true,
+    ms_bos: true,
+    ms_choch: true,
+    ms_mss: true,
+    ms_wick_breaks: true,
+    labels: true,
+    supply_demand: true,
+    ob_fresh: true,
+    ob_mitigated: true,
+    ob_breaker: true,
+    ob_rejection: true,
+    fvg_fresh: true,
+    fvg_inversion: true,
+    fvg_mitigated: true,
+    liq_sweep: true,
+    liq_pools: true,
+    liq_equal: true,
+    fib_retracement: true,
+    fib_extensions: true,
+    trend_ema: true,
+    rsi_momentum: true,
+    volume_profile: false,
+    zones_danger: true,
+    zones_caution: true,
+    zones_entry: true,
+    zones_safe: true,
+    session_london: true,
+    session_ny: true,
+    session_asian: true,
+    strength_panel: true,
+    advanced_analysis: true,
+  });
+
   // Sync pair changes from external props
   useEffect(() => {
     setSelectedPair(initialPair);
@@ -114,9 +151,30 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
     }
   }, [initialCandles]);
 
-  // 🌐 WebSocket Streaming Subscription & Interruption Telemetry
+  // 🌐 Dedicated Continuous Low-Latency WebSocket & Canonical Streaming Pipeline
   useEffect(() => {
-    // 1. Subscribe to canonical tick broadcasts for the selected pair
+    // 1. Dedicated VisionAtlasWebSocketClient (with multi-provider failover: OANDA v20, Twelve Data, TraderMade, MT5)
+    const wsClient = VisionAtlasWebSocketClient.getInstance(selectedPair, selectedTf);
+
+    const unsubTicks = wsClient.subscribeTicks((packet) => {
+      if (packet.candles && packet.candles.length > 0) {
+        setLiveCandles(packet.candles);
+      }
+      if (Number.isFinite(packet.price) && packet.price > 0) {
+        setLivePrice(packet.price);
+      }
+      setLiveChangePercent(packet.change24h);
+      setLiveTimestamp(packet.timestamp);
+      setLiveLatencyMs(packet.latencyMs);
+      setIsInterrupted(false);
+    });
+
+    const unsubStatus = wsClient.subscribeStatus((status, provider, latencyMs) => {
+      setLiveLatencyMs(latencyMs);
+      setIsInterrupted(status === 'OFFLINE' || status === 'RECONNECTING');
+    });
+
+    // 2. Authoritative LiveMarketFeedManager subscription for instant SSOT Terminal parity
     const unsubscribe = LiveMarketFeedManager.subscribe((event) => {
       if (event.pair === selectedPair) {
         setLiveCandles(event.candles);
@@ -129,7 +187,7 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
       }
     });
 
-    // 2. Subscribe to WebSocket telemetry for drop / latency interruption handling
+    // 3. Telemetry heartbeat to prevent stale data
     const unsubTel = LiveMarketFeedManager.subscribeWebSocketTelemetry((tel) => {
       const session = MarketSessionManager.getMarketSessionInfo(selectedPair);
       const isStale = !session.isFrozen && ((Date.now() - tel.lastTickTimestamp) > 20000);
@@ -137,22 +195,18 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
       if (tel.latencyMs) setLiveLatencyMs(tel.latencyMs);
     });
 
-    const staleTimer = setInterval(() => {
-      const tel = LiveMarketFeedManager.getWebSocketTelemetry();
-      const session = MarketSessionManager.getMarketSessionInfo(selectedPair);
-      const isStale = !session.isFrozen && ((Date.now() - tel.lastTickTimestamp) > 20000);
-      setIsInterrupted(!tel.isConnected || isStale);
-    }, 2000);
-
     return () => {
+      unsubTicks();
+      unsubStatus();
       unsubscribe();
       unsubTel();
-      clearInterval(staleTimer);
     };
   }, [selectedPair, selectedTf]);
 
   const handleReconnect = () => {
-    LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1500);
+    const wsClient = VisionAtlasWebSocketClient.getInstance(selectedPair, selectedTf);
+    wsClient.reconnect();
+    LiveMarketFeedManager.startLiveFeed(selectedPair, selectedTf, 1000);
     setIsInterrupted(false);
   };
 
@@ -392,11 +446,14 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
             showIndicatorsOverlay={chartViewMode === 'Advanced' || chartViewMode === 'Standard' || isIndicatorsOpen}
             showQuantumSimulation={isQuantumVisionOpen}
             showMarketDna={isMarketDnaOpen}
+            showVisionAtlasLab={isVisionAtlasLabOpen}
+            showLiquidityHeatmap={isLiquidityOpen}
             chartType={chartType}
             showPatternOnChart={showPatternOnChart}
             horizonCandles={horizonCandles}
             latencyMs={liveLatencyMs}
             isInterrupted={isInterrupted}
+            indicatorSettings={indicatorSettings}
             onReconnect={handleReconnect}
           />
         </div>
@@ -466,6 +523,8 @@ export const InfinityVisionWorkspace: React.FC<InfinityVisionWorkspaceProps> = (
         isOpen={isIndicatorsOpen}
         onClose={() => setIsIndicatorsOpen(false)}
         theme={theme}
+        settings={indicatorSettings}
+        onUpdateSettings={setIndicatorSettings}
       />
     </div>
   );
