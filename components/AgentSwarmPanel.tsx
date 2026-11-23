@@ -10,7 +10,8 @@ import {
   TechnicalAnalysis,
   SwarmConsensusResult,
   OrderFlowAnalysis,
-  ChiefReviewerAuditResult
+  ChiefReviewerAuditResult,
+  CandlestickPatternAnalysis
 } from '@/lib/types';
 import { 
   BarChart3, 
@@ -30,7 +31,9 @@ import {
   Radio,
   ExternalLink,
   Zap,
-  Activity
+  Activity,
+  Flame,
+  Shield
 } from 'lucide-react';
 
 interface AgentSwarmPanelProps {
@@ -40,6 +43,7 @@ interface AgentSwarmPanelProps {
   news: NewsAnalysis;
   risk: RiskAssessment;
   orderFlow?: OrderFlowAnalysis;
+  candlestickPattern?: CandlestickPatternAnalysis;
   chiefReviewerAudit?: ChiefReviewerAuditResult;
   onExecuteTrade?: () => void;
   onOpenMonteCarlo?: () => void;
@@ -55,6 +59,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
   news,
   risk,
   orderFlow,
+  candlestickPattern,
   chiefReviewerAudit,
   onExecuteTrade,
   onOpenMonteCarlo,
@@ -140,7 +145,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
             Continuous Loop Active {telemetry?.cycleNumber ? `(Cycle #${telemetry.cycleNumber})` : ''}
           </span>
           <span>• 15s Multi-Desk Recalibration Loop</span>
-          <span>• 1,050+ Technical + 1,050+ Macro Strategies (2,100+ Total)</span>
+          <span>• 525+ Technical + 525+ Macro + 120+ Candlestick Patterns (1,170+ Total)</span>
           <span>• 38 Wires Streamed</span>
           <span className="text-cyan-600 font-bold">
             {telemetry?.latencyMs ? `${telemetry.latencyMs}ms Latency` : 'Zero Human Latency'}
@@ -575,7 +580,88 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
         </div>
       )}
 
-      {/* 6. RISK MANAGER & CHIEF CAPITAL GATEKEEPER (Wide Card) */}
+      {/* 6. CANDLESTICK PATTERN & TIMING GATEKEEPER SPECIALIST (Kenji Takahashi) */}
+      {candlestickPattern && (
+        <div className={`rounded-xl p-4 sm:p-5 flex flex-col justify-between transition-colors shadow-md border ${
+          theme === 'light' ? 'bg-white border-slate-200 hover:border-rose-500' : 'bg-terminal-900 border-terminal-border hover:border-rose-500/40'
+        }`}>
+          <div>
+            <div className="flex items-center justify-between border-b border-terminal-border/60 pb-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-rose-950 border border-rose-800 flex items-center justify-center text-rose-400">
+                  <Flame className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-base">Candlestick Desk</h3>
+                  <span className="text-xs font-semibold text-rose-400">{candlestickPattern.agentName}</span>
+                </div>
+              </div>
+              {getBiasBadge(candlestickPattern.bias)}
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div className="bg-terminal-950/80 p-3 rounded-lg border border-rose-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-rose-400 text-xs uppercase font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Formation & Boundary Anchor
+                  </span>
+                  <span className="text-xs text-slate-300 font-medium">
+                    {candlestickPattern.detectedPattern.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400">Pattern Category: </span>
+                    <span className="text-white font-mono font-bold">{candlestickPattern.patternCategory}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Wick-to-Body: </span>
+                    <span className="text-rose-300 font-mono">{candlestickPattern.wickToBodyRatio}:1 (Body {candlestickPattern.bodySizePercent}%)</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Volume Multiplier: </span>
+                    <span className={`font-mono font-bold ${candlestickPattern.volumeConfirmation.volumeMultiplier >= 1.2 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                      {candlestickPattern.volumeConfirmation.volumeMultiplier}x 20-SMA
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Structural SL Anchor: </span>
+                    <span className="text-cyan-300 font-bold">{candlestickPattern.definingCandleBoundary.extremeWickPrice || 'Active Boundary'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-terminal-950/70 p-3 rounded-lg border border-terminal-border/40">
+                <span className="text-slate-400 text-xs uppercase font-bold block mb-1.5">Geometry & Noise Filtering</span>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400">Noise Filter: </span>
+                    <span className={candlestickPattern.rejectionStatus.isRejectedNoise ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                      {candlestickPattern.rejectionStatus.isRejectedNoise ? 'NOISE REJECTED' : 'CLEAN STRUCTURE'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Credibility Win-Rate: </span>
+                    <span className="text-white font-mono">{candlestickPattern.historicalCredibilityScore}%</span>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-slate-300 text-xs sm:text-sm leading-relaxed pt-1">
+                {candlestickPattern.reasoning}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-3.5 pt-2.5 border-t border-terminal-border/40 text-xs text-slate-400 flex items-center justify-between font-medium">
+            <span>Anchor: {(candlestickPattern.definingCandleBoundary.anchorType || 'DEFINING_CANDLE_EXTREME_WICK').replace(/_/g, ' ')}</span>
+            <span>Confidence: {candlestickPattern.confidenceScore}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* 7. RISK MANAGER & CHIEF CAPITAL GATEKEEPER (Wide Card) */}
       <div className="bg-terminal-900 border border-emerald-800/60 rounded-xl p-4 sm:p-5 flex flex-col justify-between hover:border-emerald-500/50 transition-colors shadow-md relative overflow-hidden md:col-span-2 lg:col-span-2">
         <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
 
@@ -758,7 +844,7 @@ export const AgentSwarmPanel: React.FC<AgentSwarmPanelProps> = ({
           </div>
 
           <div className="mt-3.5 pt-2.5 border-t border-terminal-border/40 text-xs text-slate-400 flex items-center justify-between font-medium">
-            <span>Specialist Desks Audited: 6 Desks</span>
+            <span>Specialist Desks Audited: 7 Desks (8 Agents in Chamber)</span>
             <span className="text-indigo-400 font-bold">Gatekeeper Clearance Active</span>
           </div>
         </div>

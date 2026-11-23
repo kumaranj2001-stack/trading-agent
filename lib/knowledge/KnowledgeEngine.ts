@@ -16,10 +16,12 @@ import {
   NewsAnalysis,
   ConfluenceGrade,
   OrderBookLiquidityWallSnapshot,
-  UnifiedProfitableSetup
+  UnifiedProfitableSetup,
+  CandlestickPatternAnalysis
 } from '../types';
 import { TECHNICAL_KNOWLEDGE_BASE } from './technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from './fundamentalKnowledge';
+import { CANDLESTICK_KNOWLEDGE_BASE } from './candlestickKnowledge';
 import { diagnosticReasoningEngine } from '../diagnosticReasoningEngine';
 import { exhaustiveStrategyCorpusEngine } from '../exhaustiveStrategyCorpusEngine';
 import { unifiedSetupEngine } from '../unifiedSetupEngine';
@@ -27,15 +29,18 @@ import { unifiedSetupEngine } from '../unifiedSetupEngine';
 export class KnowledgeEngine {
   private technicalRules: KnowledgeRule[];
   private fundamentalRules: KnowledgeRule[];
+  private candlestickRules: KnowledgeRule[];
 
   constructor() {
     this.technicalRules = TECHNICAL_KNOWLEDGE_BASE;
     this.fundamentalRules = FUNDAMENTAL_KNOWLEDGE_BASE;
+    this.candlestickRules = CANDLESTICK_KNOWLEDGE_BASE;
   }
 
   public getTotalStats(): { 
     technicalCount: number; 
     fundamentalCount: number; 
+    candlestickCount: number;
     dynamicConstraintCount: number; 
     totalCount: number;
     baselineRules: number;
@@ -47,9 +52,10 @@ export class KnowledgeEngine {
     return {
       technicalCount: this.technicalRules.length,
       fundamentalCount: this.fundamentalRules.length,
+      candlestickCount: this.candlestickRules.length,
       dynamicConstraintCount: dynamicRules.length,
-      totalCount: this.technicalRules.length + this.fundamentalRules.length + dynamicRules.length,
-      baselineRules: this.technicalRules.length + this.fundamentalRules.length,
+      totalCount: this.technicalRules.length + this.fundamentalRules.length + this.candlestickRules.length + dynamicRules.length,
+      baselineRules: this.technicalRules.length + this.fundamentalRules.length + this.candlestickRules.length,
       synthesizedRules: dynamicRules.length,
       zeroPruningCertified: true,
       exhaustiveExecutionActive: true,
@@ -58,7 +64,7 @@ export class KnowledgeEngine {
 
   /**
    * Exhaustive Synchronous Strategy Corpus Evaluation
-   * Evaluates all 2,100+ quantitative strategies (1,050+ technical and 1,050+ fundamental models across 8 orthogonal families) without heuristic pruning.
+   * Evaluates all 1,170+ quantitative strategies (525+ technical, 525+ fundamental, 120+ candlestick patterns across 8 orthogonal families) without heuristic pruning.
    */
   public evaluateExhaustiveStrategyCorpus(params: {
     pair: CurrencyPair;
@@ -69,6 +75,7 @@ export class KnowledgeEngine {
     fundamental: FundamentalAnalysis;
     forex: ForexAnalysis;
     news: NewsAnalysis;
+    candlestickPattern?: CandlestickPatternAnalysis;
   }): ExhaustiveStrategyCorpusEvaluation {
     return exhaustiveStrategyCorpusEngine.evaluateSynchronously(params);
   }
@@ -96,6 +103,10 @@ export class KnowledgeEngine {
     return this.fundamentalRules;
   }
 
+  public getCandlestickRules(): KnowledgeRule[] {
+    return this.candlestickRules;
+  }
+
   public getDynamicRules(): FailureConstraintRule[] {
     return diagnosticReasoningEngine.getDynamicRules();
   }
@@ -104,6 +115,7 @@ export class KnowledgeEngine {
     return [
       ...this.technicalRules,
       ...this.fundamentalRules,
+      ...this.candlestickRules,
       ...diagnosticReasoningEngine.getDynamicRules(),
     ];
   }

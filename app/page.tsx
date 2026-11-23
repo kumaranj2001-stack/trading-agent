@@ -295,7 +295,7 @@ export default function Home() {
 
     // 🏛️ SSOT Single-Source-of-Truth Clearance Check: Consensus Chamber Directive
     if (calibratedResult.chiefRiskManagerUnifiedDirective && calibratedResult.chiefRiskManagerUnifiedDirective.institutionalClearanceStatus === 'FAIL_SAFE_PAUSED') {
-      console.warn(`[AUTOPILOT_SSOT_CLEARANCE_LOCK] 7-Agent Consensus Chamber institutional clearance not granted (FAIL_SAFE_PAUSED).`);
+      console.warn(`[AUTOPILOT_SSOT_CLEARANCE_LOCK] 8-Agent Consensus Chamber institutional clearance not granted (FAIL_SAFE_PAUSED).`);
       return;
     }
 
@@ -510,8 +510,8 @@ export default function Home() {
   }, [selectedPair, timeframe, fetchMarketData, fetchOpportunities, executeAutopilotOrder]);
 
   // 5b. Dedicated 15-Second Multi-Desk Institutional Recalibration Engine
-  // Automatically triggers every 15 SECONDS to synthesize data across all five core analytical engines:
-  // Technical (1,050+ strategies), Fundamental (1,050+ engines across 8 orthogonal families), News (38 wires), Forex/Order Flow, and Risk Management
+  // Automatically triggers every 15 SECONDS to synthesize data across all core analytical engines:
+  // Technical (525+ strategies), Fundamental (525+ models across 8 orthogonal families), Candlestick (120+ patterns), News (38 wires), Intermarket, Order Flow, and Risk Management
   useEffect(() => {
     const recalibrationTimer = setInterval(() => {
       if (MarketSessionManager.isMarketFrozen(selectedPairRef.current)) {
@@ -874,9 +874,9 @@ export default function Home() {
     }
 
     // 🏛️ SSOT Architectural Gatekeeper Check:
-    // Actionable trade execution is derived EXCLUSIVELY from the Autonomous 7-Agent Debate and Consensus Chamber
+    // Actionable trade execution is derived EXCLUSIVELY from the Autonomous 8-Agent Debate and Consensus Chamber
     if (consensus.chiefRiskManagerUnifiedDirective && consensus.chiefRiskManagerUnifiedDirective.institutionalClearanceStatus === 'FAIL_SAFE_PAUSED') {
-      showNotification(`🛑 SSOT GATEKEEPER LOCK: 7-Agent Consensus Chamber clearance paused due to stale data.`);
+      showNotification(`🛑 SSOT GATEKEEPER LOCK: 8-Agent Consensus Chamber clearance paused due to stale data.`);
       return;
     }
 
@@ -1289,6 +1289,7 @@ export default function Home() {
                   news={consensus.agents.news}
                   risk={consensus.agents.risk}
                   orderFlow={consensus.agents.orderFlow}
+                  candlestickPattern={consensus.agents.candlestickPattern}
                   chiefReviewerAudit={consensus.chiefReviewerAudit}
                   onExecuteTrade={handleExecuteTrade}
                   onOpenMonteCarlo={() => setActiveTab('var')}
@@ -1343,11 +1344,11 @@ export default function Home() {
                       02 // 24/7 AUTONOMOUS MULTI-AGENT SWARM INTELLIGENCE COMMAND DESK
                     </span>
                     <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                      5 SPECIALIZED DESKS
+                      8 AUTONOMOUS SPECIALISTS
                     </span>
                   </div>
                   <p className="text-slate-400 text-xs">
-                    Simultaneous asynchronous processes: Technical (1,050+), Fundamental (1,050+), 38 News Wires, Forex Relativity & CRO Risk Gatekeeper
+                    Simultaneous asynchronous processes: Technical (525+), Fundamental (525+), Candlestick (120+), 38 News Wires, Intermarket Relativity, Order Flow Microstructure & CRO Risk Gatekeeper
                   </p>
                 </div>
               </div>
@@ -1383,6 +1384,7 @@ export default function Home() {
                 news={consensus.agents.news}
                 risk={consensus.agents.risk}
                 orderFlow={consensus.agents.orderFlow}
+                candlestickPattern={consensus.agents.candlestickPattern}
                 chiefReviewerAudit={consensus.chiefReviewerAudit}
                 onExecuteTrade={handleExecuteTrade}
                 onOpenMonteCarlo={() => setActiveTab('var')}
@@ -1418,8 +1420,8 @@ export default function Home() {
           />
         )}
 
-        {/* Tab 5: Autonomous 7-Agent Debate & Consensus Chamber (Unified with 7-Stage Pipeline) */}
-        {(activeTab === 'debate' || (activeTab as string) === 'five-agent-debate' || (activeTab as string) === 'seven-agent-debate' || (activeTab as string) === 'sequential-pipeline' || (activeTab as string) === 'pipeline') && (
+        {/* Tab 5: Autonomous 8-Agent Debate & Consensus Chamber (Unified with 7-Stage Pipeline) */}
+        {(activeTab === 'debate' || (activeTab as string) === 'five-agent-debate' || (activeTab as string) === 'seven-agent-debate' || (activeTab as string) === 'eight-agent-debate' || (activeTab as string) === 'sequential-pipeline' || (activeTab as string) === 'pipeline') && (
           <AgentDebateFeed
             messages={(consensus && consensus.pair === selectedPair) ? consensus.debateTranscript : []}
             candles={candles}
@@ -1469,7 +1471,7 @@ export default function Home() {
             onExecuteTrade={(trade) => {
               if (trade.symbol !== selectedPair) {
                 handleSelectPair(trade.symbol);
-                showNotification(`ORDER FLOW ROUTED: ${trade.symbol} loaded into 7-Agent Consensus Chamber for debate synthesis.`);
+                showNotification(`ORDER FLOW ROUTED: ${trade.symbol} loaded into 8-Agent Consensus Chamber for debate synthesis.`);
               } else {
                 handleExecuteTrade();
               }

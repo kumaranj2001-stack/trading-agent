@@ -5,6 +5,7 @@ import { Search, Database, CheckCircle, X, ArrowLeft, ShieldAlert, AlertTriangle
 import { KnowledgeRule, FailureConstraintRule } from '@/lib/types';
 import { TECHNICAL_KNOWLEDGE_BASE } from '@/lib/knowledge/technicalKnowledge';
 import { FUNDAMENTAL_KNOWLEDGE_BASE } from '@/lib/knowledge/fundamentalKnowledge';
+import { CANDLESTICK_KNOWLEDGE_BASE } from '@/lib/knowledge/candlestickKnowledge';
 import { knowledgeEngine } from '@/lib/knowledge/KnowledgeEngine';
 import { diagnosticReasoningEngine } from '@/lib/diagnosticReasoningEngine';
 
@@ -22,7 +23,7 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
   isFullPage = false,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<'ALL' | 'TECHNICAL' | 'FUNDAMENTAL' | 'INDIAN_MARKET' | 'FAILURE_CONSTRAINTS' | 'TRIGGERED'>('ALL');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'TECHNICAL' | 'FUNDAMENTAL' | 'CANDLESTICK_PATTERN' | 'INDIAN_MARKET' | 'FAILURE_CONSTRAINTS' | 'TRIGGERED'>('ALL');
   const [apiRules, setApiRules] = useState<KnowledgeRule[] | null>(null);
   const [apiStats, setApiStats] = useState<any>(null);
   const [isLoadingApi, setIsLoadingApi] = useState<boolean>(false);
@@ -75,6 +76,7 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
       // Tab filter
       if (activeTab === 'TECHNICAL' && (rule.category !== 'TECHNICAL' || isDynamic)) return false;
       if (activeTab === 'FUNDAMENTAL' && (rule.category !== 'FUNDAMENTAL' || isDynamic)) return false;
+      if (activeTab === 'CANDLESTICK_PATTERN' && (rule.category !== 'CANDLESTICK_PATTERN' || isDynamic)) return false;
       if (activeTab === 'INDIAN_MARKET' && rule.marketScope !== 'INDIAN_MARKET') return false;
       if (activeTab === 'FAILURE_CONSTRAINTS' && !isDynamic) return false;
       if (activeTab === 'TRIGGERED') {
@@ -107,10 +109,10 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-white text-sm sm:text-base truncate">
-                10 // INSTITUTIONAL KNOWLEDGE BASE (2,100+ QUANTITATIVE MODELS)
+                10 // INSTITUTIONAL KNOWLEDGE BASE (1,170+ QUANTITATIVE MODELS)
               </h3>
               <span className="hidden sm:inline px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                {allRules.length} VERIFIED MODELS (1,050+ TECH + 1,050+ FUND)
+                {allRules.length} VERIFIED MODELS (525+ TECH + 525+ FUND + 120+ CANDLESTICK)
               </span>
               <span className="hidden md:inline px-2 py-0.5 rounded text-[10px] font-mono bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold">
                 DYNAMIC RISK PRECEDENCE
@@ -120,7 +122,7 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-slate-400 font-mono truncate">
-              1,050+ Technical (SMC / AMT / Volatility) • 1,050+ Fundamental (Macro / Rates / Flows / COT)
+              525+ Technical (SMC / AMT / Volatility) • 525+ Fundamental (Macro / Rates / Flows / COT) • 120+ Candlestick Patterns
             </p>
           </div>
         </div>
@@ -173,6 +175,14 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
               }`}
             >
               Fundamental ({FUNDAMENTAL_KNOWLEDGE_BASE.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('CANDLESTICK_PATTERN')}
+              className={`px-2.5 py-1 rounded transition-colors ${
+                activeTab === 'CANDLESTICK_PATTERN' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Candlestick ({CANDLESTICK_KNOWLEDGE_BASE.length})
             </button>
             <button
               onClick={() => setActiveTab('INDIAN_MARKET')}
@@ -318,8 +328,10 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
                 <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 mb-2">
                   <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      isTech 
+                      rule.category === 'TECHNICAL'
                         ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30' 
+                        : rule.category === 'CANDLESTICK_PATTERN'
+                        ? 'bg-rose-500/10 text-rose-400 border border-rose-500/30'
                         : 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
                     }`}>
                       {rule.category}
@@ -358,6 +370,28 @@ export const KnowledgeBaseModal: React.FC<KnowledgeBaseModalProps> = ({
                 <p className="text-slate-300 text-xs font-sans mb-2 leading-relaxed">
                   {rule.conditionDescription}
                 </p>
+
+                {/* 🕯️ Curated Candlestick Pattern Metrics */}
+                {rule.candlestickMetrics && (
+                  <div className="my-2 p-2.5 rounded-lg bg-rose-950/20 border border-rose-500/30 text-[10px] font-mono grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div>
+                      <span className="text-slate-400 text-[9px] block">Pattern Formation</span>
+                      <strong className="text-rose-300 truncate block">{rule.candlestickMetrics.patternType.replace(/_/g, ' ')}</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[9px] block">Min Wick:Body Ratio</span>
+                      <strong className="text-amber-300 block">{rule.candlestickMetrics.minWickToBodyRatio}:1</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[9px] block">Volume Confirmation</span>
+                      <strong className="text-cyan-300 block">≥{rule.candlestickMetrics.volumeConfirmationThreshold}x 20-SMA</strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 text-[9px] block">Defining SL Anchor</span>
+                      <strong className="text-emerald-300 truncate block">{rule.candlestickMetrics.stopLossAnchorPoint.replace(/_/g, ' ')}</strong>
+                    </div>
+                  </div>
+                )}
 
                 {/* 🏛️ Standardized Unified Risk-First Schema: Structural Invalidation & Dynamic Target Logic */}
                 {rule.structuralInvalidation && rule.dynamicTargetLogic && (

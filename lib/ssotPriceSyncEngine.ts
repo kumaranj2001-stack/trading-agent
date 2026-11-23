@@ -14,7 +14,7 @@ export interface ImmutableEventRecord {
   spreadPips: number;
   sourceModule: string;  // e.g. 'TERMINAL_FEED', 'SCALPING_DESK'
   stateHash: string;     // FNV-1a checksum for tamper-proof verification
-  consensusSignature: string; // 7-Agent Debate Consensus clearance stamp
+  consensusSignature: string; // 8-Agent Debate Consensus clearance stamp
 }
 
 export interface ModuleSyncTelemetry {
@@ -98,7 +98,7 @@ export class SSOTPriceSyncEngine {
       { id: '02_knowledge', name: '02. Knowledge Corpus (2,100+ Models)' },
       { id: '03_vision_atlas', name: '03. Vision Atlas Lab (Lightweight Charts DOM)' },
       { id: '04_agent_swarm', name: '04. Multi-Agent Swarm Intelligence Desk' },
-      { id: '05_seven_agent_debate', name: '05. Autonomous 7-Agent Debate & Consensus' },
+      { id: '05_seven_agent_debate', name: '05. Autonomous 8-Agent Debate & Consensus' },
       { id: '06_roles', name: '06. Roles Architecture & Institutional Gatekeeper' },
       { id: '07_journals', name: '07. Persistent Trade Journals & Loss Attribution' },
       { id: '08_wire', name: '08. 38-Source Real-Time Financial Wire' },

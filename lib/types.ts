@@ -132,6 +132,7 @@ export type AgentRole =
   | 'forex_analyst'
   | 'news_analyst'
   | 'order_flow_analyst'
+  | 'candlestick_pattern_analyst'
   | 'risk_manager'
   | 'chief_reviewer'
   | 'terminal_node';
@@ -505,7 +506,9 @@ export interface StructuralInvalidationPoint {
     | 'VALUE_AREA_BOUNDARY'
     | 'CENTRAL_BANK_RATE_WALL'
     | 'SOVEREIGN_YIELD_REVERSAL'
-    | 'COMMERCIAL_COT_EXTREME';
+    | 'COMMERCIAL_COT_EXTREME'
+    | 'DEFINING_CANDLE_EXTREME_WICK'
+    | 'DEFINING_CANDLE_BODY_BOUNDARY';
   anchorOffsetPips: number;
   invalidationPriceFormula: string;
   structuralBoundaryDescription: string;
@@ -534,9 +537,60 @@ export interface DynamicRiskProfile {
   expectedRoiPercent: number;
 }
 
+export interface CandlestickPatternMetrics {
+  patternType: string;
+  minWickToBodyRatio: number;
+  maxOppositeWickPercent: number;
+  minBodySizePercent: number;
+  volumeConfirmationThreshold: number; // e.g. 1.35x 20-period SMA volume
+  multiTimeframeAlignment: string[]; // e.g. ['1M', '5M', '15M', '1H', '4H']
+  historicalWinRate: number; // e.g. 84.6%
+  sampleSize: number; // e.g. 1420 trades
+  profitFactor: number; // e.g. 2.85
+  structuralConfirmationLocation: 'LIQUIDITY_SWEEP' | 'ORDER_BLOCK' | 'CHOCH_REVERSAL' | 'FAIR_VALUE_GAP' | 'SESSION_HIGH_LOW' | 'KEY_S_R_LEVEL';
+  stopLossAnchorPoint: 'DEFINING_CANDLE_EXTREME_WICK' | 'DEFINING_CANDLE_BODY_BOUNDARY';
+}
+
+export interface CandlestickPatternAnalysis {
+  agentName: string;
+  detectedPattern: string;
+  patternCategory: 'REVERSAL' | 'CONTINUATION' | 'INDECISION_FILTER';
+  bias: SignalDirection;
+  confidenceScore: number;
+  wickToBodyRatio: number;
+  bodySizePercent: number;
+  volumeConfirmation: {
+    currentVolume: number;
+    sma20Volume: number;
+    volumeMultiplier: number;
+    confirmed: boolean;
+  };
+  structuralContext: {
+    location: 'LIQUIDITY_SWEEP' | 'ORDER_BLOCK' | 'CHOCH_REVERSAL' | 'FAIR_VALUE_GAP' | 'SESSION_HIGH_LOW' | 'KEY_S_R_LEVEL';
+    structuralLevelPrice: number;
+    distancePips: number;
+    isAlignedWithHTF: boolean;
+  };
+  definingCandleBoundary: {
+    extremeWickPrice: number;
+    bodyBoundaryPrice: number;
+    suggestedStopLoss: number;
+    invalidationBufferPips: number;
+    anchorType?: 'DEFINING_CANDLE_EXTREME_WICK' | 'DEFINING_CANDLE_BODY_BOUNDARY';
+  };
+  rejectionStatus: {
+    isRejectedNoise: boolean;
+    rejectionReason?: string;
+  };
+  topMatchedRules: KnowledgeRule[];
+  reasoning?: string;
+  historicalCredibilityScore?: number;
+  timestamp: string;
+}
+
 export interface KnowledgeRule {
   id: string;
-  category: 'TECHNICAL' | 'FUNDAMENTAL';
+  category: 'TECHNICAL' | 'FUNDAMENTAL' | 'CANDLESTICK_PATTERN';
   subcategory: string;
   marketScope: 'FOREX' | 'INDIAN_MARKET' | 'GLOBAL';
   ruleName: string;
@@ -545,7 +599,7 @@ export interface KnowledgeRule {
   expectedWinRate: number; // percentage, e.g. 78.5%
   signalAction: SignalDirection;
   invalidationCriteria: string;
-  framework?: 'SMC' | 'ICT' | 'CLASSICAL_QUANT' | 'MACRO_REGIME' | 'CENTRAL_BANK' | 'COT_FLOW';
+  framework?: 'SMC' | 'ICT' | 'CLASSICAL_QUANT' | 'MACRO_REGIME' | 'CENTRAL_BANK' | 'COT_FLOW' | 'PRICE_ACTION_CANDLESTICK';
   timeframeScope?: 'MICRO' | 'INTRADAY' | 'SWING' | 'MACRO';
   spatialZoneTarget?: 'DEMAND_OB' | 'SUPPLY_OB' | 'FVG' | 'OTE_POCKET' | 'BSL' | 'SSL' | 'EQUILIBRIUM';
   quantParameters?: Record<string, any>;
@@ -557,6 +611,9 @@ export interface KnowledgeRule {
   expectancyR?: number;
   tier?: 'TIER_1_ALPHA_VANGUARD' | 'TIER_2_HIGH_CONVICTION' | 'TIER_3_TACTICAL_CONFLUENCE';
 
+  // 🕯️ Dedicated High-Credibility Candlestick Pattern Metrics
+  candlestickMetrics?: CandlestickPatternMetrics;
+
   // 🏛️ Standardized Unified Risk-First Schema (Inextricably Linked)
   structuralInvalidation: StructuralInvalidationPoint;
   dynamicTargetLogic: DynamicTargetCalculationLogic;
@@ -566,7 +623,7 @@ export interface KnowledgeRule {
 export interface ScreenedModel {
   id: string;
   name: string;
-  category: 'TECHNICAL' | 'FUNDAMENTAL';
+  category: 'TECHNICAL' | 'FUNDAMENTAL' | 'CANDLESTICK_PATTERN';
   orthogonalFamily: string;
   sharpeRatio: number;
   maxDrawdownPercent: number;
@@ -656,7 +713,7 @@ export interface KnowledgeMatchResult {
 
 export interface ExhaustiveCategoryBreakdown {
   categoryName: string;
-  type: 'TECHNICAL' | 'FUNDAMENTAL';
+  type: 'TECHNICAL' | 'FUNDAMENTAL' | 'CANDLESTICK_PATTERN';
   totalRules: number;
   concordantRulesCount: number;
   opposingRulesCount: number;
@@ -790,9 +847,10 @@ export interface InstitutionalOrderFlowMetrics {
 }
 
 export interface ExhaustiveStrategyCorpusEvaluation {
-  totalEvaluatedStrategies: number; // 2,100+
-  technicalEvaluatedCount: number;  // 1,050+
-  fundamentalEvaluatedCount: number; // 1,050+
+  totalEvaluatedStrategies: number; // 1,170+
+  technicalEvaluatedCount: number;  // 525+
+  fundamentalEvaluatedCount: number; // 525+
+  candlestickEvaluatedCount?: number; // 120+
   dynamicFailureConstraintsCount: number; // 1+
 
   technicalConcordance: {
@@ -804,6 +862,14 @@ export interface ExhaustiveStrategyCorpusEvaluation {
   };
 
   fundamentalConcordance: {
+    bullishCount: number;
+    bearishCount: number;
+    neutralCount: number;
+    concordanceRatio: number; // percentage
+    dominantBias: 'BUY' | 'SELL' | 'NEUTRAL';
+  };
+
+  candlestickConcordance?: {
     bullishCount: number;
     bearishCount: number;
     neutralCount: number;
@@ -1331,8 +1397,9 @@ export interface DebateTerminalNode {
     fundamentalAnalyst: string;
     newsAnalyst: string;
     forexAnalyst: string;
-    chiefRiskOfficer: string;
     orderFlowAnalyst?: string;
+    candlestickPatternAnalyst?: string;
+    chiefRiskOfficer: string;
     chiefReviewer?: string;
   };
 }
@@ -1355,7 +1422,7 @@ export interface DebatePriceThresholds {
 export interface DebateCitedRule {
   ruleId: string;
   ruleName: string;
-  category: 'TECHNICAL' | 'FUNDAMENTAL' | 'RISK' | 'NEWS';
+  category: 'TECHNICAL' | 'FUNDAMENTAL' | 'RISK' | 'NEWS' | 'CANDLESTICK_PATTERN' | 'ORDER_FLOW';
   winRate: number;
   side: 'BUY' | 'SELL';
   rationale: string;
@@ -1406,10 +1473,12 @@ export interface SwarmConsensusResult {
   knowledgeSummary: {
     totalTechnicalRulesLoaded: number;
     totalFundamentalRulesLoaded: number;
+    totalCandlestickRulesLoaded?: number;
     totalDynamicRulesLoaded?: number;
     totalOperativeRules?: number;
     matchedTechnicalRules: number;
     matchedFundamentalRules: number;
+    matchedCandlestickRules?: number;
     topConfluenceRules: KnowledgeRule[];
     activeFailureConstraint?: FailureConstraintRule;
   };
@@ -1420,6 +1489,7 @@ export interface SwarmConsensusResult {
     forex: ForexAnalysis;
     news: NewsAnalysis;
     orderFlow?: OrderFlowAnalysis;
+    candlestickPattern?: CandlestickPatternAnalysis;
     risk: RiskAssessment;
   };
   buySideChannelWeight?: number;
@@ -1849,7 +1919,7 @@ export interface SevenStagePipelineResult {
 }
 
 export interface DeskAuditVerdict {
-  desk: 'TECHNICAL' | 'FUNDAMENTAL' | 'NEWS_WIRE' | 'FOREX_INTERMARKET' | 'ORDER_FLOW' | 'RISK_GOVERNANCE';
+  desk: 'TECHNICAL' | 'FUNDAMENTAL' | 'NEWS_WIRE' | 'FOREX_INTERMARKET' | 'ORDER_FLOW' | 'CANDLESTICK_PATTERN' | 'RISK_GOVERNANCE';
   analystName: string;
   verdict: 'COMPLIANT' | 'WARNING' | 'NON_COMPLIANT';
   finding: string;
@@ -1857,7 +1927,7 @@ export interface DeskAuditVerdict {
 }
 
 export interface DeskVoteDetail {
-  desk: 'TECHNICAL' | 'FUNDAMENTAL' | 'NEWS_WIRE' | 'FOREX_INTERMARKET' | 'ORDER_FLOW' | 'RISK_GOVERNANCE';
+  desk: 'TECHNICAL' | 'FUNDAMENTAL' | 'NEWS_WIRE' | 'FOREX_INTERMARKET' | 'ORDER_FLOW' | 'CANDLESTICK_PATTERN' | 'RISK_GOVERNANCE';
   analystName: string;
   bias: string;
   vote: 'AGREE' | 'DISAGREE';
@@ -1885,9 +1955,10 @@ export interface ChiefReviewerAuditResult {
     newsWire: DeskAuditVerdict;
     forexIntermarket: DeskAuditVerdict;
     orderFlow?: DeskAuditVerdict;
+    candlestickPattern?: DeskAuditVerdict;
     riskGovernance: DeskAuditVerdict;
   };
-  deskVotes: Partial<Record<'TECHNICAL' | 'FUNDAMENTAL' | 'NEWS_WIRE' | 'FOREX_INTERMARKET' | 'ORDER_FLOW' | 'RISK_GOVERNANCE', DeskVoteDetail>>;
+  deskVotes: Partial<Record<'TECHNICAL' | 'FUNDAMENTAL' | 'NEWS_WIRE' | 'FOREX_INTERMARKET' | 'ORDER_FLOW' | 'CANDLESTICK_PATTERN' | 'RISK_GOVERNANCE', DeskVoteDetail>>;
   completeInvalidationCriteriaList: string[];
   contradictionResolution: {
     hasContradiction: boolean;

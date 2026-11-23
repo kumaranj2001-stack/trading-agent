@@ -209,13 +209,13 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
     {
       id: 'debate',
       number: '05',
-      label: '7-Agent Debate',
-      description: 'Autonomous 7-Agent Debate & Consensus Chamber',
+      label: '8-Agent Debate',
+      description: 'Autonomous 8-Agent Debate & Consensus Chamber',
       icon: MessageSquare,
       color: 'text-sky-400',
       activeBg: 'bg-sky-500/15 border-sky-500/40 text-sky-300 font-semibold',
-      isActive: activeTab === 'debate' || activeTab === 'five-agent-debate' || activeTab === 'seven-agent-debate' || activeTab === 'sequential-pipeline' || activeTab === 'pipeline',
-      badge: '7 AGENTS',
+      isActive: activeTab === 'debate' || activeTab === 'five-agent-debate' || activeTab === 'seven-agent-debate' || activeTab === 'eight-agent-debate' || activeTab === 'sequential-pipeline' || activeTab === 'pipeline',
+      badge: '8 AGENTS',
       badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
       action: () => {
         setActiveTab('debate');
@@ -227,12 +227,12 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       id: 'roles',
       number: '06',
       label: 'Role',
-      description: '7-Role Governance & Architecture',
+      description: '8-Role Governance & Architecture',
       icon: Layers,
       color: 'text-rose-400',
       activeBg: 'bg-rose-500/15 border-rose-500/40 text-rose-300 font-semibold',
       isActive: activeTab === 'roles' || activeTab === 'architecture',
-      badge: '7 AGENTS',
+      badge: '8 AGENTS',
       badgeColor: 'bg-rose-500/20 text-rose-400 border-rose-500/30',
       action: () => {
         setActiveTab('roles');

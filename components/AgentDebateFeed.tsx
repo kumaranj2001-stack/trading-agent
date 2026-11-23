@@ -167,6 +167,8 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         return <Scale className="w-4 h-4 text-amber-400" />;
       case 'order_flow_analyst':
         return <Activity className="w-4 h-4 text-orange-400" />;
+      case 'candlestick_pattern_analyst':
+        return <Flame className="w-4 h-4 text-rose-400" />;
       case 'news_analyst':
         return <Newspaper className="w-4 h-4 text-sky-400" />;
       case 'risk_manager':
@@ -313,7 +315,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
   const streamLatencyMs = synthesis?.streamLatencyMs ?? 28;
   const failSafeActive = Boolean(synthesis?.failSafePauseActive || streamLatencyMs > 1500);
 
-  // Active 7-Agent Specialist Roster (SSOT Core Architecture)
+  // Active 8-Agent Specialist Roster (SSOT Core Architecture)
   const specialistAgents = useMemo(() => {
     const findAgent = (role: AgentDebateMessage['role'], defaultName: string, defaultDesk: string, iconColor: string) => {
       const msg = [...messages].reverse().find(m => m.role === role && !m.isTerminalNode);
@@ -325,7 +327,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         stance: msg ? (msg.side || (msg.sentiment === 'BULLISH' ? 'BUY' : 'SELL')) : (definitiveBias.includes('BUY') ? 'BUY' : 'SELL'),
         citedRuleId: msg?.citedRuleId,
         winRate: msg?.winRate,
-        thesis: msg ? msg.content.slice(0, 130) + '...' : 'Specialist telemetry actively debated in 7-Agent consensus engine.',
+        thesis: msg ? msg.content.slice(0, 130) + '...' : 'Specialist telemetry actively debated in 8-Agent consensus engine.',
         iconColor,
       };
     };
@@ -336,6 +338,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
       findAgent('news_analyst', 'Arthur Wright', 'News & Macro Intelligence', 'text-sky-400'),
       findAgent('forex_analyst', 'Kenji Sato', 'Forex & Cross-Asset Corridors', 'text-amber-400'),
       findAgent('order_flow_analyst', 'Kaelen Voss', 'Order Flow & Liquidity Desk', 'text-orange-400'),
+      findAgent('candlestick_pattern_analyst', 'Kenji Takahashi', 'Candlestick Pattern Specialist (120 Rules)', 'text-rose-400'),
       findAgent('risk_manager', 'Sarah Stirling', 'Chief Risk Officer (CRO)', 'text-emerald-400'),
       findAgent('chief_reviewer', 'Dr. Marcus Sterling', 'Chief Reviewer & Gatekeeper', 'text-indigo-400'),
     ];
@@ -366,7 +369,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <h3 className={`font-bold text-base sm:text-lg tracking-wide ${
                 isLight ? 'text-slate-900' : 'text-white'
               }`}>
-                05 // AUTONOMOUS 7-AGENT DEBATE & CONSENSUS CHAMBER
+                05 // AUTONOMOUS 8-AGENT DEBATE & CONSENSUS CHAMBER
               </h3>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -382,7 +385,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-500/15 text-purple-300 border border-purple-500/40 flex items-center gap-1">
                 <Database className="w-3 h-3 text-purple-400" />
-                2,100+ STRATEGIES SYNCHRONOUS DEBATE
+                1,170+ STRATEGIES SYNCHRONOUS DEBATE
               </span>
               <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/15 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3 text-cyan-400" />
@@ -396,7 +399,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <span>•</span>
               <span>Timeframe: <strong className="text-cyan-500 font-bold">{timeframe.toUpperCase()}</strong></span>
               <span>•</span>
-              <span>Decision Engine: <strong className="text-emerald-500 font-bold">7-Agent Autonomous Consensus Chamber (SSOT)</strong></span>
+              <span>Decision Engine: <strong className="text-emerald-500 font-bold">8-Agent Autonomous Consensus Chamber (SSOT)</strong></span>
               <span>•</span>
               <span>Target Mode: <strong className="text-emerald-500 font-bold">10+ Pips TP1 & Uncapped Runner</strong></span>
               <span>•</span>
@@ -420,7 +423,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                   : isLight ? 'text-slate-600 hover:text-slate-900' : 'text-slate-400 hover:text-white'
               }`}
             >
-              7-AGENT DEBATE
+              8-AGENT DEBATE
             </button>
             <button
               onClick={() => setChamberTab('PIPELINE')}
@@ -495,33 +498,36 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         </div>
       </div>
 
-      {/* 🏛️ 7 Active Specialist Agents Roster Ribbon */}
+      {/* 🏛️ 8 Active Specialist Agents Roster Ribbon */}
       <div className="p-2.5 rounded-xl bg-terminal-950/80 border border-terminal-border/80 flex items-center justify-between gap-2 overflow-x-auto text-[11px] font-mono scrollbar-thin">
         <div className="flex items-center gap-2 shrink-0">
           <Bot className="w-4 h-4 text-cyan-400" />
-          <span className="font-bold text-white uppercase">7 Active Agents:</span>
+          <span className="font-bold text-white uppercase">8 Active Agents:</span>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-nowrap">
           <span className="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800 text-cyan-300">
-            1. Marcus Vance (1,050+ Tech)
+            1. Marcus Vance (525+ Tech)
           </span>
           <span className="px-2 py-0.5 rounded bg-purple-950/60 border border-purple-800 text-purple-300">
-            2. Dr. Elena Rostova (1,050+ Macro)
+            2. Dr. Elena Rostova (525+ Macro)
           </span>
           <span className="px-2 py-0.5 rounded bg-sky-950/60 border border-sky-800 text-sky-300">
-            3. Alexander Vance (95+ News)
+            3. Alexander Vance (38 Wires)
           </span>
           <span className="px-2 py-0.5 rounded bg-amber-950/60 border border-amber-800 text-amber-300">
-            4. Kenji Sato (Forex Order Flow)
+            4. Kenji Sato (Intermarket Flow)
           </span>
-          <span className="px-2 py-0.5 rounded bg-teal-950/60 border border-teal-800 text-teal-300">
-            5. Strategy Corpus & MTF Node (2,100+)
+          <span className="px-2 py-0.5 rounded bg-orange-950/60 border border-orange-800 text-orange-300">
+            5. Kaelen Voss (Order Flow & Depth)
+          </span>
+          <span className="px-2 py-0.5 rounded bg-rose-950/60 border border-rose-800 text-rose-300">
+            6. Kenji Takahashi (120+ Candlestick Rules)
           </span>
           <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-300">
-            6. Sarah Stirling (Micro-Lot & 1:1 Ratchet)
+            7. Sarah Stirling (Risk & 1:1 Ratchet)
           </span>
           <span className="px-2 py-0.5 rounded bg-indigo-950/60 border border-indigo-800 text-indigo-300">
-            7. Marcus Sterling (Chief Reviewer)
+            8. Marcus Sterling (Chief Reviewer)
           </span>
         </div>
       </div>
@@ -579,9 +585,9 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
         </div>
       )}
 
-      {/* Grid: Left = Dialectical Pressure Engine & 7-Agent Active Specialist Roster; Right = Unified Risk Manager Directives */}
+      {/* Grid: Left = Dialectical Pressure Engine & 8-Agent Active Specialist Roster; Right = Unified Risk Manager Directives */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Left (7 cols): Autonomous 7-Agent Specialist Chamber & Dialectical Pressure Engine */}
+        {/* Left (7 cols): Autonomous 8-Agent Specialist Chamber & Dialectical Pressure Engine */}
         <div className={`lg:col-span-7 border rounded-xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden space-y-3 ${
           isLight ? 'bg-slate-50 border-slate-200 shadow-sm' : 'bg-terminal-950 border-terminal-border/80'
         }`}>
@@ -594,7 +600,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <span className={`font-bold uppercase tracking-wider ${
                 isLight ? 'text-slate-900' : 'text-white'
               }`}>
-                Autonomous 7-Agent Debate Chamber (SSOT Decision Engine)
+                Autonomous 8-Agent Debate Chamber (SSOT Decision Engine)
               </span>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -610,7 +616,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
                 </span>
               )}
               <span className="text-[10px] text-cyan-300 font-bold bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/30">
-                2,100+ CORPUS VERIFIED
+                1,170+ CORPUS VERIFIED
               </span>
             </div>
           </div>
@@ -622,7 +628,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
               <div className="min-w-0">
                 <span className={`font-bold block truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>SSOT ARCHITECTURAL OVERRIDE ACTIVE</span>
                 <span className={`text-[10px] block truncate ${isLight ? 'text-slate-600' : 'text-slate-300'}`}>
-                  Actionable trade execution derived exclusively from this 7-Agent Chamber. Auxiliary modules are strictly read-only.
+                  Actionable trade execution derived exclusively from this 8-Agent Chamber. Auxiliary modules are strictly read-only.
                 </span>
               </div>
             </div>
@@ -681,10 +687,10 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
             </div>
           </div>
 
-          {/* Autonomous 7-Agent Specialist Roster Grid */}
+          {/* Autonomous 8-Agent Specialist Roster Grid */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 uppercase tracking-wider">
-              <span>7 Autonomous Specialists Active in Chamber:</span>
+              <span>8 Autonomous Specialists Active in Chamber:</span>
               <span className="text-indigo-400">100% Synchronous Corpus Integration</span>
             </div>
 
@@ -1082,7 +1088,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
             </span>
           </div>
 
-          {/* Buy-Side Rules from 1,050+ Technical & 1,050+ Fundamental Rules */}
+          {/* Buy-Side Rules from 1,170+ Strategies Corpus (525+ Tech, 525+ Fund, 120+ Candlestick) */}
           {buySideRules.length > 0 && (
             <div className="space-y-1.5">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">
@@ -1153,7 +1159,7 @@ export const AgentDebateFeed: React.FC<AgentDebateFeedProps> = ({
             </span>
           </div>
 
-          {/* Sell-Side Rules from 1,050+ Technical & 1,050+ Fundamental Rules */}
+          {/* Sell-Side Rules from 1,170+ Strategies Corpus (525+ Tech, 525+ Fund, 120+ Candlestick) */}
           {sellSideRules.length > 0 && (
             <div className="space-y-1.5">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider block">

@@ -582,10 +582,10 @@ export class StrategyRegistry {
     let grade: ConfluenceGrade = 'B';
     let gradingRationale = '';
 
-    // Check Grade A+ Requirements
+    // Check Grade A+ Requirements (Supermajority across 7 specialist desks, 8 agents in chamber)
     if (
       direction !== 'HOLD' &&
-      agreeDeskCount >= 4 &&
+      agreeDeskCount >= 5 &&
       metaConsensusScore >= 80 &&
       debateFrictionIndex < 10.0 &&
       liquidityWallVerified &&
@@ -595,7 +595,7 @@ export class StrategyRegistry {
     ) {
       grade = 'A+';
       isGradeAPlus = true;
-      gradingRationale = `INSTITUTIONAL GRADE A+ VERIFIED: Unanimous/supermajority desk alignment (${agreeDeskCount}/5), meta-consensus probability of ${metaConsensusScore}% (>=80%), low dialectical friction of ${debateFrictionIndex}% (<10%), confirmed order book depth liquidity wall backing, clean HTF market structure shift, and zero conflicting news catalysts.`;
+      gradingRationale = `INSTITUTIONAL GRADE A+ VERIFIED: Supermajority desk alignment (${agreeDeskCount}/7 desks, 8-agent consensus chamber), meta-consensus probability of ${metaConsensusScore}% (>=80%), low dialectical friction of ${debateFrictionIndex}% (<10%), confirmed order book depth liquidity wall backing, clean HTF market structure shift, candlestick defining-boundary hold, and zero conflicting news catalysts.`;
     }
     // Check Grade A Requirements
     else if (
@@ -609,7 +609,7 @@ export class StrategyRegistry {
     ) {
       grade = 'A';
       isGradeA = true;
-      gradingRationale = `INSTITUTIONAL GRADE A VERIFIED: At least 4/5 desk agreement (${agreeDeskCount}/5), meta-consensus probability of ${metaConsensusScore}% (70-79%), dialectical friction of ${debateFrictionIndex}% (<15%), confirmed structural ${isBull ? 'S1 floor' : 'R1 ceiling'} hold, and minimum 1:3 Risk-to-Reward ratio (${calculatedRRR}:1).`;
+      gradingRationale = `INSTITUTIONAL GRADE A VERIFIED: Specialist desk agreement (${agreeDeskCount}/7 desks), meta-consensus probability of ${metaConsensusScore}% (70-79%), dialectical friction of ${debateFrictionIndex}% (<15%), confirmed structural ${isBull ? 'S1 floor' : 'R1 ceiling'} hold, candlestick timing clearance, and minimum 1:3 Risk-to-Reward ratio (${calculatedRRR}:1).`;
     }
     // Filter out low-probability or retail-level triggers
     else {
@@ -636,7 +636,7 @@ export class StrategyRegistry {
       isRetailFiltered,
       metaConsensusProbability: metaConsensusScore,
       dialecticalFriction: debateFrictionIndex,
-      deskAgreementRatio: Number((agreeDeskCount / 5).toFixed(2)),
+      deskAgreementRatio: Number((agreeDeskCount / 7).toFixed(2)),
       agreeDeskCount,
       liquidityWallVerified,
       htfStructuralAlignment,

@@ -402,7 +402,7 @@ export const ScalpingDesk: React.FC<ScalpingDeskProps> = ({
         </div>
       </div>
 
-      {/* 🏛️ SINGLE SOURCE OF TRUTH (SSOT) PRICE PARITY & 7-AGENT CONSENSUS CLEARANCE BANNER */}
+      {/* 🏛️ SINGLE SOURCE OF TRUTH (SSOT) PRICE PARITY & 8-AGENT CONSENSUS CLEARANCE BANNER */}
       <div className={`p-3.5 rounded-xl border shadow-lg font-mono text-xs ${
         isFailsafeHalted 
           ? 'bg-rose-950/30 border-rose-500/50 text-rose-300' 
@@ -437,15 +437,15 @@ export const ScalpingDesk: React.FC<ScalpingDeskProps> = ({
             </div>
           </div>
 
-          {/* Column 2: 7-Agent Debate Consensus & Gatekeeper Stamp */}
+          {/* Column 2: 8-Agent Debate Consensus & Gatekeeper Stamp */}
           <div className="space-y-1.5 pt-2 md:pt-0 md:px-3">
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5 font-bold text-amber-400">
                 <Award className="w-3.5 h-3.5 text-amber-400" />
-                7-AGENT DEBATE CONSENSUS
+                8-AGENT DEBATE CONSENSUS
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-400 border border-amber-500/30 font-bold">
-                SUPERMAJORITY (4/5)
+                SUPERMAJORITY (5/7)
               </span>
             </div>
             <div className="flex items-baseline justify-between text-[11px]">
@@ -479,7 +479,7 @@ export const ScalpingDesk: React.FC<ScalpingDeskProps> = ({
             </div>
             <div className="flex items-center justify-between text-[10px] text-slate-400">
               <span>Failure Circuit Breaker: <strong className="text-emerald-400">ACTIVE (&lt;0.3p max)</strong></span>
-              <span className="text-cyan-400 font-bold">1,050+ Rules</span>
+              <span className="text-cyan-400 font-bold">1,170+ Rules</span>
             </div>
           </div>
         </div>
@@ -753,10 +753,10 @@ export const ScalpingDesk: React.FC<ScalpingDeskProps> = ({
                       </div>
                     </div>
 
-                    {/* 7-Agent Debate Consensus & Knowledge Base Alignment */}
+                    {/* 8-Agent Debate Consensus & Knowledge Base Alignment */}
                     <div className="px-2 py-1.5 rounded bg-amber-500/10 border border-amber-500/20 text-[10px] space-y-0.5">
                       <div className="flex items-center justify-between text-amber-300 font-bold">
-                        <span>7-Agent Verdict: {opp.consensusVerdict || opp.direction} ({opp.consensusConfidence || 86.6}%)</span>
+                        <span>8-Agent Verdict: {opp.consensusVerdict || opp.direction} ({opp.consensusConfidence || 86.6}%)</span>
                         <span className="text-cyan-400">{opp.linkedRuleId || 'RULE-SMC-MSS-01'}</span>
                       </div>
                       <div className="text-slate-400 truncate text-[9px]" title={opp.gatekeeperSignature}>

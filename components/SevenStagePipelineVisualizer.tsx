@@ -227,7 +227,7 @@ export const SevenStagePipelineVisualizer: React.FC<SevenStagePipelineVisualizer
                     STAGE 1 OF 7
                   </span>
                   <h4 className="font-extrabold text-sm text-cyan-300 uppercase">
-                    2,100+ Quantitative Execution Strategies Exhaustive Analysis
+                    1,170+ Quantitative Execution Strategies Exhaustive Analysis
                   </h4>
                 </div>
                 <span className="text-[10px] text-slate-400">Execution Latency: {stage1.latencyMs}ms</span>
@@ -237,7 +237,7 @@ export const SevenStagePipelineVisualizer: React.FC<SevenStagePipelineVisualizer
                 <div className={`p-3 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
                   <span className="text-[10px] text-slate-400 block font-semibold">Total Strategies Evaluated</span>
                   <span className="text-base font-extrabold text-cyan-400">{stage1.totalStrategiesEvaluated} Rules</span>
-                  <span className="text-[9px] text-slate-500 block mt-0.5">1,050+ Technical + 1,050+ Fundamental</span>
+                  <span className="text-[9px] text-slate-500 block mt-0.5">525+ Technical + 525+ Fundamental + 120+ Candlestick</span>
                 </div>
 
                 <div className={`p-3 rounded-xl border ${theme === 'light' ? 'bg-slate-50 border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>

@@ -19,6 +19,8 @@ export async function GET(req: NextRequest) {
       rules = knowledgeEngine.getTechnicalRules();
     } else if (category === 'FUNDAMENTAL') {
       rules = knowledgeEngine.getFundamentalRules();
+    } else if (category === 'CANDLESTICK_PATTERN' || category === 'CANDLESTICK') {
+      rules = knowledgeEngine.getCandlestickRules();
     } else if (category === 'DYNAMIC_CONSTRAINTS' || category === 'FAILURE_CONSTRAINTS' || category === 'SYNTHESIZED_RULES') {
       rules = diagnosticReasoningEngine.getDynamicRules() as any;
     } else if (category === 'INDIAN_MARKET') {
