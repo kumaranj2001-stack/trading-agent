@@ -90,7 +90,7 @@ export class ChiefReviewerAgent extends BaseAgent {
       verdict: techVote === 'AGREE' ? 'COMPLIANT' : 'WARNING',
       score: technical.confidenceScore,
       finding: techVote === 'AGREE'
-        ? `Compliant: SMC structure (${technical.smartMoneyConcepts?.structure || technical.trend}) and RSI momentum (${technical.indicatorSummary.rsiStatus}) support ${proposedDirection}. Stop loss anchored tightly at 5 pips beyond structure (${technical.suggestedStopLoss}).`
+        ? `Compliant: SMC structure (${technical.smartMoneyConcepts?.structure || technical.trend}) and RSI momentum (${technical.indicatorSummary.rsiStatus}) support ${proposedDirection}. Stop loss anchored dynamically to market structure (${technical.suggestedStopLoss}).`
         : `Divergence Warning: Technical desk bias (${technical.bias}) diverges from candidate ${proposedDirection}. Structural boundary invalidation monitored.`,
     };
     const techVoteDetail: DeskVoteDetail = {
@@ -301,8 +301,8 @@ export class ChiefReviewerAgent extends BaseAgent {
                                  risk.parameters.takeProfit1 > 0;
     const proportionalSizingEnforced = risk.parameters.maxLossUsd <= (risk.accountHealth.startingBalance * (risk.parameters.accountRiskPercent / 100)) + 1.0;
     const riskVote: 'AGREE' | 'DISAGREE' = (riskWorkflowVerified && proportionalSizingEnforced && risk.verdict !== 'VETOED') ? 'AGREE' : 'DISAGREE';
-    const riskBuyArg = `Dynamic risk workflow verified: Sizing set to ${risk.parameters.positionSizeLots} lots with stop loss at ${risk.parameters.stopLoss} (tight 5 pips beyond S1 floor), target at ${risk.parameters.takeProfit1}, R:R ${risk.parameters.riskRewardRatio}:1, downside risk capped at $${risk.parameters.maxLossUsd} (${risk.parameters.accountRiskPercent}% equity).`;
-    const riskSellArg = `Downside risk protection: Sizing set to ${risk.parameters.positionSizeLots} lots with stop loss at ${risk.parameters.stopLoss} (tight 5 pips beyond R1 ceiling), target at ${risk.parameters.takeProfit1}, tail-risk circuit breaker armed.`;
+    const riskBuyArg = `Dynamic risk workflow verified: Sizing set to ${risk.parameters.positionSizeLots} lots with stop loss at ${risk.parameters.stopLoss} (dynamically anchored to S1 floor), target at ${risk.parameters.takeProfit1}, R:R ${risk.parameters.riskRewardRatio}:1, downside risk capped at $${risk.parameters.maxLossUsd} (${risk.parameters.accountRiskPercent}% equity).`;
+    const riskSellArg = `Downside risk protection: Sizing set to ${risk.parameters.positionSizeLots} lots with stop loss at ${risk.parameters.stopLoss} (dynamically anchored to R1 ceiling), target at ${risk.parameters.takeProfit1}, tail-risk circuit breaker armed.`;
     const riskVerdict: DeskAuditVerdict = {
       desk: 'RISK_GOVERNANCE',
       analystName: 'Sarah Stirling (Risk Governance & Capital Preservation)',
@@ -388,8 +388,8 @@ export class ChiefReviewerAgent extends BaseAgent {
     // 5. EXPLICIT INVALIDATION CRITERIA & COMPLETE 7-TRIGGER CHECKLIST
     // ===============================================================
     const invalidationPriceLevel = proposedDirection === 'BUY'
-      ? Number((technical.keySupport ? technical.keySupport - 5 * pipMultiplier : currentPrice - 10 * pipMultiplier).toFixed(5))
-      : Number((technical.keyResistance ? technical.keyResistance + 5 * pipMultiplier : currentPrice + 10 * pipMultiplier).toFixed(5));
+      ? Number((technical.keySupport ? technical.keySupport : currentPrice - 10 * pipMultiplier).toFixed(5))
+      : Number((technical.keyResistance ? technical.keyResistance : currentPrice + 10 * pipMultiplier).toFixed(5));
 
     const explicitInvalidationCriteria = proposedDirection === 'BUY'
       ? `MANDATORY INVALIDATION: Immediate autonomous exit triggered if price breaches S1 structural floor (${invalidationPriceLevel}) on execution candles, if confirmed Bearish CHoCH forms, or if high-impact adverse news shock prints.`

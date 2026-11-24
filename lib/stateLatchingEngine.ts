@@ -269,15 +269,15 @@ export class StateLatchingEngine {
     const rawTakeProfit = consensus.executionSignal.takeProfit;
 
     let stopDistance = Math.abs(anchoredEntryPrice - rawStopLoss);
-    if (!stopDistance || stopDistance < 5 * pipMultiplier || stopDistance > 80 * pipMultiplier) {
-      stopDistance = 18 * pipMultiplier;
+    if (!stopDistance || stopDistance < 2 * pipMultiplier || stopDistance > 80 * pipMultiplier) {
+      stopDistance = 14 * pipMultiplier;
     }
 
     let targetDistance = Math.abs(rawTakeProfit - anchoredEntryPrice);
-    const minTargetDistance = stopDistance * 1.5;
-    const maxTargetDistance = stopDistance * 4.0;
-    if (!targetDistance || targetDistance < minTargetDistance || targetDistance > maxTargetDistance || targetDistance > 250 * pipMultiplier) {
-      targetDistance = stopDistance * (isConservativeRR ? 1.85 : Math.max(2.2, Math.min(3.2, currentRR || 2.6)));
+    const minTargetDistance = stopDistance * 1.3;
+    const maxTargetDistance = stopDistance * 2.5;
+    if (!targetDistance || targetDistance < minTargetDistance || targetDistance > maxTargetDistance || targetDistance > 60 * pipMultiplier) {
+      targetDistance = stopDistance * (isConservativeRR ? 1.6 : 1.85);
     }
 
     let anchoredStopLoss: number;
@@ -286,15 +286,13 @@ export class StateLatchingEngine {
     if (isSell) {
       anchoredStopLoss = Number((anchoredEntryPrice + stopDistance).toFixed(decimals));
       anchoredTakeProfit = Number((anchoredEntryPrice - targetDistance).toFixed(decimals));
-      // Ensure resistance ceiling is higher than stop loss to allow breathing room
-      resistanceCeiling = Math.max(resistanceCeiling, Number((anchoredStopLoss + 5 * pipMultiplier).toFixed(decimals)));
-      s1Floor = Math.min(s1Floor, Number((anchoredTakeProfit - 5 * pipMultiplier).toFixed(decimals)));
+      resistanceCeiling = Math.max(resistanceCeiling, anchoredStopLoss);
+      s1Floor = Math.min(s1Floor, anchoredTakeProfit);
     } else {
       anchoredStopLoss = Number((anchoredEntryPrice - stopDistance).toFixed(decimals));
       anchoredTakeProfit = Number((anchoredEntryPrice + targetDistance).toFixed(decimals));
-      // Ensure S1 floor is lower than stop loss
-      s1Floor = Math.min(s1Floor, Number((anchoredStopLoss - 5 * pipMultiplier).toFixed(decimals)));
-      resistanceCeiling = Math.max(resistanceCeiling, Number((anchoredTakeProfit + 5 * pipMultiplier).toFixed(decimals)));
+      s1Floor = Math.min(s1Floor, anchoredStopLoss);
+      resistanceCeiling = Math.max(resistanceCeiling, anchoredTakeProfit);
     }
 
     const anchoredRiskReward = Number((targetDistance / stopDistance).toFixed(2));

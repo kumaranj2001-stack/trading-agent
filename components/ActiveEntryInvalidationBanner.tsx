@@ -147,7 +147,7 @@ export const ActiveEntryInvalidationBanner: React.FC<ActiveEntryInvalidationBann
               <span className="text-slate-300 text-[11px]">
                 {isStructuralOverride ? (
                   <span>
-                    🚨 <strong className="text-rose-400 font-black">PARAMOUNT STRUCTURAL OVERRIDE:</strong> Confirmed CHoCH / Market Structure Breakdown detected. Initial 5-pip buffer overridden; immediate market execution exit required to protect accumulated equity.
+                    🚨 <strong className="text-rose-400 font-black">PARAMOUNT STRUCTURAL OVERRIDE:</strong> Confirmed CHoCH / Market Structure Breakdown detected. Dynamic structural anchor breached; immediate market execution exit required to protect accumulated equity.
                   </span>
                 ) : isProfit ? (
                   <span>

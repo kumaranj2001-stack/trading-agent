@@ -110,151 +110,151 @@ const createTechnicalRiskSchema = (
   dynamicRiskProfile: DynamicRiskProfile;
 } => {
   let anchorType: StructuralInvalidationPoint['anchorType'] = 'ORDER_BLOCK_BOUNDARY';
-  let anchorOffsetPips = 5.0;
+  let anchorOffsetPips = 0.0;
   let invalidationPriceFormula = '';
   let structuralBoundaryDescription = '';
-  let trailingBreakevenTriggerPips = 10.0;
-  let maxPermissibleStopDistancePips = 22.0;
+  let trailingBreakevenTriggerPips = 8.0;
+  let maxPermissibleStopDistancePips = 20.0;
 
   let targetType: DynamicTargetCalculationLogic['targetType'] = 'OPPOSING_LIQUIDITY_POOL';
-  let minimumRiskRewardRatio = 3.2;
+  let minimumRiskRewardRatio = 1.8;
   let targetCalculationFormula = '';
-  let volatilityExpansionCoefficient = 1.85;
-  let dynamicExitRatchet = '1:1 Breakeven locked at +10p; trailing ratchet 1.5x ATR after 2.0R expansion.';
+  let volatilityExpansionCoefficient = 1.25;
+  let dynamicExitRatchet = '1:1 Breakeven locked at +8p; high-probability execution at immediate analytical zone.';
 
   switch (orthogonalFamily) {
     case 'Smart Money Concepts & Order Flow':
       anchorType = 'ORDER_BLOCK_BOUNDARY';
-      anchorOffsetPips = 5.0;
+      anchorOffsetPips = 0.0;
       invalidationPriceFormula = isBull
-        ? 'DemandOrderBlock.Low - 5.0p (Structural Liquidity Floor)'
-        : 'SupplyOrderBlock.High + 5.0p (Structural Liquidity Ceiling)';
+        ? 'DemandOrderBlock.Low (Structural Liquidity Floor)'
+        : 'SupplyOrderBlock.High (Structural Liquidity Ceiling)';
       structuralBoundaryDescription = isBull
         ? 'Breach of Demand Order Block low invalidates institutional buying sponsorship.'
         : 'Breach of Supply Order Block high invalidates institutional distribution bias.';
-      trailingBreakevenTriggerPips = 10.0;
-      maxPermissibleStopDistancePips = 22.0;
+      trailingBreakevenTriggerPips = 8.0;
+      maxPermissibleStopDistancePips = 20.0;
       targetType = 'OPPOSING_LIQUIDITY_POOL';
-      minimumRiskRewardRatio = 3.4;
-      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.4) at Opposing Buy/Sell Side Liquidity Pool';
-      volatilityExpansionCoefficient = 1.95;
-      dynamicExitRatchet = 'Lock 1:1 Breakeven at +10p; ratchet trail 1.5x ATR beyond 2.0R.';
+      minimumRiskRewardRatio = 1.85;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 1.85) at Immediate Opposing Liquidity Zone';
+      volatilityExpansionCoefficient = 1.30;
+      dynamicExitRatchet = 'Lock 1:1 Breakeven at +8p; close proximity harvest at analytical zone.';
       break;
 
     case 'Auction Market Theory & CVD':
       anchorType = 'VALUE_AREA_BOUNDARY';
-      anchorOffsetPips = 6.0;
+      anchorOffsetPips = 0.0;
       invalidationPriceFormula = isBull
-        ? 'ValueAreaLow - 6.0p (High-Volume POC Defense Band)'
-        : 'ValueAreaHigh + 6.0p (High-Volume POC Defense Band)';
+        ? 'ValueAreaLow (High-Volume POC Defense Band)'
+        : 'ValueAreaHigh (High-Volume POC Defense Band)';
       structuralBoundaryDescription = isBull
         ? 'Acceptance below VAL with negative cumulative delta invalidates value expansion auction.'
         : 'Acceptance above VAH with positive cumulative delta invalidates exhaustion auction.';
-      trailingBreakevenTriggerPips = 12.0;
-      maxPermissibleStopDistancePips = 24.0;
+      trailingBreakevenTriggerPips = 8.0;
+      maxPermissibleStopDistancePips = 20.0;
       targetType = 'ORDER_BOOK_DEPTH_WALL';
-      minimumRiskRewardRatio = 3.2;
-      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.2) at Overhead Order Book Asymmetric Depth Wall';
-      volatilityExpansionCoefficient = 1.80;
+      minimumRiskRewardRatio = 1.80;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 1.80) at Overhead Order Book Asymmetric Depth Wall';
+      volatilityExpansionCoefficient = 1.25;
       dynamicExitRatchet = 'Breakeven ratchet armed at high-volume shelf; trail behind dynamic POC.';
       break;
 
     case 'Harmonic Geometry & Volatility':
       anchorType = isBull ? 'SWING_LOW_BUFFER' : 'SWING_HIGH_BUFFER';
-      anchorOffsetPips = 5.0;
+      anchorOffsetPips = 0.0;
       invalidationPriceFormula = isBull
-        ? 'HarmonicPointX.Low - 5.0p (0.786 / 0.886 Golden Pocket Invalidation)'
-        : 'HarmonicPointX.High + 5.0p (0.786 / 0.886 Golden Pocket Invalidation)';
+        ? 'HarmonicPointX.Low (0.786 / 0.886 Golden Pocket Invalidation)'
+        : 'HarmonicPointX.High (0.786 / 0.886 Golden Pocket Invalidation)';
       structuralBoundaryDescription = isBull
         ? 'Candle close beyond 1.000 retracement of swing Point X invalidates harmonic PRZ.'
         : 'Candle close beyond 1.000 retracement of swing Point X invalidates bearish PRZ.';
-      trailingBreakevenTriggerPips = 10.0;
-      maxPermissibleStopDistancePips = 20.0;
+      trailingBreakevenTriggerPips = 8.0;
+      maxPermissibleStopDistancePips = 18.0;
       targetType = 'ASYMMETRIC_EXPANSION_RR';
-      minimumRiskRewardRatio = 3.5;
-      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.5) at 1.618 Fibonacci Extension Runway';
-      volatilityExpansionCoefficient = 2.00;
-      dynamicExitRatchet = 'Lock 1:1 Breakeven at 0.618 CD target; trail 1.3x ATR beyond 2.0R.';
+      minimumRiskRewardRatio = 1.90;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 1.90) at Immediate Fibonacci PRZ Analytical Runway';
+      volatilityExpansionCoefficient = 1.30;
+      dynamicExitRatchet = 'Lock 1:1 Breakeven at 0.618 CD target; harvest at analytical zone.';
       break;
 
     case 'Multi-Timeframe Entry Protocols':
       anchorType = 'LIQUIDITY_SWEEP_EXTREME';
-      anchorOffsetPips = 4.5;
+      anchorOffsetPips = 0.0;
       invalidationPriceFormula = isBull
-        ? 'HTFSweepWick.Low - 4.5p (Session Sweep Purge Baseline)'
-        : 'HTFSweepWick.High + 4.5p (Session Sweep Purge Baseline)';
+        ? 'HTFSweepWick.Low (Session Sweep Purge Baseline)'
+        : 'HTFSweepWick.High (Session Sweep Purge Baseline)';
       structuralBoundaryDescription = 'Violation of HTF sweep wick low/high dissolves institutional displacement thesis.';
-      trailingBreakevenTriggerPips = 10.0;
-      maxPermissibleStopDistancePips = 22.0;
+      trailingBreakevenTriggerPips = 8.0;
+      maxPermissibleStopDistancePips = 20.0;
       targetType = 'OPPOSING_LIQUIDITY_POOL';
-      minimumRiskRewardRatio = 3.6;
-      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.6) at Opposite Session High/Low Liquidity';
-      volatilityExpansionCoefficient = 2.10;
-      dynamicExitRatchet = 'Lock Breakeven at 15M BOS; trail 1.5x ATR behind 1H swing pivots.';
+      minimumRiskRewardRatio = 1.85;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 1.85) at Immediate Opposite Session Liquidity';
+      volatilityExpansionCoefficient = 1.30;
+      dynamicExitRatchet = 'Lock Breakeven at 15M BOS; exit at analytical pool.';
       break;
 
     case 'Statistical Arbitrage & Mean Reversion':
       anchorType = 'VWAP_VOLATILITY_BAND';
-      anchorOffsetPips = 7.0;
+      anchorOffsetPips = 0.0;
       invalidationPriceFormula = isBull
-        ? 'BollingerLower3σ - 7.0p (Statistical Extreme Breakdown Buffer)'
-        : 'BollingerUpper3σ + 7.0p (Statistical Extreme Breakout Buffer)';
+        ? 'BollingerLower3σ (Statistical Extreme Breakdown Baseline)'
+        : 'BollingerUpper3σ (Statistical Extreme Breakout Baseline)';
       structuralBoundaryDescription = 'Sustained price drift beyond 3.5σ confirms regime drift away from mean.';
-      trailingBreakevenTriggerPips = 12.0;
-      maxPermissibleStopDistancePips = 25.0;
+      trailingBreakevenTriggerPips = 8.0;
+      maxPermissibleStopDistancePips = 20.0;
       targetType = 'VALUE_AREA_EXTENDED_POC';
-      minimumRiskRewardRatio = 3.0;
-      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.0) at Central Mean VWAP Equilibrium';
-      volatilityExpansionCoefficient = 1.65;
-      dynamicExitRatchet = 'Ratchet to Breakeven at 1.0σ touch; scale single target at Mean Band.';
+      minimumRiskRewardRatio = 1.65;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 1.65) at Central Mean VWAP Equilibrium';
+      volatilityExpansionCoefficient = 1.20;
+      dynamicExitRatchet = 'Ratchet to Breakeven at 1.0σ touch; close target at Mean Band.';
       break;
 
     case 'Multi-Timeframe Trend Stacks':
       anchorType = isBull ? 'SWING_LOW_BUFFER' : 'SWING_HIGH_BUFFER';
-      anchorOffsetPips = 5.5;
+      anchorOffsetPips = 0.0;
       invalidationPriceFormula = isBull
-        ? 'DynamicEMA50 - 5.5p (Ribbon Stack Compression Support Floor)'
-        : 'DynamicEMA50 + 5.5p (Ribbon Stack Compression Resistance Ceiling)';
+        ? 'DynamicEMA50 (Ribbon Stack Compression Support Floor)'
+        : 'DynamicEMA50 (Ribbon Stack Compression Resistance Ceiling)';
       structuralBoundaryDescription = 'Displacement through 50 EMA ribbon stack breaks directional persistence.';
-      trailingBreakevenTriggerPips = 11.0;
-      maxPermissibleStopDistancePips = 24.0;
+      trailingBreakevenTriggerPips = 8.0;
+      maxPermissibleStopDistancePips = 20.0;
       targetType = 'ASYMMETRIC_EXPANSION_RR';
-      minimumRiskRewardRatio = 3.3;
-      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.3) at Trend Channel Expansion Ceiling';
-      volatilityExpansionCoefficient = 1.90;
-      dynamicExitRatchet = 'Dynamic ATR trailing stop armed; 1:1 Breakeven locked at +11p.';
+      minimumRiskRewardRatio = 1.75;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 1.75) at Immediate Trend Channel Expansion Level';
+      volatilityExpansionCoefficient = 1.25;
+      dynamicExitRatchet = 'Dynamic ATR trailing stop armed; 1:1 Breakeven locked at +8p.';
       break;
 
     case 'Statistical Arbitrage & Oscillators':
       anchorType = isBull ? 'SWING_LOW_BUFFER' : 'SWING_HIGH_BUFFER';
-      anchorOffsetPips = 5.0;
+      anchorOffsetPips = 0.0;
       invalidationPriceFormula = isBull
-        ? 'DivergencePivot.Low - 5.0p (Momentum Baseline Support)'
-        : 'DivergencePivot.High + 5.0p (Momentum Baseline Resistance)';
+        ? 'DivergencePivot.Low (Momentum Baseline Support)'
+        : 'DivergencePivot.High (Momentum Baseline Resistance)';
       structuralBoundaryDescription = 'Breach of momentum swing pivot negates RSI/CVD divergence premise.';
-      trailingBreakevenTriggerPips = 10.0;
-      maxPermissibleStopDistancePips = 20.0;
+      trailingBreakevenTriggerPips = 8.0;
+      maxPermissibleStopDistancePips = 18.0;
       targetType = 'ORDER_BOOK_DEPTH_WALL';
-      minimumRiskRewardRatio = 3.1;
-      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.1) at Counter-Trend Liquidity Imbalance Wall';
-      volatilityExpansionCoefficient = 1.70;
-      dynamicExitRatchet = 'Lock Breakeven at 50 RSI midline crossing; trail 1.5x ATR.';
+      minimumRiskRewardRatio = 1.70;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 1.70) at Counter-Trend Liquidity Imbalance Zone';
+      volatilityExpansionCoefficient = 1.20;
+      dynamicExitRatchet = 'Lock Breakeven at 50 RSI midline crossing; harvest at immediate depth wall.';
       break;
 
     case 'Price Action & Candlestick Absorptions':
     default:
       anchorType = 'LIQUIDITY_SWEEP_EXTREME';
-      anchorOffsetPips = 5.0;
+      anchorOffsetPips = 0.0;
       invalidationPriceFormula = isBull
-        ? 'AbsorptionWick.Low - 5.0p (Institutional Stopping Volume Floor)'
-        : 'AbsorptionWick.High + 5.0p (Institutional Stopping Volume Ceiling)';
+        ? 'AbsorptionWick.Low (Institutional Stopping Volume Floor)'
+        : 'AbsorptionWick.High (Institutional Stopping Volume Ceiling)';
       structuralBoundaryDescription = 'Loss of institutional absorption wick reveals unhedged market pressure.';
-      trailingBreakevenTriggerPips = 10.0;
-      maxPermissibleStopDistancePips = 21.0;
+      trailingBreakevenTriggerPips = 8.0;
+      maxPermissibleStopDistancePips = 18.0;
       targetType = 'OPPOSING_LIQUIDITY_POOL';
-      minimumRiskRewardRatio = 3.2;
-      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.2) at Opposing Liquidity Vacuum Pocket';
-      volatilityExpansionCoefficient = 1.80;
+      minimumRiskRewardRatio = 1.80;
+      targetCalculationFormula = 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 1.80) at Immediate Opposing Liquidity Pocket';
+      volatilityExpansionCoefficient = 1.25;
       dynamicExitRatchet = '1:1 Breakeven locked immediately after expansion candle closes.';
       break;
   }

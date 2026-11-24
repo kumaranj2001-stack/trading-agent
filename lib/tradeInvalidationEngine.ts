@@ -76,7 +76,7 @@ export class TradeInvalidationEngine {
         structuralOverrideTriggered = true;
         chochBreakdownDetected = true;
         technicalReasons.unshift(
-          `⚡ PARAMOUNT STRUCTURAL OVERRIDE: Confirmed Change of Character (CHoCH) / Structure Breakdown on execution timeframe (${isBuy ? `Price ${livePrice} breached swing low ${minRecentLow.toFixed(4)}` : `Price ${livePrice} breached swing high ${maxRecentHigh.toFixed(4)}`}). Overriding initial 5-pip buffer; immediate market close mandated to protect accumulated equity.`
+          `⚡ PARAMOUNT STRUCTURAL OVERRIDE: Confirmed Change of Character (CHoCH) / Structure Breakdown on execution timeframe (${isBuy ? `Price ${livePrice} breached swing low ${minRecentLow.toFixed(4)}` : `Price ${livePrice} breached swing high ${maxRecentHigh.toFixed(4)}`}). Dynamic structural invalidation breached; immediate market close mandated to protect accumulated equity.`
         );
       }
 

@@ -201,14 +201,12 @@ export class CandlestickPatternAnalystAgent extends BaseAgent {
       rejectionReason = `REJECTED ANOMALY: Low volume (${volumeMultiplier}x) fails to corroborate expansion formation.`;
     }
 
-    // 5. Compute Defining Candle Boundaries (Exact SL Invalidation Anchor)
+    // 5. Compute Defining Candle Boundaries (Exact Dynamic SL Invalidation Anchor)
     const isBuy = bias.includes('BUY');
     const extremeWickPrice = isBuy ? c1.low : c1.high;
     const bodyBoundaryPrice = isBuy ? c1.open : c1.close;
-    const bufferPips = 2.5;
-    const suggestedStopLoss = isBuy
-      ? Number((extremeWickPrice - bufferPips * pipMultiplier).toFixed(isGold ? 2 : isJpy ? 3 : 5))
-      : Number((extremeWickPrice + bufferPips * pipMultiplier).toFixed(isGold ? 2 : isJpy ? 3 : 5));
+    const bufferPips = 0.0;
+    const suggestedStopLoss = Number(extremeWickPrice.toFixed(isGold ? 2 : isJpy ? 3 : 5));
 
     // 6. Match Knowledge Base Candlestick Rules
     const allCandleRules = knowledgeEngine.getCandlestickRules();
@@ -254,7 +252,7 @@ export class CandlestickPatternAnalystAgent extends BaseAgent {
       topMatchedRules: matchedRules.length > 0 ? matchedRules : allCandleRules.slice(0, 2),
       reasoning: isRejectedNoise 
         ? `Noise Rejection: ${rejectionReason}`
-        : `${detectedPattern.replace(/_/g, ' ')} formation verified against 120+ institutional pattern rules. Volume confirmed at ${volumeMultiplier}x 20-period SMA. Stop loss anchored strictly to defining candle boundary (${suggestedStopLoss}) with ${bufferPips}p buffer.`,
+        : `${detectedPattern.replace(/_/g, ' ')} formation verified against 120+ institutional pattern rules. Volume confirmed at ${volumeMultiplier}x 20-period SMA. Stop loss anchored dynamically to defining candle extreme wick structure point (${suggestedStopLoss}) without fixed buffer.`,
       historicalCredibilityScore: matchedRules[0]?.expectedWinRate || 82.5,
       timestamp: new Date().toISOString()
     };

@@ -755,7 +755,7 @@ export class SevenStagePipelineEngine {
         questioner: 'Sarah Stirling (Risk Manager)',
         respondent: 'Marcus Vance (Buy-Side)',
         argumentTopic: 'Downside Protection against Liquidity Hunt',
-        resolutionVerdict: 'Resolved: Stop Loss anchored 5 pips beyond S1 floor behind institutional liquidity wall.',
+        resolutionVerdict: 'Resolved: Stop Loss anchored dynamically to S1 floor behind institutional liquidity wall (zero fixed buffer).',
       },
       {
         round: 2,

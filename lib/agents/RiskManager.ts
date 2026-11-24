@@ -31,7 +31,7 @@ export const DEFAULT_RISK_CONFIG: RiskManagerConfig = {
   maxRiskPerTradePercent: 1.5,
   maxDailyDrawdownPercent: 4.0,
   currentDailyDrawdownPercent: 0.8,
-  minRiskRewardRatio: 1.8,
+  minRiskRewardRatio: 1.5,
   maxLeverage: 30,
 };
 
@@ -221,15 +221,15 @@ export class RiskManagerAgent extends BaseAgent {
         ? Math.min(technical.keySupport, bidWallPrice)
         : bidWallPrice;
       
-      // Stop Loss anchored strictly beyond the verified Order Book Bid Liquidity Wall + ATR buffer
-      calculatedStopLoss = Number((structuralPoint - (volatilityBufferAbs + 5 * pipMultiplier)).toFixed(decimals));
+      // Stop Loss anchored dynamically directly to the specific market structure point (Zero fixed 5-pip buffer)
+      calculatedStopLoss = Number(structuralPoint.toFixed(decimals));
       stopDistance = Number((currentPrice - calculatedStopLoss).toFixed(decimals));
       if (stopDistance <= 0 || calculatedStopLoss >= currentPrice) {
-        stopDistance = Math.max(15 * pipMultiplier, volatilityBufferAbs + 5 * pipMultiplier);
+        stopDistance = Math.max(8 * pipMultiplier, (technical.keySupport && currentPrice > technical.keySupport ? currentPrice - technical.keySupport : 12 * pipMultiplier));
         calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
       }
       adjustmentsMade.push(
-        `Order Book Liquidity Wall Anchoring: Initial Stop Loss anchored strictly at ${calculatedStopLoss} behind Order Book Bid Wall at ${bidWallPrice} (Depth: ${bidWallVolume} lots, ATR Buffer: ${volatilityAtrBufferPips} pips).`
+        `Dynamic Market Structure Anchoring: Stop Loss anchored directly to structural support level at ${calculatedStopLoss} (Bid Wall: ${bidWallPrice}, Depth: ${bidWallVolume} lots; zero fixed buffer applied).`
       );
     } else if (proposedAction === 'SELL') {
       // For SELL setups: structural ceiling is max(keyResistance, askWallPrice)
@@ -237,24 +237,24 @@ export class RiskManagerAgent extends BaseAgent {
         ? Math.max(technical.keyResistance, askWallPrice)
         : askWallPrice;
       
-      // Stop Loss anchored strictly beyond the verified Order Book Ask Liquidity Wall + ATR buffer
-      calculatedStopLoss = Number((structuralPoint + (volatilityBufferAbs + 5 * pipMultiplier)).toFixed(decimals));
+      // Stop Loss anchored dynamically directly to the specific market structure point (Zero fixed 5-pip buffer)
+      calculatedStopLoss = Number(structuralPoint.toFixed(decimals));
       stopDistance = Number((calculatedStopLoss - currentPrice).toFixed(decimals));
       if (stopDistance <= 0 || calculatedStopLoss <= currentPrice) {
-        stopDistance = Math.max(15 * pipMultiplier, volatilityBufferAbs + 5 * pipMultiplier);
+        stopDistance = Math.max(8 * pipMultiplier, (technical.keyResistance && technical.keyResistance > currentPrice ? technical.keyResistance - currentPrice : 12 * pipMultiplier));
         calculatedStopLoss = Number((currentPrice + stopDistance).toFixed(decimals));
       }
       adjustmentsMade.push(
-        `Order Book Liquidity Wall Anchoring: Initial Stop Loss anchored strictly at ${calculatedStopLoss} behind Order Book Ask Wall at ${askWallPrice} (Depth: ${askWallVolume} lots, ATR Buffer: ${volatilityAtrBufferPips} pips).`
+        `Dynamic Market Structure Anchoring: Stop Loss anchored directly to structural resistance level at ${calculatedStopLoss} (Ask Wall: ${askWallPrice}, Depth: ${askWallVolume} lots; zero fixed buffer applied).`
       );
     } else {
-      stopDistance = 20 * pipMultiplier;
+      stopDistance = 15 * pipMultiplier;
       calculatedStopLoss = Number((currentPrice - stopDistance).toFixed(decimals));
     }
 
-    // Dynamic Take Profit & Unlimited Profit Maximization Engine:
-    // Permanently removes the 10-50 pip profit restriction to allow unlimited profit potential.
-    // Generates multi-tier institutional expansion targets (TP1, TP2, TP3, and uncapped trailing runner).
+    // Dynamic Take Profit & Analytical Zone Execution Engine:
+    // Positioned reasonably close to entry price aligned strictly with immediate analytical zones (1:1.5 to 1:2.2 R:R)
+    // Eliminates extreme, unreachable targets (120-180+ pips) that rarely trigger to maximize execution fidelity.
     const overallConfidenceScore = Math.round(
       (technical.confidenceScore * 0.40) +
       (fundamental.confidenceScore * 0.35) +
@@ -266,18 +266,31 @@ export class RiskManagerAgent extends BaseAgent {
       (fundamental.macroRegime && (fundamental.macroRegime.includes('Expansion') || fundamental.macroRegime.includes('Tightening'))) ||
       pair === 'XAU/USD' || pair === 'WTI_CRUDE';
 
-    // Baseline R:R supports micro-setups (minimum 10 pips / 1:1 to 1:1.5 R:R) up to multi-tier macro expansions (100-500+ pips)
-    // Small setups (10 pips target or 1:1 to 1:1.5 R:R) are mandatorily executed with 1:1 Breakeven Ratchet armed.
-    const minTargetDistance = 10 * pipMultiplier;
-    const targetDistance = Math.max(
-      minTargetDistance,
-      isHighConvictionMacro
-        ? Math.max(120 * pipMultiplier, stopDistance * 4.5)
-        : Math.max(25 * pipMultiplier, stopDistance * 1.5)
-    );
+    // Strictly align take profit distance to the nearest verified analytical zone
+    let targetDistance: number;
+    if (proposedAction === 'BUY' && technical.keyResistance && technical.keyResistance > currentPrice) {
+      const analyticalZoneDist = technical.keyResistance - currentPrice;
+      if (analyticalZoneDist >= stopDistance * 1.3 && analyticalZoneDist <= stopDistance * 2.4) {
+        targetDistance = Number(analyticalZoneDist.toFixed(decimals));
+      } else {
+        targetDistance = Number((stopDistance * (isHighConvictionMacro ? 2.0 : 1.75)).toFixed(decimals));
+      }
+    } else if (proposedAction === 'SELL' && technical.keySupport && technical.keySupport < currentPrice) {
+      const analyticalZoneDist = currentPrice - technical.keySupport;
+      if (analyticalZoneDist >= stopDistance * 1.3 && analyticalZoneDist <= stopDistance * 2.4) {
+        targetDistance = Number(analyticalZoneDist.toFixed(decimals));
+      } else {
+        targetDistance = Number((stopDistance * (isHighConvictionMacro ? 2.0 : 1.75)).toFixed(decimals));
+      }
+    } else {
+      targetDistance = Number((stopDistance * (isHighConvictionMacro ? 2.0 : 1.75)).toFixed(decimals));
+    }
+
+    // Ensure target distance is reasonably bounded (close proximity to entry, minimum 8 pips)
+    targetDistance = Math.max(8 * pipMultiplier, targetDistance);
 
     adjustmentsMade.push(
-      `Unified High-Conviction Profit Framework: Single high-confidence target set to ${(targetDistance / pipMultiplier).toFixed(0)} pips (${(targetDistance / stopDistance).toFixed(1)}:1 R:R) to eliminate fragmented exit management and maximize trade fidelity.`
+      `Realistic Analytical Zone Target: Target positioned in close proximity to entry at ${(targetDistance / pipMultiplier).toFixed(1)} pips (${(targetDistance / stopDistance).toFixed(1)}:1 R:R) aligned with immediate analytical zone for timely, high-fidelity execution.`
     );
 
     // Strict Real-Time Loss Exposure Elimination Protocol (1:1 Breakeven Ratchet)
@@ -291,7 +304,7 @@ export class RiskManagerAgent extends BaseAgent {
     if (proposedAction === 'SELL') {
       // 🎯 FOR SHORT / SELL: Stop Loss MUST be strictly ABOVE entry, Target MUST be strictly BELOW entry
       calculatedTakeProfit1 = Number((currentPrice - targetDistance).toFixed(decimals));
-      calculatedTakeProfit2 = Number((currentPrice - targetDistance * 1.8).toFixed(decimals));
+      calculatedTakeProfit2 = Number((currentPrice - targetDistance * 1.4).toFixed(decimals));
 
       // Strict Mathematical Invariant Assertion: Stop Loss > entryPrice && Take Profit < entryPrice
       if (calculatedStopLoss <= currentPrice) {
@@ -301,12 +314,12 @@ export class RiskManagerAgent extends BaseAgent {
         calculatedTakeProfit1 = Number((currentPrice - Math.abs(targetDistance)).toFixed(decimals));
       }
       if (calculatedTakeProfit2 >= currentPrice) {
-        calculatedTakeProfit2 = Number((currentPrice - Math.abs(targetDistance * 1.8)).toFixed(decimals));
+        calculatedTakeProfit2 = Number((currentPrice - Math.abs(targetDistance * 1.4)).toFixed(decimals));
       }
     } else if (proposedAction === 'BUY') {
       // 🎯 FOR LONG / BUY: Stop Loss MUST be strictly BELOW entry, Target MUST be strictly ABOVE entry
       calculatedTakeProfit1 = Number((currentPrice + targetDistance).toFixed(decimals));
-      calculatedTakeProfit2 = Number((currentPrice + targetDistance * 1.8).toFixed(decimals));
+      calculatedTakeProfit2 = Number((currentPrice + targetDistance * 1.4).toFixed(decimals));
 
       // Strict Mathematical Invariant Assertion: Stop Loss < entryPrice && Take Profit > entryPrice
       if (calculatedStopLoss >= currentPrice) {
@@ -316,11 +329,11 @@ export class RiskManagerAgent extends BaseAgent {
         calculatedTakeProfit1 = Number((currentPrice + Math.abs(targetDistance)).toFixed(decimals));
       }
       if (calculatedTakeProfit2 <= currentPrice) {
-        calculatedTakeProfit2 = Number((currentPrice + Math.abs(targetDistance * 1.8)).toFixed(decimals));
+        calculatedTakeProfit2 = Number((currentPrice + Math.abs(targetDistance * 1.4)).toFixed(decimals));
       }
     } else {
       calculatedTakeProfit1 = Number((currentPrice + targetDistance).toFixed(decimals));
-      calculatedTakeProfit2 = Number((currentPrice + targetDistance * 1.8).toFixed(decimals));
+      calculatedTakeProfit2 = Number((currentPrice + targetDistance * 1.4).toFixed(decimals));
     }
 
     // Conditional Execution: Strict Verification of Confidence Threshold

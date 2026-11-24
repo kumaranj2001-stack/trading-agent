@@ -586,7 +586,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               <strong className="text-xs">{consensus.latchedState.anchoredEntryPrice}</strong>
             </div>
             <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
-              <span className="text-[10px] text-rose-500 block font-semibold">Anchored Stop Loss (5-Pip Buffer)</span>
+              <span className="text-[10px] text-rose-500 block font-semibold">Anchored Stop Loss (Dynamic Structure)</span>
               <strong className="text-xs text-rose-400">{consensus.latchedState.anchoredStopLoss}</strong>
             </div>
             <div className={`p-1.5 rounded border ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
@@ -663,7 +663,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                   ${consensus.unifiedProfitableSetup?.singleHighConfidenceTarget || consensus.agents.risk.parameters.takeProfit1}
                 </div>
                 <span className="text-[9px] text-emerald-400/90 block mt-0.5 font-semibold">
-                  +{consensus.unifiedProfitableSetup?.targetDistancePips || 120} Pips • Liquidity Wall Target
+                  +{consensus.unifiedProfitableSetup?.targetDistancePips || 24} Pips • Analytical Zone Target
                 </span>
               </div>
 
@@ -673,13 +673,13 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               }`}>
                 <div className="flex items-center justify-between text-[10px] text-rose-400 mb-0.5 font-bold">
                   <span>ANCHORED STOP LOSS</span>
-                  <span className="text-slate-400 font-mono">5p Buffer</span>
+                  <span className="text-slate-400 font-mono">Dynamic Structure</span>
                 </div>
                 <div className="font-bold text-rose-300 text-sm font-mono tracking-tight">
                   ${consensus.unifiedProfitableSetup?.anchoredStopLoss || consensus.agents.risk.parameters.stopLoss}
                 </div>
                 <span className="text-[9px] text-rose-400/90 block mt-0.5 font-semibold">
-                  -{consensus.unifiedProfitableSetup?.stopDistancePips || 18} Pips • S1/R1 Structural Barrier
+                  -{consensus.unifiedProfitableSetup?.stopDistancePips || 14} Pips • S1/R1 Structural Barrier
                 </span>
               </div>
 
@@ -748,13 +748,13 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                   <div className="text-slate-300 truncate">
                     <span className="text-slate-400">Formula: </span>
                     <code className="text-rose-300 font-bold">
-                      {consensus.unifiedProfitableSetup?.structuralInvalidation?.invalidationPriceFormula || 'Structural Floor - 5p buffer'}
+                      {consensus.unifiedProfitableSetup?.structuralInvalidation?.invalidationPriceFormula || 'Structural Invalidation Point (Zero Fixed Buffer)'}
                     </code>
                   </div>
                   <div className="flex items-center justify-between text-[9px] text-slate-400">
-                    <span>Buffer: <strong className="text-white">+{consensus.unifiedProfitableSetup?.structuralInvalidation?.anchorOffsetPips || 5} pips</strong></span>
-                    <span>Max Allowed Stop: <strong className="text-emerald-400">{consensus.unifiedProfitableSetup?.structuralInvalidation?.maxPermissibleStopDistancePips || 24} pips</strong></span>
-                    <span>1:1 Ratchet: <strong className="text-cyan-400">+{consensus.unifiedProfitableSetup?.structuralInvalidation?.trailingBreakevenTriggerPips || 10}p</strong></span>
+                    <span>Buffer: <strong className="text-white">{consensus.unifiedProfitableSetup?.structuralInvalidation?.anchorOffsetPips ?? 0} pips (Dynamic)</strong></span>
+                    <span>Max Allowed Stop: <strong className="text-emerald-400">{consensus.unifiedProfitableSetup?.structuralInvalidation?.maxPermissibleStopDistancePips || 20} pips</strong></span>
+                    <span>1:1 Ratchet: <strong className="text-cyan-400">+{consensus.unifiedProfitableSetup?.structuralInvalidation?.trailingBreakevenTriggerPips || 8}p</strong></span>
                   </div>
                 </div>
 
@@ -769,13 +769,13 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
                   <div className="text-slate-300 truncate">
                     <span className="text-slate-400">Formula: </span>
                     <code className="text-emerald-300 font-bold">
-                      {consensus.unifiedProfitableSetup?.dynamicTargetLogic?.targetCalculationFormula || 'EntryPrice +/- (Distance * 3.2)'}
+                      {consensus.unifiedProfitableSetup?.dynamicTargetLogic?.targetCalculationFormula || 'EntryPrice +/- (Distance * 1.8)'}
                     </code>
                   </div>
                   <div className="flex items-center justify-between text-[9px] text-slate-400">
-                    <span>Min R:R: <strong className="text-amber-400">≥ {consensus.unifiedProfitableSetup?.dynamicTargetLogic?.minimumRiskRewardRatio || 3.2}:1</strong></span>
-                    <span>Volatility Multiplier: <strong className="text-white">{consensus.unifiedProfitableSetup?.dynamicTargetLogic?.volatilityExpansionCoefficient || 1.85}x</strong></span>
-                    <span>Exit Trailing: <strong className="text-cyan-400">1.5x ATR</strong></span>
+                    <span>Min R:R: <strong className="text-amber-400">≥ {consensus.unifiedProfitableSetup?.dynamicTargetLogic?.minimumRiskRewardRatio || 1.8}:1</strong></span>
+                    <span>Volatility Multiplier: <strong className="text-white">{consensus.unifiedProfitableSetup?.dynamicTargetLogic?.volatilityExpansionCoefficient || 1.25}x</strong></span>
+                    <span>Exit Trailing: <strong className="text-cyan-400">1.2x ATR</strong></span>
                   </div>
                 </div>
               </div>
@@ -784,7 +784,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
               <div className="mt-1.5 pt-1.5 border-t border-indigo-500/20 flex flex-wrap items-center justify-between gap-1 text-[9px] text-slate-300">
                 <span className="truncate max-w-xl">
                   <strong className="text-amber-400">DYNAMIC RISK VERDICT: </strong>
-                  {consensus.unifiedProfitableSetup?.riskGatingRationale || 'Dynamic risk precedence verified: Invalidation anchored 5p beyond order block boundary.'}
+                  {consensus.unifiedProfitableSetup?.riskGatingRationale || 'Dynamic risk precedence verified: Invalidation anchored directly to market structure point.'}
                 </span>
                 <span className="text-cyan-400 font-bold shrink-0">
                   RULE: {consensus.unifiedProfitableSetup?.linkedRuleId || 'UNIFIED-QUANT-SCHEMA'}
@@ -804,7 +804,7 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </div>
             <div className={`p-1.5 rounded border min-w-0 ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
               <span className={`block font-semibold ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}>Structural Stop Loss</span>
-              <strong className="text-rose-400 font-bold truncate block">5 Pips Beyond S1/R1</strong>
+              <strong className="text-rose-400 font-bold truncate block">Dynamic Market Structure</strong>
             </div>
             <div className={`p-1.5 rounded border min-w-0 ${theme === 'light' ? 'bg-white border-slate-200' : 'bg-terminal-900 border-terminal-border'}`}>
               <span className={`block font-semibold ${theme === 'light' ? 'text-slate-600' : 'text-slate-300'}`}>Dynamic Lot Sizing</span>

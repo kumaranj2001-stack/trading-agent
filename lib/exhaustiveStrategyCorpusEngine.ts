@@ -585,25 +585,33 @@ export class ExhaustiveStrategyCorpusEngine {
     const decimals = isGold || isIndia ? 2 : isJpy ? 3 : 5;
 
     // 3. Mathematically Deterministic Stop Loss & Take Profit Parameters
-    // Stop loss is anchored 5 pips BEYOND the verified liquidity wall
+    // Stop loss is anchored dynamically directly to the verified liquidity wall / market structure point without fixed buffer
     let anchoredStopLossLevel: number;
     let anchoredTakeProfitLevel: number;
     let liquidityWallDistancePips = 0;
 
     if (direction === 'BUY') {
-      // Anchored strictly below Bid Wall
+      // Anchored strictly at structural floor (Bid Wall / Key Support)
       const structuralFloor = Math.min(bidWallPrice, technical.keySupport || bidWallPrice);
-      anchoredStopLossLevel = Number((structuralFloor - (volatilityAtrBufferPips + 5) * pipMultiplier).toFixed(decimals));
+      anchoredStopLossLevel = Number(structuralFloor.toFixed(decimals));
+      if (anchoredStopLossLevel >= currentPrice) {
+        anchoredStopLossLevel = Number((currentPrice - 10 * pipMultiplier).toFixed(decimals));
+      }
       liquidityWallDistancePips = Number(((currentPrice - bidWallPrice) / pipMultiplier).toFixed(1));
       const stopDistance = Math.abs(currentPrice - anchoredStopLossLevel);
-      anchoredTakeProfitLevel = Number((currentPrice + stopDistance * 3.2).toFixed(decimals));
+      // Recalibrated realistic take profit aligned with immediate analytical zone (1.8 R:R)
+      anchoredTakeProfitLevel = Number((currentPrice + stopDistance * 1.8).toFixed(decimals));
     } else {
-      // Anchored strictly above Ask Wall
+      // Anchored strictly at structural ceiling (Ask Wall / Key Resistance)
       const structuralCeiling = Math.max(askWallPrice, technical.keyResistance || askWallPrice);
-      anchoredStopLossLevel = Number((structuralCeiling + (volatilityAtrBufferPips + 5) * pipMultiplier).toFixed(decimals));
+      anchoredStopLossLevel = Number(structuralCeiling.toFixed(decimals));
+      if (anchoredStopLossLevel <= currentPrice) {
+        anchoredStopLossLevel = Number((currentPrice + 10 * pipMultiplier).toFixed(decimals));
+      }
       liquidityWallDistancePips = Number(((askWallPrice - currentPrice) / pipMultiplier).toFixed(1));
       const stopDistance = Math.abs(anchoredStopLossLevel - currentPrice);
-      anchoredTakeProfitLevel = Number((currentPrice - stopDistance * 3.2).toFixed(decimals));
+      // Recalibrated realistic take profit aligned with immediate analytical zone (1.8 R:R)
+      anchoredTakeProfitLevel = Number((currentPrice - stopDistance * 1.8).toFixed(decimals));
     }
 
     // 4. Evaluate Mandatory Gating Checklist (Absolute Capital Preservation & Strict Institutional Tiers)
@@ -611,7 +619,7 @@ export class ExhaustiveStrategyCorpusEngine {
     const structuralIntegrityVerified = direction === 'BUY'
       ? currentPrice >= (technical.keySupport || currentPrice * 0.99)
       : currentPrice <= (technical.keyResistance || currentPrice * 1.01);
-    const liquidityWallAnchored = anchoredStopLossLevel > 0 && Math.abs(currentPrice - anchoredStopLossLevel) > 5 * pipMultiplier;
+    const liquidityWallAnchored = anchoredStopLossLevel > 0 && Math.abs(currentPrice - anchoredStopLossLevel) > 0.5 * pipMultiplier;
     const zeroUnhedgedRiskCertified = true; // Armed with automated 1:1 Breakeven Lock
 
     const allGatingPassed = 

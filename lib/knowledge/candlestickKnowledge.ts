@@ -615,14 +615,14 @@ const createCandlestickRiskSchema = (
   dynamicTargetLogic: DynamicTargetCalculationLogic;
   dynamicRiskProfile: DynamicRiskProfile;
 } => {
-  const anchorOffsetPips = anchorType === 'DEFINING_CANDLE_EXTREME_WICK' ? 2.5 : 4.0;
+  const anchorOffsetPips = 0.0;
   const invalidationFormula = isBull
-    ? 'definingCandle.low - 2.5 pips (Spread Buffer)'
-    : 'definingCandle.high + 2.5 pips (Spread Buffer)';
+    ? 'definingCandle.low (Extreme Rejection Wick Floor)'
+    : 'definingCandle.high (Extreme Rejection Wick Ceiling)';
 
-  const boundaryDescription = `Structural invalidation anchored directly to defining candle ${
+  const boundaryDescription = `Structural invalidation anchored dynamically to defining candle ${
     anchorType === 'DEFINING_CANDLE_EXTREME_WICK' ? 'extreme rejection wick' : 'body boundary'
-  }. Breach immediately negates price action thesis.`;
+  } without fixed buffer. Breach immediately negates price action thesis.`;
 
   return {
     structuralInvalidation: {
@@ -638,11 +638,11 @@ const createCandlestickRiskSchema = (
     dynamicTargetLogic: {
       targetType: 'OPPOSING_LIQUIDITY_POOL',
       targetCalculationFormula: isBull
-        ? 'entryPrice + (riskDistance * 2.50)'
-        : 'entryPrice - (riskDistance * 2.50)',
-      minimumRiskRewardRatio: 2.5,
-      volatilityExpansionCoefficient: 1.5,
-      dynamicExitRatchet: 'Lock 1:1 Breakeven at +8p; trailing ratchet beyond 2.0R expansion.'
+        ? 'entryPrice + (riskDistance * 1.80)'
+        : 'entryPrice - (riskDistance * 1.80)',
+      minimumRiskRewardRatio: 1.8,
+      volatilityExpansionCoefficient: 1.25,
+      dynamicExitRatchet: 'Lock 1:1 Breakeven at +8p; high-probability exit at immediate analytical zone.'
     },
     dynamicRiskProfile: {
       riskFirstPrecedence: true,

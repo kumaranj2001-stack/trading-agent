@@ -2101,7 +2101,7 @@ export interface EntryProximityFilterResult {
   toleranceBandDescription: string;
   unlimitedProfitPotential: boolean; // True: allows uncapped upside (+100, +250, +500+ pips)
   profitCapEnforced: boolean; // False: 50-pip restriction permanently removed
-  zeroLossExposureEliminated: boolean; // True: 1:1 breakeven ratchet + 5-pip structural stop
+  zeroLossExposureEliminated: boolean; // True: 1:1 breakeven ratchet + dynamic structural stop
   breakevenStopArmed: boolean; // Automated breakeven trigger armed
   dynamicTrailingRunnerActive: boolean; // Dynamic ATR/structural trailing stop active
   expansionTargets?: {
@@ -2118,11 +2118,11 @@ export interface RiskGovernanceGatekeeperResult {
   accountEquity: number;
   dynamicLots: number;
   riskRewardRatio: number;
-  minAllowedRiskReward: number; // 2.0
+  minAllowedRiskReward: number; // 1.5
   monteCarloWinProbability: number;
   minAllowedWinProbability: number; // 68%
   structuralStopLossLevel: number;
-  structuralBufferPips: number; // 5 pips
+  structuralBufferPips: number; // Dynamic structural buffer
   absoluteLossCapUsd: number;
   maxDrawdownLimitPercent: number; // 2.0%
   status: 'APPROVED' | 'VETOED';

@@ -76,42 +76,42 @@ export class UnifiedSetupEngine {
     // 1. Resolve Governing Structural Invalidation & Dynamic Target Schemas
     const structuralInvalidation: StructuralInvalidationPoint = governingRule?.structuralInvalidation || {
       anchorType: 'ORDER_BLOCK_BOUNDARY',
-      anchorOffsetPips: 5.0,
+      anchorOffsetPips: 0.0,
       invalidationPriceFormula: isSell
-        ? 'SupplyOrderBlock.High + 5.0p (Structural Liquidity Ceiling)'
-        : 'DemandOrderBlock.Low - 5.0p (Structural Liquidity Floor)',
-      structuralBoundaryDescription: 'Structural breach beyond order block invalidates institutional momentum.',
-      trailingBreakevenTriggerPips: 10.0,
-      maxPermissibleStopDistancePips: 24.0,
+        ? 'SupplyOrderBlock.High (Structural Liquidity Ceiling)'
+        : 'DemandOrderBlock.Low (Structural Liquidity Floor)',
+      structuralBoundaryDescription: 'Structural breach directly beyond order block boundary invalidates institutional momentum.',
+      trailingBreakevenTriggerPips: 8.0,
+      maxPermissibleStopDistancePips: 20.0,
     };
 
     const dynamicTargetLogic: DynamicTargetCalculationLogic = governingRule?.dynamicTargetLogic || {
       targetType: 'OPPOSING_LIQUIDITY_POOL',
-      minimumRiskRewardRatio: 3.2,
-      targetCalculationFormula: 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 3.2) towards Opposing Liquidity',
-      volatilityExpansionCoefficient: 1.85,
-      dynamicExitRatchet: '1:1 Breakeven locked at +10p; trailing ratchet 1.5x ATR after 2.0R expansion.',
+      minimumRiskRewardRatio: 1.8,
+      targetCalculationFormula: 'EntryPrice +/- (Abs(EntryPrice - StopLoss) * 1.8) towards Immediate Analytical Zone',
+      volatilityExpansionCoefficient: 1.25,
+      dynamicExitRatchet: '1:1 Breakeven locked at +8p; high-probability exit at analytical zone.',
     };
 
     const dynamicRiskProfile: DynamicRiskProfile = governingRule?.dynamicRiskProfile || {
       riskFirstPrecedence: true,
       proportionalSizingMethod: 'VOLATILITY_ADJUSTED_EQUITY_PERCENT',
       maxAccountRiskPercent: 2.0,
-      expectedRoiPercent: 16.5,
+      expectedRoiPercent: 12.5,
     };
 
-    // 2. Derive Structural Protective Stop Loss using the Schema Invalidation Logic
+    // 2. Derive Structural Protective Stop Loss using the Schema Invalidation Logic (Zero Fixed Buffer)
     let stopLoss = 0;
     let stopDistancePips = 0;
 
-    const offsetPips = structuralInvalidation.anchorOffsetPips || 5.0;
-    const atrBuffer = liquidityWalls?.volatilityAtrBufferPips || 15.0;
+    const offsetPips = structuralInvalidation.anchorOffsetPips ?? 0.0;
+    const atrBuffer = liquidityWalls?.volatilityAtrBufferPips || 12.0;
 
     if (liquidityWalls && liquidityWalls.anchoredStopLossLevel > 0) {
       stopLoss = Number(liquidityWalls.anchoredStopLossLevel.toFixed(decimals));
       stopDistancePips = Number((Math.abs(currentPrice - stopLoss) / pipMultiplier).toFixed(1));
     } else {
-      stopDistancePips = Math.max(14, atrBuffer + offsetPips);
+      stopDistancePips = Math.max(10, atrBuffer);
       if (isSell) {
         stopLoss = Number((currentPrice + stopDistancePips * pipMultiplier).toFixed(decimals));
       } else {
@@ -121,8 +121,8 @@ export class UnifiedSetupEngine {
 
     // Safety fallback
     if (stopDistancePips <= 0) {
-      stopDistancePips = 18.0;
-      stopLoss = Number((isSell ? currentPrice + 18 * pipMultiplier : currentPrice - 18 * pipMultiplier).toFixed(decimals));
+      stopDistancePips = 12.0;
+      stopLoss = Number((isSell ? currentPrice + 12 * pipMultiplier : currentPrice - 12 * pipMultiplier).toFixed(decimals));
     }
 
     // 3. Dynamic Risk Priority Gate Verification (Precedence over Rigid Entry Triggers)
@@ -134,14 +134,14 @@ export class UnifiedSetupEngine {
       // Dynamically clamp stop distance to structural boundary
       stopDistancePips = structuralInvalidation.maxPermissibleStopDistancePips;
       stopLoss = Number((isSell ? currentPrice + stopDistancePips * pipMultiplier : currentPrice - stopDistancePips * pipMultiplier).toFixed(decimals));
-      riskGatingRationale = `Stop loss re-anchored to max permissible boundary (${stopDistancePips}p) beyond ${structuralInvalidation.anchorType}.`;
+      riskGatingRationale = `Stop loss dynamically anchored to structural boundary (${stopDistancePips}p) at ${structuralInvalidation.anchorType}.`;
     }
 
-    // 4. Derive Single High-Confidence Target via Dynamic Target Calculation Logic
+    // 4. Derive Single High-Confidence Target via Dynamic Target Calculation Logic (Calibrated to Analytical Zones)
     const minRRR = Math.max(
-      3.0,
-      dynamicTargetLogic.minimumRiskRewardRatio || 3.2,
-      confluenceGrade === 'A+' ? 3.6 : confluenceGrade === 'A' ? 3.2 : 3.0
+      1.5,
+      dynamicTargetLogic.minimumRiskRewardRatio || 1.8,
+      confluenceGrade === 'A+' ? 2.2 : confluenceGrade === 'A' ? 1.85 : 1.6
     );
 
     const targetDistancePips = Number((stopDistancePips * minRRR).toFixed(1));
@@ -154,12 +154,12 @@ export class UnifiedSetupEngine {
 
     const riskRewardRatio = Number((targetDistancePips / stopDistancePips).toFixed(2));
 
-    // Gate Condition B: Target must meet institutional R:R floor
-    if (riskRewardRatio < 3.0) {
+    // Gate Condition B: Target must meet institutional R:R floor (1:1.4)
+    if (riskRewardRatio < 1.4) {
       riskFirstGatingPassed = false;
-      riskGatingRationale = `Dynamic risk gate rejected entry: Calculated R:R (${riskRewardRatio}:1) is below 1:3.0 institutional threshold.`;
+      riskGatingRationale = `Dynamic risk gate rejected entry: Calculated R:R (${riskRewardRatio}:1) is below 1:1.4 threshold.`;
     } else if (!riskGatingRationale) {
-      riskGatingRationale = `Dynamic risk precedence verified: Invalidation anchored ${offsetPips}p beyond ${structuralInvalidation.anchorType} (${structuralInvalidation.invalidationPriceFormula}). Dynamic target achieves ${riskRewardRatio}:1 R:R (${dynamicTargetLogic.targetType}).`;
+      riskGatingRationale = `Dynamic risk precedence verified: Invalidation anchored directly to ${structuralInvalidation.anchorType} (${structuralInvalidation.invalidationPriceFormula}). Dynamic target achieves ${riskRewardRatio}:1 R:R aligned with immediate analytical zone (${dynamicTargetLogic.targetType}).`;
     }
 
     // 5. Proportional Lot Sizing (Dynamic Risk Profile Sizing Method)

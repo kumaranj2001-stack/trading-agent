@@ -494,8 +494,8 @@ export class LiveMarketFeedManager {
       max10PipDistance
     );
     let effectiveTargetDist = Math.abs(latched.anchoredTakeProfit - latched.anchoredEntryPrice);
-    if (!effectiveTargetDist || effectiveTargetDist > 250 * pipMultiplier || effectiveTargetDist < effectiveStopDist * 1.2) {
-      effectiveTargetDist = effectiveStopDist * 2.6;
+    if (!effectiveTargetDist || effectiveTargetDist > 60 * pipMultiplier || effectiveTargetDist < effectiveStopDist * 1.2) {
+      effectiveTargetDist = effectiveStopDist * 1.8;
     }
 
     // Calculate dynamic Stop Loss and Take Profit strictly aligned to liveEntryPrice
@@ -533,16 +533,16 @@ export class LiveMarketFeedManager {
       anchoredTakeProfit: dynamicTakeProfit,
       anchoredRiskReward,
       anchoredLots: safeLots,
-      s1Floor: isSell ? Number((dynamicTakeProfit - 5 * pipMultiplier).toFixed(decimals)) : Number((dynamicStopLoss - 5 * pipMultiplier).toFixed(decimals)),
-      resistanceCeiling: isSell ? Number((dynamicStopLoss + 5 * pipMultiplier).toFixed(decimals)) : Number((dynamicTakeProfit + 5 * pipMultiplier).toFixed(decimals)),
+      s1Floor: isSell ? dynamicTakeProfit : dynamicStopLoss,
+      resistanceCeiling: isSell ? dynamicStopLoss : dynamicTakeProfit,
     };
 
-    // Multi-tier expansion targets strictly aligned to trade direction
+    // Realistic analytical targets strictly aligned to trade direction and close proximity
     const updatedExpansionTargets = {
-      tp1: Number((isSell ? liveEntryPrice - 35 * pipMultiplier : liveEntryPrice + 35 * pipMultiplier).toFixed(decimals)),
-      tp2: Number((isSell ? liveEntryPrice - 85 * pipMultiplier : liveEntryPrice + 85 * pipMultiplier).toFixed(decimals)),
-      tp3: Number((isSell ? liveEntryPrice - 180 * pipMultiplier : liveEntryPrice + 180 * pipMultiplier).toFixed(decimals)),
-      openRunnerPips: 'UNCAPPED (Trailing ATR Pivots)',
+      tp1: Number((isSell ? liveEntryPrice - 12 * pipMultiplier : liveEntryPrice + 12 * pipMultiplier).toFixed(decimals)),
+      tp2: Number((isSell ? liveEntryPrice - 24 * pipMultiplier : liveEntryPrice + 24 * pipMultiplier).toFixed(decimals)),
+      tp3: Number((isSell ? liveEntryPrice - 42 * pipMultiplier : liveEntryPrice + 42 * pipMultiplier).toFixed(decimals)),
+      openRunnerPips: 'HIGH-CONVICTION RUNNER (Trailing ATR)',
     };
 
     const updatedEntryProximityFilter: EntryProximityFilterResult = {

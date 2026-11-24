@@ -90,13 +90,13 @@ export class AutomatedSignalValidationModule {
 
     const toleranceBandDescription = `Unified High-Conviction Profit Framework Active. Single high-confidence target aligned to verified liquidity wall. Live variance: ${pipDistance} pips. Single-ticket execution engaged.`;
 
-    // Multi-tier expansion target projections strictly aligned to trade direction
+    // Multi-tier expansion target projections strictly aligned to trade direction and immediate analytical zones
     const isSell = direction === 'SELL';
     const expansionTargets = {
-      tp1: Number((isSell ? livePrice - 35 * pipMultiplier : livePrice + 35 * pipMultiplier).toFixed(decimals)),
-      tp2: Number((isSell ? livePrice - 85 * pipMultiplier : livePrice + 85 * pipMultiplier).toFixed(decimals)),
-      tp3: Number((isSell ? livePrice - 180 * pipMultiplier : livePrice + 180 * pipMultiplier).toFixed(decimals)),
-      openRunnerPips: 'UNCAPPED (Trailing ATR Pivots)',
+      tp1: Number((isSell ? livePrice - 12 * pipMultiplier : livePrice + 12 * pipMultiplier).toFixed(decimals)),
+      tp2: Number((isSell ? livePrice - 24 * pipMultiplier : livePrice + 24 * pipMultiplier).toFixed(decimals)),
+      tp3: Number((isSell ? livePrice - 42 * pipMultiplier : livePrice + 42 * pipMultiplier).toFixed(decimals)),
+      openRunnerPips: 'HIGH-CONVICTION RUNNER (Trailing ATR)',
     };
 
     return {
@@ -123,11 +123,11 @@ export class AutomatedSignalValidationModule {
    * Autonomous Risk Governance Gatekeeper:
    * Enforces Strict Real-Time Risk Controls to Eliminate Losses Exposure:
    * 1. Dynamic lot sizing strictly proportional to account equity (max drawdown <= 2.0%).
-   * 2. Hard structural stop-loss anchored 5 pips beyond confirmed structural invalidation ($S1/$R1).
+   * 2. Dynamic structural stop-loss anchored strictly to confirmed structural invalidation point ($S1/$R1) without fixed 5-pip buffer.
    * 3. Automated 1:1 Breakeven Stop Ratchet: When position reaches 1:1 R:R profit distance,
    *    stop is autonomously moved to entry + 1 pip spread buffer, locking in 0.00% downside loss.
    * 4. Dynamic ATR Trailing Runner: Trails swing pivots to lock in accrued gains without capping upside.
-   * 5. Minimum risk-reward threshold (>= 2.0:1) with uncapped expansion potential (up to 10:1+).
+   * 5. Realistic analytical risk-reward threshold (>= 1.5:1) aligned with immediate zones.
    * 6. Monte Carlo win-probability check (>= 68%).
    */
   public evaluateRiskGovernance(params: {
@@ -151,13 +151,13 @@ export class AutomatedSignalValidationModule {
       currentPrice,
       direction,
       maxDrawdownLimitPercent = 2.0,
-      minAllowedRiskReward = 2.0,
+      minAllowedRiskReward = 1.5,
       minAllowedWinProbability = 68,
     } = params;
 
     const pipMultiplier = PIP_VALUES[symbol] || (symbol.includes('JPY') ? 0.01 : symbol === 'XAU/USD' ? 0.10 : 0.0001);
     const stopDistancePips = Number((Math.abs(currentPrice - proposedStopLoss) / pipMultiplier).toFixed(2));
-    const structuralBufferPips = 5.0; // Hard 5-pip structural buffer
+    const structuralBufferPips = 0.0; // Dynamic structural anchoring (Zero fixed 5-pip buffer)
 
     // Enforce absolute dollar loss cap based on max drawdown limit
     const absoluteLossCapUsd = Number(((accountEquity * (maxDrawdownLimitPercent / 100))).toFixed(2));
@@ -172,18 +172,18 @@ export class AutomatedSignalValidationModule {
     // Evaluate gates
     const rrPassed = riskRewardRatio >= minAllowedRiskReward;
     const winProbPassed = monteCarloWinProbability >= minAllowedWinProbability;
-    const structuralStopPassed = stopDistancePips >= structuralBufferPips;
+    const structuralStopPassed = stopDistancePips >= 0.5;
 
     const passed = rrPassed && winProbPassed && structuralStopPassed;
     const status: RiskGovernanceGatekeeperResult['status'] = passed ? 'APPROVED' : 'VETOED';
 
     const reasons: string[] = [];
-    if (!rrPassed) reasons.push(`Risk-to-Reward ratio (${riskRewardRatio}:1) is below mandatory 2.0:1 threshold.`);
+    if (!rrPassed) reasons.push(`Risk-to-Reward ratio (${riskRewardRatio}:1) is below mandatory ${minAllowedRiskReward}:1 threshold.`);
     if (!winProbPassed) reasons.push(`Monte Carlo profit probability (${monteCarloWinProbability}%) is below mandatory 68% verification threshold.`);
-    if (!structuralStopPassed) reasons.push(`Stop distance (${stopDistancePips} pips) is tighter than mandatory 5-pip structural invalidation buffer.`);
+    if (!structuralStopPassed) reasons.push(`Stop distance (${stopDistancePips} pips) must be anchored to a valid market structure point.`);
 
     const rationale = passed
-      ? `Zero-Loss Exposure Risk Governance Cleared: R:R ${riskRewardRatio}:1 (Uncapped Upside), Monte Carlo Win Prob ${monteCarloWinProbability}% (>= 68%), Dynamic Lots: ${dynamicLots} (capped at $${absoluteLossCapUsd} max drawdown, ${maxDrawdownLimitPercent}% equity), Structural stop buffer: ${stopDistancePips} pips, 1:1 Breakeven Ratchet ARMED.`
+      ? `Dynamic Risk Governance Cleared: R:R ${riskRewardRatio}:1 (Analytical Zone Target), Monte Carlo Win Prob ${monteCarloWinProbability}% (>= 68%), Dynamic Lots: ${dynamicLots} (capped at $${absoluteLossCapUsd} max drawdown, ${maxDrawdownLimitPercent}% equity), Structural stop anchored dynamically at ${stopDistancePips} pips, 1:1 Breakeven Ratchet ARMED.`
       : `Risk Governance Veto: ${reasons.join(' ')}`;
 
     return {
