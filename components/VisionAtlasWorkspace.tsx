@@ -40,6 +40,7 @@ import {
   Filter,
   Globe,
   Landmark,
+  Coins,
   ArrowUpRight,
   ArrowDownRight,
   Check,
@@ -99,6 +100,13 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
   const [selectedTimeframe, setSelectedTimeframe] = useState<TimeFrame>(initialTf);
   const [workspaceMode, setWorkspaceMode] = useState<'infinity-vision' | 'confluence-matrix'>('infinity-vision');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+
+  const isIndianMarket = selectedPair === 'NIFTY 50' || selectedPair === 'BANK NIFTY' || 
+                         selectedPair === 'RELIANCE' || selectedPair === 'TCS' || 
+                         selectedPair === 'HDFC BANK' || selectedPair === 'INFY' ||
+                         selectedPair.includes('/INR');
+  const isMetal = selectedPair === 'XAU/USD' || selectedPair === 'XAG/USD' || 
+                  selectedPair === 'XPT/USD' || selectedPair === 'COPPER';
 
   // Payload state
   const [payload, setPayload] = useState<VisionAtlasPayload | null>(null);
@@ -881,50 +889,143 @@ export const VisionAtlasWorkspace: React.FC<VisionAtlasWorkspaceProps> = ({
                       </div>
                     </div>
 
-                    {/* Indian Market Dynamics & Institutional Liquidity Gauges */}
-                    <div className="p-3 bg-terminal-950/80 border border-terminal-border rounded-lg space-y-2 font-mono text-xs">
-                      <div className="flex items-center justify-between text-slate-300 font-semibold text-[11px]">
-                        <span className="flex items-center gap-1.5">
-                          <Activity className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>INSTITUTIONAL LIQUIDITY & INDIAN MARKET DYNAMICS</span>
-                        </span>
-                        <span className="text-[10px] text-emerald-400 font-bold">FII ACCUMULATION</span>
+                    {/* Asset-Specific Institutional Liquidity & Macro Dynamics */}
+                    {isMetal ? (
+                      /* Precious Metals & Sovereign Monetary Dynamics */
+                      <div className="p-3 bg-terminal-950/80 border border-amber-500/30 rounded-lg space-y-2 font-mono text-xs">
+                        <div className="flex items-center justify-between text-slate-300 font-semibold text-[11px]">
+                          <span className="flex items-center gap-1.5">
+                            <Coins className="w-3.5 h-3.5 text-amber-400" />
+                            <span>SOVEREIGN BULLION &amp; REAL RATE DYNAMICS</span>
+                          </span>
+                          <span className="text-[10px] text-amber-400 font-bold">CENTRAL BANK INFLOWS</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">Bullion Purchases:</span>
+                            <span className="font-bold text-amber-300">
+                              +1,037 MT/Yr
+                            </span>
+                          </div>
+
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">US 10Y Real TIPS:</span>
+                            <span className="font-bold text-cyan-300">
+                              -15 bps Spread
+                            </span>
+                          </div>
+
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">DXY Inverse Beta:</span>
+                            <span className="font-bold text-emerald-400">
+                              -0.82 Correlation
+                            </span>
+                          </div>
+
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">LBMA Vault Float:</span>
+                            <span className="font-bold text-cyan-300">
+                              5-Yr Physical Low
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-[10px] text-slate-400 leading-snug">
+                          Sovereign central bank reserve reallocation and declining real yields provide structural physical demand. Zero corporate debt or equity dilution risk.
+                        </div>
                       </div>
-
-                      <div className="grid grid-cols-2 gap-2 text-[11px]">
-                        <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
-                          <span className="text-slate-400">FII Net Cash:</span>
-                          <span className="font-bold text-emerald-400">
-                            {payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.fiiFpiNetCashFlowCr && payload.multiFactorConfluence.fundamentalStream.indianMarketDynamics.fiiFpiNetCashFlowCr > 0 ? '+' : ''}₹{payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.fiiFpiNetCashFlowCr || 2340} Cr
+                    ) : isIndianMarket ? (
+                      /* Indian Market Dynamics & Institutional Liquidity Gauges */
+                      <div className="p-3 bg-terminal-950/80 border border-terminal-border rounded-lg space-y-2 font-mono text-xs">
+                        <div className="flex items-center justify-between text-slate-300 font-semibold text-[11px]">
+                          <span className="flex items-center gap-1.5">
+                            <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>INSTITUTIONAL LIQUIDITY &amp; INDIAN MARKET DYNAMICS</span>
                           </span>
+                          <span className="text-[10px] text-emerald-400 font-bold">FII ACCUMULATION</span>
                         </div>
 
-                        <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
-                          <span className="text-slate-400">DII SIP Support:</span>
-                          <span className="font-bold text-cyan-300">
-                            +₹{payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.diiNetCashFlowCr || 1980} Cr
-                          </span>
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">FII Net Cash:</span>
+                            <span className="font-bold text-emerald-400">
+                              {payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.fiiFpiNetCashFlowCr && payload.multiFactorConfluence.fundamentalStream.indianMarketDynamics.fiiFpiNetCashFlowCr > 0 ? '+' : ''}₹{payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.fiiFpiNetCashFlowCr || 2340} Cr
+                            </span>
+                          </div>
+
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">DII SIP Support:</span>
+                            <span className="font-bold text-cyan-300">
+                              +₹{payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.diiNetCashFlowCr || 1980} Cr
+                            </span>
+                          </div>
+
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">F&amp;O Long/Short:</span>
+                            <span className="font-bold text-emerald-400">
+                              {payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.fiiIndexLongShortRatio || 1.38}x (Bullish)
+                            </span>
+                          </div>
+
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">India VIX:</span>
+                            <span className="font-bold text-cyan-300">
+                              {payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.indiaVix || 13.2} (Low Vol)
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
-                          <span className="text-slate-400">F&O Long/Short:</span>
-                          <span className="font-bold text-emerald-400">
-                            {payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.fiiIndexLongShortRatio || 1.38}x (Bullish)
-                          </span>
-                        </div>
-
-                        <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
-                          <span className="text-slate-400">India VIX:</span>
-                          <span className="font-bold text-cyan-300">
-                            {payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.indiaVix || 13.2} (Low Vol)
-                          </span>
+                        <div className="text-[10px] text-slate-400 leading-snug">
+                          {payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.corporateEarningsImpact || 'Banking NII and capital goods expansions offset global headwinds with strong domestic cash market absorption.'}
                         </div>
                       </div>
+                    ) : (
+                      /* Global Forex & Sovereign Yield Dynamics */
+                      <div className="p-3 bg-terminal-950/80 border border-terminal-border rounded-lg space-y-2 font-mono text-xs">
+                        <div className="flex items-center justify-between text-slate-300 font-semibold text-[11px]">
+                          <span className="flex items-center gap-1.5">
+                            <Globe className="w-3.5 h-3.5 text-blue-400" />
+                            <span>GLOBAL FOREX &amp; SOVEREIGN YIELD DYNAMICS</span>
+                          </span>
+                          <span className="text-[10px] text-blue-400 font-bold">INTERBANK CARRY</span>
+                        </div>
 
-                      <div className="text-[10px] text-slate-400 leading-snug">
-                        {payload?.multiFactorConfluence?.fundamentalStream.indianMarketDynamics.corporateEarningsImpact || 'Banking NII and capital goods expansions offset global headwinds with strong domestic cash market absorption.'}
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">Sovereign 10Y Spread:</span>
+                            <span className="font-bold text-cyan-300">
+                              +175 bps
+                            </span>
+                          </div>
+
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">Policy Divergence:</span>
+                            <span className="font-bold text-emerald-400">
+                              Fed vs ECB/BOJ
+                            </span>
+                          </div>
+
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">Current Account:</span>
+                            <span className="font-bold text-cyan-300">
+                              Trade Deficit Balanced
+                            </span>
+                          </div>
+
+                          <div className="p-2 bg-terminal-900 border border-terminal-border rounded flex items-center justify-between">
+                            <span className="text-slate-400">Interbank Liquidity:</span>
+                            <span className="font-bold text-emerald-400">
+                              Tier 1 Prime Clearing
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-[10px] text-slate-400 leading-snug">
+                          Cross-currency yield differentials and central bank policy stances drive interbank flow and institutional carry trade allocation.
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Macro-Commodity & DXY Transmission */}
                     <div className="p-3 bg-terminal-950/80 border border-terminal-border rounded-lg space-y-1.5 font-mono text-xs">

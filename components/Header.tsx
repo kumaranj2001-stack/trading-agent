@@ -13,7 +13,10 @@ import {
   ChevronDown,
   Snowflake,
   Lock,
-  Compass
+  Compass,
+  Radio,
+  History,
+  BookOpen
 } from 'lucide-react';
 import { CurrencyPair, ExecutionMode, MarketSegment, MarketSessionInfo, TimeFrame, NavigationTab } from '@/lib/types';
 import { PortfolioState } from '@/lib/store';
@@ -68,6 +71,13 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
   onOpenSettings,
+  onOpenScanner,
+  onOpenCalendar,
+  onOpenMonteCarlo,
+  onOpenKnowledge,
+  onOpenNewsWire,
+  onOpenFirebase,
+  onOpenJournal,
   onOpenLeftDrawer,
   isLeftDrawerOpen = false,
   isAnalyzing,
@@ -267,6 +277,51 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="hidden xl:inline text-[10px] font-bold uppercase tracking-wider">
                   {isMarketFrozen ? 'Frozen' : 'Live'}
                 </span>
+              </button>
+            )}
+
+            {onOpenNewsWire && (
+              <button
+                onClick={onOpenNewsWire}
+                className={`p-1.5 sm:p-2 rounded-lg border transition-colors shadow-sm shrink-0 ${
+                  activeTab === 'wire'
+                    ? 'bg-red-500/20 text-red-300 border-red-500/40'
+                    : 'bg-terminal-800 hover:bg-terminal-700 border-terminal-border text-slate-300 hover:text-white'
+                }`}
+                title="Open 38-Feed Live Financial Speed Wire"
+                aria-label="Live News Wire"
+              >
+                <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-red-400" />
+              </button>
+            )}
+
+            {onOpenMonteCarlo && (
+              <button
+                onClick={onOpenMonteCarlo}
+                className={`p-1.5 sm:p-2 rounded-lg border transition-colors shadow-sm shrink-0 ${
+                  activeTab === 'var' || activeTab === 'backtest'
+                    ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                    : 'bg-terminal-800 hover:bg-terminal-700 border-terminal-border text-slate-300 hover:text-white'
+                }`}
+                title="Open Monte Carlo VaR & Stress Test"
+                aria-label="Monte Carlo VaR"
+              >
+                <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400" />
+              </button>
+            )}
+
+            {onOpenJournal && (
+              <button
+                onClick={onOpenJournal}
+                className={`p-1.5 sm:p-2 rounded-lg border transition-colors shadow-sm shrink-0 ${
+                  activeTab === 'journals'
+                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                    : 'bg-terminal-800 hover:bg-terminal-700 border-terminal-border text-slate-300 hover:text-white'
+                }`}
+                title="Open Persistent Trade Journal"
+                aria-label="Trade Journal"
+              >
+                <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
               </button>
             )}
 

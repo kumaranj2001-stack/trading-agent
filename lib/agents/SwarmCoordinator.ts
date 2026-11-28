@@ -692,22 +692,74 @@ export class SwarmCoordinator {
       risk.parameters.takeProfit1 > 0
     );
 
-    // 🛡️ Zero-Veto Dynamic Position Sizing Architecture:
-    // Hard vetoes permanently eliminated: trades are never aborted due to friction, R:R, or gatekeeper warnings.
-    // Instead, position size dynamically scales down to micro-lots (0.01 - 0.02 lots),
-    // and entries remain mandatory with 1:1 Breakeven Ratchet armed.
-    executionAuthorized = !failSafePauseActive;
-    executionStatus = failSafePauseActive ? 'VETOED' : 'READY';
+    // 🛡️ Strict Directional Parity & Gatekeeper Verification:
+    // If candlestick pattern is Bearish (or bias is SELL) but activeDirection is BUY, or vice versa,
+    // this constitutes a direct contradiction and MUST be vetoed.
+    const isCandleContradiction = !!(
+      candlestick &&
+      !candlestick.rejectionStatus?.isRejectedNoise &&
+      ((activeDirection === 'BUY' && (candlestick.bias.includes('SELL') || candlestick.bias.includes('BEARISH') || candlestick.detectedPattern.includes('BEARISH') || candlestick.detectedPattern === 'EVENING_STAR' || candlestick.detectedPattern === 'SHOOTING_STAR' || candlestick.detectedPattern === 'THREE_BLACK_CROWS')) ||
+       (activeDirection === 'SELL' && (candlestick.bias.includes('BUY') || candlestick.bias.includes('BULLISH') || candlestick.detectedPattern.includes('BULLISH') || candlestick.detectedPattern === 'MORNING_STAR' || candlestick.detectedPattern === 'HAMMER' || candlestick.detectedPattern === 'THREE_WHITE_SOLDIERS')))
+    );
 
-    if (!riskWorkflowCompleted || overallConfidence < 68 || !capitalPreservationGate.passed || chiefReviewerAudit.status === 'VETOED' || !preExecutionFilter.allowed || !entryProximityFilter.passed || !riskGovernanceGatekeeper.passed) {
-      finalLots = Math.max(0.01, Math.min(0.02, finalLots));
-      if (!unifiedDecision.summary.includes('Micro-Lot Scaled')) {
-        unifiedDecision.summary = `Dynamic Micro-Lot Sizing: Sized to ${finalLots} lots with 1:1 Breakeven Ratchet armed. ${unifiedDecision.summary}`;
+    const isTechnicalContradiction = !!(
+      (activeDirection === 'BUY' && technical.bias === 'STRONG_SELL') ||
+      (activeDirection === 'SELL' && technical.bias === 'STRONG_BUY')
+    );
+
+    const isHardVetoed = 
+      failSafePauseActive ||
+      !riskWorkflowCompleted ||
+      overallConfidence < 68 ||
+      isCandleContradiction ||
+      isTechnicalContradiction ||
+      !capitalPreservationGate.passed ||
+      chiefReviewerAudit.status === 'VETOED' ||
+      risk.verdict === 'VETOED' ||
+      !preExecutionFilter.allowed ||
+      !entryProximityFilter.passed ||
+      !riskGovernanceGatekeeper.passed;
+
+    let vetoReason = '';
+    if (failSafePauseActive) {
+      vetoReason = `FAIL-SAFE PAUSE ACTIVE: WebSocket/SSE stream latency (${streamLatencyMs}ms) exceeded 1500ms safety threshold. Execution paused against stale data.`;
+    } else if (isCandleContradiction) {
+      vetoReason = `DIRECTIONAL CONTRADICTION: Candlestick pattern (${candlestick.detectedPattern.replace(/_/g, ' ')}, ${candlestick.bias}) directly opposes ${activeDirection} directive. Execution vetoed.`;
+    } else if (isTechnicalContradiction) {
+      vetoReason = `TECHNICAL CONTRADICTION: Technical desk (${technical.bias}) directly opposes ${activeDirection} directive. Execution vetoed.`;
+    } else if (overallConfidence < 68) {
+      vetoReason = `CONFIDENCE THRESHOLD BREACH: Overall confluence confidence (${overallConfidence}%) is below 68% minimum gate. Execution vetoed.`;
+    } else if (!capitalPreservationGate.passed) {
+      vetoReason = `CAPITAL PRESERVATION GATE BREACH: Setup failed capital preservation invariants (${capitalPreservationGate.status}). Execution vetoed.`;
+    } else if (chiefReviewerAudit.status === 'VETOED') {
+      vetoReason = `CHIEF REVIEWER VETO: Institutional Gatekeeper rejected trade (${chiefReviewerAudit.contradictionResolution.explanation}). Execution vetoed.`;
+    } else if (risk.verdict === 'VETOED') {
+      vetoReason = `RISK GOVERNANCE VETO: Risk desk vetoed setup (${risk.reasoning}). Execution vetoed.`;
+    } else if (!preExecutionFilter.allowed) {
+      vetoReason = `HISTORICAL FAILURE GATE: Pre-execution diagnostic filter blocked setup (${preExecutionFilter.reason || 'Pattern matched historical loss heuristic'}). Execution vetoed.`;
+    } else if (!entryProximityFilter.passed) {
+      vetoReason = `ENTRY PROXIMITY GATE: Proposed entry too far from live market price (${entryProximityFilter.rejectionReason}). Execution vetoed.`;
+    } else if (!riskGovernanceGatekeeper.passed) {
+      vetoReason = `RISK GOVERNANCE GATEKEEPER: Setup failed drawdown or R:R criteria (${riskGovernanceGatekeeper.rationale || 'Risk gatekeeper rejection'}). Execution vetoed.`;
+    } else if (!riskWorkflowCompleted) {
+      vetoReason = `RISK WORKFLOW INCOMPLETE: Mandatory sizing and stop parameters unverified prior to dispatch. Execution vetoed.`;
+    }
+
+    if (isHardVetoed) {
+      executionAuthorized = false;
+      executionStatus = 'VETOED';
+      finalLots = 0;
+      if (!unifiedDecision.summary.includes('HARD VETO')) {
+        unifiedDecision.summary = `[HARD VETO ENFORCED] ${vetoReason} | ${unifiedDecision.summary}`;
       }
-    } else if (chiefReviewerAudit.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
-      finalLots = Math.max(0.01, Number((finalLots * 0.50).toFixed(2)));
-    } else if (preExecutionFilter.action === 'ADJUST_SIZING') {
-      finalLots = preExecutionFilter.adjustedLots || 0.01;
+    } else {
+      executionAuthorized = true;
+      executionStatus = 'READY';
+      if (chiefReviewerAudit.contradictionResolution.resolutionAction === 'REDUCE_SIZE_50_PERCENT') {
+        finalLots = Math.max(0.01, Number((finalLots * 0.50).toFixed(2)));
+      } else if (preExecutionFilter.action === 'ADJUST_SIZING') {
+        finalLots = preExecutionFilter.adjustedLots || 0.01;
+      }
     }
 
     // ⚡ Execute Strict Seven-Stage Deterministic Sequential Pipeline
@@ -723,7 +775,7 @@ export class SwarmCoordinator {
       directive: debateOutcome.synthesis.terminalNode?.directive || 'MAINTAIN_POSITION',
       directiveTitle: debateOutcome.synthesis.terminalNode?.directiveTitle || 'MAINTAIN POSITION DIRECTIVE: CONFLUENCE RESILIENT ACROSS 8 SPECIALIST AGENTS',
       actionableSummary: debateOutcome.synthesis.terminalNode?.actionableSummary || 'Consensus verified across 8 autonomous agents',
-      institutionalClearanceStatus: failSafePauseActive
+      institutionalClearanceStatus: isHardVetoed
         ? ('FAIL_SAFE_PAUSED' as const)
         : (finalLots <= 0.02 ? ('DYNAMIC_TIER_APPROVED' as const) : ('CLEARED_FOR_EXECUTION' as const)),
       zeroVetoAllocationLots: finalLots,
@@ -793,7 +845,7 @@ export class SwarmCoordinator {
         chiefRiskManagerUnifiedDirective,
       },
       executionSignal: {
-        authorized: !failSafePauseActive,
+        authorized: executionAuthorized,
         orderType,
         symbol: pair,
         lots: finalLots,
@@ -802,12 +854,10 @@ export class SwarmCoordinator {
         takeProfit: finalTakeProfit,
         riskReward: existingLatched?.anchoredRiskReward || finalRiskReward,
         riskAmountUsd: finalMaxRisk,
-        status: failSafePauseActive ? 'VETOED' : 'READY',
+        status: executionStatus,
         gradingTier: confluenceGrade,
-        tierDescription: failSafePauseActive
-          ? `FAIL-SAFE PAUSE ACTIVE: WebSocket/SSE stream latency (${streamLatencyMs}ms) exceeded 1500ms safety threshold. Execution paused against stale data.`
-          : (finalLots <= 0.02 && overallConfidence < 68)
-          ? `DYNAMIC MICRO-LOT ALLOCATION (${finalLots} Lots): Hard veto decoupled. 1:1 Breakeven Ratchet armed for zero-loss exposure.`
+        tierDescription: isHardVetoed
+          ? vetoReason
           : tierParams.executionPolicy,
       },
       autonomousLoopTelemetry: {

@@ -360,8 +360,25 @@ export const LeftNavigationDrawer: React.FC<LeftNavigationDrawerProps> = ({
       },
     },
     {
-      id: 'firebase',
+      id: 'backtest',
       number: '14',
+      label: 'Backtest',
+      description: 'Historical OHLCV Replay & Stress Simulator',
+      icon: History,
+      color: 'text-purple-400',
+      activeBg: 'bg-purple-500/15 border-purple-500/40 text-purple-300 font-semibold',
+      isActive: activeTab === 'backtest',
+      badge: 'CANDLE REPLAY',
+      badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+      action: () => {
+        setActiveTab('backtest');
+        onClose();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+    },
+    {
+      id: 'firebase',
+      number: '14b',
       label: 'Firebase',
       description: 'Firestore Cloud Realtime State Sync',
       icon: Cloud,

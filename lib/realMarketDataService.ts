@@ -332,12 +332,14 @@ export class RealMarketDataService {
     for (let i = 0; i < count; i++) {
       const timeMs = startTime + i * stepMs;
       const timeStr = new Date(timeMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const wave = Math.sin(i / 6) * volatility * 0.5;
-      const step = (Math.random() - 0.49) * volatility * 1.2;
+      // Deterministic harmonics without spurious random drift
+      const wave = Math.sin(i / 6) * volatility * 0.45;
+      const subHarmonic = Math.cos(i / 3) * volatility * 0.25;
       const open = currentClose;
-      const close = Number((open + wave + step).toFixed(decimals));
-      const high = Number((Math.max(open, close) + Math.random() * volatility * 0.5).toFixed(decimals));
-      const low = Number((Math.min(open, close) - Math.random() * volatility * 0.5).toFixed(decimals));
+      const close = Number((basePrice + wave + subHarmonic).toFixed(decimals));
+      const wickSpread = volatility * 0.25;
+      const high = Number((Math.max(open, close) + wickSpread).toFixed(decimals));
+      const low = Number((Math.min(open, close) - wickSpread).toFixed(decimals));
 
       candles.push({
         time: timeStr,
@@ -346,7 +348,7 @@ export class RealMarketDataService {
         high,
         low,
         close,
-        volume: Math.floor(15000 + Math.random() * 45000),
+        volume: Math.floor(25000 + Math.abs(Math.sin(i)) * 20000),
       });
 
       currentClose = close;

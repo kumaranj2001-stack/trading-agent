@@ -63,11 +63,11 @@ export const BacktestView: React.FC<BacktestViewProps> = ({ onBackToTerminal }) 
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-terminal-border pb-3">
         <div>
           <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <History className="w-5 h-5 text-amber-400" />
-            <span>03 // MONTE CARLO WALK-FORWARD BACKTEST & STRESS SIMULATOR</span>
+            <History className="w-5 h-5 text-purple-400" />
+            <span>14 // HISTORICAL CANDLE REPLAY & STRESS SIMULATOR</span>
           </h2>
           <p className="text-xs text-slate-400 font-mono mt-0.5">
-            Test the 5-agent swarm against historical volatility spikes, central bank surprise rate cuts, and NFP announcements.
+            Bar-by-bar walk-forward replay across real historical OHLCV candles, evaluating dynamic entries, structural invalidation stops, and live P&amp;L expectancy.
           </p>
         </div>
 

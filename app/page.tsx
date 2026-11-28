@@ -604,6 +604,43 @@ export default function Home() {
           };
         });
 
+        // 🎯 Automated Server/Client Stop Loss & Take Profit Execution (Global Invariant across ALL modes)
+        for (const pos of updatedPositions) {
+          const symPrice = pos.symbol === selectedPair ? event.livePrice : LiveMarketFeedManager.getCanonicalPrice(pos.symbol);
+          const isStopLossHit = (pos.type === 'BUY' && symPrice <= pos.stopLoss) ||
+                                (pos.type === 'SELL' && symPrice >= pos.stopLoss);
+          const isTakeProfitHit = (pos.type === 'BUY' && symPrice >= pos.takeProfit) ||
+                                  (pos.type === 'SELL' && symPrice <= pos.takeProfit);
+
+          if (isStopLossHit) {
+            setTimeout(() => {
+              handleClosePosition(pos.id, 'STOP_LOSS_TRIGGERED', [`Stop Loss executed at live price ${symPrice} (Target SL: ${pos.stopLoss})`]);
+            }, 0);
+          } else if (isTakeProfitHit) {
+            setTimeout(() => {
+              handleClosePosition(pos.id, 'TAKE_PROFIT_TRIGGERED', [`Take Profit executed at live price ${symPrice} (Target TP: ${pos.takeProfit})`]);
+            }, 0);
+          }
+        }
+
+        // 🚨 Automated Daily Drawdown Circuit Breaker & Emergency Flattening Protocol
+        const currentEquity = prev.balance + totalOpenPnl;
+        const startingCapital = 100000;
+        const maxDailyDrawdownLimit = 4.0; // 4.0% hard capital preservation threshold
+        const dailyLossAmount = startingCapital - currentEquity;
+        const currentDrawdownPct = dailyLossAmount > 0 ? (dailyLossAmount / startingCapital) * 100 : 0;
+
+        if (currentDrawdownPct >= maxDailyDrawdownLimit && updatedPositions.length > 0) {
+          for (const pos of updatedPositions) {
+            setTimeout(() => {
+              handleClosePosition(pos.id, 'EMERGENCY_CIRCUIT_BREAKER_FLATTENED', [
+                `HARD DRAWDOWN CIRCUIT BREAKER: Account drawdown reached ${currentDrawdownPct.toFixed(2)}% (limit ${maxDailyDrawdownLimit}%). All open risk flattened.`
+              ]);
+            }, 0);
+          }
+          showNotification(`🚨 HARD DRAWDOWN CIRCUIT BREAKER ACTIVATED: Account drawdown reached ${currentDrawdownPct.toFixed(2)}% (exceeded ${maxDailyDrawdownLimit}% limit). All positions flattened.`);
+        }
+
         // ⚡ Paramount Structural Override & Invalidation Exit (FULL_AUTOPILOT & SEMI_AUTONOMOUS)
         if (executionModeRef.current === 'FULL_AUTOPILOT' || executionModeRef.current === 'SEMI_AUTONOMOUS') {
           for (const pos of updatedPositions) {

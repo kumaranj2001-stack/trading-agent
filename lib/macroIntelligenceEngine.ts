@@ -508,8 +508,12 @@ export class EventDrivenMacroIntelligenceEngine {
     });
 
     // 7. Calculate Precise Execution Parameters (Math Consistency: SL > Entry for SELL, SL < Entry for BUY)
-    const pipMultiplier = symbol.includes('JPY') ? 0.01 : symbol.includes('XAU') || symbol.includes('WTI') || symbol.includes('BRENT') || symbol.includes('NIFTY') ? 1.0 : 0.0001;
-    const volatilityPips = symbol.includes('XAU') ? 24.5 : symbol.includes('NIFTY') ? 180.0 : symbol.includes('WTI') ? 1.8 : 0.0045;
+    const isGold = symbol.includes('XAU');
+    const isOil = symbol.includes('WTI') || symbol.includes('BRENT');
+    const isIndex = symbol.includes('NIFTY') || symbol.includes('SENSEX');
+    const isJpy = symbol.includes('JPY');
+    const pipMultiplier = isGold ? 0.10 : isJpy ? 0.01 : isOil ? 0.01 : isIndex ? 1.0 : 0.0001;
+    const volatilityPips = isGold ? 24.5 : isIndex ? 180.0 : isOil ? 1.8 : 0.0045;
 
     let entryZoneMin = livePrice;
     let entryZoneMax = livePrice;

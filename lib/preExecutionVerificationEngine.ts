@@ -160,23 +160,9 @@ export class PreExecutionVerificationEngine {
       };
     }
 
-    // 6. Zero-Veto Decoupled Execution Guardrails:
-    // Permanent removal of hard vetoes: trades are never aborted due to friction, R:R filters, or slippage.
-    // Enforce 10-pip maximum entry bound: if signal price is > 10 pips from live fill, snap directly to liveFillPrice.
-    let effectiveSignalPrice = signalPrice;
-    if (slippagePips > 10.0) {
-      effectiveSignalPrice = liveFillPrice;
-    }
-
-    // Dynamic Micro-Lot Sizing:
-    // If free margin is limited or dialectical friction is elevated, scale down to 0.01 - 0.02 lots
-    let validatedLots = proportionalLotSize;
-    if (requiredMarginUsd > freeMargin && freeMargin > 0) {
-      validatedLots = 0.01;
-    }
-    if (!contradictionCheckPassed || !failureConstraintCheck.passed || !riskWorkflowVerified) {
-      validatedLots = Math.max(0.01, Math.min(0.02, validatedLots));
-    }
+    // 6. Strict Pre-Execution Guardrails:
+    // Enforce 10-pip maximum entry bound and verify all atomic criteria
+    const effectiveSignalPrice = signalPrice;
 
     const entryProximity = automatedSignalValidationModule.evaluateEntryProximityBand({
       symbol: pair,
@@ -198,13 +184,148 @@ export class PreExecutionVerificationEngine {
       minAllowedWinProbability: 40,
     });
 
-    if (!riskGovernance.passed) {
+    // Check strict gatekeeper failure conditions
+    if (slippagePips > 10.0) {
+      return {
+        isVerified: false,
+        atomicTickId,
+        verificationTimestamp: now,
+        symbol: pair,
+        orderType,
+        signalPrice: effectiveSignalPrice,
+        liveBid: bidAsk.bid,
+        liveAsk: bidAsk.ask,
+        liveFillPrice,
+        spreadPips: bidAsk.spreadPips,
+        priceDeviationPercent,
+        slippagePips,
+        riskWorkflowVerified,
+        proportionalLotSize: 0,
+        requiredMarginUsd: 0,
+        freeMarginUsd: freeMargin,
+        contradictionCheck: {
+          passed: contradictionCheckPassed,
+          newsSentimentInversionDetected: newsSentimentInversion,
+          macroTechnicalDivergenceDetected: macroTechDivergence,
+          structuralInvalidationBreached,
+          resolutionDirective: contradictionDirective,
+        },
+        failureConstraintCheck,
+        entryProximityFilter: entryProximity,
+        riskGovernanceValidation: riskGovernance,
+        action: 'ABORT_AND_RECALIBRATE',
+        abortReason: `SLIPPAGE EXCEEDED: Real-time slippage of ${slippagePips} pips exceeds the 10.0 pip safety threshold. Order execution aborted.`,
+      };
+    }
+
+    if (!contradictionCheckPassed) {
+      return {
+        isVerified: false,
+        atomicTickId,
+        verificationTimestamp: now,
+        symbol: pair,
+        orderType,
+        signalPrice: effectiveSignalPrice,
+        liveBid: bidAsk.bid,
+        liveAsk: bidAsk.ask,
+        liveFillPrice,
+        spreadPips: bidAsk.spreadPips,
+        priceDeviationPercent,
+        slippagePips,
+        riskWorkflowVerified,
+        proportionalLotSize: 0,
+        requiredMarginUsd: 0,
+        freeMarginUsd: freeMargin,
+        contradictionCheck: {
+          passed: false,
+          newsSentimentInversionDetected: newsSentimentInversion,
+          macroTechnicalDivergenceDetected: macroTechDivergence,
+          structuralInvalidationBreached,
+          resolutionDirective: contradictionDirective,
+        },
+        failureConstraintCheck,
+        entryProximityFilter: entryProximity,
+        riskGovernanceValidation: riskGovernance,
+        action: 'ABORT_AND_RECALIBRATE',
+        abortReason: contradictionDirective,
+      };
+    }
+
+    if (!failureConstraintCheck.passed) {
+      return {
+        isVerified: false,
+        atomicTickId,
+        verificationTimestamp: now,
+        symbol: pair,
+        orderType,
+        signalPrice: effectiveSignalPrice,
+        liveBid: bidAsk.bid,
+        liveAsk: bidAsk.ask,
+        liveFillPrice,
+        spreadPips: bidAsk.spreadPips,
+        priceDeviationPercent,
+        slippagePips,
+        riskWorkflowVerified,
+        proportionalLotSize: 0,
+        requiredMarginUsd: 0,
+        freeMarginUsd: freeMargin,
+        contradictionCheck: {
+          passed: contradictionCheckPassed,
+          newsSentimentInversionDetected: newsSentimentInversion,
+          macroTechnicalDivergenceDetected: macroTechDivergence,
+          structuralInvalidationBreached,
+          resolutionDirective: contradictionDirective,
+        },
+        failureConstraintCheck,
+        entryProximityFilter: entryProximity,
+        riskGovernanceValidation: riskGovernance,
+        action: 'ABORT_AND_RECALIBRATE',
+        abortReason: `HISTORICAL LOSS RULE MATCH: Diagnostic engine identified matching loss heuristic #${failureConstraintCheck.matchingRuleId}. Order execution aborted.`,
+      };
+    }
+
+    if (!riskWorkflowVerified) {
+      return {
+        isVerified: false,
+        atomicTickId,
+        verificationTimestamp: now,
+        symbol: pair,
+        orderType,
+        signalPrice: effectiveSignalPrice,
+        liveBid: bidAsk.bid,
+        liveAsk: bidAsk.ask,
+        liveFillPrice,
+        spreadPips: bidAsk.spreadPips,
+        priceDeviationPercent,
+        slippagePips,
+        riskWorkflowVerified: false,
+        proportionalLotSize: 0,
+        requiredMarginUsd: 0,
+        freeMarginUsd: freeMargin,
+        contradictionCheck: {
+          passed: contradictionCheckPassed,
+          newsSentimentInversionDetected: newsSentimentInversion,
+          macroTechnicalDivergenceDetected: macroTechDivergence,
+          structuralInvalidationBreached,
+          resolutionDirective: contradictionDirective,
+        },
+        failureConstraintCheck,
+        entryProximityFilter: entryProximity,
+        riskGovernanceValidation: riskGovernance,
+        action: 'ABORT_AND_RECALIBRATE',
+        abortReason: 'RISK WORKFLOW INCOMPLETE: Risk parameters unverified or overall confidence (<68%) below institutional requirement.',
+      };
+    }
+
+    // Dynamic sizing within verified bounds
+    let validatedLots = proportionalLotSize;
+    if (requiredMarginUsd > freeMargin && freeMargin > 0) {
       validatedLots = Math.max(0.01, Math.min(0.02, validatedLots));
     }
 
     const finalRequiredMargin = (validatedLots * 100000) / 30;
 
-    // All atomic pre-execution checks verified on identical tick: DISPATCH_ORDER guaranteed
+    // All atomic pre-execution checks verified on identical tick: DISPATCH_ORDER approved
     return {
       isVerified: true,
       atomicTickId,
@@ -216,8 +337,8 @@ export class PreExecutionVerificationEngine {
       liveAsk: bidAsk.ask,
       liveFillPrice,
       spreadPips: bidAsk.spreadPips,
-      priceDeviationPercent: slippagePips > 10.0 ? 0 : priceDeviationPercent,
-      slippagePips: Math.min(10.0, slippagePips),
+      priceDeviationPercent,
+      slippagePips,
       riskWorkflowVerified: true,
       proportionalLotSize: validatedLots,
       requiredMarginUsd: finalRequiredMargin,
@@ -227,9 +348,7 @@ export class PreExecutionVerificationEngine {
         newsSentimentInversionDetected: newsSentimentInversion,
         macroTechnicalDivergenceDetected: macroTechDivergence,
         structuralInvalidationBreached,
-        resolutionDirective: contradictionCheckPassed
-          ? 'Atomic cross-desk confluence verified on identical tick.'
-          : 'Zero-Veto Override: Sized to micro-lots (0.01-0.02 lots) with 1:1 Breakeven Ratchet armed.',
+        resolutionDirective: 'Atomic cross-desk confluence verified on identical tick.',
       },
       failureConstraintCheck: {
         passed: true,

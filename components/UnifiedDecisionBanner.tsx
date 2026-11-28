@@ -387,6 +387,38 @@ export const UnifiedDecisionBanner: React.FC<UnifiedDecisionBannerProps> = ({
             </span>
             {showPipelineDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
+
+          {onOpenNewsWire && (
+            <button
+              type="button"
+              onClick={onOpenNewsWire}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
+                theme === 'light'
+                  ? 'bg-red-50 hover:bg-red-100 text-red-800 border-red-300'
+                  : 'bg-red-500/15 hover:bg-red-500/25 text-red-300 border-red-500/30'
+              }`}
+              title="Open 38-Source Financial News Speed Wire"
+            >
+              <Radio className="w-3 h-3 text-red-400" />
+              <span>WIRE (38)</span>
+            </button>
+          )}
+
+          {onOpenMonteCarlo && (
+            <button
+              type="button"
+              onClick={onOpenMonteCarlo}
+              className={`px-2 py-0.5 rounded text-[11px] font-bold flex items-center gap-1 border transition-all cursor-pointer ${
+                theme === 'light'
+                  ? 'bg-purple-50 hover:bg-purple-100 text-purple-800 border-purple-300'
+                  : 'bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border-purple-500/30'
+              }`}
+              title="Open Monte Carlo VaR & Stress Test Desk"
+            >
+              <Shield className="w-3 h-3 text-purple-400" />
+              <span>VAR DESK</span>
+            </button>
+          )}
         </div>
 
         {/* Live Synchronized Ticker Price & Recalibration Trigger */}

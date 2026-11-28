@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CurrencyPair, RiskVerdict } from '@/lib/types';
 import { SwarmCoordinator } from '@/lib/agents/SwarmCoordinator';
-import { BASE_PRICES } from '@/lib/marketData';
+import { BASE_PRICES, PIP_VALUES } from '@/lib/marketData';
+import { RealMarketDataService } from '@/lib/realMarketDataService';
 
 export const runtime = 'nodejs';
 
@@ -9,7 +10,7 @@ interface ScenarioResult {
   scenarioName: string;
   pair: CurrencyPair;
   action: 'BUY' | 'SELL' | 'NO_TRADE';
-  riskVerdict: RiskVerdict;
+  riskVerdict: 'APPROVED' | 'MODIFIED' | 'VETOED';
   lots: number;
   entryPrice: number;
   exitPrice: number;
@@ -24,50 +25,19 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      // Body is optional for backtesting
+      // Body is optional
     }
 
     const rawPair = typeof body?.pair === 'string' ? body.pair : 'EUR/USD';
     const pair: CurrencyPair = (rawPair in BASE_PRICES) ? (rawPair as CurrencyPair) : 'EUR/USD';
 
-    const scenarios = [
-      {
-        name: 'US NFP Jobs Beat (+240k vs 165k exp)',
-        pair: 'EUR/USD' as CurrencyPair,
-        techBias: 'DOWNTREND',
-        expectedMovePips: -65,
-      },
-      {
-        name: 'ECB Dovish Rate Cut (-25 bps)',
-        pair: 'EUR/USD' as CurrencyPair,
-        techBias: 'DOWNTREND',
-        expectedMovePips: -45,
-      },
-      {
-        name: 'BOJ Rate Hike & Carry Trade Liquidation',
-        pair: 'USD/JPY' as CurrencyPair,
-        techBias: 'STRONG_DOWNTREND',
-        expectedMovePips: -140,
-      },
-      {
-        name: 'UK Sticky Services Inflation (BoE Pause)',
-        pair: 'GBP/USD' as CurrencyPair,
-        techBias: 'UPTREND',
-        expectedMovePips: 55,
-      },
-      {
-        name: 'Commodity Rally (WTI Crude +4.5%)',
-        pair: 'USD/CAD' as CurrencyPair,
-        techBias: 'DOWNTREND',
-        expectedMovePips: -50,
-      },
-      {
-        name: 'Asian Session Thin Liquidity Drift',
-        pair: 'AUD/USD' as CurrencyPair,
-        techBias: 'SIDEWAYS',
-        expectedMovePips: 8,
-      },
-    ];
+    // 1. Fetch real historical OHLCV candle series
+    const { candles } = await RealMarketDataService.fetchRealLiveCandles(pair, '1h', 60);
+
+    const isGold = pair === 'XAU/USD';
+    const isJpy = pair.includes('JPY');
+    const pipMultiplier = PIP_VALUES[pair] || (isGold ? 0.10 : isJpy ? 0.01 : 0.0001);
+    const pipDollarPerLot = 10;
 
     const coordinator = new SwarmCoordinator();
     const results: ScenarioResult[] = [];
@@ -75,59 +45,132 @@ export async function POST(req: NextRequest) {
     let winCount = 0;
     let lossCount = 0;
     let vetoedCount = 0;
+    let peakEquity = 100000;
+    let currentEquity = 100000;
+    let maxDrawdownUsd = 0;
 
-    for (const sc of scenarios) {
-      const consensus = coordinator.runConsensus(sc.pair, '1h');
+    // 2. Walk-forward bar-by-bar historical replay across multiple market windows
+    const windowStep = 6;
+    const minHistory = 20;
+
+    for (let i = minHistory; i < candles.length - 5; i += windowStep) {
+      const historicalSlice = candles.slice(0, i);
+      const evalCandle = candles[i];
+      const futureCandles = candles.slice(i + 1, i + 6);
+
+      const consensus = coordinator.runConsensus(pair, '1h', historicalSlice);
+      const signal = consensus.executionSignal;
       const risk = consensus.agents.risk;
 
-      let pnl = 0;
-      let outcome: ScenarioResult['outcome'] = 'SCRATCH';
+      const dateStr = new Date(evalCandle.time).toISOString().replace('T', ' ').slice(0, 16);
+      const scenarioName = `Historical Window ${results.length + 1} (${dateStr} UTC - Bar #${i})`;
 
-      if (risk.verdict === 'VETOED') {
+      if (!signal.authorized || signal.status === 'VETOED' || risk.verdict === 'VETOED') {
         vetoedCount++;
-        outcome = 'SCRATCH';
-        pnl = 0;
-      } else {
-        const isWin = (risk.action === 'BUY' && sc.expectedMovePips > 0) ||
-                      (risk.action === 'SELL' && sc.expectedMovePips < 0);
-        
-        if (isWin) {
-          outcome = 'WIN';
-          winCount++;
-          pnl = risk.parameters.projectedGainUsd;
+        results.push({
+          scenarioName,
+          pair,
+          action: 'NO_TRADE',
+          riskVerdict: 'VETOED',
+          lots: 0,
+          entryPrice: evalCandle.close,
+          exitPrice: evalCandle.close,
+          pnlUsd: 0,
+          outcome: 'SCRATCH',
+          rationale: signal.tierDescription || risk.reasoning || 'Hard Veto enforced: Sub-threshold confluence or gatekeeper breach.',
+        });
+        continue;
+      }
+
+      // Signal authorized: Replay execution across future candles
+      const orderAction: 'BUY' | 'SELL' = signal.orderType === 'SELL_MARKET' ? 'SELL' : 'BUY';
+      const entryPrice = signal.entry || evalCandle.close;
+      const stopLoss = signal.stopLoss;
+      const takeProfit = signal.takeProfit;
+      const lots = Math.max(0.01, signal.lots || 0.1);
+
+      let exitPrice = futureCandles[futureCandles.length - 1]?.close || entryPrice;
+      let outcome: 'WIN' | 'LOSS' | 'SCRATCH' = 'SCRATCH';
+      let tradeClosed = false;
+
+      for (const bar of futureCandles) {
+        if (orderAction === 'BUY') {
+          if (bar.low <= stopLoss) {
+            exitPrice = stopLoss;
+            outcome = 'LOSS';
+            tradeClosed = true;
+            break;
+          } else if (bar.high >= takeProfit) {
+            exitPrice = takeProfit;
+            outcome = 'WIN';
+            tradeClosed = true;
+            break;
+          }
         } else {
-          outcome = 'LOSS';
-          lossCount++;
-          pnl = -risk.parameters.maxLossUsd;
+          if (bar.high >= stopLoss) {
+            exitPrice = stopLoss;
+            outcome = 'LOSS';
+            tradeClosed = true;
+            break;
+          } else if (bar.low <= takeProfit) {
+            exitPrice = takeProfit;
+            outcome = 'WIN';
+            tradeClosed = true;
+            break;
+          }
         }
       }
 
+      if (!tradeClosed) {
+        // Exit at end of window
+        const finalBar = futureCandles[futureCandles.length - 1] || evalCandle;
+        exitPrice = finalBar.close;
+        const diff = orderAction === 'BUY' ? (exitPrice - entryPrice) : (entryPrice - exitPrice);
+        outcome = diff > 0.0001 ? 'WIN' : diff < -0.0001 ? 'LOSS' : 'SCRATCH';
+      }
+
+      const pipDelta = orderAction === 'BUY'
+        ? (exitPrice - entryPrice) / pipMultiplier
+        : (entryPrice - exitPrice) / pipMultiplier;
+
+      const pnl = Number((pipDelta * pipDollarPerLot * lots).toFixed(2));
       totalPnl += pnl;
+      currentEquity += pnl;
+
+      if (currentEquity > peakEquity) peakEquity = currentEquity;
+      const dd = peakEquity - currentEquity;
+      if (dd > maxDrawdownUsd) maxDrawdownUsd = dd;
+
+      if (outcome === 'WIN') winCount++;
+      else if (outcome === 'LOSS') lossCount++;
 
       results.push({
-        scenarioName: sc.name,
-        pair: sc.pair,
-        action: risk.action,
-        riskVerdict: risk.verdict,
-        lots: risk.parameters.positionSizeLots,
-        entryPrice: risk.parameters.entryPrice,
-        exitPrice: risk.action === 'BUY' ? risk.parameters.takeProfit1 : risk.parameters.stopLoss,
+        scenarioName,
+        pair,
+        action: orderAction,
+        riskVerdict: risk.verdict as 'APPROVED' | 'MODIFIED' | 'VETOED',
+        lots,
+        entryPrice,
+        exitPrice,
         pnlUsd: pnl,
         outcome,
-        rationale: risk.reasoning,
+        rationale: `Replay execution across OHLCV bars: ${orderAction} @ ${entryPrice}, SL ${stopLoss}, TP ${takeProfit}. Result: ${outcome} (${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} USD).`,
       });
     }
 
     const executedCount = winCount + lossCount;
     const winRate = executedCount > 0 ? Number(((winCount / executedCount) * 100).toFixed(1)) : 0;
-    const profitFactor = lossCount > 0 ? Number((Math.max(1, winCount * 2.2) / lossCount).toFixed(2)) : 3.5;
+    const maxDrawdownPercent = Number(((maxDrawdownUsd / 100000) * 100).toFixed(2));
+    const grossProfit = results.filter(r => r.pnlUsd > 0).reduce((acc, r) => acc + r.pnlUsd, 0);
+    const grossLoss = Math.abs(results.filter(r => r.pnlUsd < 0).reduce((acc, r) => acc + r.pnlUsd, 0));
+    const profitFactor = grossLoss > 0 ? Number((grossProfit / grossLoss).toFixed(2)) : (grossProfit > 0 ? 4.5 : 1.0);
 
     return NextResponse.json({
       success: true,
       data: {
         targetPair: pair,
         summary: {
-          totalScenarios: scenarios.length,
+          totalScenarios: results.length,
           executedTrades: executedCount,
           vetoedTrades: vetoedCount,
           winCount,
@@ -135,14 +178,15 @@ export async function POST(req: NextRequest) {
           winRatePercent: winRate,
           totalPnlUsd: Number(totalPnl.toFixed(2)),
           profitFactor,
-          maxDrawdownPercent: 2.4,
+          maxDrawdownPercent,
         },
         scenarios: results,
       },
     });
   } catch (error: any) {
+    console.error('Backtest error:', error);
     return NextResponse.json(
-      { success: false, error: 'Backtest execution failed' },
+      { success: false, error: 'Historical candle replay backtest failed' },
       { status: 500 }
     );
   }

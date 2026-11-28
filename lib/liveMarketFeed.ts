@@ -347,19 +347,19 @@ export class LiveMarketFeedManager {
       else if (isCopper) decimals = 4;
 
       const pip = PIP_VALUES[this.currentPair] || 0.0001;
-      // Micro fluctuation jitter between -1.5 and +1.5 pips
-      const tickDelta = (Math.random() - 0.495) * pip * 1.4;
-      const newClose = Number((lastCandle.close + tickDelta).toFixed(decimals));
-      const newHigh = Number(Math.max(lastCandle.high, newClose).toFixed(decimals));
-      const newLow = Number(Math.min(lastCandle.low, newClose).toFixed(decimals));
+      // Single Authoritative WebSocket Stream: Zero synthetic micro-jitter drift
+      // Preserves exact canonical quote received from live OANDA/TradingView benchmark feed
+      const newClose = lastCandle.close;
+      const newHigh = lastCandle.high;
+      const newLow = lastCandle.low;
 
-      // Update latest candle in-place
+      // Update latest candle in-place maintaining true price integrity
       const updatedLastCandle: Candle = {
         ...lastCandle,
         close: newClose,
         high: newHigh,
         low: newLow,
-        volume: lastCandle.volume + Math.floor(Math.random() * 8 + 1),
+        volume: lastCandle.volume + 1,
       };
 
       const updatedCandles = [...candles.slice(0, candles.length - 1), updatedLastCandle];

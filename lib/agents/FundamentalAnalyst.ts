@@ -39,11 +39,14 @@ export class FundamentalAnalystAgent extends BaseAgent {
       INR: { stance: 'NEUTRAL', rate: 6.50, inflation: 4.8, sentiment: 'RBI balancing strong 7.2% GDP growth with food inflation vigilance via liquidity management.' },
     };
 
-    const baseOutlook = centralBanks[base] || (isIndian ? centralBanks['INR'] : { stance: 'NEUTRAL', rate: 3.0, inflation: 2.5, sentiment: 'Stable macro baseline.' });
-    const quoteOutlook = centralBanks[quote] || { stance: 'NEUTRAL', rate: 3.0, inflation: 2.5, sentiment: 'Stable macro baseline.' };
+    const isMetal = isGold || isSilver || isPlatinum;
+    const baseOutlook = isMetal
+      ? { stance: 'NEUTRAL' as const, rate: 0.0, inflation: 0.0, sentiment: 'Monetary Bullion: 0% nominal yield; value driven by sovereign reserve accumulation, TIPS real yield spreads, and LBMA physical vault float.' }
+      : centralBanks[base] || (isIndian ? centralBanks['INR'] : { stance: 'NEUTRAL' as const, rate: 3.0, inflation: 2.5, sentiment: 'Stable macro baseline.' });
+    const quoteOutlook = centralBanks[quote] || { stance: 'NEUTRAL' as const, rate: 3.0, inflation: 2.5, sentiment: 'Stable macro baseline.' };
 
-    const nominalDiff = baseOutlook.rate - quoteOutlook.rate;
-    const baseRealRate = baseOutlook.rate - baseOutlook.inflation;
+    const nominalDiff = isMetal ? -quoteOutlook.rate : (baseOutlook.rate - quoteOutlook.rate);
+    const baseRealRate = isMetal ? 0.0 : (baseOutlook.rate - baseOutlook.inflation);
     const quoteRealRate = quoteOutlook.rate - quoteOutlook.inflation;
     const realRateSpread = Number((baseRealRate - quoteRealRate).toFixed(2));
 
@@ -73,7 +76,8 @@ export class FundamentalAnalystAgent extends BaseAgent {
         macroScore = 32;
         macroRegime = 'OPEC+ Supply Restraint & Geopolitical Logistics Premium';
       } else if (isGold || isSilver || isPlatinum) {
-        macroScore = 45;
+        // Bullion macro scoring: inverse to US TIPS real yield + central bank reserve accumulation
+        macroScore = 45 - (quoteRealRate > 2.0 ? 12 : -12) + (quoteOutlook.stance === 'DOVISH' ? 18 : quoteOutlook.stance === 'HAWKISH' ? -12 : 5);
         macroRegime = 'Sovereign Bullion Reserve Accumulation & Real Yield Compression';
       } else {
         macroScore = 25;
